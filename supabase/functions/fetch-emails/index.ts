@@ -77,15 +77,16 @@ function toIsoString(dateValue: string | null | undefined) {
 }
 
 function extractRawEmail(fetchResponse: string, tag: string) {
-  const literalMatch = fetchResponse.match(/BODY\.PEEK\[\] \{\d+\}\r\n/);
+  // IMAP servers may return BODY[] or BODY.PEEK[] or BODY[TEXT] etc.
+  const literalMatch = fetchResponse.match(/BODY(?:\.PEEK)?\[\S*\] \{(\d+)\}\r\n/);
   if (!literalMatch || literalMatch.index === undefined) {
+    console.error("No BODY literal found in response, first 200 chars:", fetchResponse.substring(0, 200));
     return { rawEmail: null, uid: null };
   }
 
+  const literalSize = parseInt(literalMatch[1], 10);
   const start = literalMatch.index + literalMatch[0].length;
-  const endMarker = `\r\n)\r\n${tag} `;
-  const end = fetchResponse.lastIndexOf(endMarker);
-  const rawEmail = end === -1 ? fetchResponse.slice(start) : fetchResponse.slice(start, end);
+  const rawEmail = fetchResponse.substring(start, start + literalSize);
   const uidMatch = fetchResponse.match(/UID (\d+)/);
 
   return {
