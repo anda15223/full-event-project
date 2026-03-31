@@ -48,6 +48,7 @@ const App = () => (
           <Route path="/agent/review" element={<DashboardLayout><AgentReviewQueue /></DashboardLayout>} />
           <Route path="/agent/operations" element={<DashboardLayout><AgentOperations /></DashboardLayout>} />
           <Route path="/agent/romania" element={<DashboardLayout><AgentRomania /></DashboardLayout>} />
+          <Route path="/ledger" element={<DashboardLayout><Ledger /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

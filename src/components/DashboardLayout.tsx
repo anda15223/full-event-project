@@ -21,6 +21,7 @@ const navItems = [
   { icon: Wrench, label: "Operations", path: "/agent/operations", color: "bg-agent-purple" },
   { icon: Globe, label: "Romania", path: "/agent/romania", color: "bg-agent-blue" },
   { icon: ClipboardList, label: "Non-Email Tasks", path: "/tasks", color: "bg-agent-gray" },
+  { icon: BookOpen, label: "Ledger", path: "/ledger", color: "bg-agent-green" },
   { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
 ];
 
