@@ -1,0 +1,1 @@
+UPDATE invoices SET company = 'Blue Fish ApS' WHERE location ILIKE '%reffen%' AND company != 'Blue Fish ApS';
