@@ -17,8 +17,17 @@ const COMPANIES = [
 ];
 
 const SYSTEM_PROMPT = `You are an AI email classification agent for a Danish business group with multiple companies.
+You MUST support emails in English, Danish, and Romanian natively.
 
-Your job is to analyze each email and return structured JSON.
+Your job is to analyze each email and return structured JSON. ALL output text (summary, task titles, notes, review reasons) MUST be in clear business English regardless of the original email language.
+
+LANGUAGE DETECTION:
+- Detect the email language: "en" (English), "da" (Danish), "ro" (Romanian), "unknown" if unclear
+- Use language as a signal for company assignment (Romanian → likely "Romania", Danish → likely Danish companies) but always validate with context
+
+KEYWORD AWARENESS (multi-language):
+- Invoice: invoice, payment, bill (EN) | faktura, betaling (DA) | factură, plată (RO)
+- Task: please confirm, action required (EN) | venligst bekræft, handling nødvendig (DA) | te rog confirmă, necesar (RO)
 
 COMPANIES (assign exactly one):
 - M.C.A. Holding ApS
@@ -31,7 +40,7 @@ COMPANIES (assign exactly one):
 - Unknown (when unsure)
 
 CLASSIFICATION categories:
-- invoice: Contains invoice, faktura, payment request, billing notice, supplier/utility/rent invoice
+- invoice: Contains invoice, faktura, factură, payment request, billing notice, supplier/utility/rent invoice
 - task: Requires action (reply, approval, missing document, deadline, follow-up, booking change, supplier/legal/admin request)
 - waiting: Next step depends on another person/supplier/authority
 - information: Useful but no immediate action needed
@@ -50,20 +59,21 @@ PRIORITY RULES:
 
 Return ONLY valid JSON matching this schema:
 {
+  "language": "en|da|ro|unknown",
   "classification": "invoice|task|waiting|information|irrelevant",
   "company": "one of the companies above",
   "confidence": 0.0-1.0,
-  "summary": "brief summary",
+  "summary": "brief summary IN ENGLISH",
   "action_required": true/false,
   "needs_review": true/false,
-  "review_reason": "reason or empty",
+  "review_reason": "reason or empty (IN ENGLISH)",
   "task": null or {
-    "title": "task title",
+    "title": "task title IN ENGLISH",
     "priority": "urgent|high|normal|low",
     "status": "urgent|to_do|waiting|done",
     "due_date": "YYYY-MM-DD or null",
     "owner": "Alexandra",
-    "notes": "context"
+    "notes": "context IN ENGLISH"
   },
   "invoice": null or {
     "supplier_name": "name",
@@ -175,6 +185,7 @@ ${bodySnippet ? `Body:\n${bodySnippet}` : "(no body text available — classify 
           needs_review: needsReview,
           review_reason: needsReview ? (parsed.review_reason || "Low confidence or unknown company") : null,
           processed: true,
+          language: parsed.language || "unknown",
         }).eq("id", email.id);
 
         // Create task if present
