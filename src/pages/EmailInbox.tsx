@@ -3,18 +3,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Mail, FileText, CheckSquare, Search } from "lucide-react";
+import { RefreshCw, Mail, FileText, CheckSquare, Search, ArrowLeft, Clock, Building2, User } from "lucide-react";
 import { format } from "date-fns";
-import { useEmails, useSyncAndClassify } from "@/hooks/useEmailAgent";
+import { motion, AnimatePresence } from "framer-motion";
+import { useEmails, useSyncAndClassify, type Email } from "@/hooks/useEmailAgent";
 
 const classificationConfig: Record<string, { label: string; color: string; icon: typeof FileText }> = {
   invoice: { label: "Invoice", color: "bg-primary/10 text-primary border-primary/20", icon: FileText },
   task: { label: "Task", color: "bg-accent/10 text-accent border-accent/20", icon: CheckSquare },
+  waiting: { label: "Waiting", color: "bg-chart-3/10 text-chart-3 border-chart-3/20", icon: Clock },
+  information: { label: "Info", color: "bg-muted text-muted-foreground border-border", icon: Mail },
+  irrelevant: { label: "Irrelevant", color: "bg-destructive/10 text-destructive border-destructive/20", icon: Mail },
 };
 
 export default function EmailInbox() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const { data: emails, isLoading } = useEmails();
   const syncAndClassify = useSyncAndClassify();
 
@@ -33,6 +38,100 @@ export default function EmailInbox() {
     return list;
   }, [emails, filter, search]);
 
+  // Detail view when an email is selected
+  if (selectedEmail) {
+    const config = classificationConfig[selectedEmail.classification || ""];
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" onClick={() => setSelectedEmail(null)} className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Inbox
+        </Button>
+
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="bg-card border-border overflow-hidden">
+            {/* Email header bar */}
+            <div className="border-b border-border p-5 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <h1 className="text-xl font-bold text-foreground leading-tight">
+                  {selectedEmail.subject || "(no subject)"}
+                </h1>
+                <div className="flex gap-2 shrink-0">
+                  {config && (
+                    <Badge variant="outline" className={config.color}>
+                      {config.label}
+                    </Badge>
+                  )}
+                  {!selectedEmail.processed && (
+                    <Badge variant="outline" className="border-muted text-muted-foreground">Pending</Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2 text-foreground">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-medium">{selectedEmail.sender || "Unknown"}</span>
+                  </div>
+                </div>
+                <span className="text-muted-foreground ml-auto text-xs">
+                  {selectedEmail.received_at
+                    ? format(new Date(selectedEmail.received_at), "EEEE, MMMM d, yyyy 'at' HH:mm")
+                    : ""}
+                </span>
+              </div>
+
+              {/* Company & metadata row */}
+              {(selectedEmail.company || selectedEmail.confidence) && (
+                <div className="flex items-center gap-3 pt-1">
+                  {selectedEmail.company && (
+                    <Badge variant="outline" className="border-accent/30 text-accent text-xs">
+                      <Building2 className="h-3 w-3 mr-1" />
+                      {selectedEmail.company}
+                    </Badge>
+                  )}
+                  {selectedEmail.confidence != null && (
+                    <span className="text-xs text-muted-foreground">
+                      AI confidence: {Math.round((selectedEmail.confidence || 0) * 100)}%
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* AI Summary */}
+            {selectedEmail.summary && (
+              <div className="border-b border-border px-5 py-3 bg-accent/5">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                  AI Summary
+                </div>
+                <p className="text-sm text-foreground">{selectedEmail.summary}</p>
+              </div>
+            )}
+
+            {/* Email body */}
+            <CardContent className="p-5">
+              <div className="prose prose-sm prose-invert max-w-none">
+                <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed min-h-[200px]">
+                  {selectedEmail.body_text || (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p>Email body not available</p>
+                      <p className="text-xs mt-1">Headers only — body text was not fetched to save resources</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // List view
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -83,53 +182,62 @@ export default function EmailInbox() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {filteredEmails.map((email) => {
-            const config = classificationConfig[email.classification || ""];
-            const IconComp = config?.icon || Mail;
-            return (
-              <Card
-                key={email.id}
-                className={`glass-panel cursor-pointer hover:border-primary/30 transition-all border-l-2 ${
-                  email.classification === "invoice" ? "border-l-primary" :
-                  email.classification === "task" ? "border-l-accent" : "border-l-muted"
-                }`}
-              >
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
-                      email.classification === "invoice" ? "bg-primary/10" : "bg-accent/10"
-                    }`}>
-                      <IconComp className={`w-4 h-4 ${email.classification === "invoice" ? "text-primary" : "text-accent"}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-sm font-medium truncate text-foreground">
-                          {email.sender || "Unknown"}
-                        </span>
-                        {config && (
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.color}`}>
-                            {config.label}
-                          </Badge>
-                        )}
-                        {!email.processed && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-muted text-muted-foreground">Pending</Badge>
-                        )}
-                        <span className="ml-auto text-xs text-muted-foreground shrink-0">
-                          {email.received_at ? format(new Date(email.received_at), "MMM d, HH:mm") : ""}
-                        </span>
+        <AnimatePresence>
+          <div className="space-y-2">
+            {filteredEmails.map((email, i) => {
+              const config = classificationConfig[email.classification || ""];
+              const IconComp = config?.icon || Mail;
+              return (
+                <motion.div
+                  key={email.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.02, 0.3) }}
+                >
+                  <Card
+                    onClick={() => setSelectedEmail(email)}
+                    className={`glass-panel cursor-pointer hover:border-primary/30 transition-all border-l-2 ${
+                      email.classification === "invoice" ? "border-l-primary" :
+                      email.classification === "task" ? "border-l-accent" : "border-l-muted"
+                    }`}
+                  >
+                    <CardContent className="py-3 px-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
+                          email.classification === "invoice" ? "bg-primary/10" : "bg-accent/10"
+                        }`}>
+                          <IconComp className={`w-4 h-4 ${email.classification === "invoice" ? "text-primary" : "text-accent"}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-medium truncate text-foreground">
+                              {email.sender || "Unknown"}
+                            </span>
+                            {config && (
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${config.color}`}>
+                                {config.label}
+                              </Badge>
+                            )}
+                            {!email.processed && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-muted text-muted-foreground">Pending</Badge>
+                            )}
+                            <span className="ml-auto text-xs text-muted-foreground shrink-0">
+                              {email.received_at ? format(new Date(email.received_at), "MMM d, HH:mm") : ""}
+                            </span>
+                          </div>
+                          <p className="text-sm truncate font-medium text-foreground">{email.subject}</p>
+                          {email.summary && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{email.summary}</p>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm truncate font-medium text-foreground">{email.subject}</p>
-                      {email.summary && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{email.summary}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+        </AnimatePresence>
       )}
     </div>
   );
