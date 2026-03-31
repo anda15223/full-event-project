@@ -330,18 +330,13 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                   </div>
                 )}
                 <div className="flex-1 p-4">
-                  {pdfUrl ? (
+                  {(pdfStoragePath || pdfAttachmentId) ? (
                     <div className="h-full rounded-xl border border-border/40 overflow-hidden flex flex-col">
                       <div className="px-4 py-2 bg-secondary/40 border-b border-border/30 flex items-center justify-between shrink-0">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">PDF Document</span>
-                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
-                            <ExternalLink className="h-3 w-3" /> Open in new tab
-                          </Button>
-                        </a>
                       </div>
                       <div className="flex-1">
-                        <PdfViewer pdfUrl={pdfUrl} />
+                        <PdfViewer storagePath={pdfStoragePath || undefined} attachmentId={pdfAttachmentId || undefined} />
                       </div>
                     </div>
                   ) : emailInfo?.body_html || emailInfo?.body_clean_text ? (
