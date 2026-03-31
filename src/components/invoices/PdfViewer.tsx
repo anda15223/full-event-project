@@ -88,13 +88,10 @@ export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) 
   const renderPage = useCallback(async (pdf: any, num: number) => {
     const page = await pdf.getPage(num);
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
+    if (!canvas) return;
 
-    const containerWidth = container.clientWidth - 32;
-    const unscaledViewport = page.getViewport({ scale: 1 });
-    const scale = Math.min(containerWidth / unscaledViewport.width, 2);
-    const viewport = page.getViewport({ scale });
+    // Render at a fixed readable scale — container scrolls to fit
+    const viewport = page.getViewport({ scale: 1.5 });
 
     canvas.height = viewport.height;
     canvas.width = viewport.width;
