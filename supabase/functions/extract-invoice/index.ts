@@ -88,7 +88,7 @@ serve(async (req) => {
         .eq("classification", "invoice")
         .eq("has_attachments", true)
         .gte("received_at", "2026-02-01T00:00:00.000Z")
-        .limit(10);
+        .limit(5);
 
       if (invoiceEmails && invoiceEmails.length > 0) {
         const emailIds = invoiceEmails.map(e => e.id);
