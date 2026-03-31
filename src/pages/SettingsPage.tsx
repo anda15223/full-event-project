@@ -25,6 +25,7 @@ type ReprocessProgress = {
   totalCashflow: number;
   currentSubject: string;
   byCompany: Record<string, number>;
+  errorBreakdown: Record<string, number>;
 };
 
 function loadSavedProgress(): { running: boolean; progress: ReprocessProgress | null } {
@@ -48,10 +49,12 @@ function saveProgress(progress: ReprocessProgress | null, running: boolean) {
 function ClaudeReprocessPanel() {
   const saved = loadSavedProgress();
   const [running, setRunning] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState<ReprocessProgress | null>(saved.progress);
   const [testDetails, setTestDetails] = useState<any[] | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [retryResult, setRetryResult] = useState<any>(null);
 
   const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ["claude-reprocess-stats"],
@@ -112,6 +115,7 @@ function ClaudeReprocessPanel() {
       batch: 0, totalBatches: 0, processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
       totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0,
       totalCashflow: stats?.totalCashflow || 0, currentSubject: "", byCompany: {} as Record<string, number>,
+      errorBreakdown: {} as Record<string, number>,
     };
     const batchSize = 20;
     const maxBatches = Math.ceil((stats?.totalEmails || 369) / batchSize);
@@ -144,6 +148,12 @@ function ClaudeReprocessPanel() {
         totals.totalCashflow = data.total_cashflow || totals.totalCashflow;
         totals.currentSubject = data.current_subject || "";
         if (data.by_company) totals.byCompany = data.by_company;
+        // Accumulate error breakdown
+        if (data.error_breakdown) {
+          for (const [cat, count] of Object.entries(data.error_breakdown)) {
+            totals.errorBreakdown[cat] = (totals.errorBreakdown[cat] || 0) + (count as number);
+          }
+        }
 
         // Move to next offset
         offset = data.next_offset || (offset + batchSize);
@@ -185,6 +195,24 @@ function ClaudeReprocessPanel() {
     setCompleted(false);
     setPaused(false);
     saveProgress(null, false);
+  };
+
+  const runRetry = async () => {
+    setRetrying(true);
+    setRetryResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
+        body: { retry_errors: true, parallel: 5 },
+      });
+      if (error) throw error;
+      setRetryResult(data);
+      toast.success(`Retry complete: ${data.extracted ?? 0} recovered from ${data.processed ?? 0} emails`);
+      refetchStats();
+    } catch (err) {
+      toast.error("Retry failed: " + (err instanceof Error ? err.message : "Unknown"));
+    } finally {
+      setRetrying(false);
+    }
   };
 
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
@@ -320,10 +348,42 @@ function ClaudeReprocessPanel() {
               </div>
             )}
 
-            <div className="flex gap-2 pt-2">
+            {/* Error breakdown */}
+            {progress.errors > 0 && Object.keys(progress.errorBreakdown || {}).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-destructive">Errors ({progress.errors})</p>
+                {Object.entries(progress.errorBreakdown)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([category, count]) => {
+                    const labels: Record<string, string> = {
+                      pdf_too_large: "PDF too large",
+                      json_parse: "JSON parse failed",
+                      attachment_download: "Attachment download",
+                      claude_timeout: "Claude timeout",
+                      rate_limit: "Rate limited",
+                      no_content: "No content",
+                      other: "Other",
+                    };
+                    return (
+                      <div key={category} className="flex items-center justify-between text-sm">
+                        <span className="text-destructive/80">{labels[category] || category}</span>
+                        <span className="font-mono font-semibold text-destructive">{count}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2 flex-wrap">
               <Button onClick={runFull} variant="outline" size="sm" className="gap-1.5">
                 <RefreshCw className="h-3 w-3" /> {completed ? "Run again" : "Resume"}
               </Button>
+              {completed && progress.errors > 0 && (
+                <Button onClick={runRetry} disabled={retrying} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30">
+                  {retrying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  Retry {progress.errors} errors
+                </Button>
+              )}
               <Button variant="ghost" size="sm" className="gap-1.5" asChild>
                 <a href="/agent/invoices">View invoices →</a>
               </Button>
@@ -331,6 +391,14 @@ function ClaudeReprocessPanel() {
                 <a href="/cashflow">View cashflow →</a>
               </Button>
             </div>
+
+            {retryResult && (
+              <div className="rounded-lg bg-muted p-3 space-y-1 text-sm">
+                <p className="font-semibold">🔄 Retry results</p>
+                <p>Processed: {retryResult.processed} · Recovered: <span className="text-success font-semibold">{retryResult.extracted}</span> · Still errored: <span className="text-destructive">{retryResult.errors}</span></p>
+                {retryResult.remaining > 0 && <p className="text-xs text-muted-foreground">{retryResult.remaining} more to retry</p>}
+              </div>
+            )}
           </div>
         )}
 
