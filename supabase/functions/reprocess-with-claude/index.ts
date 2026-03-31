@@ -36,19 +36,25 @@ serve(async (req) => {
 
     console.log(`Reprocess: test=${testMode}, batch=${batchSize}, offset=${offset}`);
 
-    // ONLY process emails classified as "invoice" — this is the key filter
-    // The previous bug was processing ALL emails (including 1129 unclassified ones)
-    let query = supabase
-      .from("emails")
-      .select("id, subject, sender, classification, router_status, has_attachments")
-      .eq("classification", "invoice")
-      .gte("received_at", "2026-01-01T00:00:00.000Z")
-      .order("received_at", { ascending: false });
-
+    // For test mode: grab 5 most recent emails regardless of classification
+    // For full mode: only process invoice-classified emails
+    let query;
     if (testMode) {
-      query = query.limit(5);
+      query = supabase
+        .from("emails")
+        .select("id, subject, sender, classification, router_status, has_attachments")
+        .gte("received_at", "2026-01-01T00:00:00.000Z")
+        .not("router_status", "eq", "ignored")
+        .order("received_at", { ascending: false })
+        .limit(5);
     } else {
-      query = query.range(offset, offset + batchSize - 1);
+      query = supabase
+        .from("emails")
+        .select("id, subject, sender, classification, router_status, has_attachments")
+        .eq("classification", "invoice")
+        .gte("received_at", "2026-01-01T00:00:00.000Z")
+        .order("received_at", { ascending: false })
+        .range(offset, offset + batchSize - 1);
     }
 
     const { data: emails, error: queryError } = await query;
