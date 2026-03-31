@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import PostalMime from "npm:postal-mime";
 import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
@@ -10,7 +9,7 @@ const corsHeaders = {
 
 const RequestSchema = z.object({
   since_date: z.string().optional(),
-  limit: z.number().int().min(1).max(200).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
   offset: z.number().int().min(0).optional(),
 });
 
@@ -36,33 +35,43 @@ function stripHtml(html: string) {
     .replace(/&quot;/gi, '"');
 }
 
-function formatAddress(address: unknown): string {
-  if (!address) return "unknown";
-  if (typeof address === "string") return address;
+function bytesFromBinaryString(value: string) {
+  return Uint8Array.from(Array.from(value, (char: string) => char.charCodeAt(0)));
+}
 
-  if (Array.isArray(address)) {
-    return formatAddress(address[0]);
-  }
+function decodeQuotedPrintable(value: string) {
+  return value
+    .replace(/=\r?\n/g, "")
+    .replace(/=([0-9A-F]{2})/gi, (_match: string, hex: string) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    );
+}
 
-  if (typeof address === "object") {
-    const value = address as {
-      name?: string;
-      address?: string;
-      text?: string;
-      value?: unknown[];
-    };
+function decodeMimeWords(value: string | null | undefined) {
+  if (!value) return "";
 
-    if (Array.isArray(value.value) && value.value.length > 0) {
-      return formatAddress(value.value[0]);
+  return value.replace(/=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g, (
+    match: string,
+    _charset: string,
+    encoding: string,
+    text: string,
+  ) => {
+    try {
+      if (encoding.toUpperCase() === "B") {
+        return new TextDecoder("utf-8").decode(bytesFromBinaryString(atob(text)));
+      }
+
+      const qp = text
+        .replace(/_/g, " ")
+        .replace(/=([0-9A-F]{2})/gi, (_match: string, hex: string) =>
+          String.fromCharCode(parseInt(hex, 16)),
+        );
+
+      return new TextDecoder("utf-8").decode(bytesFromBinaryString(qp));
+    } catch {
+      return match;
     }
-
-    if (value.text) return value.text;
-    if (value.name && value.address) return `${value.name} <${value.address}>`;
-    if (value.address) return value.address;
-    if (value.name) return value.name;
-  }
-
-  return "unknown";
+  });
 }
 
 function toIsoString(dateValue: string | null | undefined) {
@@ -76,32 +85,60 @@ function toIsoString(dateValue: string | null | undefined) {
   return parsedDate.toISOString();
 }
 
-function extractRawEmail(fetchResponse: string, tag: string) {
-  // IMAP servers may return BODY[] or BODY.PEEK[] or BODY[TEXT] etc.
-  const literalMatch = fetchResponse.match(/BODY(?:\.PEEK)?\[\S*\] \{(\d+)\}\r\n/);
-  if (!literalMatch || literalMatch.index === undefined) {
-    console.error("No BODY literal found in response, first 200 chars:", fetchResponse.substring(0, 200));
-    return { rawEmail: null, uid: null };
+function extractUid(fetchResponse: string) {
+  return fetchResponse.match(/UID (\d+)/)?.[1] ?? null;
+}
+
+function extractLiterals(fetchResponse: string) {
+  const literals: string[] = [];
+  const literalRegex = /\{(\d+)\}\r\n/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = literalRegex.exec(fetchResponse)) !== null) {
+    const size = Number.parseInt(match[1], 10);
+    const start = match.index + match[0].length;
+    const literal = fetchResponse.slice(start, start + size);
+    literals.push(literal);
+    literalRegex.lastIndex = start + size;
   }
 
-  const literalSize = parseInt(literalMatch[1], 10);
-  const start = literalMatch.index + literalMatch[0].length;
-  const rawEmail = fetchResponse.substring(start, start + literalSize);
-  const uidMatch = fetchResponse.match(/UID (\d+)/);
+  return literals;
+}
+
+function parseHeaderBlock(headerBlock: string) {
+  const unfolded = headerBlock.replace(/\r?\n[ \t]+/g, " ");
+
+  const getHeader = (name: string) => {
+    const match = unfolded.match(new RegExp(`^${name}:\\s*(.+)$`, "im"));
+    return decodeMimeWords(normalizeText(match?.[1] ?? null)) || null;
+  };
 
   return {
-    rawEmail,
-    uid: uidMatch?.[1] ?? null,
+    subject: getHeader("Subject") || "(no subject)",
+    sender: getHeader("From") || "unknown",
+    date: getHeader("Date"),
+    messageId: getHeader("Message-ID"),
   };
+}
+
+function extractBodySnippet(bodySection: string) {
+  const decoded = decodeQuotedPrintable(bodySection);
+  const stripped = decoded.includes("<html") ? stripHtml(decoded) : decoded;
+
+  return normalizeText(
+    stripped
+      .replace(/Content-[^\n]+/gi, " ")
+      .replace(/--[^\n]+/g, " "),
+  ).slice(0, 2500);
 }
 
 async function readResponse(
   conn: Deno.Conn,
   decoder: TextDecoder,
   isComplete: (response: string) => boolean,
-  maxChunks = 200,
+  maxChunks = 120,
 ) {
-  const buffer = new Uint8Array(65536);
+  const buffer = new Uint8Array(32768);
   let response = "";
 
   for (let i = 0; i < maxChunks; i++) {
@@ -134,7 +171,7 @@ async function sendCommand(
       response.includes(`${tag} OK`) ||
       response.includes(`${tag} NO`) ||
       response.includes(`${tag} BAD`),
-    400,
+    160,
   );
 }
 
@@ -156,7 +193,7 @@ serve(async (req) => {
       );
     }
 
-    const { since_date, limit = 5, offset = 0 } = parsedRequest.data;
+    const { since_date, limit = 3, offset = 0 } = parsedRequest.data;
 
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
     const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
@@ -183,10 +220,7 @@ serve(async (req) => {
       );
     }
 
-    conn = await Deno.connectTls({
-      hostname: IMAP_HOST,
-      port: IMAP_PORT,
-    });
+    conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
 
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
@@ -246,32 +280,36 @@ serve(async (req) => {
     }> = [];
 
     for (const seqNum of fetchIds) {
-      try {
-        const tag = `F${seqNum}`;
-        const fetchResponse = await sendCommand(conn, encoder, decoder, tag, `FETCH ${seqNum} (UID BODY.PEEK[])`);
-        const { rawEmail, uid } = extractRawEmail(fetchResponse, tag);
+      const tag = `F${seqNum}`;
+      const fetchResponse = await sendCommand(
+        conn,
+        encoder,
+        decoder,
+        tag,
+        `FETCH ${seqNum} (UID BODY.PEEK[HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)] BODY.PEEK[TEXT]<0.2500>)`,
+      );
 
-        if (!rawEmail) {
-          continue;
-        }
+      const literals = extractLiterals(fetchResponse);
+      const uid = extractUid(fetchResponse);
+      const headerBlock = literals[0] ?? "";
+      const bodySection = literals[1] ?? "";
 
-        const parsedEmail = await PostalMime.parse(rawEmail);
-        const bodyText = normalizeText(parsedEmail.text || stripHtml(parsedEmail.html || "")).slice(0, 3000);
-        const sender = formatAddress(parsedEmail.from);
-        const subject = normalizeText(parsedEmail.subject) || "(no subject)";
-        const receivedAt = toIsoString(parsedEmail.date);
-        const messageId = normalizeText(parsedEmail.messageId) || (uid ? `imap-uid-${uid}` : `imap-seq-${seqNum}`);
-
-        emails.push({
-          message_id: messageId,
-          subject,
-          sender,
-          body_text: bodyText,
-          received_at: receivedAt,
-        });
-      } catch (error) {
-        console.error(`Failed to parse email ${seqNum}:`, error);
+      if (!headerBlock && !bodySection) {
+        console.error("No FETCH literals found for message", seqNum);
+        continue;
       }
+
+      const headers = parseHeaderBlock(headerBlock);
+      const bodyText = extractBodySnippet(bodySection);
+      const messageId = headers.messageId || (uid ? `imap-uid-${uid}` : `imap-seq-${seqNum}`);
+
+      emails.push({
+        message_id: messageId,
+        subject: headers.subject,
+        sender: headers.sender,
+        body_text: bodyText,
+        received_at: toIsoString(headers.date),
+      });
     }
 
     await sendCommand(conn, encoder, decoder, "A99", "LOGOUT");
@@ -312,7 +350,7 @@ serve(async (req) => {
         inserted,
         skipped,
         has_more: pageStart > 0,
-        next_offset: offset + emails.length,
+        next_offset: offset + fetchIds.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
