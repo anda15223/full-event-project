@@ -209,6 +209,7 @@ export type Database = {
       emails: {
         Row: {
           action_required: boolean | null
+          assigned_agent: string | null
           body_clean_text: string | null
           body_html: string | null
           body_text: string | null
@@ -226,14 +227,17 @@ export type Database = {
           parse_error: string | null
           parse_status: string | null
           processed: boolean | null
+          reader_status: string | null
           received_at: string | null
           review_reason: string | null
+          router_status: string | null
           sender: string | null
           subject: string | null
           summary: string | null
         }
         Insert: {
           action_required?: boolean | null
+          assigned_agent?: string | null
           body_clean_text?: string | null
           body_html?: string | null
           body_text?: string | null
@@ -251,14 +255,17 @@ export type Database = {
           parse_error?: string | null
           parse_status?: string | null
           processed?: boolean | null
+          reader_status?: string | null
           received_at?: string | null
           review_reason?: string | null
+          router_status?: string | null
           sender?: string | null
           subject?: string | null
           summary?: string | null
         }
         Update: {
           action_required?: boolean | null
+          assigned_agent?: string | null
           body_clean_text?: string | null
           body_html?: string | null
           body_text?: string | null
@@ -276,8 +283,10 @@ export type Database = {
           parse_error?: string | null
           parse_status?: string | null
           processed?: boolean | null
+          reader_status?: string | null
           received_at?: string | null
           review_reason?: string | null
+          router_status?: string | null
           sender?: string | null
           subject?: string | null
           summary?: string | null
