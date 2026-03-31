@@ -127,12 +127,14 @@ serve(async (req) => {
 
     for (const email of emails) {
       try {
-        const bodySnippet = (email.body_text || "").substring(0, 2000);
+        // Use body_clean_text (AI-optimized) > body_text > empty
+        const bodySource = (email.body_clean_text || email.body_text || "").substring(0, 3000);
         const emailContent = `
 Subject: ${email.subject || "(no subject)"}
 From: ${email.sender || "unknown"}
 Date: ${email.received_at || "unknown"}
-${bodySnippet ? `Body:\n${bodySnippet}` : "(no body text available — classify based on subject and sender)"}
+Has Attachments: ${email.has_attachments ? "yes" : "no"}
+${bodySource ? `Body:\n${bodySource}` : "(no body text available — classify based on subject and sender)"}
 `;
 
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

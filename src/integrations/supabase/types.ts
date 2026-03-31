@@ -38,6 +38,68 @@ export type Database = {
         }
         Relationships: []
       }
+      email_attachments: {
+        Row: {
+          cid: string | null
+          content_disposition: string | null
+          created_at: string
+          document_type: string | null
+          email_id: string
+          extracted_summary: string | null
+          extracted_text: string | null
+          filename: string | null
+          id: string
+          is_inline: boolean | null
+          mime_type: string | null
+          parse_error: string | null
+          parse_status: string | null
+          size: number | null
+          storage_path: string | null
+        }
+        Insert: {
+          cid?: string | null
+          content_disposition?: string | null
+          created_at?: string
+          document_type?: string | null
+          email_id: string
+          extracted_summary?: string | null
+          extracted_text?: string | null
+          filename?: string | null
+          id?: string
+          is_inline?: boolean | null
+          mime_type?: string | null
+          parse_error?: string | null
+          parse_status?: string | null
+          size?: number | null
+          storage_path?: string | null
+        }
+        Update: {
+          cid?: string | null
+          content_disposition?: string | null
+          created_at?: string
+          document_type?: string | null
+          email_id?: string
+          extracted_summary?: string | null
+          extracted_text?: string | null
+          filename?: string | null
+          id?: string
+          is_inline?: boolean | null
+          mime_type?: string | null
+          parse_error?: string | null
+          parse_status?: string | null
+          size?: number | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_attachments_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_invoices: {
         Row: {
           amount: number | null
@@ -144,15 +206,21 @@ export type Database = {
       emails: {
         Row: {
           action_required: boolean | null
+          body_clean_text: string | null
+          body_html: string | null
           body_text: string | null
+          charset: string | null
           classification: string | null
           company: string | null
           confidence: number | null
           created_at: string
+          has_attachments: boolean | null
           id: string
           language: string | null
           message_id: string | null
           needs_review: boolean | null
+          parse_error: string | null
+          parse_status: string | null
           processed: boolean | null
           received_at: string | null
           review_reason: string | null
@@ -162,15 +230,21 @@ export type Database = {
         }
         Insert: {
           action_required?: boolean | null
+          body_clean_text?: string | null
+          body_html?: string | null
           body_text?: string | null
+          charset?: string | null
           classification?: string | null
           company?: string | null
           confidence?: number | null
           created_at?: string
+          has_attachments?: boolean | null
           id?: string
           language?: string | null
           message_id?: string | null
           needs_review?: boolean | null
+          parse_error?: string | null
+          parse_status?: string | null
           processed?: boolean | null
           received_at?: string | null
           review_reason?: string | null
@@ -180,15 +254,21 @@ export type Database = {
         }
         Update: {
           action_required?: boolean | null
+          body_clean_text?: string | null
+          body_html?: string | null
           body_text?: string | null
+          charset?: string | null
           classification?: string | null
           company?: string | null
           confidence?: number | null
           created_at?: string
+          has_attachments?: boolean | null
           id?: string
           language?: string | null
           message_id?: string | null
           needs_review?: boolean | null
+          parse_error?: string | null
+          parse_status?: string | null
           processed?: boolean | null
           received_at?: string | null
           review_reason?: string | null

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import PostalMime from "npm:postal-mime@2.4.1";
 import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
@@ -10,204 +11,99 @@ const corsHeaders = {
 
 const RequestSchema = z.object({ email_id: z.string().uuid() });
 
-/* ── MIME helpers ── */
-
-/** Build raw byte array from QP-encoded text */
-function qpToBytes(text: string): Uint8Array {
-  const cleaned = text.replace(/=\r?\n/g, "");
-  const byteArray: number[] = [];
-  let i = 0;
-  while (i < cleaned.length) {
-    if (cleaned[i] === "=" && i + 2 < cleaned.length && /[0-9A-Fa-f]{2}/.test(cleaned.substring(i + 1, i + 3))) {
-      byteArray.push(parseInt(cleaned.substring(i + 1, i + 3), 16));
-      i += 3;
-    } else {
-      byteArray.push(cleaned.charCodeAt(i));
-      i++;
-    }
-  }
-  return Uint8Array.from(byteArray);
-}
-
-/** Build raw byte array from base64 text */
-function b64ToBytes(text: string): Uint8Array {
-  const cleaned = text.replace(/\s/g, "");
-  return Uint8Array.from(Array.from(atob(cleaned), c => c.charCodeAt(0)));
-}
-
-/** Decode bytes with charset, trying UTF-8 first if result looks like mojibake */
-function decodeWithCharset(bytes: Uint8Array, charset: string): string {
-  // Always try UTF-8 first
-  try {
-    const utf8 = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    // If it decoded without errors, it's valid UTF-8
-    return utf8;
-  } catch {
-    // Not valid UTF-8, use declared charset
-  }
-  try {
-    return new TextDecoder(charset).decode(bytes);
-  } catch {
-    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
-  }
-}
-
-function getHeader(headers: string, name: string): string {
-  // Unfold continuation lines first
-  const unfolded = headers.replace(/\r?\n[ \t]+/g, " ");
-  const re = new RegExp(`^${name}:\\s*(.+)$`, "im");
-  const m = unfolded.match(re);
-  return m ? m[1].trim() : "";
-}
-
-function getCharset(contentType: string): string {
-  const m = contentType.match(/charset="?([^";\s]+)"?/i);
-  return m ? m[1] : "utf-8";
-}
-
-function stripHtml(html: string): string {
+/* ── HTML → clean text for AI ── */
+function htmlToCleanText(html: string): string {
   return html
+    // Remove tracking pixels / invisible images
+    .replace(/<img[^>]*width\s*=\s*["']?1["']?[^>]*>/gi, "")
+    .replace(/<img[^>]*height\s*=\s*["']?1["']?[^>]*>/gi, "")
+    // Remove style/script blocks
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    // Convert structure to newlines
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/tr>/gi, "\n")
     .replace(/<\/li>/gi, "\n")
+    .replace(/<\/h[1-6]>/gi, "\n\n")
+    .replace(/<\/td>/gi, " | ")
+    // Strip remaining tags
     .replace(/<[^>]+>/g, "")
+    // Decode HTML entities
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&aelig;/gi, "æ")
+    .replace(/&oslash;/gi, "ø")
+    .replace(/&aring;/gi, "å")
+    // Remove tracking URLs (common patterns)
+    .replace(/https?:\/\/[^\s]*click[^\s]*/gi, "[link]")
+    .replace(/https?:\/\/[^\s]*track[^\s]*/gi, "[link]")
+    .replace(/https?:\/\/[^\s]*unsubscribe[^\s]*/gi, "[unsubscribe]")
+    // Clean up whitespace
+    .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-/** Decode a single MIME part body given its headers.
- *  Body is a Latin-1 string (raw bytes preserved as char codes 0-255) */
-function decodePart(body: string, partHeaders: string): string {
-  const ct = getHeader(partHeaders, "Content-Type");
-  const cte = getHeader(partHeaders, "Content-Transfer-Encoding").toLowerCase();
-  const charset = getCharset(ct);
-
-  try {
-    if (cte === "quoted-printable") return decodeWithCharset(qpToBytes(body), charset);
-    if (cte === "base64") return decodeWithCharset(b64ToBytes(body), charset);
-  } catch { /* fall through */ }
-
-  // For 8bit/7bit/binary or no CTE: body is Latin-1 string with raw bytes
-  // Convert to byte array and decode with proper charset
-  const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
-  return decodeWithCharset(bytes, charset);
-}
-
-/**
- * Recursively extract text from a MIME message.
- * Returns { plain, html } — prefer plain, fallback to stripped html.
- */
-function extractTextFromMime(raw: string): { plain: string; html: string } {
-  // Split headers and body
-  const headerEnd = raw.indexOf("\r\n\r\n");
-  if (headerEnd === -1) {
-    const altEnd = raw.indexOf("\n\n");
-    if (altEnd === -1) return { plain: raw, html: "" };
-    const headers = raw.substring(0, altEnd);
-    const body = raw.substring(altEnd + 2);
-    return extractFromHeaders(headers, body);
-  }
-  const headers = raw.substring(0, headerEnd);
-  const body = raw.substring(headerEnd + 4);
-  return extractFromHeaders(headers, body);
-}
-
-function extractFromHeaders(headers: string, body: string): { plain: string; html: string } {
-  const ct = getHeader(headers, "Content-Type");
-
-  // Check for multipart
-  const boundaryMatch = ct.match(/boundary="?([^";\s]+)"?/i);
-  if (boundaryMatch) {
-    const boundary = boundaryMatch[1];
-    return extractFromMultipart(body, boundary);
-  }
-
-  // Single part
-  const decoded = decodePart(body, headers);
-  if (/text\/html/i.test(ct)) {
-    return { plain: "", html: decoded };
-  }
-  return { plain: decoded, html: "" };
-}
-
-function extractFromMultipart(body: string, boundary: string): { plain: string; html: string } {
-  const parts = body.split("--" + boundary);
-  let plain = "";
-  let html = "";
-
-  for (const part of parts) {
-    if (part.startsWith("--") || part.trim() === "") continue;
-
-    const partHeaderEnd = part.indexOf("\r\n\r\n");
-    const altEnd = part.indexOf("\n\n");
-    let partHeaders: string;
-    let partBody: string;
-
-    if (partHeaderEnd !== -1) {
-      partHeaders = part.substring(0, partHeaderEnd);
-      partBody = part.substring(partHeaderEnd + 4);
-    } else if (altEnd !== -1) {
-      partHeaders = part.substring(0, altEnd);
-      partBody = part.substring(altEnd + 2);
-    } else {
-      continue;
-    }
-
-    // Remove trailing boundary markers
-    const trailingBoundary = partBody.lastIndexOf("\r\n--" + boundary);
-    if (trailingBoundary !== -1) partBody = partBody.substring(0, trailingBoundary);
-
-    const partCt = getHeader(partHeaders, "Content-Type");
-
-    // Nested multipart (e.g. multipart/alternative inside multipart/mixed)
-    const nestedBoundary = partCt.match(/boundary="?([^";\s]+)"?/i);
-    if (nestedBoundary) {
-      const nested = extractFromMultipart(partBody, nestedBoundary[1]);
-      if (nested.plain) plain = nested.plain;
-      if (nested.html) html = nested.html;
-      continue;
-    }
-
-    if (/text\/plain/i.test(partCt) || (!partCt && !plain)) {
-      plain = decodePart(partBody, partHeaders);
-    } else if (/text\/html/i.test(partCt)) {
-      html = decodePart(partBody, partHeaders);
-    }
-  }
-
-  return { plain, html };
-}
-
 /* ── IMAP helpers ── */
-
-async function readResponse(conn: Deno.Conn, decoder: TextDecoder, isComplete: (r: string) => boolean, maxBytes = 512000): Promise<string> {
-  const buf = new Uint8Array(65536);
-  let response = "";
+async function readResponseRaw(conn: Deno.Conn, isComplete: (r: Uint8Array) => boolean, maxBytes = 1024000): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
   let totalBytes = 0;
-  for (let i = 0; i < 500; i++) {
+  const buf = new Uint8Array(65536);
+  
+  for (let i = 0; i < 1000; i++) {
     const n = await conn.read(buf);
     if (n === null) break;
+    const chunk = buf.slice(0, n);
+    chunks.push(chunk);
     totalBytes += n;
-    response += decoder.decode(buf.subarray(0, n));
-    if (isComplete(response)) break;
-    if (totalBytes > maxBytes) break; // safety limit
+    
+    // Check completion using ASCII-safe string conversion
+    const combined = concatUint8Arrays(chunks, totalBytes);
+    if (isComplete(combined)) break;
+    if (totalBytes > maxBytes) break;
   }
-  return response;
+  
+  return concatUint8Arrays(chunks, totalBytes);
 }
 
-async function sendCommand(conn: Deno.Conn, enc: TextEncoder, dec: TextDecoder, tag: string, command: string, maxBytes = 512000): Promise<string> {
+function concatUint8Arrays(arrays: Uint8Array[], totalLength: number): Uint8Array {
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
+}
+
+function uint8Contains(data: Uint8Array, searchStr: string): boolean {
+  const searchBytes = new TextEncoder().encode(searchStr);
+  outer: for (let i = 0; i <= data.length - searchBytes.length; i++) {
+    for (let j = 0; j < searchBytes.length; j++) {
+      if (data[i + j] !== searchBytes[j]) continue outer;
+    }
+    return true;
+  }
+  return false;
+}
+
+async function sendCommandRaw(conn: Deno.Conn, tag: string, command: string, maxBytes = 1024000): Promise<Uint8Array> {
+  const enc = new TextEncoder();
   await conn.write(enc.encode(`${tag} ${command}\r\n`));
-  return readResponse(conn, dec, r => r.includes(`${tag} OK`) || r.includes(`${tag} NO`) || r.includes(`${tag} BAD`), maxBytes);
+  return readResponseRaw(conn, (data) => {
+    return uint8Contains(data, `${tag} OK`) || uint8Contains(data, `${tag} NO`) || uint8Contains(data, `${tag} BAD`);
+  }, maxBytes);
+}
+
+// ASCII-safe string for IMAP protocol parsing (does NOT decode email content)
+function bytesToAscii(data: Uint8Array): string {
+  return new TextDecoder("iso-8859-1").decode(data);
 }
 
 serve(async (req) => {
@@ -225,14 +121,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: email, error: dbErr } = await supabase.from("emails").select("message_id, body_text").eq("id", parsed.data.email_id).single();
+    const { data: email, error: dbErr } = await supabase
+      .from("emails")
+      .select("message_id, body_text, body_html, parse_status")
+      .eq("id", parsed.data.email_id)
+      .single();
+
     if (dbErr || !email) {
       return new Response(JSON.stringify({ error: "Email not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // If body already cached, return it
-    if (email.body_text && email.body_text.length > 20) {
-      return new Response(JSON.stringify({ body_text: email.body_text }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // If already parsed, return cached data
+    if (email.parse_status === "parsed" && (email.body_html || (email.body_text && email.body_text.length > 20))) {
+      return new Response(JSON.stringify({
+        body_text: email.body_text,
+        body_html: email.body_html,
+        parse_status: "parsed",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
@@ -244,19 +149,20 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "IMAP credentials not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Connect to IMAP
     conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
-    const enc = new TextEncoder();
-    const dec = new TextDecoder("utf-8");
-    // Latin-1 decoder preserves raw bytes (0x00-0xFF) for MIME parsing
-    const rawDec = new TextDecoder("iso-8859-1");
+    
+    // Read greeting
+    await readResponseRaw(conn, (d) => uint8Contains(d, "\r\n"), 8192);
 
-    await readResponse(conn, dec, r => r.includes("\r\n"), 8192);
-    const loginRes = await sendCommand(conn, enc, dec, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
-    if (!loginRes.includes("A1 OK")) {
+    // Login
+    const loginRes = await sendCommandRaw(conn, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
+    if (!uint8Contains(loginRes, "A1 OK")) {
       return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    await sendCommand(conn, enc, dec, "A2", "SELECT INBOX", 4096);
+    // Select INBOX
+    await sendCommandRaw(conn, "A2", "SELECT INBOX", 4096);
 
     // Find UID
     let uid: string | null = null;
@@ -264,53 +170,142 @@ serve(async (req) => {
     if (messageId.startsWith("imap-uid-")) {
       uid = messageId.replace("imap-uid-", "");
     } else if (messageId.startsWith("<") || messageId.includes("@")) {
-      const searchRes = await sendCommand(conn, enc, dec, "A3", `UID SEARCH HEADER Message-ID "${messageId}"`, 4096);
+      const searchRes = bytesToAscii(await sendCommandRaw(conn, "A3", `UID SEARCH HEADER Message-ID "${messageId}"`, 4096));
       const searchLine = searchRes.split("\r\n").find(l => l.startsWith("* SEARCH"));
       const uids = searchLine ? searchLine.replace("* SEARCH ", "").trim().split(" ").filter(Boolean) : [];
       uid = uids[0] || null;
     }
 
     if (!uid) {
-      await sendCommand(conn, enc, dec, "A99", "LOGOUT", 1024);
+      await sendCommandRaw(conn, "A99", "LOGOUT", 1024);
       conn.close(); conn = null;
-      return new Response(JSON.stringify({ error: "Could not find email on server", body_text: "" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("emails").update({ parse_status: "failed", parse_error: "Email not found on server" }).eq("id", parsed.data.email_id);
+      return new Response(JSON.stringify({ error: "Could not find email on server" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch the FULL message (RFC822) using Latin-1 decoder to preserve raw bytes
-    const fetchRes = await sendCommand(conn, enc, rawDec, "F1", `UID FETCH ${uid} (BODY.PEEK[])`, 512000);
-
-    await sendCommand(conn, enc, dec, "A99", "LOGOUT", 1024);
+    // Fetch full RFC822 message as raw bytes
+    const fetchResBytes = await sendCommandRaw(conn, "F1", `UID FETCH ${uid} (BODY.PEEK[])`, 1024000);
+    
+    // Logout
+    await sendCommandRaw(conn, "A99", "LOGOUT", 1024);
     conn.close(); conn = null;
 
     // Extract the literal from IMAP response
-    const literalMatch = fetchRes.match(/\{(\d+)\}\r\n/);
-    let bodyText = "";
-    if (literalMatch) {
-      const size = parseInt(literalMatch[1], 10);
-      const start = fetchRes.indexOf(literalMatch[0]) + literalMatch[0].length;
-      const rawMessage = fetchRes.substring(start, start + size);
-
-      // Full MIME parse
-      const { plain, html } = extractTextFromMime(rawMessage);
-      bodyText = plain || (html ? stripHtml(html) : "");
+    const fetchResAscii = bytesToAscii(fetchResBytes);
+    const literalMatch = fetchResAscii.match(/\{(\d+)\}\r\n/);
+    
+    if (!literalMatch) {
+      await supabase.from("emails").update({ parse_status: "failed", parse_error: "Could not extract message from IMAP response" }).eq("id", parsed.data.email_id);
+      return new Response(JSON.stringify({ error: "Failed to extract message" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Clean up
-    bodyText = bodyText
-      .replace(/\u0000/g, "")
-      .replace(/\r/g, "")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
+    const literalSize = parseInt(literalMatch[1], 10);
+    // Find the byte position of the literal start
+    const headerStr = fetchResAscii.substring(0, fetchResAscii.indexOf(literalMatch[0]) + literalMatch[0].length);
+    const headerBytes = new TextEncoder().encode(headerStr).length;
+    // The raw email bytes start right after the literal header
+    // But since we used iso-8859-1 for ASCII parsing, byte positions match char positions
+    const startPos = fetchResAscii.indexOf(literalMatch[0]) + literalMatch[0].length;
+    const rawEmailBytes = fetchResBytes.slice(startPos, startPos + literalSize);
 
-    // Truncate for DB storage (200KB max)
-    if (bodyText.length > 200000) bodyText = bodyText.substring(0, 200000);
+    console.log(`Raw email size: ${rawEmailBytes.length} bytes (expected ${literalSize})`);
 
-    if (bodyText) {
-      await supabase.from("emails").update({ body_text: bodyText }).eq("id", parsed.data.email_id);
+    // Parse with postal-mime (handles all MIME, charset, encoding automatically)
+    const parsedEmail = await PostalMime.parse(rawEmailBytes);
+
+    const bodyText = parsedEmail.text || "";
+    const bodyHtml = parsedEmail.html || "";
+    const bodyCleanText = bodyHtml ? htmlToCleanText(bodyHtml) : bodyText;
+    const detectedCharset = "auto"; // postal-mime handles charset internally
+
+    // Process attachments
+    const attachments = parsedEmail.attachments || [];
+    const hasAttachments = attachments.length > 0;
+    const attachmentRecords: Array<{
+      email_id: string;
+      filename: string | null;
+      mime_type: string | null;
+      size: number;
+      content_disposition: string | null;
+      is_inline: boolean;
+      cid: string | null;
+      storage_path: string | null;
+      parse_status: string;
+    }> = [];
+
+    for (const att of attachments) {
+      const filename = att.filename || `attachment_${Date.now()}`;
+      const mimeType = att.mimeType || "application/octet-stream";
+      const isInline = att.disposition === "inline";
+      const cid = att.contentId || null;
+      const content = att.content; // Uint8Array
+
+      let storagePath: string | null = null;
+      
+      if (content && content.byteLength > 0) {
+        // Upload to storage
+        const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+        storagePath = `${parsed.data.email_id}/${safeName}`;
+        
+        try {
+          const { error: uploadError } = await supabase.storage
+            .from("email-attachments")
+            .upload(storagePath, content, {
+              contentType: mimeType,
+              upsert: true,
+            });
+          
+          if (uploadError) {
+            console.error(`Failed to upload attachment ${filename}:`, uploadError);
+            storagePath = null;
+          }
+        } catch (e) {
+          console.error(`Storage upload error for ${filename}:`, e);
+          storagePath = null;
+        }
+      }
+
+      attachmentRecords.push({
+        email_id: parsed.data.email_id,
+        filename,
+        mime_type: mimeType,
+        size: content?.byteLength || 0,
+        content_disposition: att.disposition || null,
+        is_inline: isInline,
+        cid,
+        storage_path: storagePath,
+        parse_status: storagePath ? "stored" : "failed",
+      });
     }
 
-    return new Response(JSON.stringify({ body_text: bodyText || "(empty email body)" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Save attachments to DB
+    if (attachmentRecords.length > 0) {
+      const { error: attError } = await supabase.from("email_attachments").insert(attachmentRecords);
+      if (attError) console.error("Failed to save attachment records:", attError);
+    }
+
+    // Update email record with parsed content
+    const updateData: Record<string, unknown> = {
+      body_text: bodyText || bodyCleanText || null,
+      body_html: bodyHtml || null,
+      body_clean_text: bodyCleanText || null,
+      charset: detectedCharset,
+      parse_status: "parsed",
+      parse_error: null,
+      has_attachments: hasAttachments,
+    };
+
+    await supabase.from("emails").update(updateData).eq("id", parsed.data.email_id);
+
+    return new Response(JSON.stringify({
+      body_text: bodyText || bodyCleanText,
+      body_html: bodyHtml,
+      body_clean_text: bodyCleanText,
+      parse_status: "parsed",
+      has_attachments: hasAttachments,
+      attachment_count: attachmentRecords.length,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
   } catch (error) {
     console.error("Fetch email body error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
