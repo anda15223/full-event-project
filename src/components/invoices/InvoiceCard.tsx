@@ -157,6 +157,18 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
             </div>
           </div>
 
+          {/* Category badge */}
+          {invoice.category && invoice.category !== "supplier_invoice" && (
+            <div className="mt-2">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/40">
+                {invoice.category === "operating_expense" ? "📱 Bill" :
+                 invoice.category === "equipment" ? "🔧 Equipment" :
+                 invoice.category === "cashflow_pbs" ? "🏦 PBS" :
+                 invoice.category === "rykker" ? "⚠ Rykker" : invoice.category}
+              </span>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border/30">
             <Button
@@ -180,13 +192,24 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
               <PdfUploadButton invoiceId={invoice.id} onUploaded={(url) => setLocalPdfUrl(url)} />
             )}
             {invoice.status !== "paid" && (
-              <Button
-                size="sm"
-                className="rounded-xl text-xs gap-1.5 h-8 bg-success hover:bg-success/90 text-success-foreground"
-                onClick={() => setPreviewOpen(true)}
-              >
-                <CreditCard className="h-3 w-3" /> Review & Pay
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  className="rounded-xl text-xs gap-1.5 h-8 bg-success hover:bg-success/90 text-success-foreground"
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <CreditCard className="h-3 w-3" /> Review & Pay
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl text-xs gap-1.5 h-8 border-success/40 text-success hover:bg-success/10"
+                  onClick={() => markAsPaid.mutate(invoice)}
+                  disabled={markAsPaid.isPending}
+                >
+                  <CreditCard className="h-3 w-3" /> Mark as Paid
+                </Button>
+              </>
             )}
           </div>
         </div>
