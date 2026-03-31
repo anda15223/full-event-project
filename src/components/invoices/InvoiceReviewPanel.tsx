@@ -334,14 +334,9 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                           </Button>
                         </a>
                       </div>
-                      <object
-                        data={pdfUrl}
-                        type="application/pdf"
-                        className="flex-1 w-full border-0"
-                        title="Invoice PDF"
-                      >
-                        <embed src={pdfUrl} type="application/pdf" className="w-full h-full" />
-                      </object>
+                      <div className="flex-1">
+                        <PdfViewer pdfUrl={pdfUrl} />
+                      </div>
                     </div>
                   ) : emailInfo?.body_html || emailInfo?.body_clean_text ? (
                     <div className="h-full rounded-xl border border-border/40 overflow-hidden flex flex-col">
