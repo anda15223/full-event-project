@@ -101,22 +101,26 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
     setCustomLocation(LOCATIONS.includes(inv.location || "") ? "" : (inv.location || ""));
   }, [inv.id]);
 
-  // Load PDF URL — try direct url first, then signed url from attachment
+  // Resolve PDF source — find storage path or attachment ID
   useEffect(() => {
     if (!open) return;
-    setPdfUrl(null);
+    setPdfStoragePath(null);
+    setPdfAttachmentId(null);
     
-    const loadPdf = async () => {
-      // If invoice has a pdf_url, check if it's a storage path or full URL
+    const loadPdfSource = async () => {
+      // If invoice has a pdf_url, extract storage path from it
       if (inv.pdf_url) {
         if (inv.pdf_url.startsWith("http")) {
-          setPdfUrl(inv.pdf_url);
+          // Extract storage path from full URL
+          const match = inv.pdf_url.match(/email-attachments\/(.+)$/);
+          if (match) {
+            setPdfStoragePath(match[1]);
+          } else {
+            // Fallback: use full URL as storage path (might be a different format)
+            setPdfStoragePath(inv.pdf_url);
+          }
         } else {
-          // It's a storage path, create signed URL
-          const { data: signed } = await supabase.storage
-            .from("email-attachments")
-            .createSignedUrl(inv.pdf_url, 3600);
-          if (signed?.signedUrl) setPdfUrl(signed.signedUrl);
+          setPdfStoragePath(inv.pdf_url);
         }
         return;
       }
@@ -125,20 +129,21 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
       if (inv.email_id) {
         const { data } = await supabase
           .from("email_attachments")
-          .select("storage_path, filename")
+          .select("id, storage_path")
           .eq("email_id", inv.email_id!)
           .ilike("mime_type", "%pdf%")
           .limit(1);
-        if (data?.[0]?.storage_path) {
-          const { data: signed } = await supabase.storage
-            .from("email-attachments")
-            .createSignedUrl(data[0].storage_path, 3600);
-          if (signed?.signedUrl) setPdfUrl(signed.signedUrl);
+        if (data?.[0]) {
+          if (data[0].storage_path) {
+            setPdfStoragePath(data[0].storage_path);
+          } else {
+            setPdfAttachmentId(data[0].id);
+          }
         }
       }
     };
     
-    loadPdf();
+    loadPdfSource();
     
     // Load email info
     if (inv.email_id) {
