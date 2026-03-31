@@ -61,22 +61,27 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Filter out emails that already have invoices in the DB
-    const emailIds = emails.map((e: any) => e.id);
-    const { data: existingInvoices } = await supabase
-      .from("invoices").select("email_id").in("email_id", emailIds);
-    const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
-    const toProcess = emailIds.filter((id: string) => !existingIds.has(id));
+    // Filter out emails that already have invoices — but NOT in test mode (we want to see results)
+    let toProcess: string[];
+    if (testMode) {
+      // Test mode: process all fetched emails regardless of existing invoices
+      toProcess = emailIds;
+      console.log(`Test mode: processing all ${toProcess.length} emails (ignoring existing invoices)`);
+    } else {
+      const { data: existingInvoices } = await supabase
+        .from("invoices").select("email_id").in("email_id", emailIds);
+      const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
+      toProcess = emailIds.filter((id: string) => !existingIds.has(id));
 
-    console.log(`Batch offset=${offset}: ${emails.length} invoice emails fetched, ${existingIds.size} already have invoices, ${toProcess.length} to process`);
+      console.log(`Batch offset=${offset}: ${emails.length} invoice emails fetched, ${existingIds.size} already have invoices, ${toProcess.length} to process`);
 
-    // If all already processed, return with next offset so frontend advances
-    if (toProcess.length === 0) {
-      return new Response(JSON.stringify({
-        processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
-        message: "All emails in this batch already have invoices",
-        next_offset: offset + batchSize,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (toProcess.length === 0) {
+        return new Response(JSON.stringify({
+          processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
+          message: "All emails in this batch already have invoices",
+          next_offset: offset + batchSize,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     let extracted = 0;
