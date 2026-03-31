@@ -65,11 +65,8 @@ function isRykker(subject: string | null, bodyText: string | null): boolean {
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
   const sn = (supplierName || "").toLowerCase();
-  
-  // Check supplier overrides first
   for (const [key, val] of Object.entries(SUPPLIER_COMPANY_OVERRIDES)) {
     if (sn.includes(key)) {
-      // For Jeka Fish, resolve location based on delivery address
       if (key.includes("jeka")) {
         const loc = (location || "").toLowerCase();
         const resolvedLocation = (loc.includes("aarhus") || loc.includes("århus"))
@@ -80,7 +77,6 @@ function resolveCompany(supplierName: string | null, location: string | null, em
       return val;
     }
   }
-  
   const loc = (location || "").toLowerCase();
   for (const [key, company] of Object.entries(LOCATION_COMPANY_MAP)) {
     if (loc.includes(key)) return { company, location };
@@ -92,28 +88,14 @@ function resolveCompany(supplierName: string | null, location: string | null, em
 function assignCategory(invoiceData: any): string {
   const supplier = (invoiceData.supplier_name || "").toLowerCase();
   const bought = (invoiceData.what_was_bought || "").toLowerCase();
-
-  // Phone bills
   if (["lebara", "tdc", "telenor", "yousee", "3 denmark", "one.com"].some(s => supplier.includes(s))) {
     invoiceData.what_was_bought = invoiceData.what_was_bought || "Phone/Communication bill";
     return "operating_expense";
   }
-  // Equipment
-  if (supplier.includes("larsen") || bought.includes("equipment") || bought.includes("udstyr")) {
-    return "equipment";
-  }
-  // Subscriptions
-  if (["esmiley", "subscription", "abonnement"].some(s => supplier.includes(s) || bought.includes(s))) {
-    return "operating_expense";
-  }
-  // Rykker
-  if (invoiceData.extraction_notes?.toLowerCase().includes("rykker") || invoiceData.status === "overdue") {
-    return "rykker";
-  }
-  // PBS
-  if (["pbs", "direct debit"].some(s => (invoiceData.payment_method || "").toLowerCase().includes(s))) {
-    return "cashflow_pbs";
-  }
+  if (supplier.includes("larsen") || bought.includes("equipment") || bought.includes("udstyr")) return "equipment";
+  if (["esmiley", "subscription", "abonnement"].some(s => supplier.includes(s) || bought.includes(s))) return "operating_expense";
+  if (invoiceData.extraction_notes?.toLowerCase().includes("rykker") || invoiceData.status === "overdue") return "rykker";
+  if (["pbs", "direct debit"].some(s => (invoiceData.payment_method || "").toLowerCase().includes(s))) return "cashflow_pbs";
   return "supplier_invoice";
 }
 
@@ -128,6 +110,20 @@ function looksLikeInvoiceContent(text: string): boolean {
   const hasAmount = AMOUNT_PATTERN.test(text);
   const hasDate = DATE_PATTERN.test(text);
   return (hasKeyword && hasAmount) || (hasKeyword && hasDate) || (hasAmount && hasDate);
+}
+
+/* ── Error categorization ── */
+type ErrorCategory = "pdf_too_large" | "json_parse" | "attachment_download" | "claude_timeout" | "rate_limit" | "no_content" | "other";
+
+function categorizeError(error: string): ErrorCategory {
+  const e = (error || "").toLowerCase();
+  if (e.includes("timeout") || e.includes("timed out") || e.includes("deadline")) return "claude_timeout";
+  if (e.includes("rate") || e.includes("429") || e.includes("too many")) return "rate_limit";
+  if (e.includes("parse") || e.includes("json") || e.includes("unexpected token")) return "json_parse";
+  if (e.includes("download") || e.includes("storage") || e.includes("no data")) return "attachment_download";
+  if (e.includes("too large") || e.includes("token") || e.includes("maximum")) return "pdf_too_large";
+  if (e.includes("no body") || e.includes("no text") || e.includes("empty") || e.includes("no invoice")) return "no_content";
+  return "other";
 }
 
 const CLAUDE_EXTRACTION_PROMPT = `Extract invoice data from the text. Return ONLY valid JSON, no markdown.
@@ -149,35 +145,67 @@ Return:
 
 If NOT an invoice: {"is_invoice":false,"confidence":0,"extraction_notes":"reason"}`;
 
-/* ── Call Claude via direct fetch (no SDK needed) ── */
+/* ── Robust JSON parsing (handles markdown, trailing commas, etc) ── */
+function parseClaudeJson(text: string): any {
+  let cleaned = text
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+  const jsonStart = cleaned.search(/[\{\[]/);
+  const jsonEnd = cleaned.lastIndexOf('}');
+  if (jsonStart !== -1 && jsonEnd !== -1) {
+    cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+  }
+  cleaned = cleaned
+    .replace(/,\s*}/g, "}")
+    .replace(/,\s*]/g, "]")
+    .replace(/[\x00-\x1F\x7F]/g, "");
+  return JSON.parse(cleaned);
+}
+
+/* ── Call Claude with timeout ── */
+const CLAUDE_TIMEOUT_MS = 25000;
+const MAX_PDF_CHARS = 8000;
+const MAX_BODY_CHARS = 3000;
+
 async function callClaude(apiKey: string, messages: Array<{ role: string; content: any }>, maxTokens = 500): Promise<any> {
   console.log("Calling Claude API with model claude-sonnet-4-20250514...");
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: maxTokens,
-      messages,
-    }),
-  });
-
-  const responseText = await response.text();
   
-  if (!response.ok) {
-    console.error("Claude API HTTP error:", response.status, responseText);
-    throw new Error(`Claude API error ${response.status}: ${responseText.substring(0, 500)}`);
-  }
-
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
+  
   try {
-    return JSON.parse(responseText);
-  } catch {
-    console.error("Claude response not JSON:", responseText.substring(0, 500));
-    throw new Error("Claude returned non-JSON response");
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: maxTokens,
+        messages,
+      }),
+      signal: controller.signal,
+    });
+
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      if (response.status === 429) throw new Error("Rate limit (429)");
+      console.error("Claude API HTTP error:", response.status, responseText.substring(0, 300));
+      throw new Error(`Claude API error ${response.status}: ${responseText.substring(0, 200)}`);
+    }
+
+    try {
+      return JSON.parse(responseText);
+    } catch {
+      console.error("Claude response not JSON:", responseText.substring(0, 300));
+      throw new Error("Claude returned non-JSON response");
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -198,15 +226,13 @@ serve(async (req) => {
     
     const claudeKey = Deno.env.get("aiagents") || Deno.env.get("AIAGENTS");
     if (!claudeKey) {
-      console.error("aiagents/AIAGENTS secret not found in environment");
       return new Response(JSON.stringify({ error: "Claude API key (aiagents) not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log("Claude API key found, length:", claudeKey.length);
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
+    const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> = [];
 
     if (parsed.data.attachment_id) {
       const { data: att, error } = await supabase
@@ -240,7 +266,8 @@ serve(async (req) => {
             const result = await processEmail(supabase, emailId, supabaseUrl, claudeKey);
             results.push(...result);
           } catch (err) {
-            results.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown" });
+            const errMsg = err instanceof Error ? err.message : "Unknown";
+            results.push({ email_id: emailId, status: "error", error: errMsg, error_category: categorizeError(errMsg) });
           }
         }
       }
@@ -250,6 +277,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ message: "No items to process", results: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Add error_category to all error results
+    for (const r of results) {
+      if (r.status === "error" && r.error && !r.error_category) {
+        r.error_category = categorizeError(r.error);
+      }
     }
 
     const extracted = results.filter(r => r.status === "extracted").length;
@@ -269,8 +303,8 @@ serve(async (req) => {
 /* ── Process a full email ── */
 async function processEmail(
   supabase: any, emailId: string, supabaseUrl: string, claudeKey: string
-): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string }>> {
-  const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
+): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }>> {
+  const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> = [];
 
   const { data: atts } = await supabase
     .from("email_attachments").select("*").eq("email_id", emailId).eq("is_inline", false);
@@ -286,12 +320,20 @@ async function processEmail(
   let extractedFromAttachment = false;
   for (const att of docAtts) {
     if (att.storage_path) {
-      const result = await processAttachment(supabase, att, supabaseUrl, claudeKey);
-      results.push(result);
-      if (result.status === "extracted") extractedFromAttachment = true;
+      try {
+        const result = await processAttachment(supabase, att, supabaseUrl, claudeKey);
+        results.push(result);
+        if (result.status === "extracted") extractedFromAttachment = true;
+      } catch (attachError) {
+        // Error C — Don't fail entire email if attachment fails
+        const errMsg = attachError instanceof Error ? attachError.message : "Attachment processing failed";
+        console.warn(`⚠ Attachment ${att.id} failed, falling back to body: ${errMsg}`);
+        results.push({ email_id: att.email_id, attachment_id: att.id, status: "error", error: errMsg, error_category: categorizeError(errMsg) });
+      }
     }
   }
 
+  // Fall back to email body if no attachment extracted
   if (!extractedFromAttachment) {
     const result = await processEmailBody(supabase, emailId, claudeKey);
     results.push(result);
@@ -303,28 +345,26 @@ async function processEmail(
 /* ── Extract from email body ── */
 async function processEmailBody(
   supabase: any, emailId: string, claudeKey: string
-): Promise<{ email_id: string; status: string; error?: string }> {
+): Promise<{ email_id: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> {
   const { data: email } = await supabase
     .from("emails")
     .select("subject, sender, company, body_clean_text, body_text, received_at")
     .eq("id", emailId).single();
 
-  if (!email) return { email_id: emailId, status: "error", error: "Email not found" };
+  if (!email) return { email_id: emailId, status: "error", error: "Email not found", error_category: "other" };
 
-  // Check ignore rules
   if (shouldIgnore(email.sender, email.subject, email.body_clean_text || email.body_text)) {
-    console.log(`Ignoring email ${emailId}: matches ignore rule (Livet på Øen / kontoudtog)`);
     return { email_id: emailId, status: "ignored", error: "Matched ignore rule" };
   }
 
   const bodyText = email.body_clean_text || email.body_text || "";
   if (!bodyText || bodyText.trim().length < 20) {
-    return { email_id: emailId, status: "skipped", error: "No body text" };
+    return { email_id: emailId, status: "skipped", error: "No body text", error_category: "no_content" };
   }
 
   const fullText = `${email.subject || ""} ${bodyText}`;
   if (!looksLikeInvoiceContent(fullText)) {
-    return { email_id: emailId, status: "skipped", error: "No invoice-like content in body" };
+    return { email_id: emailId, status: "skipped", error: "No invoice-like content in body", error_category: "no_content" };
   }
 
   const emailContext = [
@@ -334,9 +374,10 @@ async function processEmailBody(
     `Date: ${email.received_at || ""}`,
   ].join("\n");
 
+  // Error A — Truncate body text
   return await callClaudeExtraction(
     supabase, emailId, null, null,
-    bodyText.substring(0, 15000), emailContext,
+    bodyText.substring(0, MAX_BODY_CHARS), emailContext,
     email.company, claudeKey
   );
 }
@@ -344,33 +385,37 @@ async function processEmailBody(
 /* ── Process a single attachment ── */
 async function processAttachment(
   supabase: any, att: any, supabaseUrl: string, claudeKey: string
-): Promise<{ email_id: string; attachment_id: string; status: string; error?: string }> {
+): Promise<{ email_id: string; attachment_id: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> {
   if (!att.storage_path) {
-    console.log(`Attachment ${att.id}: no storage_path, skipping`);
-    return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path" };
+    return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path", error_category: "attachment_download" };
   }
 
   // Check if PDF text was already extracted — use cached text
   if (att.extracted_text && att.extracted_text.length > 100) {
     console.log(`Using cached extracted text for ${att.id} (${att.extracted_text.length} chars)`);
-    const mt = (att.mime_type || "").toLowerCase();
     const pdfUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${att.storage_path}`;
     const emailContext = await getEmailContext(supabase, att.email_id);
     const { data: parentEmail } = await supabase.from("emails").select("company").eq("id", att.email_id).single();
     return await callClaudeExtraction(
       supabase, att.email_id, att.id, pdfUrl,
-      att.extracted_text.substring(0, 15000), emailContext,
+      att.extracted_text.substring(0, MAX_PDF_CHARS), emailContext,
       parentEmail?.company, claudeKey
     );
   }
 
+  // Error C — Graceful attachment download
   console.log(`Downloading attachment ${att.id} from ${att.storage_path}`);
-  const { data: fileData, error: dlError } = await supabase.storage
-    .from("email-attachments").download(att.storage_path);
-
-  if (dlError || !fileData) {
-    console.error(`Download failed for ${att.id}:`, dlError);
-    return { email_id: att.email_id, attachment_id: att.id, status: "error", error: `Download failed: ${dlError?.message || "no data"}` };
+  let fileData: any;
+  try {
+    const result = await supabase.storage.from("email-attachments").download(att.storage_path);
+    if (result.error || !result.data) {
+      throw new Error(`Download failed: ${result.error?.message || "no data"}`);
+    }
+    fileData = result.data;
+  } catch (dlErr) {
+    const errMsg = dlErr instanceof Error ? dlErr.message : "Download failed";
+    console.warn(`⚠ PDF download failed for ${att.id}: ${errMsg}`);
+    return { email_id: att.email_id, attachment_id: att.id, status: "error", error: errMsg, error_category: "attachment_download" };
   }
 
   const mt = (att.mime_type || "").toLowerCase();
@@ -383,11 +428,26 @@ async function processAttachment(
     const bytes = new Uint8Array(arrayBuffer);
     console.log(`PDF attachment ${att.id}: ${bytes.length} bytes`);
 
+    // Error A — Check PDF size limit (5MB max for base64 to Claude)
+    if (bytes.length > 5 * 1024 * 1024) {
+      console.warn(`⚠ PDF too large for Claude: ${att.id} (${bytes.length} bytes)`);
+      // Try basic text extraction as fallback
+      const basicText = tryExtractPdfText(bytes);
+      if (basicText && basicText.trim().length > 100) {
+        return await callClaudeExtraction(
+          supabase, att.email_id, att.id, pdfUrl,
+          basicText.substring(0, MAX_PDF_CHARS), emailContext,
+          parentEmail?.company, claudeKey
+        );
+      }
+      return { email_id: att.email_id, attachment_id: att.id, status: "error", error: "PDF too large for Claude API", error_category: "pdf_too_large" };
+    }
+
     // Step 1: Try basic regex text extraction
     let basicText = tryExtractPdfText(bytes);
     console.log(`Basic PDF extraction for ${att.id}: ${basicText.length} chars`);
 
-    // Step 2: If basic extraction got decent text, use it for Claude structured extraction
+    // Step 2: If basic extraction got decent text, use it
     if (basicText && basicText.trim().length > 100) {
       console.log(`Using basic extracted text for ${att.id}`);
       await supabase.from("email_attachments").update({
@@ -396,12 +456,12 @@ async function processAttachment(
 
       return await callClaudeExtraction(
         supabase, att.email_id, att.id, pdfUrl,
-        basicText.substring(0, 15000), emailContext,
+        basicText.substring(0, MAX_PDF_CHARS), emailContext,
         parentEmail?.company, claudeKey
       );
     }
 
-    // Step 3: Send PDF directly to Claude as a document (handles scanned + digital PDFs)
+    // Step 3: Send PDF directly to Claude as a document
     console.log(`Basic extraction insufficient for ${att.id}, sending PDF to Claude document API`);
     try {
       let base64 = "";
@@ -412,7 +472,6 @@ async function processAttachment(
       }
       base64 = btoa(base64);
 
-      // Use Claude's document type for native PDF reading
       const claudeResponse = await callClaude(claudeKey, [{
         role: "user",
         content: [
@@ -430,46 +489,27 @@ async function processAttachment(
       const responseText = claudeResponse.content?.[0]?.text || "";
       console.log(`Claude PDF response for ${att.id}:`, responseText.substring(0, 500));
 
-      // Save extracted text from Claude
       await supabase.from("email_attachments").update({
         extracted_text: responseText.substring(0, 50000),
-        document_type: "invoice",
-        parse_status: "extracted",
-        parse_error: null,
+        document_type: "invoice", parse_status: "extracted", parse_error: null,
       }).eq("id", att.id);
 
-      // Parse Claude's JSON response with robust extraction
+      // Error B — Robust JSON parsing
       let invoiceData: any = null;
       try {
-        let cleaned = responseText
-          .replace(/```json\s*/gi, "")
-          .replace(/```\s*/g, "")
-          .trim();
-        const jsonStart = cleaned.search(/[\{\[]/);
-        const jsonEnd = cleaned.lastIndexOf('}');
-        if (jsonStart !== -1 && jsonEnd !== -1) {
-          cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
-        }
-        cleaned = cleaned.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, "");
-        invoiceData = JSON.parse(cleaned);
+        invoiceData = parseClaudeJson(responseText);
       } catch (parseErr) {
         console.error(`Failed to parse Claude PDF response for ${att.id}:`, parseErr instanceof Error ? parseErr.message : parseErr);
+        // Fallback: try extraction from the text Claude returned
         return await callClaudeExtraction(
           supabase, att.email_id, att.id, pdfUrl,
-          responseText.substring(0, 15000), emailContext,
+          responseText.substring(0, MAX_PDF_CHARS), emailContext,
           parentEmail?.company, claudeKey
         );
       }
 
-      // Debug logging
-      console.log(`=== PDF PARSED KEYS for ${att.id} ===`, Object.keys(invoiceData));
-      console.log(`=== PDF is_invoice ===`, typeof invoiceData.is_invoice, invoiceData.is_invoice);
-
-      // Handle is_invoice as string OR boolean
       const isNotInvoice = invoiceData.is_invoice === false || invoiceData.is_invoice === "false";
-
       if (!invoiceData || isNotInvoice) {
-        console.log(`⏭ PDF not invoice: ${att.id} — ${invoiceData?.extraction_notes || "no notes"}`);
         return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
       }
 
@@ -483,61 +523,17 @@ async function processAttachment(
         extracted_summary: invoiceData.what_was_bought || `Invoice from ${invoiceData.supplier_name || "unknown"}`,
       }).eq("id", att.id);
 
-      // Upsert email_invoices
-      const { data: existing } = await supabase.from("email_invoices").select("id").eq("email_id", att.email_id).limit(1);
-      const emailInvoiceRecord = {
-        email_id: att.email_id,
-        supplier_name: invoiceData.supplier_name || null,
-        invoice_number: invoiceData.invoice_number || null,
-        invoice_date: invoiceData.invoice_date || null,
-        due_date: invoiceData.due_date || null,
-        amount: invoiceData.amount || null,
-        currency: invoiceData.currency || "DKK",
-        vat: invoiceData.vat_amount || null,
-        attachment_present: true,
-        company: mapped.company,
-      };
-      if (existing && existing.length > 0) {
-        await supabase.from("email_invoices").update(emailInvoiceRecord).eq("id", existing[0].id);
-      } else {
-        await supabase.from("email_invoices").insert(emailInvoiceRecord);
-      }
-
-      // Upsert invoices
-      const { data: existingInvoice } = await supabase.from("invoices").select("id").eq("email_id", att.email_id).limit(1);
-      const invoiceRecord = {
-        email_id: att.email_id,
-        supplier_name: invoiceData.supplier_name || null,
-        invoice_number: invoiceData.invoice_number || null,
-        invoice_date: invoiceData.invoice_date || null,
-        due_date: invoiceData.due_date || null,
-        amount: invoiceData.amount || null,
-        total_with_vat: invoiceData.total_with_vat || invoiceData.amount || null,
-        vat_amount: invoiceData.vat_amount || null,
-        currency: invoiceData.currency || "DKK",
-        what_was_bought: invoiceData.what_was_bought || null,
-        company: mapped.company,
-        location: mapped.location || invoiceData.location || null,
-        source_type: invoiceData.source_type || "email",
-        status,
-        confidence,
-        pdf_url: pdfUrl,
-        payment_account: invoiceData.payment_account || null,
-        payment_reference: invoiceData.payment_reference || null,
-        category,
-      };
-      if (existingInvoice && existingInvoice.length > 0) {
-        await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
-      } else {
-        await supabase.from("invoices").insert(invoiceRecord);
-      }
+      // Upsert email_invoices + invoices
+      await upsertInvoice(supabase, att.email_id, att.id, invoiceData, mapped, category, status, confidence, pdfUrl);
 
       console.log(`✅ PDF extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}`);
       return { email_id: att.email_id, attachment_id: att.id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence };
 
     } catch (e) {
-      console.error(`Claude document API error for ${att.id}:`, e instanceof Error ? e.message : JSON.stringify(e));
-      return { email_id: att.email_id, attachment_id: att.id, status: "error", error: `Claude PDF error: ${e instanceof Error ? e.message : "unknown"}` };
+      const errMsg = e instanceof Error ? e.message : "unknown";
+      const cat = errMsg.includes("abort") ? "claude_timeout" as ErrorCategory : categorizeError(errMsg);
+      console.error(`Claude document API error for ${att.id}:`, errMsg);
+      return { email_id: att.email_id, attachment_id: att.id, status: "error", error: `Claude PDF error: ${errMsg}`, error_category: cat };
     }
   }
 
@@ -549,7 +545,7 @@ async function processAttachment(
     await supabase.from("email_attachments").update({
       extracted_text: "(empty)", parse_error: "Could not extract text", document_type: "invoice",
     }).eq("id", att.id);
-    return { email_id: att.email_id, attachment_id: att.id, status: "empty", error: "No text extracted" };
+    return { email_id: att.email_id, attachment_id: att.id, status: "empty", error: "No text extracted", error_category: "no_content" };
   }
 
   await supabase.from("email_attachments").update({
@@ -558,7 +554,7 @@ async function processAttachment(
 
   return await callClaudeExtraction(
     supabase, att.email_id, att.id, pdfUrl,
-    extractedText.substring(0, 15000), emailContext,
+    extractedText.substring(0, MAX_PDF_CHARS), emailContext,
     parentEmail?.company, claudeKey
   );
 }
@@ -568,7 +564,7 @@ async function callClaudeExtraction(
   supabase: any, emailId: string, attachmentId: string | null, pdfUrl: string | null,
   text: string, emailContext: string, emailCompany: string | null,
   claudeKey: string
-): Promise<{ email_id: string; attachment_id?: string; status: string; error?: string }> {
+): Promise<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> {
   const id = { email_id: emailId, ...(attachmentId ? { attachment_id: attachmentId } : {}) };
 
   try {
@@ -582,55 +578,26 @@ async function callClaudeExtraction(
     const responseText = claudeData.content?.[0]?.text || "";
     console.log(`Claude response for ${emailId}:`, responseText.substring(0, 500));
 
+    // Error B — Robust JSON parsing
     let invoiceData: any = null;
     try {
-      // Strip markdown code blocks if present (Bug B)
-      let cleaned = responseText
-        .replace(/```json\s*/gi, "")
-        .replace(/```\s*/g, "")
-        .trim();
-      // Find JSON boundaries
-      const jsonStart = cleaned.search(/[\{\[]/);
-      const jsonEnd = cleaned.lastIndexOf('}');
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
-      }
-      // Fix common JSON issues
-      cleaned = cleaned
-        .replace(/,\s*}/g, "}")
-        .replace(/,\s*]/g, "]")
-        .replace(/[\x00-\x1F\x7F]/g, "");
-      invoiceData = JSON.parse(cleaned);
+      invoiceData = parseClaudeJson(responseText);
     } catch (parseErr) {
       console.error("Failed to parse Claude response as JSON:", responseText.substring(0, 300));
-      console.error("Parse error:", parseErr instanceof Error ? parseErr.message : parseErr);
-      return { ...id, status: "error", error: "Could not parse Claude response" };
+      return { ...id, status: "error", error: "JSON parse failed: " + (parseErr instanceof Error ? parseErr.message : "invalid"), error_category: "json_parse" };
     }
 
-    // Debug logging for is_invoice check (Bug A + Bug C)
-    console.log(`=== PARSED JSON KEYS for ${emailId} ===`, Object.keys(invoiceData));
-    console.log(`=== is_invoice ===`, typeof invoiceData.is_invoice, invoiceData.is_invoice);
-    console.log(`=== confidence ===`, typeof invoiceData.confidence, invoiceData.confidence);
-
-    // Handle is_invoice as string OR boolean (Bug A)
-    const isInvoice = invoiceData.is_invoice === true || invoiceData.is_invoice === "true";
     const isNotInvoice = invoiceData.is_invoice === false || invoiceData.is_invoice === "false";
-
     if (!invoiceData || isNotInvoice) {
-      console.log(`⏭ Not an invoice: ${emailId} — ${invoiceData?.extraction_notes || "no notes"}`);
       return { ...id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
     }
 
-    // Check ignore rules on extracted supplier
     if (shouldIgnore(invoiceData.supplier_name, null, text)) {
-      console.log(`Ignoring extraction for ${emailId}: supplier matched ignore rule`);
       return { ...id, status: "ignored", error: "Supplier matched ignore rule" };
     }
 
-    // Apply company mapping rules
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
     const category = assignCategory(invoiceData);
-
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
     const rykkerDetected = isRykker(emailContext, text);
     const finalCategory = rykkerDetected ? "rykker" : category;
@@ -644,63 +611,75 @@ async function callClaudeExtraction(
       }).eq("id", attachmentId);
     }
 
-    // Upsert email_invoices
-    const { data: existing } = await supabase.from("email_invoices").select("id").eq("email_id", emailId).limit(1);
-    const emailInvoiceRecord = {
-      email_id: emailId,
-      supplier_name: invoiceData.supplier_name || null,
-      invoice_number: invoiceData.invoice_number || null,
-      invoice_date: invoiceData.invoice_date || null,
-      due_date: invoiceData.due_date || null,
-      amount: invoiceData.amount || null,
-      currency: invoiceData.currency || "DKK",
-      vat: invoiceData.vat_amount || null,
-      attachment_present: !!attachmentId,
-      company: mapped.company,
-    };
-    if (existing && existing.length > 0) {
-      await supabase.from("email_invoices").update(emailInvoiceRecord).eq("id", existing[0].id);
-    } else {
-      await supabase.from("email_invoices").insert(emailInvoiceRecord);
-    }
-
-    // Upsert invoices
-    const { data: existingInvoice } = await supabase.from("invoices").select("id").eq("email_id", emailId).limit(1);
-    const invoiceRecord = {
-      email_id: emailId,
-      supplier_name: invoiceData.supplier_name || null,
-      invoice_number: invoiceData.invoice_number || null,
-      invoice_date: invoiceData.invoice_date || null,
-      due_date: invoiceData.due_date || null,
-      amount: invoiceData.amount || null,
-      total_with_vat: invoiceData.total_with_vat || invoiceData.amount || null,
-      vat_amount: invoiceData.vat_amount || null,
-      currency: invoiceData.currency || "DKK",
-      what_was_bought: invoiceData.what_was_bought || null,
-      company: mapped.company,
-      location: mapped.location || invoiceData.location || null,
-      source_type: invoiceData.source_type || "email",
-      status,
-      confidence,
-      overdue_flag: rykkerDetected || false,
-      pdf_url: pdfUrl,
-      payment_account: invoiceData.payment_account || null,
-      payment_reference: invoiceData.payment_reference || null,
-      notes,
-      category: finalCategory,
-    };
-    if (existingInvoice && existingInvoice.length > 0) {
-      await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
-    } else {
-      await supabase.from("invoices").insert(invoiceRecord);
-    }
+    await upsertInvoice(supabase, emailId, attachmentId, invoiceData, mapped, finalCategory, status, confidence, pdfUrl, notes, rykkerDetected);
 
     console.log(`✅ Extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, confidence=${confidence}, status=${status}`);
     return { ...id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence };
 
   } catch (err) {
-    console.error("Claude extraction error for", emailId, ":", err instanceof Error ? err.message : JSON.stringify(err));
-    return { ...id, status: "error", error: err instanceof Error ? err.message : "Claude API error" };
+    const errMsg = err instanceof Error ? err.message : "Claude API error";
+    const cat = errMsg.includes("abort") ? "claude_timeout" as ErrorCategory : categorizeError(errMsg);
+    console.error("Claude extraction error for", emailId, ":", errMsg);
+    return { ...id, status: "error", error: errMsg, error_category: cat };
+  }
+}
+
+/* ── Shared upsert helper ── */
+async function upsertInvoice(
+  supabase: any, emailId: string, attachmentId: string | null,
+  invoiceData: any, mapped: { company: string | null; location: string | null },
+  category: string, status: string, confidence: number, pdfUrl: string | null,
+  notes?: string | null, rykkerDetected?: boolean
+) {
+  // Upsert email_invoices
+  const { data: existing } = await supabase.from("email_invoices").select("id").eq("email_id", emailId).limit(1);
+  const emailInvoiceRecord = {
+    email_id: emailId,
+    supplier_name: invoiceData.supplier_name || null,
+    invoice_number: invoiceData.invoice_number || null,
+    invoice_date: invoiceData.invoice_date || null,
+    due_date: invoiceData.due_date || null,
+    amount: invoiceData.amount || null,
+    currency: invoiceData.currency || "DKK",
+    vat: invoiceData.vat_amount || null,
+    attachment_present: !!attachmentId,
+    company: mapped.company,
+  };
+  if (existing && existing.length > 0) {
+    await supabase.from("email_invoices").update(emailInvoiceRecord).eq("id", existing[0].id);
+  } else {
+    await supabase.from("email_invoices").insert(emailInvoiceRecord);
+  }
+
+  // Upsert invoices
+  const { data: existingInvoice } = await supabase.from("invoices").select("id").eq("email_id", emailId).limit(1);
+  const invoiceRecord = {
+    email_id: emailId,
+    supplier_name: invoiceData.supplier_name || null,
+    invoice_number: invoiceData.invoice_number || null,
+    invoice_date: invoiceData.invoice_date || null,
+    due_date: invoiceData.due_date || null,
+    amount: invoiceData.amount || null,
+    total_with_vat: invoiceData.total_with_vat || invoiceData.amount || null,
+    vat_amount: invoiceData.vat_amount || null,
+    currency: invoiceData.currency || "DKK",
+    what_was_bought: invoiceData.what_was_bought || null,
+    company: mapped.company,
+    location: mapped.location || invoiceData.location || null,
+    source_type: invoiceData.source_type || "email",
+    status,
+    confidence,
+    overdue_flag: rykkerDetected || false,
+    pdf_url: pdfUrl,
+    payment_account: invoiceData.payment_account || null,
+    payment_reference: invoiceData.payment_reference || null,
+    notes: notes || null,
+    category,
+  };
+  if (existingInvoice && existingInvoice.length > 0) {
+    await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
+  } else {
+    await supabase.from("invoices").insert(invoiceRecord);
   }
 }
 
