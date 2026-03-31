@@ -59,13 +59,13 @@ export function EmailCard({ email, index, isSelected, sectionKey, onSelect }: Em
       {/* Bottom: company + priority badge + date */}
       <div className="flex items-center gap-2 pl-5 flex-wrap">
         {email.company && (
-          <Badge variant="outline" className="text-[10px] h-5 rounded-lg border-border/40 gap-1 px-2">
+          <span className="inline-flex items-center gap-1 text-[10px] h-5 rounded-lg border border-border/40 px-2 font-medium">
             <Building2 className="h-3 w-3" /> {email.company}
-          </Badge>
+          </span>
         )}
-        <Badge variant="outline" className={`text-[10px] h-5 rounded-lg border-0 ${pConfig.bg} ${pConfig.text} px-2`}>
+        <span className={`inline-flex items-center text-[10px] h-5 rounded-lg font-medium ${pConfig.bg} ${pConfig.text} px-2`}>
           {pConfig.label}
-        </Badge>
+        </span>
         {email.received_at && (
           <span className="text-[10px] text-muted-foreground/50 ml-auto">
             {new Date(email.received_at).toLocaleDateString()}
