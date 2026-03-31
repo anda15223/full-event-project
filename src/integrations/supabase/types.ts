@@ -293,6 +293,223 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount: number | null
+          company: string | null
+          confidence: number | null
+          created_at: string
+          currency: string | null
+          due_date: string | null
+          email_id: string | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          location: string | null
+          notes: string | null
+          overdue_flag: boolean | null
+          payment_account: string | null
+          payment_reference: string | null
+          pdf_url: string | null
+          source_type: string | null
+          status: string | null
+          supplier_name: string | null
+          total_with_vat: number | null
+          vat_amount: number | null
+          what_was_bought: string | null
+        }
+        Insert: {
+          amount?: number | null
+          company?: string | null
+          confidence?: number | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          email_id?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          location?: string | null
+          notes?: string | null
+          overdue_flag?: boolean | null
+          payment_account?: string | null
+          payment_reference?: string | null
+          pdf_url?: string | null
+          source_type?: string | null
+          status?: string | null
+          supplier_name?: string | null
+          total_with_vat?: number | null
+          vat_amount?: number | null
+          what_was_bought?: string | null
+        }
+        Update: {
+          amount?: number | null
+          company?: string | null
+          confidence?: number | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          email_id?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          location?: string | null
+          notes?: string | null
+          overdue_flag?: boolean | null
+          payment_account?: string | null
+          payment_reference?: string | null
+          pdf_url?: string | null
+          source_type?: string | null
+          status?: string | null
+          supplier_name?: string | null
+          total_with_vat?: number | null
+          vat_amount?: number | null
+          what_was_bought?: string | null
+        }
+        Relationships: []
+      }
+      ledger: {
+        Row: {
+          amount: number | null
+          company: string | null
+          created_at: string
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          location: string | null
+          paid_date: string | null
+          payment_reference: string | null
+          supplier_name: string | null
+          total_with_vat: number | null
+          vat_amount: number | null
+          what_was_bought: string | null
+        }
+        Insert: {
+          amount?: number | null
+          company?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          location?: string | null
+          paid_date?: string | null
+          payment_reference?: string | null
+          supplier_name?: string | null
+          total_with_vat?: number | null
+          vat_amount?: number | null
+          what_was_bought?: string | null
+        }
+        Update: {
+          amount?: number | null
+          company?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          location?: string | null
+          paid_date?: string | null
+          payment_reference?: string | null
+          supplier_name?: string | null
+          total_with_vat?: number | null
+          vat_amount?: number | null
+          what_was_bought?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_corrections: {
+        Row: {
+          created_at: string
+          field_corrected: string | null
+          id: string
+          invoice_id: string | null
+          new_value: string | null
+          old_value: string | null
+          supplier_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_corrected?: string | null
+          id?: string
+          invoice_id?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          supplier_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_corrected?: string | null
+          id?: string
+          invoice_id?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          supplier_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_corrections_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          correction_count: number | null
+          created_at: string
+          email_domain: string | null
+          id: string
+          is_web_order_supplier: boolean | null
+          known_companies: string[] | null
+          known_locations: string[] | null
+          name: string
+          notes: string | null
+          payment_account: string | null
+          payment_terms: string | null
+          reconcile_with: string | null
+          vat_included: boolean | null
+        }
+        Insert: {
+          correction_count?: number | null
+          created_at?: string
+          email_domain?: string | null
+          id?: string
+          is_web_order_supplier?: boolean | null
+          known_companies?: string[] | null
+          known_locations?: string[] | null
+          name: string
+          notes?: string | null
+          payment_account?: string | null
+          payment_terms?: string | null
+          reconcile_with?: string | null
+          vat_included?: boolean | null
+        }
+        Update: {
+          correction_count?: number | null
+          created_at?: string
+          email_domain?: string | null
+          id?: string
+          is_web_order_supplier?: boolean | null
+          known_companies?: string[] | null
+          known_locations?: string[] | null
+          name?: string
+          notes?: string | null
+          payment_account?: string | null
+          payment_terms?: string | null
+          reconcile_with?: string | null
+          vat_included?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
