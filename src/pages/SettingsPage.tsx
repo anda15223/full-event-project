@@ -67,7 +67,7 @@ function ClaudeReprocessPanel() {
     }
   };
 
-  const pauseRef = { current: false };
+  const pauseRef = useRef(false);
 
   const runFull = async () => {
     setRunning(true);
