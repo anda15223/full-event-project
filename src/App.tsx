@@ -21,6 +21,7 @@ import AgentInvoices from "./pages/AgentInvoices";
 import AgentReviewQueue from "./pages/AgentReviewQueue";
 import AgentOperations from "./pages/AgentOperations";
 import AgentRomania from "./pages/AgentRomania";
+import Ledger from "./pages/Ledger";
 
 const queryClient = new QueryClient();
 
