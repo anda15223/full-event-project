@@ -14,7 +14,7 @@ import {
 import {
   LayoutDashboard, Mail, CheckSquare, Settings,
   MessageCircle, Users, Flame, FileText, Cpu, PanelLeft, Home,
-  Bot, ListTodo, Receipt, AlertTriangle, Separator,
+  Bot, ListTodo, Receipt, AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
