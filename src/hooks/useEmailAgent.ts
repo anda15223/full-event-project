@@ -8,6 +8,8 @@ export type Email = {
   subject: string | null;
   sender: string | null;
   body_text: string | null;
+  body_html: string | null;
+  body_clean_text: string | null;
   received_at: string | null;
   classification: string | null;
   company: string | null;
@@ -17,6 +19,29 @@ export type Email = {
   needs_review: boolean | null;
   review_reason: string | null;
   processed: boolean | null;
+  created_at: string;
+  language: string | null;
+  charset: string | null;
+  parse_status: string | null;
+  parse_error: string | null;
+  has_attachments: boolean | null;
+};
+
+export type EmailAttachment = {
+  id: string;
+  email_id: string;
+  filename: string | null;
+  mime_type: string | null;
+  size: number;
+  content_disposition: string | null;
+  is_inline: boolean;
+  cid: string | null;
+  storage_path: string | null;
+  extracted_text: string | null;
+  extracted_summary: string | null;
+  document_type: string | null;
+  parse_status: string | null;
+  parse_error: string | null;
   created_at: string;
 };
 
@@ -77,7 +102,24 @@ export function useEmails(filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Email[];
+      return (data || []) as unknown as Email[];
+    },
+  });
+}
+
+export function useEmailAttachments(emailId: string | null) {
+  return useQuery({
+    queryKey: ["email_attachments", emailId],
+    enabled: !!emailId,
+    queryFn: async () => {
+      if (!emailId) return [];
+      const { data, error } = await supabase
+        .from("email_attachments")
+        .select("*")
+        .eq("email_id", emailId)
+        .order("created_at");
+      if (error) throw error;
+      return (data || []) as unknown as EmailAttachment[];
     },
   });
 }
@@ -333,14 +375,12 @@ export function useReprocessEmail() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (emailId: string) => {
-      // Reset the email to unprocessed
       const { error: resetError } = await supabase
         .from("emails")
         .update({ processed: false, classification: null, company: null, summary: null, confidence: null, needs_review: false, review_reason: null, action_required: false })
         .eq("id", emailId);
       if (resetError) throw resetError;
 
-      // Re-classify just this email
       const { data, error } = await supabase.functions.invoke("classify-emails", {
         body: { email_ids: [emailId], batch_size: 1 },
       });
@@ -359,11 +399,47 @@ export function useReprocessEmail() {
   });
 }
 
+// Re-parse email body (clear cached body and re-fetch from IMAP)
+export function useReparseEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (emailId: string) => {
+      // Reset parse status
+      await supabase.from("emails").update({
+        body_text: null,
+        body_html: null,
+        body_clean_text: null,
+        parse_status: "pending",
+        parse_error: null,
+        has_attachments: false,
+      }).eq("id", emailId);
+
+      // Delete old attachments
+      await supabase.from("email_attachments").delete().eq("email_id", emailId);
+
+      // Re-fetch body
+      const { data, error } = await supabase.functions.invoke("fetch-email-body", {
+        body: { email_id: emailId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emails"] });
+      queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      toast.success("Email re-parsed from server");
+    },
+    onError: (err: Error) => {
+      toast.error("Re-parse failed: " + err.message);
+    },
+  });
+}
+
 export function useUpdateEmail() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Email> }) => {
-      const { error } = await supabase.from("emails").update(updates).eq("id", id);
+      const { error } = await supabase.from("emails").update(updates as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -387,34 +463,32 @@ export function useUpdateTask() {
   });
 }
 
-// Fetch full email body on-demand
+// Fetch full email body on-demand (triggers MIME parsing if not done)
 export function useFetchEmailBody(emailId: string | null) {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["email_body", emailId],
     enabled: !!emailId,
-    staleTime: Infinity,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
       if (!emailId) return null;
-
-      // Check if body already in cache from emails query
-      const cached = queryClient.getQueryData<Email[]>(["emails"]);
-      const cachedEmail = cached?.find(e => e.id === emailId);
-      if (cachedEmail?.body_text && cachedEmail.body_text.length > 10) {
-        return cachedEmail.body_text;
-      }
 
       const { data, error } = await supabase.functions.invoke("fetch-email-body", {
         body: { email_id: emailId },
       });
       if (error) throw error;
 
-      // Update the emails cache with the body
-      if (data?.body_text) {
-        queryClient.invalidateQueries({ queryKey: ["emails"] });
-      }
+      // Update the emails cache
+      queryClient.invalidateQueries({ queryKey: ["emails"] });
 
-      return data?.body_text || "(empty)";
+      return data as {
+        body_text: string | null;
+        body_html: string | null;
+        body_clean_text?: string | null;
+        parse_status: string;
+        has_attachments?: boolean;
+        attachment_count?: number;
+      };
     },
   });
 }
