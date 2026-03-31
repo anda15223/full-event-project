@@ -19,6 +19,9 @@ const LOCATION_COMPANY_MAP: Record<string, string> = {
   "reffen": "Blue Fish ApS",
   "helsingør": "The Fish Project ApS",
   "helsingör": "The Fish Project ApS",
+  "aarhus": "The Fish Project ApS",
+  "søborg": "The Fish Project ApS",
+  "gentofte": "Aegean ApS",
   "fish bistro": "Aegean ApS",
   "gaia": "Aegean ApS",
 };
