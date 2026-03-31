@@ -221,6 +221,7 @@ export type Database = {
           id: string
           language: string | null
           message_id: string | null
+          model_used: string | null
           needs_review: boolean | null
           parse_error: string | null
           parse_status: string | null
@@ -245,6 +246,7 @@ export type Database = {
           id?: string
           language?: string | null
           message_id?: string | null
+          model_used?: string | null
           needs_review?: boolean | null
           parse_error?: string | null
           parse_status?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           id?: string
           language?: string | null
           message_id?: string | null
+          model_used?: string | null
           needs_review?: boolean | null
           parse_error?: string | null
           parse_status?: string | null
