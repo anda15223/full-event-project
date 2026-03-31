@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { FileText, Building2, DollarSign, Calendar, Hash, Package } from "lucide-react";
+import { FileText, Building2, DollarSign, Calendar, Hash, Package, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEmailInvoices, useCompanies } from "@/hooks/useEmailAgent";
+import { useEmailInvoices, useCompanies, useExtractAllInvoices } from "@/hooks/useEmailAgent";
 
 export default function AgentInvoices() {
   const [filterCompany, setFilterCompany] = useState<string>("all");
