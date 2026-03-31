@@ -10,23 +10,46 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Progress } from "@/components/ui/progress";
 
+const STORAGE_KEY = "claude-reprocess-progress";
+
+type ReprocessProgress = {
+  batch: number;
+  totalBatches: number;
+  processed: number;
+  extracted: number;
+  skipped: number;
+  ignored: number;
+  errors: number;
+  totalEmails: number;
+  totalInvoices: number;
+  totalCashflow: number;
+  currentSubject: string;
+  byCompany: Record<string, number>;
+};
+
+function loadSavedProgress(): { running: boolean; progress: ReprocessProgress | null } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { running: false, progress: null };
+    const saved = JSON.parse(raw);
+    // If it was marked running but page was closed, show as paused
+    return { running: false, progress: saved.progress || null };
+  } catch { return { running: false, progress: null }; }
+}
+
+function saveProgress(progress: ReprocessProgress | null, running: boolean) {
+  if (progress) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ progress, running }));
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 function ClaudeReprocessPanel() {
+  const saved = loadSavedProgress();
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [progress, setProgress] = useState<{
-    batch: number;
-    totalBatches: number;
-    processed: number;
-    extracted: number;
-    skipped: number;
-    ignored: number;
-    errors: number;
-    totalEmails: number;
-    totalInvoices: number;
-    totalCashflow: number;
-    currentSubject: string;
-    byCompany: Record<string, number>;
-  } | null>(null);
+  const [progress, setProgress] = useState<ReprocessProgress | null>(saved.progress);
   const [testDetails, setTestDetails] = useState<any[] | null>(null);
   const [completed, setCompleted] = useState(false);
 
@@ -92,7 +115,9 @@ function ClaudeReprocessPanel() {
         }
 
         totals.batch = i + 1;
-        setProgress({ ...totals });
+        const snap = { ...totals };
+        setProgress(snap);
+        saveProgress(snap, true);
 
         const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
           body: { test_mode: false, batch_size: batchSize },
@@ -109,7 +134,9 @@ function ClaudeReprocessPanel() {
         totals.currentSubject = data.current_subject || "";
         if (data.by_company) totals.byCompany = data.by_company;
 
-        setProgress({ ...totals });
+        const snap2 = { ...totals };
+        setProgress(snap2);
+        saveProgress(snap2, true);
 
         if ((data.processed || 0) === 0) break;
         if (pauseRef.current) {
@@ -121,12 +148,14 @@ function ClaudeReprocessPanel() {
         await new Promise(r => setTimeout(r, 8000));
       }
       setCompleted(true);
+      saveProgress(null, false);
       refetchStats();
       toast.success(`Reprocess complete: ${totals.extracted} invoices from ${totals.processed} emails`);
     } catch (err) {
       toast.error("Reprocess failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setRunning(false);
+      saveProgress(progress, false);
     }
   };
 
@@ -134,6 +163,13 @@ function ClaudeReprocessPanel() {
     pauseRef.current = true;
     setPaused(true);
     setRunning(false);
+  };
+
+  const handleReset = () => {
+    setProgress(null);
+    setCompleted(false);
+    setPaused(false);
+    saveProgress(null, false);
   };
 
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
@@ -149,7 +185,7 @@ function ClaudeReprocessPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!running && !progress && (
+        {!running && !progress && !completed && (
           <div className="flex gap-2">
             <Button onClick={runTest} variant="outline" className="gap-2">
               <FlaskConical className="h-4 w-4" /> Test on 5 emails
@@ -157,6 +193,23 @@ function ClaudeReprocessPanel() {
             <Button onClick={runFull} className="gap-2">
               <Zap className="h-4 w-4" /> Reprocess all with Claude
             </Button>
+          </div>
+        )}
+
+        {!running && progress && !completed && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+              ⏸ Paused — {progress.processed} emails processed, {progress.extracted} invoices found
+            </div>
+            <Progress value={pct} className="h-2.5" />
+            <div className="flex gap-2">
+              <Button onClick={runFull} className="gap-2">
+                <Zap className="h-4 w-4" /> Resume
+              </Button>
+              <Button onClick={handleReset} variant="outline" className="gap-2">
+                Reset
+              </Button>
+            </div>
           </div>
         )}
 
