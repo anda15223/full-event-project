@@ -180,7 +180,7 @@ export default function AgentInvoices() {
                     <span className="text-sm font-semibold text-foreground">{section.label}</span>
                     <Badge variant="secondary" className="text-[10px] px-2 py-0 border-0">{section.invoices.length}</Badge>
                     <span className="text-xs text-muted-foreground">
-                      {section.invoices.reduce((s, i) => s + (i.amount || 0), 0).toLocaleString("da-DK")} DKK
+                      {formatByCurrency(groupByCurrency(section.invoices))}
                     </span>
                   </div>
                   <motion.div animate={{ rotate: isCollapsed ? 0 : 180 }} transition={{ duration: 0.2 }}>
