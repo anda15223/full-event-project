@@ -288,6 +288,9 @@ serve(async (req) => {
 
         const modelUsed = chooseModel(email, attachments || []);
 
+        // Determine assigned agent based on classification + company
+        const assignedAgent = deriveAssignedAgent(classification, company);
+
         await supabase.from("emails").update({
           classification: classification.classification,
           company,
@@ -299,6 +302,9 @@ serve(async (req) => {
           processed: true,
           language: classification.language || "unknown",
           model_used: modelUsed,
+          assigned_agent: assignedAgent,
+          reader_status: "parsed",
+          router_status: "routed",
         }).eq("id", email.id);
 
         // FALLBACK: If fast model gave low confidence, retry with deep model
