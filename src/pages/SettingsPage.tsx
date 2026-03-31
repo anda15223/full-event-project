@@ -294,6 +294,8 @@ export default function SettingsPage() {
         <p className="text-muted-foreground text-sm mt-1">Configure your integrations and API keys</p>
       </div>
 
+      <ClaudeReprocessPanel />
+
       <ReprocessPanel />
 
       <Card className="glass-panel">
