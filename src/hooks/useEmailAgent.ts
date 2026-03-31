@@ -421,9 +421,9 @@ export function useReparseEmail() {
       // Delete old attachments
       await supabase.from("email_attachments").delete().eq("email_id", emailId);
 
-      // Re-fetch body
+      // Re-fetch body with force flag
       const { data, error } = await supabase.functions.invoke("fetch-email-body", {
-        body: { email_id: emailId },
+        body: { email_id: emailId, force: true },
       });
       if (error) throw error;
       return data;
