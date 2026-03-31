@@ -609,10 +609,11 @@ async function callClaudeExtraction(
 
     // Apply company mapping rules
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
+    const category = assignCategory(invoiceData);
 
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
-    // Check for rykker (payment reminder) → force overdue
     const rykkerDetected = isRykker(emailContext, text);
+    const finalCategory = rykkerDetected ? "rykker" : category;
     const status = rykkerDetected ? "overdue" : (confidence >= 0.7 ? "pending" : "needs_review");
     const notes = rykkerDetected ? "RYKKER — payment reminder received" : (invoiceData.extraction_notes || null);
 
