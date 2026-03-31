@@ -1,11 +1,9 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail, Search, RefreshCw, Zap, RotateCcw,
-  AlertTriangle, Clock, FileText, CheckCircle, XCircle, Building2,
-  Eye, FolderOpen, Inbox, MessageSquare, ChevronDown,
-  DollarSign, Wrench, CalendarClock, BellRing, FileCheck,
-  Trash2,
+  Mail, Search, RefreshCw, Zap, RotateCcw, XCircle,
+  AlertTriangle, Building2, FolderOpen, Inbox, Clock,
+  MessageSquare, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,231 +13,9 @@ import {
   useEmails, useCompanies, useFetchEmails, useClassifyAllEmails,
   useSyncAndClassify, useReprocessEmail, useUpdateEmail, type Email,
 } from "@/hooks/useEmailAgent";
+import { SECTIONS, assignToSections } from "@/components/inbox/inboxSections";
+import { EmailCard, EmailListItem, EmailCompactSummary } from "@/components/inbox/EmailCard";
 
-/* ── Section config matching the PDF reference ── */
-interface EmailSection {
-  key: string;
-  label: string;
-  emoji: string;
-  description: string;
-  color: string;
-  borderColor: string;
-  iconColor: string;
-  icon: React.ReactNode;
-  filter: (e: Email) => boolean;
-  columns: string[];
-  defaultCollapsed?: boolean;
-  renderStyle: "table" | "list" | "compact";
-}
-
-const SECTIONS: EmailSection[] = [
-  {
-    key: "invoices",
-    label: "INVOICES — To Process",
-    emoji: "💰",
-    description: "Invoice emails requiring processing and payment",
-    color: "bg-agent-green/4",
-    borderColor: "border-agent-green/20",
-    iconColor: "text-agent-green",
-    icon: <DollarSign className="h-4 w-4" />,
-    filter: (e) => e.classification === "invoice" && e.action_required !== false,
-    columns: ["Supplier / Sender", "Subject", "Company", "Action"],
-    renderStyle: "table",
-  },
-  {
-    key: "overdue",
-    label: "OVERDUE / REMINDERS",
-    emoji: "⚠️",
-    description: "Reminders and overdue items requiring immediate attention",
-    color: "bg-destructive/4",
-    borderColor: "border-destructive/25",
-    iconColor: "text-destructive",
-    icon: <BellRing className="h-4 w-4" />,
-    filter: (e) =>
-      e.action_required === true &&
-      e.classification !== "invoice" &&
-      (e.summary?.toLowerCase().includes("overdue") ||
-        e.summary?.toLowerCase().includes("reminder") ||
-        e.summary?.toLowerCase().includes("rykker") ||
-        e.summary?.toLowerCase().includes("unpaid") ||
-        e.subject?.toLowerCase().includes("rykker") ||
-        e.subject?.toLowerCase().includes("reminder") ||
-        e.subject?.toLowerCase().includes("overdue") ||
-        e.subject?.toLowerCase().includes("unpaid") ||
-        false),
-    columns: ["Sender", "Subject", "Company", "Action"],
-    renderStyle: "table",
-  },
-  {
-    key: "settlement",
-    label: "SETTLEMENT DOCS",
-    emoji: "📋",
-    description: "Settlement documentation to review and file",
-    color: "bg-agent-blue/4",
-    borderColor: "border-agent-blue/20",
-    iconColor: "text-agent-blue",
-    icon: <FileCheck className="h-4 w-4" />,
-    filter: (e) =>
-      e.classification === "information" &&
-      (e.summary?.toLowerCase().includes("settlement") ||
-        e.summary?.toLowerCase().includes("afregning") ||
-        e.subject?.toLowerCase().includes("settlement") ||
-        e.subject?.toLowerCase().includes("afregning") ||
-        false),
-    columns: ["From", "Entity", "Action"],
-    renderStyle: "table",
-  },
-  {
-    key: "accounting",
-    label: "ACCOUNTING / SYSTEM TASKS",
-    emoji: "🔧",
-    description: "System renewals, integrations, and accounting actions",
-    color: "bg-agent-purple/4",
-    borderColor: "border-agent-purple/20",
-    iconColor: "text-agent-purple",
-    icon: <Wrench className="h-4 w-4" />,
-    filter: (e) =>
-      e.classification === "task" &&
-      (e.summary?.toLowerCase().includes("renew") ||
-        e.summary?.toLowerCase().includes("system") ||
-        e.summary?.toLowerCase().includes("integration") ||
-        e.summary?.toLowerCase().includes("e-conomic") ||
-        e.summary?.toLowerCase().includes("bank") ||
-        e.subject?.toLowerCase().includes("renew") ||
-        e.subject?.toLowerCase().includes("e-conomic") ||
-        e.subject?.toLowerCase().includes("integration") ||
-        false),
-    columns: ["From", "Subject", "Action"],
-    renderStyle: "table",
-  },
-  {
-    key: "operational",
-    label: "OPERATIONAL / EVENTS",
-    emoji: "📌",
-    description: "Events, operations, and items requiring reply or action",
-    color: "bg-agent-orange/4",
-    borderColor: "border-agent-orange/20",
-    iconColor: "text-agent-orange",
-    icon: <CalendarClock className="h-4 w-4" />,
-    filter: (e) =>
-      (e.classification === "task" || (e.classification === "waiting" && e.action_required)) &&
-      !(
-        e.summary?.toLowerCase().includes("renew") ||
-        e.summary?.toLowerCase().includes("system") ||
-        e.summary?.toLowerCase().includes("integration") ||
-        e.summary?.toLowerCase().includes("e-conomic") ||
-        e.summary?.toLowerCase().includes("bank") ||
-        e.subject?.toLowerCase().includes("renew") ||
-        e.subject?.toLowerCase().includes("e-conomic") ||
-        e.subject?.toLowerCase().includes("integration")
-      ),
-    columns: ["From", "Subject", "Action"],
-    renderStyle: "table",
-  },
-  {
-    key: "needs_review",
-    label: "NEEDS REVIEW",
-    emoji: "🔍",
-    description: "Low-confidence AI classifications requiring manual review",
-    color: "bg-warning/4",
-    borderColor: "border-warning/25",
-    iconColor: "text-warning",
-    icon: <AlertTriangle className="h-4 w-4" />,
-    filter: (e) => e.needs_review === true,
-    columns: ["Sender", "Subject", "Classification", "Confidence"],
-    renderStyle: "table",
-  },
-  {
-    key: "fyi",
-    label: "FYI / CONFIRMED — No Action Needed",
-    emoji: "✅",
-    description: "Confirmations, delivery notes, and informational emails",
-    color: "bg-success/4",
-    borderColor: "border-success/20",
-    iconColor: "text-success",
-    icon: <CheckCircle className="h-4 w-4" />,
-    filter: (e) =>
-      (e.classification === "information" || e.classification === "waiting") &&
-      !e.action_required &&
-      !e.needs_review &&
-      !(
-        e.summary?.toLowerCase().includes("settlement") ||
-        e.summary?.toLowerCase().includes("afregning") ||
-        e.subject?.toLowerCase().includes("settlement") ||
-        e.subject?.toLowerCase().includes("afregning")
-      ),
-    columns: [],
-    defaultCollapsed: true,
-    renderStyle: "list",
-  },
-  {
-    key: "ignore",
-    label: "IGNORE — Clutter",
-    emoji: "🗑️",
-    description: "Newsletters, promotions, and irrelevant emails",
-    color: "bg-secondary/40",
-    borderColor: "border-border/30",
-    iconColor: "text-muted-foreground",
-    icon: <Trash2 className="h-4 w-4" />,
-    filter: (e) => e.classification === "irrelevant" && !e.needs_review,
-    columns: [],
-    defaultCollapsed: true,
-    renderStyle: "compact",
-  },
-];
-
-/* ── Helper: derive suggested action from email ── */
-function deriveAction(email: Email): string {
-  if (email.classification === "invoice") return "Process & pay";
-  if (email.action_required) {
-    if (email.summary?.toLowerCase().includes("reply")) return "Reply";
-    if (email.summary?.toLowerCase().includes("pay")) return "PAY NOW";
-    if (email.summary?.toLowerCase().includes("renew")) return "Renew";
-    if (email.summary?.toLowerCase().includes("review")) return "Review";
-    if (email.summary?.toLowerCase().includes("check")) return "Check";
-    if (email.summary?.toLowerCase().includes("fill")) return "Fill in";
-    if (email.summary?.toLowerCase().includes("confirm")) return "Confirm";
-    return "Action needed";
-  }
-  if (email.classification === "information") return "Review & file";
-  if (email.classification === "waiting") return "Awaiting response";
-  return "—";
-}
-
-/* ── Assign emails to sections (each email goes to first matching) ── */
-function assignToSections(emails: Email[]): Map<string, Email[]> {
-  const map = new Map<string, Email[]>();
-  SECTIONS.forEach(s => map.set(s.key, []));
-
-  const assigned = new Set<string>();
-  // needs_review first (can appear in any classification)
-  for (const email of emails) {
-    if (email.needs_review) {
-      map.get("needs_review")!.push(email);
-      assigned.add(email.id);
-    }
-  }
-  // then by section priority order
-  for (const section of SECTIONS) {
-    if (section.key === "needs_review") continue;
-    for (const email of emails) {
-      if (assigned.has(email.id)) continue;
-      if (section.filter(email)) {
-        map.get(section.key)!.push(email);
-        assigned.add(email.id);
-      }
-    }
-  }
-  // unassigned → fyi
-  for (const email of emails) {
-    if (!assigned.has(email.id) && email.processed) {
-      map.get("fyi")!.push(email);
-    }
-  }
-  return map;
-}
-
-/* ── Main component ── */
 export default function AgentInbox() {
   const [search, setSearch] = useState("");
   const [filterCompany, setFilterCompany] = useState<string>("all");
@@ -360,7 +136,7 @@ export default function AgentInbox() {
         </Select>
       </div>
 
-      {/* Sectioned Email View */}
+      {/* Sectioned View */}
       {isLoading ? (
         <div className="text-center py-16 text-muted-foreground">Loading emails...</div>
       ) : allEmails.length === 0 ? (
@@ -384,7 +160,7 @@ export default function AgentInbox() {
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-secondary/20 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`${section.iconColor}`}>{section.icon}</span>
+                    <span className={section.iconColor}>{section.icon}</span>
                     <span className="text-sm font-semibold text-foreground">
                       {section.emoji} {section.label}
                     </span>
@@ -410,19 +186,27 @@ export default function AgentInbox() {
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      {section.renderStyle === "table" ? (
-                        <SectionTable
-                          emails={sectionEmails}
-                          section={section}
-                          selectedEmail={selectedEmail}
-                          onSelect={setSelectedEmail}
-                          companies={companies}
-                          updateEmail={updateEmail}
-                        />
+                      {section.renderStyle === "card" ? (
+                        <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {sectionEmails.map((email, idx) => (
+                            <EmailCard
+                              key={email.id}
+                              email={email}
+                              index={idx}
+                              isSelected={selectedEmail?.id === email.id}
+                              sectionKey={section.key}
+                              onSelect={setSelectedEmail}
+                            />
+                          ))}
+                        </div>
                       ) : section.renderStyle === "list" ? (
-                        <SectionList emails={sectionEmails} />
+                        <div className="px-5 pb-4 space-y-0.5">
+                          {sectionEmails.map(email => (
+                            <EmailListItem key={email.id} email={email} />
+                          ))}
+                        </div>
                       ) : (
-                        <SectionCompact emails={sectionEmails} />
+                        <EmailCompactSummary emails={sectionEmails} />
                       )}
                     </motion.div>
                   )}
@@ -504,118 +288,6 @@ export default function AgentInbox() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── Table-style section (like the PDF invoice/task tables) ── */
-function SectionTable({
-  emails, section, selectedEmail, onSelect, companies, updateEmail,
-}: {
-  emails: Email[];
-  section: EmailSection;
-  selectedEmail: Email | null;
-  onSelect: (e: Email) => void;
-  companies: any;
-  updateEmail: any;
-}) {
-  return (
-    <div className="px-4 pb-4">
-      {/* Table header */}
-      <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/20 mb-2">
-        <div className="col-span-1 text-center">#</div>
-        <div className="col-span-3">Sender</div>
-        <div className="col-span-4">Subject</div>
-        <div className="col-span-2">Company</div>
-        <div className="col-span-2 text-right">Action</div>
-      </div>
-
-      {/* Rows */}
-      {emails.map((email, idx) => {
-        const action = deriveAction(email);
-        const isUrgent = action === "PAY NOW" || section.key === "overdue";
-        return (
-          <motion.button
-            key={email.id}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.02 }}
-            onClick={() => onSelect(email)}
-            className={`w-full grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-4 py-3 rounded-xl text-left transition-all mb-1 ${
-              selectedEmail?.id === email.id
-                ? "bg-agent-purple/6 border border-agent-purple/20"
-                : "hover:bg-secondary/30 border border-transparent"
-            }`}
-          >
-            <div className="col-span-1 hidden md:flex items-center justify-center">
-              <span className="text-xs text-muted-foreground/50 font-mono">{idx + 1}</span>
-            </div>
-            <div className="col-span-3">
-              <p className="text-xs font-medium text-foreground truncate">{email.sender?.replace(/<.*>/, "").trim() || "Unknown"}</p>
-            </div>
-            <div className="col-span-4">
-              <p className="text-xs text-foreground/80 truncate">{email.subject || "(no subject)"}</p>
-              {email.needs_review && <AlertTriangle className="h-3 w-3 text-warning inline ml-1" />}
-            </div>
-            <div className="col-span-2">
-              {email.company && (
-                <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary/80 text-secondary-foreground truncate inline-block max-w-full">
-                  {email.company}
-                </span>
-              )}
-            </div>
-            <div className="col-span-2 flex items-center justify-end gap-2">
-              <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg ${
-                isUrgent
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-agent-purple/8 text-agent-purple"
-              }`}>
-                {action}
-              </span>
-              <Eye className="h-3.5 w-3.5 text-muted-foreground/40 hidden md:block" />
-            </div>
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── List-style section (for FYI / confirmed) ── */
-function SectionList({ emails }: { emails: Email[] }) {
-  return (
-    <div className="px-5 pb-4">
-      <div className="space-y-1.5">
-        {emails.map(email => (
-          <div key={email.id} className="flex items-center gap-3 py-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-success shrink-0" />
-            <span className="text-xs text-foreground/70">
-              <span className="font-medium">{email.sender?.replace(/<.*>/, "").trim()}</span>
-              {" — "}
-              {email.subject || "(no subject)"}
-              {email.company && <span className="text-muted-foreground"> ({email.company})</span>}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── Compact section (for clutter/ignore) ── */
-function SectionCompact({ emails }: { emails: Email[] }) {
-  const senders = emails
-    .map(e => e.sender?.replace(/<.*>/, "").trim())
-    .filter(Boolean);
-  const unique = [...new Set(senders)];
-
-  return (
-    <div className="px-5 pb-4">
-      <p className="text-xs text-muted-foreground/70 leading-relaxed">
-        {unique.length > 0
-          ? `Newsletters, promotions, and irrelevant: ${unique.join(", ")}`
-          : `${emails.length} irrelevant emails filtered out.`}
-      </p>
     </div>
   );
 }
