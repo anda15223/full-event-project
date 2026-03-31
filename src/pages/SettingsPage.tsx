@@ -325,17 +325,46 @@ function ClaudeReprocessPanel() {
           </div>
         )}
 
-        {testDetails && (
-          <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1 max-h-48 overflow-auto">
-            <p className="font-medium">🧪 Test results:</p>
-            {testDetails.map((d: any, i: number) => (
-              <div key={i} className="flex gap-2 items-center">
-                <Badge variant={d.status === "extracted" ? "default" : d.status === "ignored" ? "secondary" : "outline"} className="text-[10px]">
-                  {d.status}
-                </Badge>
-                <span className="truncate flex-1">{d.subject || d.email_id}</span>
+        {testDetails && testDetails.length > 0 && (
+          <div className="rounded-xl bg-muted/50 p-4 space-y-3">
+            <p className="font-heading font-semibold text-sm">
+              🧪 Test results — {testDetails.length} emails tested
+            </p>
+            <div className="space-y-1.5">
+              {testDetails.map((d: any, i: number) => {
+                const icon = d.status === "extracted" ? "✅" : d.status === "ignored" ? "🚫" : d.status === "error" ? "⚠️" : "⏭";
+                const supplier = d.results?.[0]?.supplier_name || d.supplier || "—";
+                const amount = d.results?.[0]?.amount || d.amount;
+                const company = d.results?.[0]?.company || d.company || "";
+                const currency = d.results?.[0]?.currency || "DKK";
+                return (
+                  <div key={i} className="flex items-center gap-3 text-sm py-1 border-b border-border/50 last:border-0">
+                    <span className="w-5 text-center">{icon}</span>
+                    <Badge
+                      variant={d.status === "extracted" ? "default" : d.status === "ignored" ? "secondary" : d.status === "error" ? "destructive" : "outline"}
+                      className="text-[10px] w-20 justify-center"
+                    >
+                      {d.status}
+                    </Badge>
+                    <span className="flex-1 truncate font-medium">{supplier}</span>
+                    <span className="w-28 text-right font-mono text-xs">
+                      {amount ? `${currency} ${Number(amount).toLocaleString("da-DK")}` : "—"}
+                    </span>
+                    <span className="w-44 text-right text-muted-foreground text-xs truncate">{company}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {testDetails.some((d: any) => d.error) && (
+              <div className="mt-2 space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-destructive">Errors</p>
+                {testDetails.filter((d: any) => d.error).map((d: any, i: number) => (
+                  <p key={i} className="text-xs text-destructive/80 truncate">
+                    {d.subject || d.email_id}: {d.error}
+                  </p>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
       </CardContent>
