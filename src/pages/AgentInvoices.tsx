@@ -5,6 +5,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import InvoiceMetrics from "@/components/invoices/InvoiceMetrics";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceCard from "@/components/invoices/InvoiceCard";
+import SyncPanel from "@/components/invoices/SyncPanel";
 import type { Invoice } from "@/hooks/useInvoices";
 
 const SECTIONS = [
@@ -77,6 +78,9 @@ export default function AgentInvoices() {
           Payment control for all companies — track, pay, and reconcile
         </p>
       </div>
+
+      {/* Email Sync Panel */}
+      <SyncPanel />
 
       {/* Metrics */}
       <InvoiceMetrics invoices={metricsData} />

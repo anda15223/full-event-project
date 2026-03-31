@@ -156,6 +156,63 @@ export type Database = {
           },
         ]
       }
+      email_sync_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_batch: number | null
+          current_subject: string | null
+          error_log: Json | null
+          id: string
+          last_uid_processed: string | null
+          started_at: string | null
+          status: string
+          sync_from: string | null
+          sync_to: string | null
+          total_batches: number | null
+          total_emails_found: number | null
+          total_invoices_extracted: number | null
+          total_processed: number | null
+          total_skipped: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_batch?: number | null
+          current_subject?: string | null
+          error_log?: Json | null
+          id?: string
+          last_uid_processed?: string | null
+          started_at?: string | null
+          status?: string
+          sync_from?: string | null
+          sync_to?: string | null
+          total_batches?: number | null
+          total_emails_found?: number | null
+          total_invoices_extracted?: number | null
+          total_processed?: number | null
+          total_skipped?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_batch?: number | null
+          current_subject?: string | null
+          error_log?: Json | null
+          id?: string
+          last_uid_processed?: string | null
+          started_at?: string | null
+          status?: string
+          sync_from?: string | null
+          sync_to?: string | null
+          total_batches?: number | null
+          total_emails_found?: number | null
+          total_invoices_extracted?: number | null
+          total_processed?: number | null
+          total_skipped?: number | null
+        }
+        Relationships: []
+      }
       email_tasks: {
         Row: {
           company: string | null
