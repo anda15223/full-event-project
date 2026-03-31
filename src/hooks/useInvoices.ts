@@ -123,14 +123,13 @@ export function useMarkAsPaid() {
   return useMutation({
     mutationFn: async (invoice: Invoice) => {
       // Update invoice status
-      const { error: updateErr } = await supabase
+      const { error: updateErr } = await (supabase as any)
         .from("invoices")
         .update({ status: "paid", overdue_flag: false })
         .eq("id", invoice.id);
       if (updateErr) throw updateErr;
 
-      // Create ledger entry
-      const { error: ledgerErr } = await supabase.from("ledger").insert({
+      const { error: ledgerErr } = await (supabase as any).from("ledger").insert({
         invoice_id: invoice.id,
         supplier_name: invoice.supplier_name,
         amount: invoice.amount,
