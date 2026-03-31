@@ -1,0 +1,1 @@
+ALTER TABLE public.emails ADD COLUMN language text DEFAULT 'unknown';

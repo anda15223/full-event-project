@@ -150,6 +150,7 @@ export type Database = {
           confidence: number | null
           created_at: string
           id: string
+          language: string | null
           message_id: string | null
           needs_review: boolean | null
           processed: boolean | null
@@ -167,6 +168,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           id?: string
+          language?: string | null
           message_id?: string | null
           needs_review?: boolean | null
           processed?: boolean | null
@@ -184,6 +186,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           id?: string
+          language?: string | null
           message_id?: string | null
           needs_review?: boolean | null
           processed?: boolean | null
