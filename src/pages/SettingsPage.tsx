@@ -197,6 +197,24 @@ function ClaudeReprocessPanel() {
     saveProgress(null, false);
   };
 
+  const runRetry = async () => {
+    setRetrying(true);
+    setRetryResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
+        body: { retry_errors: true, parallel: 5 },
+      });
+      if (error) throw error;
+      setRetryResult(data);
+      toast.success(`Retry complete: ${data.extracted ?? 0} recovered from ${data.processed ?? 0} emails`);
+      refetchStats();
+    } catch (err) {
+      toast.error("Retry failed: " + (err instanceof Error ? err.message : "Unknown"));
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
 
   return (
