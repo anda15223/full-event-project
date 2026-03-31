@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "npm:zod@3.25.76";
+import PostalMime from "npm:postal-mime@2.7.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,7 @@ const RequestSchema = z.object({
   force: z.boolean().optional(),
 });
 
-const MAX_RFC822_BYTES = 12 * 1024 * 1024;
+const MAX_RFC822_BYTES = 5 * 1024 * 1024; // 5 MB cap to stay within CPU limits
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -293,29 +294,38 @@ serve(async (req) => {
       });
     }
 
-    /* ── Parse MIME with postal-mime ─────────────────────────── */
+    /* ── Parse MIME with postal-mime (pre-imported at top) ──── */
     const charset = extractCharsetFromRawEmail(rawEmail);
-    const { default: PostalMime } = await import("npm:postal-mime");
-    const parsedEmail = await PostalMime.parse(rawEmail, {
-      attachmentEncoding: "arraybuffer",
-      rfc822Attachments: true,
-      forceRfc822Attachments: false,
-    }) as any;
+    const parsedEmail = await PostalMime.parse(rawEmail) as any;
 
-    // CRITICAL: Only take text/html and text/plain from parsed output
-    // postal-mime correctly separates body from attachments
+    // Body extraction
     let bodyText = normalizeWhitespace(parsedEmail.text || "");
     let bodyHtml = typeof parsedEmail.html === "string" ? parsedEmail.html : parsedEmail.html ? String(parsedEmail.html) : "";
-    const attachments = Array.isArray(parsedEmail.attachments) ? parsedEmail.attachments : [];
+    const rawAttachments = Array.isArray(parsedEmail.attachments) ? parsedEmail.attachments : [];
 
-    // CRITICAL: Filter out base64/binary content that leaked into body fields
-    if (looksLikeBinary(bodyText)) {
-      console.warn("body_text looks like binary data, clearing it");
-      bodyText = "";
-    }
-    if (looksLikeBinary(bodyHtml)) {
-      console.warn("body_html looks like binary data, clearing it");
-      bodyHtml = "";
+    // Filter out base64/binary content that leaked into body fields
+    if (looksLikeBinary(bodyText)) bodyText = "";
+    if (looksLikeBinary(bodyHtml)) bodyHtml = "";
+
+    /* ── Filter & deduplicate attachments ──────────────────── */
+    const seen = new Set<string>();
+    const validAttachments: any[] = [];
+    for (const att of rawAttachments) {
+      const fileBytes = bytesFromUnknown(att.content);
+      const mimeType = (att.mimeType || "application/octet-stream").toLowerCase();
+      const filename = att.filename || "";
+
+      // Skip empty, multipart boundaries, and invalid parts
+      if (fileBytes.byteLength === 0) continue;
+      if (mimeType.startsWith("multipart/")) continue;
+      if (filename.toLowerCase().includes("boundary")) continue;
+
+      // Deduplicate by filename+size
+      const dedupeKey = `${filename}|${fileBytes.byteLength}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+
+      validAttachments.push({ ...att, _bytes: fileBytes });
     }
 
     // Delete old attachment records
@@ -324,31 +334,19 @@ serve(async (req) => {
     const cidMap = new Map<string, string>();
     const attachmentRecords: Array<Record<string, unknown>> = [];
 
-    // Process attachments: upload to storage but NO text extraction (saves CPU)
-    for (let index = 0; index < attachments.length; index++) {
-      const attachment = attachments[index] as any;
-      const fileBytes = bytesFromUnknown(attachment.content);
+    // Build attachment metadata + CID map, defer uploads to background
+    for (let index = 0; index < validAttachments.length; index++) {
+      const attachment = validAttachments[index];
+      const fileBytes: Uint8Array = attachment._bytes;
       const filename = safeFilename(attachment.filename, `attachment-${index + 1}`);
       const mimeType = attachment.mimeType || "application/octet-stream";
       const isInline = attachment.disposition === "inline" || attachment.related === true;
       const cid = normalizeContentId(attachment.contentId);
       const storagePath = buildStoragePath(email_id, filename, index + 1, isInline);
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${storagePath}`;
-
-      let parseStatus = "stored";
-      let parseError: string | null = null;
       const documentType = detectDocumentType(mimeType, filename);
 
-      const { error: uploadError } = await supabase.storage
-        .from("email-attachments")
-        .upload(storagePath, fileBytes, { contentType: mimeType, upsert: true });
-
-      if (uploadError) {
-        parseStatus = "failed";
-        parseError = uploadError.message;
-      } else if (cid) {
-        cidMap.set(cid, publicUrl);
-      }
+      if (cid) cidMap.set(cid, publicUrl);
 
       attachmentRecords.push({
         email_id,
@@ -359,12 +357,12 @@ serve(async (req) => {
         is_inline: isInline,
         cid,
         part_number: null,
-        storage_path: uploadError ? null : storagePath,
-        extracted_text: null,       // deferred – done on-demand
-        extracted_summary: null,    // deferred – done on-demand
+        storage_path: storagePath,
+        extracted_text: null,
+        extracted_summary: null,
         document_type: documentType,
-        parse_status: parseStatus,
-        parse_error: parseError,
+        parse_status: "pending",
+        parse_error: null,
       });
     }
 
@@ -375,8 +373,6 @@ serve(async (req) => {
 
     // Generate clean text for AI
     let bodyCleanText = normalizeWhitespace(bodyHtml ? htmlToCleanText(bodyHtml) : bodyText);
-
-    // For emails with no readable body but with attachments, set a helpful message
     if (!bodyCleanText && attachmentRecords.length > 0) {
       const attachNames = attachmentRecords.map(a => a.filename).join(", ");
       bodyCleanText = `No body content. See attachments: ${attachNames}`;
@@ -384,11 +380,13 @@ serve(async (req) => {
 
     const parseSucceeded = Boolean(bodyText || bodyHtml || attachmentRecords.length > 0);
 
+    // Insert attachment records immediately (metadata only, no binary upload yet)
     if (attachmentRecords.length > 0) {
-      const { error: attachmentInsertError } = await supabase.from("email_attachments").insert(attachmentRecords as any);
-      if (attachmentInsertError) console.error("Failed to save attachment records:", attachmentInsertError);
+      const { error: attachInsErr } = await supabase.from("email_attachments").insert(attachmentRecords as any);
+      if (attachInsErr) console.error("Failed to save attachment records:", attachInsErr);
     }
 
+    // Update the email row
     await supabase.from("emails").update({
       body_text: bodyText || null,
       body_html: bodyHtml || null,
@@ -398,6 +396,34 @@ serve(async (req) => {
       parse_error: parseSucceeded ? null : "Could not parse MIME content",
       has_attachments: attachmentRecords.length > 0,
     }).eq("id", email_id);
+
+    // ── Background: upload attachment blobs to storage (non-blocking) ──
+    if (validAttachments.length > 0) {
+      const bgWork = (async () => {
+        for (let i = 0; i < validAttachments.length; i++) {
+          const att = validAttachments[i];
+          const rec = attachmentRecords[i] as any;
+          try {
+            const { error: upErr } = await supabase.storage
+              .from("email-attachments")
+              .upload(rec.storage_path, att._bytes as Uint8Array, {
+                contentType: rec.mime_type,
+                upsert: true,
+              });
+            const status = upErr ? "failed" : "stored";
+            const errMsg = upErr ? upErr.message : null;
+            await supabase.from("email_attachments")
+              .update({ parse_status: status, parse_error: errMsg })
+              .eq("email_id", email_id)
+              .eq("filename", rec.filename);
+          } catch (e) {
+            console.error("BG upload error:", e);
+          }
+        }
+      })();
+      // Use EdgeRuntime.waitUntil if available, otherwise fire-and-forget
+      try { (globalThis as any).EdgeRuntime?.waitUntil(bgWork); } catch { bgWork.catch(() => {}); }
+    }
 
     return new Response(JSON.stringify({
       body_text: bodyText || null,
