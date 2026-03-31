@@ -39,21 +39,21 @@ function SidebarNav() {
   const location = useLocation();
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border bg-card">
       <SidebarHeader className="h-16 justify-center">
         <div className="flex items-center gap-3 px-2 w-full">
           <button
             onClick={toggleSidebar}
-            className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors shrink-0"
+            className="h-8 w-8 flex items-center justify-center hover:bg-sidebar-accent rounded-xl transition-colors shrink-0"
           >
             <PanelLeft className="h-4 w-4 text-muted-foreground" />
           </button>
           {!isCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary/12 to-accent/12 flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
-              <span className="font-heading font-semibold tracking-tight truncate text-foreground text-[15px]">
+              <span className="font-heading font-bold tracking-tight truncate text-foreground text-[15px]">
                 AI Ops
               </span>
             </div>
@@ -61,11 +61,9 @@ function SidebarNav() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="gap-0 px-2">
+      <SidebarContent className="gap-0 px-2.5">
         {!isCollapsed && (
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-1.5 mt-2 px-3">
-            Agents
-          </p>
+          <p className="section-label mb-2 mt-3 px-3">Agents</p>
         )}
         <SidebarMenu>
           {agentNav.map((item) => {
@@ -76,7 +74,7 @@ function SidebarNav() {
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                   <NavLink
                     to={item.path}
-                    className="h-9 transition-all font-normal text-[13px] rounded-lg"
+                    className="h-9 transition-all font-normal text-[13px] rounded-xl"
                     activeClassName="bg-primary/8 text-primary font-medium"
                   >
                     <div className="relative">
@@ -95,9 +93,7 @@ function SidebarNav() {
 
         <div className="mt-auto pt-4 border-t border-sidebar-border">
           {!isCollapsed && (
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-1.5 px-3">
-              System
-            </p>
+            <p className="section-label mb-2 px-3">System</p>
           )}
           <SidebarMenu>
             {utilityNav.map((item) => {
@@ -107,7 +103,7 @@ function SidebarNav() {
                   <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                     <NavLink
                       to={item.path}
-                      className="h-9 transition-all font-normal text-[13px] rounded-lg"
+                      className="h-9 transition-all font-normal text-[13px] rounded-xl"
                       activeClassName="bg-primary/8 text-primary font-medium"
                     >
                       <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
@@ -119,7 +115,7 @@ function SidebarNav() {
             })}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Back to Home">
-                <NavLink to="/" className="h-9 transition-all font-normal text-[13px] rounded-lg" activeClassName="">
+                <NavLink to="/" className="h-9 transition-all font-normal text-[13px] rounded-xl" activeClassName="">
                   <Home className="h-4 w-4 text-muted-foreground" />
                   {!isCollapsed && <span>Back to Home</span>}
                 </NavLink>
@@ -138,14 +134,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen flex w-full">
         <SidebarNav />
         <SidebarInset>
-          <header className="h-12 flex items-center border-b border-border/50 bg-card/80 backdrop-blur-xl px-5 sticky top-0 z-40">
+          <header className="h-14 flex items-center border-b border-border/40 bg-card/60 backdrop-blur-xl px-6 sticky top-0 z-40">
             <SidebarTrigger className="mr-4 md:hidden" />
-            <div className="flex items-center gap-2 ml-auto">
-              <div className="h-1.5 w-1.5 rounded-full bg-success pulse-soft" />
+            <div className="flex items-center gap-2.5 ml-auto">
+              <div className="h-2 w-2 rounded-full bg-success pulse-soft" />
               <span className="text-[11px] font-medium text-muted-foreground">All agents online</span>
             </div>
           </header>
-          <main className="flex-1 p-5 md:p-8 overflow-auto gradient-mesh min-h-[calc(100vh-3rem)]">
+          <main className="flex-1 p-6 md:p-8 overflow-auto gradient-mesh min-h-[calc(100vh-3.5rem)]">
             {children}
           </main>
         </SidebarInset>
