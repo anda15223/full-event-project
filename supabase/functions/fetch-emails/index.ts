@@ -256,7 +256,7 @@ serve(async (req) => {
         }
 
         const parsedEmail = await PostalMime.parse(rawEmail);
-        const bodyText = normalizeText(parsedEmail.text || stripHtml(parsedEmail.html || "")).slice(0, 5000);
+        const bodyText = normalizeText(parsedEmail.text || stripHtml(parsedEmail.html || "")).slice(0, 3000);
         const sender = formatAddress(parsedEmail.from);
         const subject = normalizeText(parsedEmail.subject) || "(no subject)";
         const receivedAt = toIsoString(parsedEmail.date);
