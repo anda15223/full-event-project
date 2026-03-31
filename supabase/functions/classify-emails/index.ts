@@ -361,6 +361,34 @@ serve(async (req) => {
           .filter(Boolean)
           .join("\n\n");
 
+        // ── Inco Danmark pre-routing ──
+        const incoRouting = detectIncoFlow(email.sender || "");
+        if (incoRouting) {
+          await supabase.from("emails").update({
+            classification: "invoice",
+            company: incoRouting.company,
+            summary: `Inco Danmark invoice — groceries/supplies to central storage for The Fish Project ApS`,
+            action_required: true,
+            confidence: 0.95,
+            needs_review: false,
+            processed: true,
+            assigned_agent: incoRouting.agent,
+            reader_status: "parsed",
+            router_status: "routed",
+          }).eq("id", email.id);
+
+          // Also create invoice record
+          await supabase.from("email_invoices").insert({
+            email_id: email.id,
+            company: incoRouting.company,
+            supplier_name: "Inco Danmark A/S",
+            currency: "DKK",
+          });
+
+          results.push({ email_id: email.id, status: "classified" });
+          continue;
+        }
+
         // ── BC Catering pre-routing (before AI call) ──
         const bcRouting = detectBcCateringFlow(
           email.sender || "",
