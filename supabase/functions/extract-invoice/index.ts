@@ -70,6 +70,35 @@ function resolveCompany(supplierName: string | null, location: string | null, em
   return { company: emailCompany || null, location };
 }
 
+/* ── Category assignment ── */
+function assignCategory(invoiceData: any): string {
+  const supplier = (invoiceData.supplier_name || "").toLowerCase();
+  const bought = (invoiceData.what_was_bought || "").toLowerCase();
+
+  // Phone bills
+  if (["lebara", "tdc", "telenor", "yousee", "3 denmark", "one.com"].some(s => supplier.includes(s))) {
+    invoiceData.what_was_bought = invoiceData.what_was_bought || "Phone/Communication bill";
+    return "operating_expense";
+  }
+  // Equipment
+  if (supplier.includes("larsen") || bought.includes("equipment") || bought.includes("udstyr")) {
+    return "equipment";
+  }
+  // Subscriptions
+  if (["esmiley", "subscription", "abonnement"].some(s => supplier.includes(s) || bought.includes(s))) {
+    return "operating_expense";
+  }
+  // Rykker
+  if (invoiceData.extraction_notes?.toLowerCase().includes("rykker") || invoiceData.status === "overdue") {
+    return "rykker";
+  }
+  // PBS
+  if (["pbs", "direct debit"].some(s => (invoiceData.payment_method || "").toLowerCase().includes(s))) {
+    return "cashflow_pbs";
+  }
+  return "supplier_invoice";
+}
+
 /* ── Invoice-like content detection ── */
 const INVOICE_KEYWORDS = /faktura|invoice|betaling|nota|kvittering|ordre|levering|regning|payment|bill|receipt|factură|plată|bilag|kreditnota|debitnota|tilbud|overførsel/i;
 const AMOUNT_PATTERN = /(?:DKK|kr\.?|EUR|€|RON|USD|\$|SEK|NOK)\s*[\d.,]+|[\d.,]+\s*(?:DKK|kr\.?|EUR|€|RON)/i;
