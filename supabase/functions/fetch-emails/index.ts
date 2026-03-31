@@ -14,6 +14,8 @@ const RequestSchema = z.object({
   offset: z.number().int().min(0).optional(),
 });
 
+const DEFAULT_SINCE_DATE = "2026-02-01";
+
 /* ── Lightweight header-only helpers ────────────────────────── */
 
 function decodeWithCharset(bytes: Uint8Array, charset: string): string {
@@ -148,6 +150,7 @@ serve(async (req) => {
 
     // Default limit is 10 — header-only fetch is cheap
     const { since_date, limit = 10, offset = 0 } = parsed.data;
+    const effectiveSinceDate = since_date || DEFAULT_SINCE_DATE;
 
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
     const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
@@ -198,8 +201,8 @@ serve(async (req) => {
 
     /* ── SEARCH ─── */
     let searchCmd = "SEARCH ALL";
-    if (since_date) {
-      const d = new Date(since_date);
+    {
+      const d = new Date(effectiveSinceDate);
       if (Number.isNaN(d.getTime())) {
         return new Response(
           JSON.stringify({ error: { since_date: ["Invalid date"] } }),
