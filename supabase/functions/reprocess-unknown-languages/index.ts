@@ -251,8 +251,11 @@ serve(async (req) => {
         // and we just changed some to non-unknown, so next page naturally shifts
       }
 
-      // Safety: prevent infinite loops
-      if (summary.processed > (totalUnknown || 1000) + 100) break;
+      // Stop if we've hit max_total
+      if (summary.processed >= max_total) {
+        hasMore = false;
+        break;
+      }
     }
 
     return new Response(JSON.stringify(summary), {
