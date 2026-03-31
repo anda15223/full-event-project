@@ -130,6 +130,18 @@ interface BcCateringRouting {
   locations: Array<{ location: string; company: string }>;
 }
 
+function detectIncoFlow(sender: string): { company: string; location: string; agent: string } | null {
+  const s = (sender || "").toLowerCase();
+  if (s.includes("inco.dk") || s.includes("finans@inco")) {
+    return {
+      company: "The Fish Project ApS",
+      location: "Central Storage — The Fish Project",
+      agent: "invoice_agent",
+    };
+  }
+  return null;
+}
+
 function detectBcCateringFlow(sender: string, subject: string, body: string): BcCateringRouting | null {
   const s = (sender || "").toLowerCase();
   const subj = (subject || "").toLowerCase();
@@ -348,6 +360,34 @@ serve(async (req) => {
         ]
           .filter(Boolean)
           .join("\n\n");
+
+        // ── Inco Danmark pre-routing ──
+        const incoRouting = detectIncoFlow(email.sender || "");
+        if (incoRouting) {
+          await supabase.from("emails").update({
+            classification: "invoice",
+            company: incoRouting.company,
+            summary: `Inco Danmark invoice — groceries/supplies to central storage for The Fish Project ApS`,
+            action_required: true,
+            confidence: 0.95,
+            needs_review: false,
+            processed: true,
+            assigned_agent: incoRouting.agent,
+            reader_status: "parsed",
+            router_status: "routed",
+          }).eq("id", email.id);
+
+          // Also create invoice record
+          await supabase.from("email_invoices").insert({
+            email_id: email.id,
+            company: incoRouting.company,
+            supplier_name: "Inco Danmark A/S",
+            currency: "DKK",
+          });
+
+          results.push({ email_id: email.id, status: "classified" });
+          continue;
+        }
 
         // ── BC Catering pre-routing (before AI call) ──
         const bcRouting = detectBcCateringFlow(
