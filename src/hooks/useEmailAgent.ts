@@ -473,16 +473,30 @@ export function useFetchEmailBody(emailId: string | null) {
   return useQuery({
     queryKey: ["email_body", emailId],
     enabled: !!emailId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     queryFn: async () => {
       if (!emailId) return null;
 
       const { data, error } = await supabase.functions.invoke("fetch-email-body", {
         body: { email_id: emailId },
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error("fetch-email-body error:", error);
+        // Return a fallback instead of throwing, so the UI can handle gracefully
+        return {
+          body_text: null,
+          body_html: null,
+          body_clean_text: null,
+          parse_status: "failed",
+          has_attachments: false,
+          attachment_count: 0,
+          error: error.message || "Failed to fetch email body",
+        };
+      }
 
-      // Update the emails cache
       queryClient.invalidateQueries({ queryKey: ["emails"] });
 
       return data as {
@@ -492,6 +506,7 @@ export function useFetchEmailBody(emailId: string | null) {
         parse_status: string;
         has_attachments?: boolean;
         attachment_count?: number;
+        error?: string;
       };
     },
   });
