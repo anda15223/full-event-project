@@ -14,7 +14,8 @@ const RequestSchema = z.object({
   force: z.boolean().optional(),
 });
 
-const MAX_RFC822_BYTES = 5 * 1024 * 1024; // 5 MB cap to stay within CPU limits
+// Reduced to 2 MB to stay well within CPU/memory limits
+const MAX_RFC822_BYTES = 2 * 1024 * 1024;
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -45,15 +46,11 @@ function normalizeWhitespace(value: string | null | undefined): string {
   return (value || "").replace(/\u0000/g, "").replace(/\r/g, "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-/** Detect if content looks like base64 / binary data instead of readable text */
 function looksLikeBinary(text: string): boolean {
   if (!text || text.length < 100) return false;
-  // Long lines of base64 chars
   if (/^[A-Za-z0-9+/=\r\n\s]{200,}$/.test(text.trim())) return true;
-  // Count ratio of base64 chars vs readable
   const base64Chars = (text.match(/[A-Za-z0-9+/=]/g) || []).length;
-  const ratio = base64Chars / text.length;
-  if (ratio > 0.95 && text.length > 500) return true;
+  if (base64Chars / text.length > 0.95 && text.length > 500) return true;
   return false;
 }
 
@@ -84,10 +81,10 @@ function appendTail(tail: string, chunk: Uint8Array, decoder: TextDecoder, maxCh
 async function readRaw(conn: Deno.Conn, isDone: (tail: string) => boolean, max = MAX_RFC822_BYTES): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   let total = 0;
-  const buf = new Uint8Array(65536);
+  const buf = new Uint8Array(32768);
   const decoder = new TextDecoder("iso-8859-1");
   let tail = "";
-  for (let i = 0; i < 1200; i++) {
+  for (let i = 0; i < 800; i++) {
     const n = await conn.read(buf);
     if (n === null) break;
     const chunk = buf.slice(0, n);
@@ -119,19 +116,6 @@ function extractCharsetFromRawEmail(rawEmail: Uint8Array): string {
   const preview = latin1(rawEmail.slice(0, Math.min(rawEmail.length, 16384)));
   const match = preview.match(/charset\s*=\s*["']?([^"';\r\n]+)/i);
   return match?.[1] || "utf-8";
-}
-
-function bytesFromUnknown(input: unknown): Uint8Array {
-  if (input instanceof Uint8Array) return input;
-  if (input instanceof ArrayBuffer) return new Uint8Array(input);
-  if (ArrayBuffer.isView(input)) return new Uint8Array(input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength));
-  if (typeof input === "string") {
-    try {
-      const binary = atob(input.replace(/[\r\n\s]/g, ""));
-      return Uint8Array.from(Array.from(binary, (char) => char.charCodeAt(0)));
-    } catch { return new TextEncoder().encode(input); }
-  }
-  return new Uint8Array();
 }
 
 function normalizeContentId(value: string | null | undefined): string | null {
@@ -237,7 +221,7 @@ serve(async (req) => {
       });
     }
 
-    /* ── IMAP connect & fetch RFC822 ─────────────────────────── */
+    /* ── IMAP connect & fetch ────────────────────────────────── */
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
     const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
     const IMAP_HOST = Deno.env.get("IMAP_HOST") || "imap.one.com";
@@ -280,12 +264,33 @@ serve(async (req) => {
       });
     }
 
-    const rawFetchBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (RFC822)`, MAX_RFC822_BYTES);
+    /* ── Step 1: Fetch BODYSTRUCTURE to know size before downloading ── */
+    const structRes = latin1(await imapCmd(conn, "S1", `UID FETCH ${uid} (RFC822.SIZE)`, 4096));
+    const sizeMatch = structRes.match(/RFC822\.SIZE\s+(\d+)/i);
+    const rfc822Size = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
+
+    // For very large emails (>2MB), only fetch headers + text parts, skip attachment binary
+    const isLargeEmail = rfc822Size > MAX_RFC822_BYTES;
+
+    let rawEmail: Uint8Array | null = null;
+    let fetchedPartially = false;
+
+    if (isLargeEmail) {
+      // Fetch only the first 200KB which should contain headers + text body
+      // Attachments will be fetched on-demand via fetch-email-attachment
+      console.log(`Large email (${rfc822Size} bytes), fetching partial (headers+text only)`);
+      const partialBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (BODY.PEEK[]<0.204800>)`, 220000);
+      const partialAscii = latin1(partialBytes);
+      rawEmail = extractBinaryLiteral(partialBytes, partialAscii);
+      fetchedPartially = true;
+    } else {
+      const rawFetchBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (RFC822)`, MAX_RFC822_BYTES);
+      const rawAscii = latin1(rawFetchBytes);
+      rawEmail = extractBinaryLiteral(rawFetchBytes, rawAscii);
+    }
+
     await imapCmd(conn, "A99", "LOGOUT", 1024);
     conn.close(); conn = null;
-
-    const rawAscii = latin1(rawFetchBytes);
-    const rawEmail = extractBinaryLiteral(rawFetchBytes, rawAscii);
 
     if (!rawEmail || rawEmail.length === 0) {
       await supabase.from("emails").update({ parse_status: "failed", parse_error: "Could not extract RFC822 message" }).eq("id", email_id);
@@ -294,7 +299,7 @@ serve(async (req) => {
       });
     }
 
-    /* ── Parse MIME with postal-mime (pre-imported at top) ──── */
+    /* ── Parse MIME ──────────────────────────────────────────── */
     const charset = extractCharsetFromRawEmail(rawEmail);
     const parsedEmail = await PostalMime.parse(rawEmail) as any;
 
@@ -307,37 +312,48 @@ serve(async (req) => {
     if (looksLikeBinary(bodyText)) bodyText = "";
     if (looksLikeBinary(bodyHtml)) bodyHtml = "";
 
-    /* ── Filter & deduplicate attachments ──────────────────── */
+    /* ── Filter & deduplicate attachments (metadata only for large emails) ── */
     const seen = new Set<string>();
     const validAttachments: any[] = [];
     for (const att of rawAttachments) {
-      const fileBytes = bytesFromUnknown(att.content);
       const mimeType = (att.mimeType || "application/octet-stream").toLowerCase();
       const filename = att.filename || "";
 
-      // Skip empty, multipart boundaries, and invalid parts
-      if (fileBytes.byteLength === 0) continue;
+      // Skip multipart boundaries and invalid parts
       if (mimeType.startsWith("multipart/")) continue;
       if (filename.toLowerCase().includes("boundary")) continue;
 
+      // For large emails, we may not have full attachment content
+      // but we still record metadata
+      let fileSize = 0;
+      if (att.content) {
+        if (att.content instanceof Uint8Array) fileSize = att.content.byteLength;
+        else if (att.content instanceof ArrayBuffer) fileSize = att.content.byteLength;
+        else if (typeof att.content === "string") fileSize = att.content.length;
+      }
+      if (att.size) fileSize = att.size;
+
+      // Skip truly empty parts (but allow 0-size metadata for large email partial fetches)
+      if (fileSize === 0 && !fetchedPartially) continue;
+
       // Deduplicate by filename+size
-      const dedupeKey = `${filename}|${fileBytes.byteLength}`;
-      if (seen.has(dedupeKey)) continue;
+      const dedupeKey = `${filename}|${fileSize}`;
+      if (seen.has(dedupeKey) && filename) continue;
       seen.add(dedupeKey);
 
-      validAttachments.push({ ...att, _bytes: fileBytes });
+      validAttachments.push(att);
     }
 
     // Delete old attachment records
-    await supabase.from("email_attachments").delete().eq("email_id", email_id);
+    if (!fetchedPartially || validAttachments.length > 0) {
+      await supabase.from("email_attachments").delete().eq("email_id", email_id);
+    }
 
     const cidMap = new Map<string, string>();
     const attachmentRecords: Array<Record<string, unknown>> = [];
 
-    // Build attachment metadata + CID map, defer uploads to background
     for (let index = 0; index < validAttachments.length; index++) {
       const attachment = validAttachments[index];
-      const fileBytes: Uint8Array = attachment._bytes;
       const filename = safeFilename(attachment.filename, `attachment-${index + 1}`);
       const mimeType = attachment.mimeType || "application/octet-stream";
       const isInline = attachment.disposition === "inline" || attachment.related === true;
@@ -346,13 +362,20 @@ serve(async (req) => {
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${storagePath}`;
       const documentType = detectDocumentType(mimeType, filename);
 
+      let fileSize = 0;
+      if (attachment.content) {
+        if (attachment.content instanceof Uint8Array) fileSize = attachment.content.byteLength;
+        else if (attachment.content instanceof ArrayBuffer) fileSize = attachment.content.byteLength;
+      }
+      if (attachment.size) fileSize = attachment.size;
+
       if (cid) cidMap.set(cid, publicUrl);
 
       attachmentRecords.push({
         email_id,
         filename,
         mime_type: mimeType,
-        size: fileBytes.byteLength,
+        size: fileSize,
         content_disposition: attachment.disposition || (isInline ? "inline" : "attachment"),
         is_inline: isInline,
         cid,
@@ -361,12 +384,12 @@ serve(async (req) => {
         extracted_text: null,
         extracted_summary: null,
         document_type: documentType,
-        parse_status: "pending",
+        parse_status: fetchedPartially ? "pending_upload" : "pending",
         parse_error: null,
       });
     }
 
-    // Replace CID references in HTML with public URLs
+    // Replace CID references in HTML
     if (bodyHtml && cidMap.size > 0) {
       bodyHtml = replaceCidSources(bodyHtml, cidMap);
     }
@@ -380,7 +403,7 @@ serve(async (req) => {
 
     const parseSucceeded = Boolean(bodyText || bodyHtml || attachmentRecords.length > 0);
 
-    // Insert attachment records immediately (metadata only, no binary upload yet)
+    // Insert attachment records
     if (attachmentRecords.length > 0) {
       const { error: attachInsErr } = await supabase.from("email_attachments").insert(attachmentRecords as any);
       if (attachInsErr) console.error("Failed to save attachment records:", attachInsErr);
@@ -397,23 +420,30 @@ serve(async (req) => {
       has_attachments: attachmentRecords.length > 0,
     }).eq("id", email_id);
 
-    // ── Background: upload attachment blobs to storage (non-blocking) ──
-    if (validAttachments.length > 0) {
+    // ── Background: upload small attachment blobs (skip for large/partial) ──
+    if (!fetchedPartially && validAttachments.length > 0) {
       const bgWork = (async () => {
         for (let i = 0; i < validAttachments.length; i++) {
           const att = validAttachments[i];
           const rec = attachmentRecords[i] as any;
+          if (!att.content) continue;
           try {
+            let bytes: Uint8Array;
+            if (att.content instanceof Uint8Array) bytes = att.content;
+            else if (att.content instanceof ArrayBuffer) bytes = new Uint8Array(att.content);
+            else continue;
+            
+            if (bytes.byteLength === 0) continue;
+
             const { error: upErr } = await supabase.storage
               .from("email-attachments")
-              .upload(rec.storage_path, att._bytes as Uint8Array, {
+              .upload(rec.storage_path, bytes, {
                 contentType: rec.mime_type,
                 upsert: true,
               });
             const status = upErr ? "failed" : "stored";
-            const errMsg = upErr ? upErr.message : null;
             await supabase.from("email_attachments")
-              .update({ parse_status: status, parse_error: errMsg })
+              .update({ parse_status: status, parse_error: upErr?.message || null })
               .eq("email_id", email_id)
               .eq("filename", rec.filename);
           } catch (e) {
@@ -421,7 +451,6 @@ serve(async (req) => {
           }
         }
       })();
-      // Use EdgeRuntime.waitUntil if available, otherwise fire-and-forget
       try { (globalThis as any).EdgeRuntime?.waitUntil(bgWork); } catch { bgWork.catch(() => {}); }
     }
 
