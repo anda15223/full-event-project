@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "npm:zod@3.25.76";
+import Anthropic from "npm:@anthropic-ai/sdk@0.27.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -31,11 +32,9 @@ const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: st
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
   const sn = (supplierName || "").toLowerCase();
-  // Supplier overrides first
   for (const [key, val] of Object.entries(SUPPLIER_COMPANY_OVERRIDES)) {
     if (sn.includes(key)) return val;
   }
-  // Location-based mapping
   const loc = (location || "").toLowerCase();
   for (const [key, company] of Object.entries(LOCATION_COMPANY_MAP)) {
     if (loc.includes(key)) return { company, location };
@@ -53,35 +52,57 @@ function looksLikeInvoiceContent(text: string): boolean {
   const hasKeyword = INVOICE_KEYWORDS.test(text);
   const hasAmount = AMOUNT_PATTERN.test(text);
   const hasDate = DATE_PATTERN.test(text);
-  // At least keyword + amount, or keyword + date, or amount + date
   return (hasKeyword && hasAmount) || (hasKeyword && hasDate) || (hasAmount && hasDate);
 }
 
-const EXTRACTION_PROMPT = `You are a document analysis expert specializing in invoice extraction.
-You receive text from a PDF document OR an email body that may contain invoice information.
+const CLAUDE_EXTRACTION_PROMPT = `You are an expert invoice data extractor. You receive text from a PDF document or an email body.
 
-Your task: Extract structured invoice data from this text.
+COMPANY MAPPING RULES — never deviate:
+- The Fish Project Reffen → Blue Fish ApS
+- The Fish Project Helsingør → The Fish Project ApS
+- Fish Bistro → Aegean ApS
+- Gaia → Aegean ApS
+- Inco Danmark A/S → The Fish Project ApS, PBS payment, central storage
+- BC Catering Roskilde (shop@bccs.dk / info@bccr.dk) → web order, add 25% VAT, The Fish Project ApS or Blue Fish ApS based on location
+- BC Catering Skanderborg (omk.administration@bccr.dk) → PBS cashflow only, Aegean ApS
 
-IMPORTANT RULES:
-- The document may be in Danish, Romanian, or English
-- ALL output must be in English
-- Extract exact numbers, dates, and identifiers as they appear
-- If a field is not found, return null
-- Currency: detect from context (DKK for Danish, RON for Romanian, EUR if European)
-- VAT: look for "moms" (Danish), "TVA" (Romanian), "VAT" (English)
-- Dates: convert to YYYY-MM-DD format
-- Amount: extract the TOTAL amount (including VAT if shown)
-- Be PERMISSIVE: if there's any invoice-like data, extract it
-- Look for: faktura, invoice, betaling, nota, kvittering, ordre, levering, regning, payment, bill, receipt, factură, bilag
+EXTRACTION RULES:
+- Always prefer PDF text over email body for invoice data
+- If no PDF, extract from email body
+- Extract from ANY email containing amounts, dates, or supplier references
+- Never skip an email just because confidence is low
+- Confidence below 0.7 → save with status needs_review
+- Confidence above 0.7 → save with status pending
+- Always extract: supplier_name, invoice_number, invoice_date, due_date, amount, vat_amount, total_with_vat, currency, company, location, what_was_bought, payment_method
+- Currency default is DKK
+- VAT default is 25% of amount if not stated
+- The document may be in Danish, Romanian, or English — output in English
+- Dates must be YYYY-MM-DD format
 
-CRITICAL COMPANY MAPPING RULES:
-- Inco Danmark / inco København → company MUST be "The Fish Project ApS", location = "Central Storage — The Fish Project"
-- Location contains "Reffen" → company = "Blue Fish ApS"
-- Location contains "Helsingør" → company = "The Fish Project ApS"
-- Fish Bistro → company = "Aegean ApS"
-- Gaia → company = "Aegean ApS"
+Return only valid JSON, no explanation, no markdown:
+{
+  "is_invoice": true,
+  "supplier_name": "",
+  "invoice_number": "",
+  "invoice_date": "YYYY-MM-DD",
+  "due_date": "YYYY-MM-DD",
+  "amount": 0.00,
+  "vat_amount": 0.00,
+  "total_with_vat": 0.00,
+  "currency": "DKK",
+  "company": "",
+  "location": "",
+  "what_was_bought": "",
+  "payment_account": "",
+  "payment_reference": "",
+  "payment_method": "",
+  "source_type": "",
+  "confidence": 0.00,
+  "extraction_notes": ""
+}
 
-You MUST use the extract_invoice tool to return your results.`;
+If the text does NOT contain any invoice data at all, return:
+{"is_invoice": false, "confidence": 0, "extraction_notes": "reason"}`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -97,60 +118,47 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+    const claudeKey = Deno.env.get("AIAGENTS");
+    if (!claudeKey) {
+      return new Response(JSON.stringify({ error: "AIAGENTS (Claude API key) not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const anthropic = new Anthropic({ apiKey: claudeKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
     const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
 
-    // ── Determine what to process ──
     if (parsed.data.attachment_id) {
-      // Single attachment mode
       const { data: att, error } = await supabase
-        .from("email_attachments")
-        .select("*")
-        .eq("id", parsed.data.attachment_id)
-        .single();
+        .from("email_attachments").select("*").eq("id", parsed.data.attachment_id).single();
       if (error || !att) {
         return new Response(JSON.stringify({ error: "Attachment not found" }), {
           status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const result = await processAttachment(supabase, att, supabaseUrl, LOVABLE_API_KEY);
+      const result = await processAttachment(supabase, att, supabaseUrl, anthropic);
       results.push(result);
-
     } else if (parsed.data.email_id) {
-      // Single email mode — try attachments first, fall back to body
-      const result = await processEmail(supabase, parsed.data.email_id, supabaseUrl, LOVABLE_API_KEY);
+      const result = await processEmail(supabase, parsed.data.email_id, supabaseUrl, anthropic);
       results.push(...result);
-
     } else if (parsed.data.batch) {
-      // Batch mode — find invoice-classified emails that don't have an invoice record yet
       const { data: invoiceEmails } = await supabase
-        .from("emails")
-        .select("id")
+        .from("emails").select("id")
         .eq("classification", "invoice")
         .gte("received_at", "2026-01-01T00:00:00.000Z")
-        .order("received_at", { ascending: false })
-        .limit(20);
+        .order("received_at", { ascending: false }).limit(20);
 
       if (invoiceEmails && invoiceEmails.length > 0) {
-        // Filter to those without an invoice record
         const emailIds = invoiceEmails.map(e => e.id);
         const { data: existingInvoices } = await supabase
-          .from("invoices")
-          .select("email_id")
-          .in("email_id", emailIds);
+          .from("invoices").select("email_id").in("email_id", emailIds);
         const existingIds = new Set((existingInvoices || []).map(i => i.email_id));
         const toProcess = emailIds.filter(id => !existingIds.has(id)).slice(0, 5);
 
         for (const emailId of toProcess) {
           try {
-            const result = await processEmail(supabase, emailId, supabaseUrl, LOVABLE_API_KEY);
+            const result = await processEmail(supabase, emailId, supabaseUrl, anthropic);
             results.push(...result);
           } catch (err) {
             results.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown" });
@@ -179,18 +187,14 @@ serve(async (req) => {
   }
 });
 
-/* ── Process a full email: try attachments, then fall back to body extraction ── */
+/* ── Process a full email ── */
 async function processEmail(
-  supabase: any, emailId: string, supabaseUrl: string, apiKey: string
+  supabase: any, emailId: string, supabaseUrl: string, anthropic: Anthropic
 ): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string }>> {
   const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
 
-  // Try document attachments first
   const { data: atts } = await supabase
-    .from("email_attachments")
-    .select("*")
-    .eq("email_id", emailId)
-    .eq("is_inline", false);
+    .from("email_attachments").select("*").eq("email_id", emailId).eq("is_inline", false);
 
   const docAtts = (atts || []).filter((att: any) => {
     const mt = (att.mime_type || "").toLowerCase();
@@ -203,30 +207,28 @@ async function processEmail(
   let extractedFromAttachment = false;
   for (const att of docAtts) {
     if (att.storage_path) {
-      const result = await processAttachment(supabase, att, supabaseUrl, apiKey);
+      const result = await processAttachment(supabase, att, supabaseUrl, anthropic);
       results.push(result);
       if (result.status === "extracted") extractedFromAttachment = true;
     }
   }
 
-  // If no attachment extraction succeeded, try extracting from email body
   if (!extractedFromAttachment) {
-    const result = await processEmailBody(supabase, emailId, supabaseUrl, apiKey);
+    const result = await processEmailBody(supabase, emailId, anthropic);
     results.push(result);
   }
 
   return results;
 }
 
-/* ── Extract invoice from email body text (no PDF needed) ── */
+/* ── Extract from email body ── */
 async function processEmailBody(
-  supabase: any, emailId: string, supabaseUrl: string, apiKey: string
+  supabase: any, emailId: string, anthropic: Anthropic
 ): Promise<{ email_id: string; status: string; error?: string }> {
   const { data: email } = await supabase
     .from("emails")
     .select("subject, sender, company, body_clean_text, body_text, received_at")
-    .eq("id", emailId)
-    .single();
+    .eq("id", emailId).single();
 
   if (!email) return { email_id: emailId, status: "error", error: "Email not found" };
 
@@ -235,7 +237,6 @@ async function processEmailBody(
     return { email_id: emailId, status: "skipped", error: "No body text" };
   }
 
-  // Check if content looks invoice-like
   const fullText = `${email.subject || ""} ${bodyText}`;
   if (!looksLikeInvoiceContent(fullText)) {
     return { email_id: emailId, status: "skipped", error: "No invoice-like content in body" };
@@ -248,24 +249,23 @@ async function processEmailBody(
     `Date: ${email.received_at || ""}`,
   ].join("\n");
 
-  return await callAiExtraction(
+  return await callClaudeExtraction(
     supabase, emailId, null, null,
     bodyText.substring(0, 15000), emailContext,
-    email.company, supabaseUrl, apiKey
+    email.company, anthropic
   );
 }
 
 /* ── Process a single attachment ── */
 async function processAttachment(
-  supabase: any, att: any, supabaseUrl: string, apiKey: string
+  supabase: any, att: any, supabaseUrl: string, anthropic: Anthropic
 ): Promise<{ email_id: string; attachment_id: string; status: string; error?: string }> {
   if (!att.storage_path) {
     return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path" };
   }
 
   const { data: fileData, error: dlError } = await supabase.storage
-    .from("email-attachments")
-    .download(att.storage_path);
+    .from("email-attachments").download(att.storage_path);
 
   if (dlError || !fileData) {
     return { email_id: att.email_id, attachment_id: att.id, status: "error", error: "Download failed" };
@@ -277,12 +277,14 @@ async function processAttachment(
   if (mt.includes("pdf")) {
     const arrayBuffer = await fileData.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
+
+    // Try basic text extraction first
     const textContent = tryExtractPdfText(bytes);
 
     if (textContent && textContent.trim().length > 50) {
       extractedText = textContent;
     } else {
-      // AI vision fallback for scanned PDFs
+      // Use Claude vision for scanned PDFs
       let base64 = "";
       const chunkSize = 32768;
       for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -290,28 +292,22 @@ async function processAttachment(
         base64 += String.fromCharCode.apply(null, Array.from(chunk));
       }
       base64 = btoa(base64);
+
       try {
-        const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [{
-              role: "user",
-              content: [
-                { type: "text", text: "Extract ALL text from this PDF document. Return the complete text content, preserving structure (tables, line items, totals). Include all numbers, dates, names, and amounts." },
-                { type: "image_url", image_url: { url: `data:application/pdf;base64,${base64}` } },
-              ],
-            }],
-          }),
+        const visionResponse = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: "Extract ALL text from this PDF document. Return the complete text content, preserving structure (tables, line items, totals). Include all numbers, dates, names, and amounts." },
+              { type: "image", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+            ],
+          }],
         });
-        if (visionResponse.ok) {
-          const visionData = await visionResponse.json();
-          extractedText = visionData.choices?.[0]?.message?.content || "";
-        } else {
-          extractedText = textContent || "";
-        }
-      } catch {
+        extractedText = visionResponse.content[0]?.type === "text" ? visionResponse.content[0].text : "";
+      } catch (e) {
+        console.error("Claude vision fallback error:", e);
         extractedText = textContent || "";
       }
     }
@@ -326,7 +322,6 @@ async function processAttachment(
     return { email_id: att.email_id, attachment_id: att.id, status: "empty", error: "No text extracted" };
   }
 
-  // Save extracted text
   await supabase.from("email_attachments").update({
     extracted_text: extractedText.substring(0, 50000), document_type: "invoice",
   }).eq("id", att.id);
@@ -335,144 +330,117 @@ async function processAttachment(
   const emailContext = await getEmailContext(supabase, att.email_id);
   const { data: parentEmail } = await supabase.from("emails").select("company").eq("id", att.email_id).single();
 
-  return await callAiExtraction(
+  return await callClaudeExtraction(
     supabase, att.email_id, att.id, pdfUrl,
     extractedText.substring(0, 15000), emailContext,
-    parentEmail?.company, supabaseUrl, apiKey
+    parentEmail?.company, anthropic
   );
 }
 
-/* ── AI structured extraction ── */
-async function callAiExtraction(
+/* ── Claude structured extraction ── */
+async function callClaudeExtraction(
   supabase: any, emailId: string, attachmentId: string | null, pdfUrl: string | null,
   text: string, emailContext: string, emailCompany: string | null,
-  supabaseUrl: string, apiKey: string
+  anthropic: Anthropic
 ): Promise<{ email_id: string; attachment_id?: string; status: string; error?: string }> {
   const id = { email_id: emailId, ...(attachmentId ? { attachment_id: attachmentId } : {}) };
 
-  const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2048,
       messages: [
-        { role: "system", content: EXTRACTION_PROMPT },
-        { role: "user", content: `Extract invoice data from this document.\n\nEmail context:\n${emailContext}\n\nDocument text:\n${text}` },
-      ],
-      tools: [{
-        type: "function",
-        function: {
-          name: "extract_invoice",
-          description: "Extract structured invoice data from document text",
-          parameters: {
-            type: "object",
-            properties: {
-              supplier_name: { type: "string", description: "Name of the supplier/vendor" },
-              invoice_number: { type: "string", description: "Invoice number/reference" },
-              invoice_date: { type: "string", description: "Invoice date in YYYY-MM-DD format" },
-              due_date: { type: "string", description: "Payment due date in YYYY-MM-DD format" },
-              amount: { type: "number", description: "Total amount including VAT" },
-              currency: { type: "string", enum: ["DKK", "EUR", "RON", "USD", "GBP", "SEK", "NOK"] },
-              vat: { type: "number", description: "VAT/moms/TVA amount" },
-              summary: { type: "string", description: "Brief summary of what the invoice is for, in English" },
-              location: { type: "string", description: "Location/branch this invoice relates to" },
-            },
-            required: ["supplier_name"],
-            additionalProperties: false,
-          },
+        {
+          role: "user",
+          content: `${CLAUDE_EXTRACTION_PROMPT}\n\n--- EMAIL CONTEXT ---\n${emailContext}\n\n--- DOCUMENT TEXT ---\n${text}`,
         },
-      }],
-      tool_choice: { type: "function", function: { name: "extract_invoice" } },
-    }),
-  });
+      ],
+    });
 
-  if (!aiResponse.ok) {
-    const errText = await aiResponse.text();
-    console.error("AI extraction error:", aiResponse.status, errText);
-    if (aiResponse.status === 429) return { ...id, status: "rate_limited" };
-    return { ...id, status: "error", error: `AI ${aiResponse.status}` };
+    const responseText = response.content[0]?.type === "text" ? response.content[0].text : "";
+    console.log(`Claude raw response for ${emailId}:`, responseText.substring(0, 500));
+
+    let invoiceData: any = null;
+    try {
+      // Strip markdown fences if present
+      const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      invoiceData = JSON.parse(cleaned);
+    } catch {
+      return { ...id, status: "error", error: "Could not parse Claude response" };
+    }
+
+    if (!invoiceData || invoiceData.is_invoice === false) {
+      return { ...id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
+    }
+
+    // Apply company mapping rules (hardcoded override)
+    const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
+
+    const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
+    const status = confidence >= 0.7 ? "pending" : "needs_review";
+
+    if (attachmentId) {
+      await supabase.from("email_attachments").update({
+        extracted_summary: invoiceData.what_was_bought || `Invoice from ${invoiceData.supplier_name || "unknown"}`,
+        parse_error: null,
+      }).eq("id", attachmentId);
+    }
+
+    // Upsert email_invoices
+    const { data: existing } = await supabase.from("email_invoices").select("id").eq("email_id", emailId).limit(1);
+    const emailInvoiceRecord = {
+      email_id: emailId,
+      supplier_name: invoiceData.supplier_name || null,
+      invoice_number: invoiceData.invoice_number || null,
+      invoice_date: invoiceData.invoice_date || null,
+      due_date: invoiceData.due_date || null,
+      amount: invoiceData.amount || null,
+      currency: invoiceData.currency || "DKK",
+      vat: invoiceData.vat_amount || null,
+      attachment_present: !!attachmentId,
+      company: mapped.company,
+    };
+    if (existing && existing.length > 0) {
+      await supabase.from("email_invoices").update(emailInvoiceRecord).eq("id", existing[0].id);
+    } else {
+      await supabase.from("email_invoices").insert(emailInvoiceRecord);
+    }
+
+    // Upsert invoices
+    const { data: existingInvoice } = await supabase.from("invoices").select("id").eq("email_id", emailId).limit(1);
+    const invoiceRecord = {
+      email_id: emailId,
+      supplier_name: invoiceData.supplier_name || null,
+      invoice_number: invoiceData.invoice_number || null,
+      invoice_date: invoiceData.invoice_date || null,
+      due_date: invoiceData.due_date || null,
+      amount: invoiceData.amount || null,
+      total_with_vat: invoiceData.total_with_vat || invoiceData.amount || null,
+      vat_amount: invoiceData.vat_amount || null,
+      currency: invoiceData.currency || "DKK",
+      what_was_bought: invoiceData.what_was_bought || null,
+      company: mapped.company,
+      location: mapped.location || invoiceData.location || null,
+      source_type: invoiceData.source_type || "email",
+      status,
+      confidence,
+      pdf_url: pdfUrl,
+      payment_account: invoiceData.payment_account || null,
+      payment_reference: invoiceData.payment_reference || null,
+    };
+    if (existingInvoice && existingInvoice.length > 0) {
+      await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
+    } else {
+      await supabase.from("invoices").insert(invoiceRecord);
+    }
+
+    console.log(`✅ Extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, confidence=${confidence}, status=${status}`);
+    return { ...id, status: "extracted" };
+
+  } catch (err) {
+    console.error("Claude extraction error:", err);
+    return { ...id, status: "error", error: err instanceof Error ? err.message : "Claude API error" };
   }
-
-  const aiData = await aiResponse.json();
-  let invoiceData: any = null;
-
-  const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-  if (toolCall?.function?.arguments) {
-    try { invoiceData = JSON.parse(toolCall.function.arguments); } catch {}
-  }
-  if (!invoiceData) {
-    const content = aiData.choices?.[0]?.message?.content || "";
-    try { invoiceData = JSON.parse(content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()); } catch {}
-  }
-  if (!invoiceData) {
-    return { ...id, status: "error", error: "Could not parse AI response" };
-  }
-
-  // Apply company mapping rules
-  const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location, emailCompany);
-
-  // Determine confidence — permissive: save everything
-  const hasAmount = invoiceData.amount != null;
-  const hasSupplier = !!invoiceData.supplier_name;
-  const confidence = hasAmount && hasSupplier ? 0.9 : hasSupplier ? 0.7 : 0.5;
-  const status = confidence >= 0.7 ? "pending" : "needs_review";
-
-  // Save attachment summary if applicable
-  if (attachmentId) {
-    await supabase.from("email_attachments").update({
-      extracted_summary: invoiceData.summary || `Invoice from ${invoiceData.supplier_name}${invoiceData.amount ? ` - ${invoiceData.amount} ${invoiceData.currency || ""}` : ""}`,
-      parse_error: null,
-    }).eq("id", attachmentId);
-  }
-
-  // Upsert to email_invoices
-  const { data: existing } = await supabase.from("email_invoices").select("id").eq("email_id", emailId).limit(1);
-  const emailInvoiceRecord = {
-    email_id: emailId,
-    supplier_name: invoiceData.supplier_name || null,
-    invoice_number: invoiceData.invoice_number || null,
-    invoice_date: invoiceData.invoice_date || null,
-    due_date: invoiceData.due_date || null,
-    amount: invoiceData.amount || null,
-    currency: invoiceData.currency || "DKK",
-    vat: invoiceData.vat || null,
-    attachment_present: !!attachmentId,
-    company: mapped.company,
-  };
-  if (existing && existing.length > 0) {
-    await supabase.from("email_invoices").update(emailInvoiceRecord).eq("id", existing[0].id);
-  } else {
-    await supabase.from("email_invoices").insert(emailInvoiceRecord);
-  }
-
-  // Upsert to invoices table
-  const { data: existingInvoice } = await supabase.from("invoices").select("id").eq("email_id", emailId).limit(1);
-  const invoiceRecord = {
-    email_id: emailId,
-    supplier_name: invoiceData.supplier_name || null,
-    invoice_number: invoiceData.invoice_number || null,
-    invoice_date: invoiceData.invoice_date || null,
-    due_date: invoiceData.due_date || null,
-    amount: invoiceData.amount || null,
-    total_with_vat: invoiceData.amount || null,
-    vat_amount: invoiceData.vat || null,
-    currency: invoiceData.currency || "DKK",
-    what_was_bought: invoiceData.summary || null,
-    company: mapped.company,
-    location: mapped.location,
-    source_type: "email",
-    status,
-    confidence,
-    pdf_url: pdfUrl,
-  };
-  if (existingInvoice && existingInvoice.length > 0) {
-    await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
-  } else {
-    await supabase.from("invoices").insert(invoiceRecord);
-  }
-
-  console.log(`Extracted invoice: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, confidence=${confidence}, status=${status}, pdf=${pdfUrl ? "YES" : "BODY"}`);
-  return { ...id, status: "extracted" };
 }
 
 /* ── Helpers ── */
@@ -480,8 +448,7 @@ async function getEmailContext(supabase: any, emailId: string): Promise<string> 
   const { data: email } = await supabase
     .from("emails")
     .select("subject, sender, company, body_clean_text, received_at")
-    .eq("id", emailId)
-    .single();
+    .eq("id", emailId).single();
   if (!email) return "";
   return [
     `Subject: ${email.subject || ""}`,

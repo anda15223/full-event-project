@@ -4,10 +4,194 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Mail, MessageCircle, Key, RefreshCw, Loader2 } from "lucide-react";
+import { Settings, Mail, MessageCircle, Key, RefreshCw, Loader2, Zap, FlaskConical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { Progress } from "@/components/ui/progress";
+
+function ClaudeReprocessPanel() {
+  const [running, setRunning] = useState(false);
+  const [testMode, setTestMode] = useState(true);
+  const [progress, setProgress] = useState<{
+    batch: number;
+    totalBatches: number;
+    processed: number;
+    extracted: number;
+    skipped: number;
+    errors: number;
+    totalEmails: number;
+    totalInvoices: number;
+  } | null>(null);
+  const [testDetails, setTestDetails] = useState<any[] | null>(null);
+
+  const { data: stats } = useQuery({
+    queryKey: ["claude-reprocess-stats"],
+    queryFn: async () => {
+      const { count: totalEmails } = await supabase
+        .from("emails")
+        .select("id", { count: "exact", head: true })
+        .gte("received_at", "2026-01-01T00:00:00.000Z");
+      const { count: totalInvoices } = await supabase
+        .from("invoices")
+        .select("id", { count: "exact", head: true });
+      return { totalEmails: totalEmails || 0, totalInvoices: totalInvoices || 0 };
+    },
+  });
+
+  const runTest = async () => {
+    setRunning(true);
+    setTestDetails(null);
+    setProgress(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
+        body: { test_mode: true, batch_size: 5 },
+      });
+      if (error) throw error;
+      console.log("🧪 Claude test results:", JSON.stringify(data, null, 2));
+      setTestDetails(data.details || []);
+      toast.success(`Test complete: ${data.extracted} invoices extracted from ${data.processed} emails`);
+    } catch (err) {
+      toast.error("Test failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const runFull = async () => {
+    setRunning(true);
+    setTestMode(false);
+    setTestDetails(null);
+    const totals = { batch: 0, totalBatches: 0, processed: 0, extracted: 0, skipped: 0, errors: 0, totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0 };
+    const batchSize = 10;
+    const maxBatches = Math.ceil((stats?.totalEmails || 2062) / batchSize);
+    totals.totalBatches = maxBatches;
+
+    try {
+      for (let i = 0; i < maxBatches; i++) {
+        totals.batch = i + 1;
+        setProgress({ ...totals });
+
+        const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
+          body: { test_mode: false, batch_size: batchSize },
+        });
+        if (error) throw error;
+
+        totals.processed += data.processed || 0;
+        totals.extracted += data.extracted || 0;
+        totals.skipped += data.skipped || 0;
+        totals.errors += data.errors || 0;
+        totals.totalInvoices = data.total_invoices || totals.totalInvoices;
+
+        setProgress({ ...totals });
+
+        if ((data.processed || 0) === 0) break; // No more to process
+      }
+      toast.success(`Full reprocess complete: ${totals.extracted} invoices from ${totals.processed} emails`);
+    } catch (err) {
+      toast.error("Reprocess failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
+
+  return (
+    <Card className="glass-panel border-primary/20">
+      <CardHeader>
+        <CardTitle className="text-base font-heading flex items-center gap-2">
+          <Zap className="h-4 w-4 text-primary" /> Claude Invoice Extraction
+        </CardTitle>
+        <CardDescription>
+          Extract invoices using Claude claude-sonnet-4-20250514 — {stats?.totalEmails ?? "..."} emails, {stats?.totalInvoices ?? "..."} invoices so far
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!running && !progress && (
+          <div className="flex gap-2">
+            <Button onClick={runTest} variant="outline" className="gap-2">
+              <FlaskConical className="h-4 w-4" /> Test on 5 emails
+            </Button>
+            <Button onClick={runFull} className="gap-2">
+              <Zap className="h-4 w-4" /> Reprocess all with Claude
+            </Button>
+          </div>
+        )}
+
+        {running && progress && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-primary font-medium">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Batch {progress.batch}/{progress.totalBatches} — Processing...
+            </div>
+            <Progress value={pct} className="h-2" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              <div>
+                <div className="text-lg font-bold">{progress.processed}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Processed</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-green-500">{progress.extracted}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Invoices</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-muted-foreground">{progress.skipped}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Skipped</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-destructive">{progress.errors}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Errors</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!running && progress && (
+          <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+            <p className="font-medium text-sm">✅ Reprocess complete</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              <div>
+                <div className="text-lg font-bold">{progress.processed}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Processed</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-green-500">{progress.extracted}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Invoices</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-muted-foreground">{progress.skipped}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Skipped</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-destructive">{progress.errors}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Errors</div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Total invoices in DB: {progress.totalInvoices}</p>
+            <Button onClick={runFull} variant="outline" size="sm" className="gap-1.5 mt-2">
+              <RefreshCw className="h-3 w-3" /> Run again
+            </Button>
+          </div>
+        )}
+
+        {testDetails && (
+          <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1 max-h-48 overflow-auto">
+            <p className="font-medium">🧪 Test results (check browser console for raw Claude responses):</p>
+            {testDetails.map((d: any, i: number) => (
+              <div key={i} className="flex gap-2">
+                <Badge variant={d.status === "extracted" ? "default" : "outline"} className="text-[10px]">
+                  {d.status}
+                </Badge>
+                <span className="truncate">{d.email_id}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function ReprocessPanel() {
   const [running, setRunning] = useState(false);
@@ -109,6 +293,8 @@ export default function SettingsPage() {
         </h1>
         <p className="text-muted-foreground text-sm mt-1">Configure your integrations and API keys</p>
       </div>
+
+      <ClaudeReprocessPanel />
 
       <ReprocessPanel />
 
