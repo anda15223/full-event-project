@@ -99,6 +99,7 @@ function HtmlEmailBody({ html }: { html: string }) {
 
 function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storageBaseUrl: string }) {
   const fetchAttachment = useFetchAttachment();
+  const extractInvoice = useExtractInvoice();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const Icon = getAttachmentIcon(att.mime_type);
   const downloadUrl = att.storage_path ? `${storageBaseUrl}/${att.storage_path}` : null;
