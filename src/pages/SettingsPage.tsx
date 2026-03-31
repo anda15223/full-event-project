@@ -82,7 +82,33 @@ function ClaudeReprocessPanel() {
       });
       if (error) throw error;
       console.log("🧪 Claude test results:", JSON.stringify(data, null, 2));
-      setTestDetails(data.details || []);
+
+      // Enrich details with invoice data from DB for extracted emails
+      const extractedIds = (data.details || [])
+        .filter((d: any) => d.status === "extracted")
+        .map((d: any) => d.email_id);
+
+      let invoiceMap: Record<string, any> = {};
+      if (extractedIds.length > 0) {
+        const { data: invoices } = await supabase
+          .from("invoices")
+          .select("email_id, supplier_name, amount, currency, company, invoice_number")
+          .in("email_id", extractedIds);
+        for (const inv of invoices || []) {
+          invoiceMap[inv.email_id] = inv;
+        }
+      }
+
+      const enriched = (data.details || []).map((d: any) => ({
+        ...d,
+        supplier: invoiceMap[d.email_id]?.supplier_name || null,
+        amount: invoiceMap[d.email_id]?.amount || null,
+        company: invoiceMap[d.email_id]?.company || null,
+        currency: invoiceMap[d.email_id]?.currency || "DKK",
+        invoice_number: invoiceMap[d.email_id]?.invoice_number || null,
+      }));
+
+      setTestDetails(enriched);
       toast.success(`Test complete: ${data.extracted ?? 0} invoices extracted from ${data.processed ?? 0} emails`);
     } catch (err) {
       toast.error("Test failed: " + (err instanceof Error ? err.message : "Unknown error"));
