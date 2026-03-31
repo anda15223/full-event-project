@@ -42,6 +42,7 @@ export type EmailAttachment = {
   document_type: string | null;
   parse_status: string | null;
   parse_error: string | null;
+  part_number: string | null;
   created_at: string;
 };
 
