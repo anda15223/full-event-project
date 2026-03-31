@@ -170,6 +170,9 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
               <Copy className="h-3 w-3" /> Payment details
               <ChevronDown className={`h-3 w-3 transition-transform ${showPayment ? "rotate-180" : ""}`} />
             </Button>
+            {!localPdfUrl && (
+              <PdfUploadButton invoiceId={invoice.id} onUploaded={(url) => setLocalPdfUrl(url)} />
+            )}
             {invoice.status !== "paid" && (
               <Button
                 size="sm"
