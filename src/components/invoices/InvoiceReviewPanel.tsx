@@ -75,7 +75,8 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
   const [customLocation, setCustomLocation] = useState("");
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfStoragePath, setPdfStoragePath] = useState<string | null>(null);
+  const [pdfAttachmentId, setPdfAttachmentId] = useState<string | null>(null);
   const [emailInfo, setEmailInfo] = useState<{ sender: string; subject: string; received_at?: string; body_html?: string; body_clean_text?: string } | null>(null);
 
   // Reset form when invoice changes
