@@ -138,6 +138,39 @@ function extractLiteral(ascii: string): string | null {
   return ascii.substring(start, start + size);
 }
 
+/* Auto-detect encoding from content if BODYSTRUCTURE regex fails */
+function detectEncoding(content: string): string {
+  const trimmed = content.trim();
+  // Base64: lines of alphanumeric+/+= chars, typically 76 chars wide
+  if (/^[A-Za-z0-9+/=\r\n\s]+$/.test(trimmed) && trimmed.length > 40) {
+    // Check if most lines are ~76 chars (base64 hallmark)
+    const lines = trimmed.split(/\r?\n/).filter(l => l.trim().length > 0);
+    const longLines = lines.filter(l => l.trim().length >= 60);
+    if (longLines.length > lines.length * 0.5) return "base64";
+  }
+  // Quoted-printable: contains =XX sequences
+  if (/=[0-9A-F]{2}/i.test(trimmed) && (trimmed.includes("=\r\n") || trimmed.includes("=\n") || (trimmed.match(/=[0-9A-F]{2}/gi) || []).length > 3)) {
+    return "quoted-printable";
+  }
+  return "7bit";
+}
+
+/* Extract encoding for a specific MIME type from BODYSTRUCTURE */
+function findPartEncoding(bs: string, mimeType: "PLAIN" | "HTML"): string {
+  // BODYSTRUCTURE part format: ("TEXT" "PLAIN" ("CHARSET" "...") NIL NIL "BASE64" size)
+  // We need to find the encoding field which comes after: type subtype params id description encoding
+  const pattern = new RegExp(
+    `"TEXT"\\s+"${mimeType}"\\s+` +     // type subtype
+    `(?:\\([^)]*\\)|NIL)\\s+` +          // params
+    `(?:"[^"]*"|NIL)\\s+` +             // id
+    `(?:"[^"]*"|NIL)\\s+` +             // description
+    `"(7BIT|8BIT|QUOTED-PRINTABLE|BASE64)"`, // encoding
+    "i"
+  );
+  const m = bs.match(pattern);
+  return m ? m[1].toLowerCase() : "";
+}
+
 /* ── Parse BODYSTRUCTURE for attachment metadata ── */
 interface AttachmentMeta {
   partNum: string;
@@ -314,8 +347,9 @@ serve(async (req) => {
         const textRes = await imapCmd(conn, "T1", `UID FETCH ${uid} (BODY.PEEK[${textPartNum}])`, 256000);
         const textContent = extractLiteral(latin1(textRes));
         if (textContent) {
-          const encMatch = bsUpper.match(/"TEXT"\s+"PLAIN"[^)]*\)\s+(?:NIL|"[^"]*")\s+(?:NIL|"[^"]*")\s+"(7BIT|8BIT|QUOTED-PRINTABLE|BASE64)"/i);
-          bodyText = decodeMimePart(textContent, encMatch?.[1]?.toLowerCase() || "7bit", charset);
+          const enc = findPartEncoding(bsRes, "PLAIN") || detectEncoding(textContent);
+          console.log(`Text encoding: ${enc}, content length: ${textContent.length}`);
+          bodyText = decodeMimePart(textContent, enc, charset);
         }
       } catch (e) { console.log("Text part fetch error:", e); }
 
@@ -324,8 +358,9 @@ serve(async (req) => {
         const htmlRes = await imapCmd(conn, "T2", `UID FETCH ${uid} (BODY.PEEK[${htmlPartNum}])`, 256000);
         const htmlContent = extractLiteral(latin1(htmlRes));
         if (htmlContent) {
-          const encMatch = bsUpper.match(/"TEXT"\s+"HTML"[^)]*\)\s+(?:NIL|"[^"]*")\s+(?:NIL|"[^"]*")\s+"(7BIT|8BIT|QUOTED-PRINTABLE|BASE64)"/i);
-          bodyHtml = decodeMimePart(htmlContent, encMatch?.[1]?.toLowerCase() || "7bit", charset);
+          const enc = findPartEncoding(bsRes, "HTML") || detectEncoding(htmlContent);
+          console.log(`HTML encoding: ${enc}, content length: ${htmlContent.length}`);
+          bodyHtml = decodeMimePart(htmlContent, enc, charset);
         }
       } catch (e) { console.log("HTML part fetch error:", e); }
 
@@ -335,8 +370,8 @@ serve(async (req) => {
           const fbRes = await imapCmd(conn, "T3", `UID FETCH ${uid} (BODY.PEEK[1])`, 256000);
           const fbContent = extractLiteral(latin1(fbRes));
           if (fbContent) {
-            const encMatch = bsUpper.match(/"(QUOTED-PRINTABLE|BASE64)"/i);
-            const decoded = decodeMimePart(fbContent, encMatch?.[1]?.toLowerCase() || "7bit", charset);
+            const enc = detectEncoding(fbContent);
+            const decoded = decodeMimePart(fbContent, enc, charset);
             if (decoded.includes("<") && decoded.includes(">")) bodyHtml = decoded;
             else bodyText = decoded;
           }
@@ -346,8 +381,8 @@ serve(async (req) => {
       const textRes = await imapCmd(conn, "T1", `UID FETCH ${uid} (BODY.PEEK[TEXT])`, 256000);
       const textContent = extractLiteral(latin1(textRes));
       if (textContent) {
-        const encMatch = bsUpper.match(/"(QUOTED-PRINTABLE|BASE64)"/i);
-        const decoded = decodeMimePart(textContent, encMatch?.[1]?.toLowerCase() || "7bit", charset);
+        const enc = detectEncoding(textContent);
+        const decoded = decodeMimePart(textContent, enc, charset);
         if (bsUpper.includes('"HTML"')) bodyHtml = decoded;
         else bodyText = decoded;
       }
