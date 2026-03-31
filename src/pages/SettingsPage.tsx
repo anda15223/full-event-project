@@ -348,10 +348,42 @@ function ClaudeReprocessPanel() {
               </div>
             )}
 
-            <div className="flex gap-2 pt-2">
+            {/* Error breakdown */}
+            {progress.errors > 0 && Object.keys(progress.errorBreakdown || {}).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-destructive">Errors ({progress.errors})</p>
+                {Object.entries(progress.errorBreakdown)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([category, count]) => {
+                    const labels: Record<string, string> = {
+                      pdf_too_large: "PDF too large",
+                      json_parse: "JSON parse failed",
+                      attachment_download: "Attachment download",
+                      claude_timeout: "Claude timeout",
+                      rate_limit: "Rate limited",
+                      no_content: "No content",
+                      other: "Other",
+                    };
+                    return (
+                      <div key={category} className="flex items-center justify-between text-sm">
+                        <span className="text-destructive/80">{labels[category] || category}</span>
+                        <span className="font-mono font-semibold text-destructive">{count}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2 flex-wrap">
               <Button onClick={runFull} variant="outline" size="sm" className="gap-1.5">
                 <RefreshCw className="h-3 w-3" /> {completed ? "Run again" : "Resume"}
               </Button>
+              {completed && progress.errors > 0 && (
+                <Button onClick={runRetry} disabled={retrying} variant="outline" size="sm" className="gap-1.5 text-destructive border-destructive/30">
+                  {retrying ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  Retry {progress.errors} errors
+                </Button>
+              )}
               <Button variant="ghost" size="sm" className="gap-1.5" asChild>
                 <a href="/agent/invoices">View invoices →</a>
               </Button>
@@ -359,6 +391,14 @@ function ClaudeReprocessPanel() {
                 <a href="/cashflow">View cashflow →</a>
               </Button>
             </div>
+
+            {retryResult && (
+              <div className="rounded-lg bg-muted p-3 space-y-1 text-sm">
+                <p className="font-semibold">🔄 Retry results</p>
+                <p>Processed: {retryResult.processed} · Recovered: <span className="text-success font-semibold">{retryResult.extracted}</span> · Still errored: <span className="text-destructive">{retryResult.errors}</span></p>
+                {retryResult.remaining > 0 && <p className="text-xs text-muted-foreground">{retryResult.remaining} more to retry</p>}
+              </div>
+            )}
           </div>
         )}
 
