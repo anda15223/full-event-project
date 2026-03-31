@@ -176,7 +176,7 @@ export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) 
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-0">
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-border/30 bg-secondary/20 shrink-0">
           <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" disabled={pageNum <= 1}
@@ -191,8 +191,10 @@ export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) 
         </div>
       )}
 
-      <div ref={containerRef} className="flex-1 overflow-auto bg-secondary/10 flex justify-center p-4">
-        <canvas ref={canvasRef} className="shadow-md rounded bg-white" />
+      <div ref={containerRef} className="min-h-0 flex-1 overflow-auto overscroll-contain bg-secondary/10 p-4">
+        <div className="flex justify-center">
+          <canvas ref={canvasRef} className="shadow-md rounded bg-white block shrink-0" style={{ maxWidth: 'none' }} />
+        </div>
       </div>
 
       <div className="px-3 py-1.5 border-t border-border/30 shrink-0">
