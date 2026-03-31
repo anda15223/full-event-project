@@ -130,6 +130,18 @@ interface BcCateringRouting {
   locations: Array<{ location: string; company: string }>;
 }
 
+function detectIncoFlow(sender: string): { company: string; location: string; agent: string } | null {
+  const s = (sender || "").toLowerCase();
+  if (s.includes("inco.dk") || s.includes("finans@inco")) {
+    return {
+      company: "The Fish Project ApS",
+      location: "Central Storage — The Fish Project",
+      agent: "invoice_agent",
+    };
+  }
+  return null;
+}
+
 function detectBcCateringFlow(sender: string, subject: string, body: string): BcCateringRouting | null {
   const s = (sender || "").toLowerCase();
   const subj = (subject || "").toLowerCase();
