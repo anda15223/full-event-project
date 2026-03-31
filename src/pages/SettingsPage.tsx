@@ -25,6 +25,7 @@ type ReprocessProgress = {
   totalCashflow: number;
   currentSubject: string;
   byCompany: Record<string, number>;
+  errorBreakdown: Record<string, number>;
 };
 
 function loadSavedProgress(): { running: boolean; progress: ReprocessProgress | null } {
