@@ -59,6 +59,7 @@ function ClaudeReprocessPanel() {
       const { count: totalEmails } = await supabase
         .from("emails")
         .select("id", { count: "exact", head: true })
+        .eq("classification", "invoice")
         .gte("received_at", "2026-01-01T00:00:00.000Z");
       const { count: totalInvoices } = await supabase
         .from("invoices")
