@@ -91,13 +91,15 @@ function decodePart(body: string, partHeaders: string): string {
   const cte = getHeader(partHeaders, "Content-Transfer-Encoding").toLowerCase();
   const charset = getCharset(ct);
 
-  if (cte === "quoted-printable") return decodeQuotedPrintable(body, charset);
-  if (cte === "base64") return decodeBase64(body, charset);
+  try {
+    if (cte === "quoted-printable") return decodeWithCharset(qpToBytes(body), charset);
+    if (cte === "base64") return decodeWithCharset(b64ToBytes(body), charset);
+  } catch { /* fall through */ }
+
+  // No transfer encoding — try charset decode on raw bytes
   if (charset.toLowerCase() !== "utf-8" && charset.toLowerCase() !== "us-ascii") {
-    try {
-      const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
-      return new TextDecoder(charset).decode(bytes);
-    } catch { /* fall through */ }
+    const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
+    return decodeWithCharset(bytes, charset);
   }
   return body;
 }
