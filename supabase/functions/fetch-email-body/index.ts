@@ -138,6 +138,39 @@ function extractLiteral(ascii: string): string | null {
   return ascii.substring(start, start + size);
 }
 
+/* Auto-detect encoding from content if BODYSTRUCTURE regex fails */
+function detectEncoding(content: string): string {
+  const trimmed = content.trim();
+  // Base64: lines of alphanumeric+/+= chars, typically 76 chars wide
+  if (/^[A-Za-z0-9+/=\r\n\s]+$/.test(trimmed) && trimmed.length > 40) {
+    // Check if most lines are ~76 chars (base64 hallmark)
+    const lines = trimmed.split(/\r?\n/).filter(l => l.trim().length > 0);
+    const longLines = lines.filter(l => l.trim().length >= 60);
+    if (longLines.length > lines.length * 0.5) return "base64";
+  }
+  // Quoted-printable: contains =XX sequences
+  if (/=[0-9A-F]{2}/i.test(trimmed) && (trimmed.includes("=\r\n") || trimmed.includes("=\n") || (trimmed.match(/=[0-9A-F]{2}/gi) || []).length > 3)) {
+    return "quoted-printable";
+  }
+  return "7bit";
+}
+
+/* Extract encoding for a specific MIME type from BODYSTRUCTURE */
+function findPartEncoding(bs: string, mimeType: "PLAIN" | "HTML"): string {
+  // BODYSTRUCTURE part format: ("TEXT" "PLAIN" ("CHARSET" "...") NIL NIL "BASE64" size)
+  // We need to find the encoding field which comes after: type subtype params id description encoding
+  const pattern = new RegExp(
+    `"TEXT"\\s+"${mimeType}"\\s+` +     // type subtype
+    `(?:\\([^)]*\\)|NIL)\\s+` +          // params
+    `(?:"[^"]*"|NIL)\\s+` +             // id
+    `(?:"[^"]*"|NIL)\\s+` +             // description
+    `"(7BIT|8BIT|QUOTED-PRINTABLE|BASE64)"`, // encoding
+    "i"
+  );
+  const m = bs.match(pattern);
+  return m ? m[1].toLowerCase() : "";
+}
+
 /* ── Parse BODYSTRUCTURE for attachment metadata ── */
 interface AttachmentMeta {
   partNum: string;
