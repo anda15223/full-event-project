@@ -95,7 +95,7 @@ export default function AgentInbox() {
             Fetch
           </Button>
           <Button
-            onClick={() => classifyEmails.mutate()}
+            onClick={() => classifyEmails.mutate(undefined)}
             disabled={classifyEmails.isPending || unprocessedCount === 0}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
