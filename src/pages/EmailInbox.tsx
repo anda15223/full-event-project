@@ -39,11 +39,8 @@ export default function EmailInbox() {
     return list;
   }, [emails, filter, search]);
 
-  // Detail view when an email is selected
   if (selectedEmail) {
     return <EmailDetail email={selectedEmail} onBack={() => setSelectedEmail(null)} />;
-      </div>
-    );
   }
 
   // List view
