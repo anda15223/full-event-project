@@ -184,9 +184,21 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
   const { data: attachments } = useEmailAttachments(email.id);
   const reparseEmail = useReparseEmail();
 
-  const bodyHtml = bodyData?.body_html || (email as any).body_html;
-  const bodyText = bodyData?.body_text || email.body_text;
+  const rawBodyHtml = bodyData?.body_html || (email as any).body_html;
+  const rawBodyText = bodyData?.body_text || email.body_text;
+
+  // Filter out base64/binary content that leaked into body fields
+  const looksLikeBinary = (text: string | null | undefined) => {
+    if (!text || text.length < 100) return false;
+    if (/^[A-Za-z0-9+/=\r\n\s]{200,}$/.test(text.trim())) return true;
+    const b64 = (text.match(/[A-Za-z0-9+/=]/g) || []).length;
+    return b64 / text.length > 0.95 && text.length > 500;
+  };
+
+  const bodyHtml = looksLikeBinary(rawBodyHtml) ? null : rawBodyHtml;
+  const bodyText = looksLikeBinary(rawBodyText) ? null : rawBodyText;
   const hasContent = bodyHtml || (bodyText && bodyText.length > 10);
+  const isAttachmentOnly = !hasContent && (attachments?.length ?? 0) > 0;
 
   const storageBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/email-attachments`;
 
