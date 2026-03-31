@@ -49,10 +49,12 @@ function saveProgress(progress: ReprocessProgress | null, running: boolean) {
 function ClaudeReprocessPanel() {
   const saved = loadSavedProgress();
   const [running, setRunning] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState<ReprocessProgress | null>(saved.progress);
   const [testDetails, setTestDetails] = useState<any[] | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [retryResult, setRetryResult] = useState<any>(null);
 
   const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ["claude-reprocess-stats"],
