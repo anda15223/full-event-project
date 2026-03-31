@@ -145,28 +145,42 @@ export function useFetchEmails() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (sinceDate?: string) => {
-      const limit = 15;
+      const limit = 5;
       let offset = 0;
       let totalFound = 0;
       let totalFetched = 0;
       let totalInserted = 0;
       let hasMore = true;
+      let consecutiveErrors = 0;
 
       while (hasMore) {
-        const { data, error } = await supabase.functions.invoke("fetch-emails", {
-          body: { since_date: sinceDate, limit, offset },
-        });
-        if (error) throw error;
+        try {
+          const { data, error } = await supabase.functions.invoke("fetch-emails", {
+            body: { since_date: sinceDate, limit, offset },
+          });
+          if (error) throw error;
 
-        const fetched = data?.fetched || 0;
-        totalFound = data?.total_found || totalFound;
-        totalFetched += fetched;
-        totalInserted += data?.inserted || 0;
-        offset = data?.next_offset ?? offset + fetched;
-        hasMore = Boolean(data?.has_more) && fetched > 0;
+          consecutiveErrors = 0;
+          const fetched = data?.fetched || 0;
+          totalFound = data?.total_found || totalFound;
+          totalFetched += fetched;
+          totalInserted += data?.inserted || 0;
+          offset = data?.next_offset ?? offset + fetched;
+          hasMore = Boolean(data?.has_more) && fetched > 0;
 
-        if (fetched === 0) {
-          hasMore = false;
+          if (fetched === 0) hasMore = false;
+
+          // Invalidate after each batch so UI updates
+          queryClient.invalidateQueries({ queryKey: ["emails"] });
+        } catch (err: any) {
+          consecutiveErrors++;
+          console.warn(`Fetch batch error (attempt ${consecutiveErrors}):`, err);
+          if (consecutiveErrors >= 2) {
+            // Stop after 2 consecutive errors but return partial results
+            break;
+          }
+          // Wait before retry
+          await new Promise(r => setTimeout(r, 2000));
         }
       }
 
