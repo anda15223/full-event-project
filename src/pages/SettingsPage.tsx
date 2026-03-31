@@ -146,6 +146,12 @@ function ClaudeReprocessPanel() {
         totals.totalCashflow = data.total_cashflow || totals.totalCashflow;
         totals.currentSubject = data.current_subject || "";
         if (data.by_company) totals.byCompany = data.by_company;
+        // Accumulate error breakdown
+        if (data.error_breakdown) {
+          for (const [cat, count] of Object.entries(data.error_breakdown)) {
+            totals.errorBreakdown[cat] = (totals.errorBreakdown[cat] || 0) + (count as number);
+          }
+        }
 
         // Move to next offset
         offset = data.next_offset || (offset + batchSize);
