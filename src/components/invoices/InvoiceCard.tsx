@@ -9,6 +9,7 @@ import { useUpdateInvoiceField } from "@/hooks/useInvoices";
 import PaymentCopyPanel from "./PaymentCopyPanel";
 import InlineEdit from "./InlineEdit";
 import InvoicePreviewSheet from "./InvoicePreviewSheet";
+import PdfUploadButton from "./PdfUploadButton";
 
 const LOCATION_COLORS: Record<string, string> = {
   "Fish Bistro": "bg-agent-blue/10 text-agent-blue border-agent-blue/20",
