@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, Mail, FileText, CheckSquare, Search, ArrowLeft, Clock, Building2, User } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEmails, useSyncAndClassify, type Email } from "@/hooks/useEmailAgent";
+import { useEmails, useSyncAndClassify, useFetchEmailBody, type Email } from "@/hooks/useEmailAgent";
+import { Loader2 } from "lucide-react";
 
 const classificationConfig: Record<string, { label: string; color: string; icon: typeof FileText }> = {
   invoice: { label: "Invoice", color: "bg-primary/10 text-primary border-primary/20", icon: FileText },
