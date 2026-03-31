@@ -12,23 +12,44 @@ const RequestSchema = z.object({ email_id: z.string().uuid() });
 
 /* ── MIME helpers ── */
 
-function decodeQuotedPrintable(text: string, charset = "utf-8"): string {
-  const decoded = text
-    .replace(/=\r?\n/g, "") // soft line breaks
-    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-  if (charset.toLowerCase() === "utf-8" || charset.toLowerCase() === "us-ascii") return decoded;
-  try {
-    const bytes = Uint8Array.from(Array.from(decoded, c => c.charCodeAt(0)));
-    return new TextDecoder(charset).decode(bytes);
-  } catch { return decoded; }
+/** Build raw byte array from QP-encoded text */
+function qpToBytes(text: string): Uint8Array {
+  const cleaned = text.replace(/=\r?\n/g, "");
+  const byteArray: number[] = [];
+  let i = 0;
+  while (i < cleaned.length) {
+    if (cleaned[i] === "=" && i + 2 < cleaned.length && /[0-9A-Fa-f]{2}/.test(cleaned.substring(i + 1, i + 3))) {
+      byteArray.push(parseInt(cleaned.substring(i + 1, i + 3), 16));
+      i += 3;
+    } else {
+      byteArray.push(cleaned.charCodeAt(i));
+      i++;
+    }
+  }
+  return Uint8Array.from(byteArray);
 }
 
-function decodeBase64(text: string, charset = "utf-8"): string {
+/** Build raw byte array from base64 text */
+function b64ToBytes(text: string): Uint8Array {
+  const cleaned = text.replace(/\s/g, "");
+  return Uint8Array.from(Array.from(atob(cleaned), c => c.charCodeAt(0)));
+}
+
+/** Decode bytes with charset, trying UTF-8 first if result looks like mojibake */
+function decodeWithCharset(bytes: Uint8Array, charset: string): string {
+  // Always try UTF-8 first
   try {
-    const cleaned = text.replace(/\s/g, "");
-    const bytes = Uint8Array.from(Array.from(atob(cleaned), c => c.charCodeAt(0)));
+    const utf8 = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    // If it decoded without errors, it's valid UTF-8
+    return utf8;
+  } catch {
+    // Not valid UTF-8, use declared charset
+  }
+  try {
     return new TextDecoder(charset).decode(bytes);
-  } catch { return text; }
+  } catch {
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  }
 }
 
 function getHeader(headers: string, name: string): string {
@@ -64,21 +85,22 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-/** Decode a single MIME part body given its headers */
+/** Decode a single MIME part body given its headers.
+ *  Body is a Latin-1 string (raw bytes preserved as char codes 0-255) */
 function decodePart(body: string, partHeaders: string): string {
   const ct = getHeader(partHeaders, "Content-Type");
   const cte = getHeader(partHeaders, "Content-Transfer-Encoding").toLowerCase();
   const charset = getCharset(ct);
 
-  if (cte === "quoted-printable") return decodeQuotedPrintable(body, charset);
-  if (cte === "base64") return decodeBase64(body, charset);
-  if (charset.toLowerCase() !== "utf-8" && charset.toLowerCase() !== "us-ascii") {
-    try {
-      const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
-      return new TextDecoder(charset).decode(bytes);
-    } catch { /* fall through */ }
-  }
-  return body;
+  try {
+    if (cte === "quoted-printable") return decodeWithCharset(qpToBytes(body), charset);
+    if (cte === "base64") return decodeWithCharset(b64ToBytes(body), charset);
+  } catch { /* fall through */ }
+
+  // For 8bit/7bit/binary or no CTE: body is Latin-1 string with raw bytes
+  // Convert to byte array and decode with proper charset
+  const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
+  return decodeWithCharset(bytes, charset);
 }
 
 /**
@@ -224,7 +246,9 @@ serve(async (req) => {
 
     conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
     const enc = new TextEncoder();
-    const dec = new TextDecoder();
+    const dec = new TextDecoder("utf-8");
+    // Latin-1 decoder preserves raw bytes (0x00-0xFF) for MIME parsing
+    const rawDec = new TextDecoder("iso-8859-1");
 
     await readResponse(conn, dec, r => r.includes("\r\n"), 8192);
     const loginRes = await sendCommand(conn, enc, dec, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
@@ -252,8 +276,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Could not find email on server", body_text: "" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch the FULL message (RFC822) — up to 500KB to handle real-world emails
-    const fetchRes = await sendCommand(conn, enc, dec, "F1", `UID FETCH ${uid} (BODY.PEEK[])`, 512000);
+    // Fetch the FULL message (RFC822) using Latin-1 decoder to preserve raw bytes
+    const fetchRes = await sendCommand(conn, enc, rawDec, "F1", `UID FETCH ${uid} (BODY.PEEK[])`, 512000);
 
     await sendCommand(conn, enc, dec, "A99", "LOGOUT", 1024);
     conn.close(); conn = null;
