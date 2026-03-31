@@ -27,6 +27,8 @@ const LOCATION_COMPANY_MAP: Record<string, string> = {
 };
 
 const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: string | null }> = {
+  "jeka": { company: "MCA Trading ApS", location: null },
+  "jeka fish": { company: "MCA Trading ApS", location: null },
   "inco": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco danmark": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco københavn": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
