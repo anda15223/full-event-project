@@ -145,7 +145,7 @@ export function useFetchEmails() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (sinceDate?: string) => {
-      const limit = 3;
+      const limit = 10; // Header-only fetch is lightweight, 10 per batch is safe
       let offset = 0;
       let totalFound = 0;
       let totalFetched = 0;
@@ -172,6 +172,11 @@ export function useFetchEmails() {
 
           // Invalidate after each batch so UI updates
           queryClient.invalidateQueries({ queryKey: ["emails"] });
+
+          // Small delay between batches to let the worker cool down
+          if (hasMore) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
         } catch (err: any) {
           consecutiveErrors++;
           console.warn(`Fetch batch error (attempt ${consecutiveErrors}):`, err);
@@ -180,7 +185,7 @@ export function useFetchEmails() {
             break;
           }
           // Wait before retry
-          await new Promise(r => setTimeout(r, 2000));
+          await new Promise(r => setTimeout(r, 3000));
         }
       }
 
