@@ -185,7 +185,7 @@ function ClaudeReprocessPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!running && !progress && (
+        {!running && !progress && !completed && (
           <div className="flex gap-2">
             <Button onClick={runTest} variant="outline" className="gap-2">
               <FlaskConical className="h-4 w-4" /> Test on 5 emails
@@ -193,6 +193,23 @@ function ClaudeReprocessPanel() {
             <Button onClick={runFull} className="gap-2">
               <Zap className="h-4 w-4" /> Reprocess all with Claude
             </Button>
+          </div>
+        )}
+
+        {!running && progress && !completed && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+              ⏸ Paused — {progress.processed} emails processed, {progress.extracted} invoices found
+            </div>
+            <Progress value={pct} className="h-2.5" />
+            <div className="flex gap-2">
+              <Button onClick={runFull} className="gap-2">
+                <Zap className="h-4 w-4" /> Resume
+              </Button>
+              <Button onClick={handleReset} variant="outline" className="gap-2">
+                Reset
+              </Button>
+            </div>
           </div>
         )}
 
