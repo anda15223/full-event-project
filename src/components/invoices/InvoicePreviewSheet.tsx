@@ -104,18 +104,18 @@ export default function InvoicePreviewSheet({ invoice, open, onOpenChange }: Pro
 
         {/* PDF Preview */}
         <div className="mt-4">
-          {inv.pdf_url ? (
+          {localPdfUrl ? (
             <div className="rounded-xl border border-border/40 overflow-hidden bg-secondary/20">
               <div className="px-4 py-2 bg-secondary/40 border-b border-border/30 flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Document Preview</span>
-                <a href={inv.pdf_url} target="_blank" rel="noopener noreferrer">
+                <a href={localPdfUrl} target="_blank" rel="noopener noreferrer">
                   <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
                     <ExternalLink className="h-3 w-3" /> Open full
                   </Button>
                 </a>
               </div>
               <iframe
-                src={inv.pdf_url}
+                src={localPdfUrl}
                 className="w-full h-[400px] border-0"
                 title="Invoice PDF"
               />
@@ -124,7 +124,14 @@ export default function InvoicePreviewSheet({ invoice, open, onOpenChange }: Pro
             <div className="rounded-xl border border-border/40 bg-secondary/20 p-8 text-center">
               <FileText className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-xs text-muted-foreground font-medium">No PDF attached</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Review the extracted details below carefully</p>
+              <p className="text-[10px] text-muted-foreground mt-1 mb-3">Upload the source document to verify before paying</p>
+              <PdfUploadButton
+                invoiceId={inv.id}
+                onUploaded={(url) => {
+                  setLocalPdfUrl(url);
+                  queryClient.invalidateQueries({ queryKey: ["invoices"] });
+                }}
+              />
             </div>
           )}
         </div>
