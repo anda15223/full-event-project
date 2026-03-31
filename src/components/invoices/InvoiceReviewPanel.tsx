@@ -97,14 +97,28 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
     setCustomLocation(LOCATIONS.includes(inv.location || "") ? "" : (inv.location || ""));
   }, [inv.id]);
 
-  // Load PDF signed URL
+  // Load PDF URL — try direct url first, then signed url from attachment
   useEffect(() => {
     if (!open) return;
-    if (inv.pdf_url) {
-      setPdfUrl(inv.pdf_url);
-    } else if (inv.email_id) {
-      // Try to find attachment
-      (async () => {
+    setPdfUrl(null);
+    
+    const loadPdf = async () => {
+      // If invoice has a pdf_url, check if it's a storage path or full URL
+      if (inv.pdf_url) {
+        if (inv.pdf_url.startsWith("http")) {
+          setPdfUrl(inv.pdf_url);
+        } else {
+          // It's a storage path, create signed URL
+          const { data: signed } = await supabase.storage
+            .from("email-attachments")
+            .createSignedUrl(inv.pdf_url, 3600);
+          if (signed?.signedUrl) setPdfUrl(signed.signedUrl);
+        }
+        return;
+      }
+      
+      // No pdf_url — try to find attachment via email_id
+      if (inv.email_id) {
         const { data } = await supabase
           .from("email_attachments")
           .select("storage_path, filename")
@@ -117,8 +131,11 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
             .createSignedUrl(data[0].storage_path, 3600);
           if (signed?.signedUrl) setPdfUrl(signed.signedUrl);
         }
-      })();
-    }
+      }
+    };
+    
+    loadPdf();
+    
     // Load email info
     if (inv.email_id) {
       (async () => {
@@ -309,7 +326,7 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                           </Button>
                         </a>
                       </div>
-                      <iframe src={pdfUrl} className="flex-1 w-full border-0" title="Invoice PDF" />
+                      <iframe src={`${pdfUrl}#toolbar=1&navpanes=0`} className="flex-1 w-full border-0" title="Invoice PDF" />
                     </div>
                   ) : (
                     <div className="h-full rounded-xl border border-border/40 bg-secondary/20 flex items-center justify-center">

@@ -19,6 +19,9 @@ const LOCATION_COMPANY_MAP: Record<string, string> = {
   "reffen": "Blue Fish ApS",
   "helsingør": "The Fish Project ApS",
   "helsingör": "The Fish Project ApS",
+  "aarhus": "The Fish Project ApS",
+  "søborg": "The Fish Project ApS",
+  "gentofte": "Aegean ApS",
   "fish bistro": "Aegean ApS",
   "gaia": "Aegean ApS",
 };
@@ -117,7 +120,9 @@ const CLAUDE_EXTRACTION_PROMPT = `Extract invoice data from the text. Return ONL
 COMPANY RULES:
 - Reffen → Blue Fish ApS
 - Helsingør → The Fish Project ApS
-- Fish Bistro/Gaia → Aegean ApS
+- Aarhus → The Fish Project ApS
+- Søborg → The Fish Project ApS
+- Fish Bistro/Gaia/Gentofte → Aegean ApS
 - Inco Danmark → The Fish Project ApS
 - BC Catering Roskilde (bccs.dk) → web order +25% VAT
 - BC Catering Skanderborg (bccr.dk) → PBS cashflow, Aegean ApS
