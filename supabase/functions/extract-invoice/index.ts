@@ -99,7 +99,7 @@ serve(async (req) => {
           .eq("is_inline", false)
           .eq("parse_status", "stored")
           .is("extracted_text", null);
-        attachmentsToProcess = atts || [];
+        attachmentsToProcess = (atts || []).slice(0, 3);
       }
     }
 
