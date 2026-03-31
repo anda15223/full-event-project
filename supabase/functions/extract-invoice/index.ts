@@ -34,7 +34,29 @@ const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: st
   "odin seafoods": { company: "The Fish Project ApS", location: null },
   "kollek": { company: "The Fish Project ApS", location: null },
   "team kollek": { company: "The Fish Project ApS", location: null },
+  "h.w. larsen": { company: "The Fish Project ApS", location: null },
+  "hw larsen": { company: "The Fish Project ApS", location: null },
 };
+
+/* ── Suppliers/content to ALWAYS ignore (never create invoices) ── */
+const IGNORE_SUPPLIERS = ["livet på øen", "livet paa øen", "livet paa oen"];
+const IGNORE_KEYWORDS = /kontoudtog|kontoopgørelse|account\s*statement/i;
+
+function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
+  const sn = (supplierName || "").toLowerCase();
+  for (const ign of IGNORE_SUPPLIERS) {
+    if (sn.includes(ign)) return true;
+  }
+  const combined = `${subject || ""} ${bodyText || ""}`;
+  return IGNORE_KEYWORDS.test(combined);
+}
+
+/* ── Rykker (payment reminder) detection ── */
+const RYKKER_PATTERN = /rykker|rykke|betalingspåmindelse|påmindelse/i;
+
+function isRykker(subject: string | null, bodyText: string | null): boolean {
+  return RYKKER_PATTERN.test(subject || "") || RYKKER_PATTERN.test((bodyText || "").substring(0, 2000));
+}
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
   const sn = (supplierName || "").toLowerCase();
