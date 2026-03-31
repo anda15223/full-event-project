@@ -23,9 +23,21 @@ export default function AgentInvoices() {
   const weekFromNow = new Date(today);
   weekFromNow.setDate(weekFromNow.getDate() + 7);
 
+  const groupByCurrency = (items: typeof allInvoices) => {
+    const groups: Record<string, number> = {};
+    items.forEach(i => {
+      const cur = i.currency || "DKK";
+      groups[cur] = (groups[cur] || 0) + (i.amount || 0);
+    });
+    return groups;
+  };
+
+  const formatByCurrency = (groups: Record<string, number>) =>
+    Object.entries(groups).map(([cur, amt]) => `${amt.toLocaleString("da-DK")} ${cur}`).join(" · ");
+
   const metrics = useMemo(() => {
     const total = allInvoices.length;
-    const totalAmount = allInvoices.reduce((s, i) => s + (i.amount || 0), 0);
+    const totalByCurrency = groupByCurrency(allInvoices);
     const overdue = allInvoices.filter(i => i.due_date && new Date(i.due_date) < today).length;
     const dueThisWeek = allInvoices.filter(i => {
       if (!i.due_date) return false;
@@ -33,7 +45,7 @@ export default function AgentInvoices() {
       return d >= today && d <= weekFromNow;
     }).length;
     const companiesCount = new Set(allInvoices.map(i => i.company).filter(Boolean)).size;
-    return { total, totalAmount, overdue, dueThisWeek, companiesCount };
+    return { total, totalByCurrency, overdue, dueThisWeek, companiesCount };
   }, [allInvoices]);
 
   // Smart sections
@@ -110,7 +122,7 @@ export default function AgentInvoices() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Total Invoices", value: metrics.total, icon: FileText, color: "text-foreground", bg: "bg-secondary/60" },
-          { label: "Total Amount", value: `${metrics.totalAmount.toLocaleString("da-DK")} DKK`, icon: DollarSign, color: "text-agent-green", bg: "bg-agent-green/6" },
+          { label: "Total Amount", value: formatByCurrency(metrics.totalByCurrency), icon: DollarSign, color: "text-agent-green", bg: "bg-agent-green/6" },
           { label: "Overdue", value: metrics.overdue, icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/6" },
           { label: "Due This Week", value: metrics.dueThisWeek, icon: Clock, color: "text-warning", bg: "bg-warning/6" },
         ].map((m, i) => (
@@ -168,7 +180,7 @@ export default function AgentInvoices() {
                     <span className="text-sm font-semibold text-foreground">{section.label}</span>
                     <Badge variant="secondary" className="text-[10px] px-2 py-0 border-0">{section.invoices.length}</Badge>
                     <span className="text-xs text-muted-foreground">
-                      {section.invoices.reduce((s, i) => s + (i.amount || 0), 0).toLocaleString("da-DK")} DKK
+                      {formatByCurrency(groupByCurrency(section.invoices))}
                     </span>
                   </div>
                   <motion.div animate={{ rotate: isCollapsed ? 0 : 180 }} transition={{ duration: 0.2 }}>
