@@ -148,12 +148,14 @@ function ClaudeReprocessPanel() {
         await new Promise(r => setTimeout(r, 8000));
       }
       setCompleted(true);
+      saveProgress(null, false);
       refetchStats();
       toast.success(`Reprocess complete: ${totals.extracted} invoices from ${totals.processed} emails`);
     } catch (err) {
       toast.error("Reprocess failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setRunning(false);
+      saveProgress(progress, false);
     }
   };
 
@@ -161,6 +163,13 @@ function ClaudeReprocessPanel() {
     pauseRef.current = true;
     setPaused(true);
     setRunning(false);
+  };
+
+  const handleReset = () => {
+    setProgress(null);
+    setCompleted(false);
+    setPaused(false);
+    saveProgress(null, false);
   };
 
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
