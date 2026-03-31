@@ -93,7 +93,8 @@ function ClaudeReprocessPanel() {
         const { data: invoices } = await supabase
           .from("invoices")
           .select("email_id, supplier_name, amount, currency, company, invoice_number")
-          .in("email_id", extractedIds);
+          .in("email_id", extractedIds)
+          .order("created_at", { ascending: false });
         for (const inv of invoices || []) {
           invoiceMap[inv.email_id] = inv;
         }
