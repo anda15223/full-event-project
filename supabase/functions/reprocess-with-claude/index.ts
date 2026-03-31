@@ -28,25 +28,31 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const batchSize = body.batch_size || 10;
     const testMode = body.test_mode || false;
-    const skipExisting = body.skip_existing !== false; // default true
+    const offset = body.offset || 0;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Reprocess: test=${testMode}, batch=${batchSize}, skipExisting=${skipExisting}`);
+    console.log(`Reprocess: test=${testMode}, batch=${batchSize}, offset=${offset}`);
 
-    // Find emails to reprocess
+    // STEP 1: Find emails that COULD contain invoices
+    // - classified as "invoice", or unclassified with attachments, or has invoice-like subjects
     let query = supabase
       .from("emails")
-      .select("id, subject, sender, classification, router_status")
+      .select("id, subject, sender, classification, router_status, has_attachments")
       .gte("received_at", "2026-01-01T00:00:00.000Z")
       .order("received_at", { ascending: false });
 
     if (testMode) {
       query = query.eq("classification", "invoice").limit(5);
     } else {
-      query = query.limit(batchSize);
+      // Only process emails that are likely invoices:
+      // - classified as "invoice"
+      // - OR unclassified/null (never classified yet)
+      // - OR have attachments (could be PDF invoices)
+      query = query.or("classification.eq.invoice,classification.is.null,has_attachments.eq.true")
+        .range(offset, offset + batchSize - 1);
     }
 
     const { data: emails, error: queryError } = await query;
@@ -55,22 +61,26 @@ serve(async (req) => {
     if (!emails || emails.length === 0) {
       return new Response(JSON.stringify({
         processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
-        message: "No emails to process",
+        message: "No more emails to process", done: true,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Filter out already-processed emails (those that already have invoices)
+    // STEP 2: Filter out emails that already have invoices
     const emailIds = emails.map((e: any) => e.id);
-    let toProcess = emailIds;
+    const { data: existingInvoices } = await supabase
+      .from("invoices").select("email_id").in("email_id", emailIds);
+    const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
+    const toProcess = emailIds.filter((id: string) => !existingIds.has(id));
 
-    if (skipExisting && !testMode) {
-      const { data: existingInvoices } = await supabase
-        .from("invoices").select("email_id").in("email_id", emailIds);
-      const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
-      toProcess = emailIds.filter((id: string) => !existingIds.has(id));
+    console.log(`Batch: ${emails.length} fetched, ${existingIds.size} already have invoices, ${toProcess.length} to process`);
+
+    if (toProcess.length === 0) {
+      return new Response(JSON.stringify({
+        processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
+        message: "All emails in this batch already processed",
+        next_offset: offset + batchSize,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
-    console.log(`Processing ${toProcess.length} of ${emails.length} emails`);
 
     let extracted = 0;
     let skipped = 0;
@@ -89,7 +99,6 @@ serve(async (req) => {
       const ignoreReason = email ? shouldSkipEmail(email) : null;
       if (ignoreReason) {
         console.log(`Ignoring ${emailId}: ${ignoreReason}`);
-        // Mark email as ignored
         await supabase.from("emails").update({
           router_status: "ignored",
           assigned_agent: "ignore_agent",
@@ -115,11 +124,35 @@ serve(async (req) => {
           data = JSON.parse(responseText);
         } catch {
           errors++;
-          details.push({ email_id: emailId, status: "error", error: "Non-JSON response", subject: currentSubject });
+          details.push({ email_id: emailId, status: "error", error: "Non-JSON response: " + responseText.substring(0, 200), subject: currentSubject });
           continue;
         }
 
-        if (!response.ok) {
+        // Handle rate limit — wait and retry once
+        if (response.status === 429 || (data.error && data.error.includes("rate_limit"))) {
+          console.log(`Rate limited on ${emailId}, waiting 60s then retrying...`);
+          await new Promise(r => setTimeout(r, 60000));
+          
+          const retryResponse = await fetch(extractUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ email_id: emailId }),
+          });
+          const retryText = await retryResponse.text();
+          try { data = JSON.parse(retryText); } catch {
+            errors++;
+            details.push({ email_id: emailId, status: "error", error: "Retry failed", subject: currentSubject });
+            continue;
+          }
+          if (!retryResponse.ok) {
+            errors++;
+            details.push({ email_id: emailId, status: "error", error: "Retry: " + (data.error || `HTTP ${retryResponse.status}`), subject: currentSubject });
+            continue;
+          }
+        } else if (!response.ok) {
           errors++;
           details.push({ email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, subject: currentSubject });
           continue;
@@ -136,6 +169,10 @@ serve(async (req) => {
           subject: currentSubject,
           data,
         });
+
+        // Small delay between emails to avoid rate limits
+        await new Promise(r => setTimeout(r, 3000));
+
       } catch (err) {
         errors++;
         details.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown", subject: currentSubject });
@@ -144,23 +181,19 @@ serve(async (req) => {
 
     // Get current counts
     const { count: totalEmails } = await supabase
-      .from("emails")
-      .select("id", { count: "exact", head: true })
+      .from("emails").select("id", { count: "exact", head: true })
+      .or("classification.eq.invoice,classification.is.null,has_attachments.eq.true")
       .gte("received_at", "2026-01-01T00:00:00.000Z");
 
     const { count: totalInvoices } = await supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true });
+      .from("invoices").select("id", { count: "exact", head: true });
 
     const { count: totalCashflow } = await supabase
-      .from("cashflow_entries")
-      .select("id", { count: "exact", head: true });
+      .from("cashflow_entries").select("id", { count: "exact", head: true });
 
     // Company breakdown
     const { data: companyBreakdown } = await supabase
-      .from("invoices")
-      .select("company");
-
+      .from("invoices").select("company");
     const byCompany: Record<string, number> = {};
     for (const inv of companyBreakdown || []) {
       const c = inv.company || "Unknown";
@@ -181,6 +214,7 @@ serve(async (req) => {
       by_company: byCompany,
       current_subject: currentSubject,
       test_mode: testMode,
+      next_offset: offset + batchSize,
       details,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
