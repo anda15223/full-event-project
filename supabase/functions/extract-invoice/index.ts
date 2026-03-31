@@ -550,14 +550,40 @@ async function callClaudeExtraction(
 
     let invoiceData: any = null;
     try {
-      const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Strip markdown code blocks if present (Bug B)
+      let cleaned = responseText
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
+        .trim();
+      // Find JSON boundaries
+      const jsonStart = cleaned.search(/[\{\[]/);
+      const jsonEnd = cleaned.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+      }
+      // Fix common JSON issues
+      cleaned = cleaned
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x1F\x7F]/g, "");
       invoiceData = JSON.parse(cleaned);
-    } catch {
+    } catch (parseErr) {
       console.error("Failed to parse Claude response as JSON:", responseText.substring(0, 300));
+      console.error("Parse error:", parseErr instanceof Error ? parseErr.message : parseErr);
       return { ...id, status: "error", error: "Could not parse Claude response" };
     }
 
-    if (!invoiceData || invoiceData.is_invoice === false) {
+    // Debug logging for is_invoice check (Bug A + Bug C)
+    console.log(`=== PARSED JSON KEYS for ${emailId} ===`, Object.keys(invoiceData));
+    console.log(`=== is_invoice ===`, typeof invoiceData.is_invoice, invoiceData.is_invoice);
+    console.log(`=== confidence ===`, typeof invoiceData.confidence, invoiceData.confidence);
+
+    // Handle is_invoice as string OR boolean (Bug A)
+    const isInvoice = invoiceData.is_invoice === true || invoiceData.is_invoice === "true";
+    const isNotInvoice = invoiceData.is_invoice === false || invoiceData.is_invoice === "false";
+
+    if (!invoiceData || isNotInvoice) {
+      console.log(`⏭ Not an invoice: ${emailId} — ${invoiceData?.extraction_notes || "no notes"}`);
       return { ...id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
     }
 
