@@ -357,6 +357,7 @@ serve(async (req) => {
               if (retryJson.confidence && retryJson.confidence > classification.confidence) {
                 const retryCompany = COMPANIES.includes(retryJson.company) ? retryJson.company : "Unknown";
                 const retryNeedsReview = retryCompany === "Unknown" || retryJson.confidence < 0.7 || retryJson.needs_review;
+                const retryAgent = deriveAssignedAgent(retryJson, retryCompany);
                 await supabase.from("emails").update({
                   classification: retryJson.classification,
                   company: retryCompany,
@@ -367,6 +368,7 @@ serve(async (req) => {
                   review_reason: retryNeedsReview ? (retryJson.review_reason || "Low confidence") : null,
                   language: retryJson.language || "unknown",
                   model_used: "google/gemini-2.5-pro",
+                  assigned_agent: retryAgent,
                 }).eq("id", email.id);
                 classification = retryJson;
               }
