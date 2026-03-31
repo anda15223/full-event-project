@@ -455,6 +455,7 @@ async function processAttachment(
 
       // Apply company mapping and save
       const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, parentEmail?.company);
+      const category = assignCategory(invoiceData);
       const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.85 : 0.5);
       const status = confidence >= 0.7 ? "pending" : "needs_review";
 
