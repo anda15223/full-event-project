@@ -27,6 +27,9 @@ export type Email = {
   parse_status: string | null;
   parse_error: string | null;
   has_attachments: boolean | null;
+  assigned_agent: string | null;
+  reader_status: string | null;
+  router_status: string | null;
 };
 
 export type EmailAttachment = {

@@ -121,6 +121,34 @@ function chooseModel(email: any, attachments: any[]): string {
   return "google/gemini-3-flash-preview";
 }
 
+/* ── Agent Assignment: route email to the right specialized agent ── */
+function deriveAssignedAgent(classification: any, company: string): string {
+  // Romania agent takes priority for Romanian operations
+  if (company === "Romania") return "romania_agent";
+  
+  // Route by classification
+  switch (classification.classification) {
+    case "invoice": return "invoice_agent";
+    case "task": {
+      // Sub-route tasks to accounting/system vs operational vs general task
+      const summary = (classification.summary || "").toLowerCase();
+      const taskNotes = (classification.task?.notes || "").toLowerCase();
+      const combined = summary + " " + taskNotes;
+      if (/renew|system|integration|e-conomic|bank|accounting|finance|admin/.test(combined)) {
+        return "accounting_agent";
+      }
+      if (/event|festival|zoo|partner|logistics|booking|venue|supplier coordination/.test(combined)) {
+        return "operational_agent";
+      }
+      return "task_agent";
+    }
+    case "waiting": return classification.action_required ? "task_agent" : "fyi_agent";
+    case "information": return "fyi_agent";
+    case "irrelevant": return "ignore_agent";
+    default: return "task_agent";
+  }
+}
+
 function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null): boolean {
   const sample = (bodyHtml || bodyText || "").trim();
   if (!sample) return true;
@@ -288,6 +316,9 @@ serve(async (req) => {
 
         const modelUsed = chooseModel(email, attachments || []);
 
+        // Determine assigned agent based on classification + company
+        const assignedAgent = deriveAssignedAgent(classification, company);
+
         await supabase.from("emails").update({
           classification: classification.classification,
           company,
@@ -299,6 +330,9 @@ serve(async (req) => {
           processed: true,
           language: classification.language || "unknown",
           model_used: modelUsed,
+          assigned_agent: assignedAgent,
+          reader_status: "parsed",
+          router_status: "routed",
         }).eq("id", email.id);
 
         // FALLBACK: If fast model gave low confidence, retry with deep model
@@ -323,6 +357,7 @@ serve(async (req) => {
               if (retryJson.confidence && retryJson.confidence > classification.confidence) {
                 const retryCompany = COMPANIES.includes(retryJson.company) ? retryJson.company : "Unknown";
                 const retryNeedsReview = retryCompany === "Unknown" || retryJson.confidence < 0.7 || retryJson.needs_review;
+                const retryAgent = deriveAssignedAgent(retryJson, retryCompany);
                 await supabase.from("emails").update({
                   classification: retryJson.classification,
                   company: retryCompany,
@@ -333,6 +368,7 @@ serve(async (req) => {
                   review_reason: retryNeedsReview ? (retryJson.review_reason || "Low confidence") : null,
                   language: retryJson.language || "unknown",
                   model_used: "google/gemini-2.5-pro",
+                  assigned_agent: retryAgent,
                 }).eq("id", email.id);
                 classification = retryJson;
               }
