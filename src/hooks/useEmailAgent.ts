@@ -414,7 +414,6 @@ export function useReparseEmail() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (emailId: string) => {
-      // Reset parse status
       await supabase.from("emails").update({
         body_text: null,
         body_html: null,
@@ -424,14 +423,28 @@ export function useReparseEmail() {
         has_attachments: false,
       }).eq("id", emailId);
 
-      // Delete old attachments
       await supabase.from("email_attachments").delete().eq("email_id", emailId);
 
-      // Re-fetch body with force flag
       const { data, error } = await supabase.functions.invoke("fetch-email-body", {
         body: { email_id: emailId, force: true },
       });
       if (error) throw error;
+
+      const { data: attachments } = await supabase
+        .from("email_attachments")
+        .select("id, is_inline, parse_status")
+        .eq("email_id", emailId)
+        .eq("is_inline", false);
+
+      const pendingAttachments = (attachments || []).filter((att) => att.parse_status !== "stored");
+      await Promise.allSettled(
+        pendingAttachments.map((att) =>
+          supabase.functions.invoke("fetch-email-attachment", {
+            body: { attachment_id: att.id },
+          })
+        )
+      );
+
       return data;
     },
     onSuccess: (_data, emailId) => {
