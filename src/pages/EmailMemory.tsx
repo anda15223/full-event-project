@@ -1,8 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { Brain, Users, Building2, Clock, Globe, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Brain, Users, Building2, Clock, Globe, Tag, FileDown } from "lucide-react";
 import { useEmails, useCompanies, useEmailInvoices } from "@/hooks/useEmailAgent";
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { exportMemoryDocument } from "@/lib/exportMemoryDoc";
+import { toast } from "sonner";
 
 export default function EmailMemory() {
   const { data: emails } = useEmails();
