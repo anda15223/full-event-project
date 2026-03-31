@@ -301,6 +301,20 @@ async function processAttachment(
     return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path" };
   }
 
+  // Check if PDF text was already extracted — use cached text
+  if (att.extracted_text && att.extracted_text.length > 100) {
+    console.log(`Using cached extracted text for ${att.id} (${att.extracted_text.length} chars)`);
+    const mt = (att.mime_type || "").toLowerCase();
+    const pdfUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${att.storage_path}`;
+    const emailContext = await getEmailContext(supabase, att.email_id);
+    const { data: parentEmail } = await supabase.from("emails").select("company").eq("id", att.email_id).single();
+    return await callClaudeExtraction(
+      supabase, att.email_id, att.id, pdfUrl,
+      att.extracted_text.substring(0, 15000), emailContext,
+      parentEmail?.company, claudeKey
+    );
+  }
+
   console.log(`Downloading attachment ${att.id} from ${att.storage_path}`);
   const { data: fileData, error: dlError } = await supabase.storage
     .from("email-attachments").download(att.storage_path);
