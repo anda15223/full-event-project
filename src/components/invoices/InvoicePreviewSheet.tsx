@@ -51,8 +51,9 @@ interface Props {
 
 export default function InvoicePreviewSheet({ invoice, open, onOpenChange }: Props) {
   const [confirmStep, setConfirmStep] = useState(false);
+  const [localPdfUrl, setLocalPdfUrl] = useState(inv.pdf_url);
   const markPaid = useMarkAsPaid();
-  const inv = invoice;
+  const queryClient = useQueryClient();
 
   const sl = inv.status === "overdue" || inv.overdue_flag ? "OVERDUE"
     : inv.status === "paid" ? "PAID" : "PENDING";
