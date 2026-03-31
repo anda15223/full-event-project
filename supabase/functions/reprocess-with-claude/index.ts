@@ -147,13 +147,22 @@ serve(async (req) => {
 
             const ex = data?.extracted || 0;
             const er = data?.errors || 0;
+            // Pull invoice data from the first extracted result
+            const firstResult = (data.results || []).find((r: any) => r.status === "extracted");
             return {
               email_id: emailId,
               status: ex > 0 ? "extracted" : (er > 0 ? "error" : "skipped"),
               subject,
               extracted: ex,
+              supplier_name: firstResult?.supplier_name || null,
+              amount: firstResult?.amount || null,
+              currency: firstResult?.currency || "DKK",
+              company: firstResult?.company || null,
+              location: firstResult?.location || null,
+              invoice_number: firstResult?.invoice_number || null,
+              confidence: firstResult?.confidence || null,
               results: data.results,
-              error: er > 0 ? (data.results?.[0]?.error || "extraction error") : undefined,
+              error: er > 0 ? (data.results?.[0]?.error || "extraction error") : (ex === 0 ? (data.results?.[0]?.error || "skipped") : undefined),
             };
           }
           return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", subject };
