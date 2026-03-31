@@ -36,22 +36,24 @@ serve(async (req) => {
 
     console.log(`Reprocess: test=${testMode}, batch=${batchSize}, offset=${offset}`);
 
-    // For test mode: grab 5 most recent emails regardless of classification
-    // For full mode: only process invoice-classified emails
+    // Test mode should pick likely invoice candidates, not arbitrary recent emails.
+    // Full mode keeps processing invoice-classified emails with offset pagination.
     let query;
     if (testMode) {
       query = supabase
         .from("emails")
-        .select("id, subject, sender, classification, router_status, has_attachments")
-        .gte("received_at", "2026-01-01T00:00:00.000Z")
+        .select("id, subject, sender, classification, router_status, has_attachments, received_at")
         .not("router_status", "eq", "ignored")
+        .or("classification.eq.invoice,has_attachments.eq.true")
+        .gte("received_at", "2026-01-01T00:00:00.000Z")
         .order("received_at", { ascending: false })
         .limit(5);
     } else {
       query = supabase
         .from("emails")
-        .select("id, subject, sender, classification, router_status, has_attachments")
+        .select("id, subject, sender, classification, router_status, has_attachments, received_at")
         .eq("classification", "invoice")
+        .not("router_status", "eq", "ignored")
         .gte("received_at", "2026-01-01T00:00:00.000Z")
         .order("received_at", { ascending: false })
         .range(offset, offset + batchSize - 1);

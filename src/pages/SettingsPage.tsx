@@ -83,7 +83,7 @@ function ClaudeReprocessPanel() {
       if (error) throw error;
       console.log("🧪 Claude test results:", JSON.stringify(data, null, 2));
       setTestDetails(data.details || []);
-      toast.success(`Test complete: ${data.extracted} invoices extracted from ${data.processed} emails`);
+      toast.success(`Test complete: ${data.extracted ?? 0} invoices extracted from ${data.processed ?? 0} emails`);
     } catch (err) {
       toast.error("Test failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
