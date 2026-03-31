@@ -68,10 +68,12 @@ export function useEmails(filters?: {
         .from("emails")
         .select("*")
         .order("received_at", { ascending: false });
-      
+
       if (filters?.classification) query = query.eq("classification", filters.classification);
       if (filters?.company) query = query.eq("company", filters.company);
       if (filters?.needs_review !== undefined) query = query.eq("needs_review", filters.needs_review);
+
+      query = query.range(0, 4999);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -143,15 +145,40 @@ export function useFetchEmails() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (sinceDate?: string) => {
-      const { data, error } = await supabase.functions.invoke("fetch-emails", {
-        body: { since_date: sinceDate, limit: 200 },
-      });
-      if (error) throw error;
-      return data;
+      const limit = 100;
+      let offset = 0;
+      let totalFound = 0;
+      let totalFetched = 0;
+      let totalInserted = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase.functions.invoke("fetch-emails", {
+          body: { since_date: sinceDate, limit, offset },
+        });
+        if (error) throw error;
+
+        const fetched = data?.fetched || 0;
+        totalFound = data?.total_found || totalFound;
+        totalFetched += fetched;
+        totalInserted += data?.inserted || 0;
+        offset = data?.next_offset ?? offset + fetched;
+        hasMore = Boolean(data?.has_more) && fetched > 0;
+
+        if (fetched === 0) {
+          hasMore = false;
+        }
+      }
+
+      return {
+        total_found: totalFound,
+        fetched: totalFetched,
+        inserted: totalInserted,
+      };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["emails"] });
-      toast.success(`Fetched ${data.fetched || 0} emails, ${data.inserted || 0} new`);
+      toast.success(`Fetched ${data.fetched || 0} emails, ${data.inserted || 0} stored`);
     },
     onError: (err: Error) => {
       toast.error("Failed to fetch emails: " + err.message);
@@ -198,12 +225,10 @@ export function useClassifyAllEmails() {
         totalProcessed += data.processed || 0;
         totalErrors += data.errors || 0;
         
-        // Stop if no more emails to process
         if ((data.processed || 0) === 0) {
           hasMore = false;
         }
         
-        // Invalidate queries after each batch so UI updates
         queryClient.invalidateQueries({ queryKey: ["emails"] });
         queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
         queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
