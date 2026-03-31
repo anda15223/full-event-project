@@ -17,6 +17,81 @@ const classificationConfig: Record<string, { label: string; color: string; icon:
   irrelevant: { label: "Irrelevant", color: "bg-destructive/10 text-destructive border-destructive/20", icon: Mail },
 };
 
+function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
+  const config = classificationConfig[email.classification || ""];
+  const { data: bodyText, isLoading: bodyLoading } = useFetchEmailBody(email.id);
+  const displayBody = bodyText || email.body_text;
+
+  return (
+    <div className="space-y-4">
+      <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Inbox
+      </Button>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="bg-card border-border overflow-hidden">
+          <div className="border-b border-border p-5 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-xl font-bold text-foreground leading-tight">
+                {email.subject || "(no subject)"}
+              </h1>
+              <div className="flex gap-2 shrink-0">
+                {config && <Badge variant="outline" className={config.color}>{config.label}</Badge>}
+                {!email.processed && <Badge variant="outline" className="border-muted text-muted-foreground">Pending</Badge>}
+              </div>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-2 text-foreground">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <span className="font-medium">{email.sender || "Unknown"}</span>
+              </div>
+              <span className="text-muted-foreground ml-auto text-xs">
+                {email.received_at ? format(new Date(email.received_at), "EEEE, MMMM d, yyyy 'at' HH:mm") : ""}
+              </span>
+            </div>
+            {(email.company || email.confidence != null) && (
+              <div className="flex items-center gap-3 pt-1">
+                {email.company && (
+                  <Badge variant="outline" className="border-accent/30 text-accent text-xs">
+                    <Building2 className="h-3 w-3 mr-1" />{email.company}
+                  </Badge>
+                )}
+                {email.confidence != null && (
+                  <span className="text-xs text-muted-foreground">AI confidence: {Math.round((email.confidence || 0) * 100)}%</span>
+                )}
+              </div>
+            )}
+          </div>
+          {email.summary && (
+            <div className="border-b border-border px-5 py-3 bg-accent/5">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">AI Summary</div>
+              <p className="text-sm text-foreground">{email.summary}</p>
+            </div>
+          )}
+          <CardContent className="p-5">
+            <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed min-h-[200px]">
+              {bodyLoading ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin opacity-50" />
+                  <p>Loading email body from server...</p>
+                </div>
+              ) : displayBody && displayBody.length > 10 ? (
+                displayBody
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>Email body could not be retrieved</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function EmailInbox() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
