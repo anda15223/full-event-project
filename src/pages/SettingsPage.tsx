@@ -12,20 +12,25 @@ import { Progress } from "@/components/ui/progress";
 
 function ClaudeReprocessPanel() {
   const [running, setRunning] = useState(false);
-  const [testMode, setTestMode] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState<{
     batch: number;
     totalBatches: number;
     processed: number;
     extracted: number;
     skipped: number;
+    ignored: number;
     errors: number;
     totalEmails: number;
     totalInvoices: number;
+    totalCashflow: number;
+    currentSubject: string;
+    byCompany: Record<string, number>;
   } | null>(null);
   const [testDetails, setTestDetails] = useState<any[] | null>(null);
+  const [completed, setCompleted] = useState(false);
 
-  const { data: stats } = useQuery({
+  const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ["claude-reprocess-stats"],
     queryFn: async () => {
       const { count: totalEmails } = await supabase
@@ -35,7 +40,10 @@ function ClaudeReprocessPanel() {
       const { count: totalInvoices } = await supabase
         .from("invoices")
         .select("id", { count: "exact", head: true });
-      return { totalEmails: totalEmails || 0, totalInvoices: totalInvoices || 0 };
+      const { count: totalCashflow } = await supabase
+        .from("cashflow_entries")
+        .select("id", { count: "exact", head: true });
+      return { totalEmails: totalEmails || 0, totalInvoices: totalInvoices || 0, totalCashflow: totalCashflow || 0 };
     },
   });
 
@@ -43,6 +51,7 @@ function ClaudeReprocessPanel() {
     setRunning(true);
     setTestDetails(null);
     setProgress(null);
+    setCompleted(false);
     try {
       const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
         body: { test_mode: true, batch_size: 5 },
@@ -58,17 +67,27 @@ function ClaudeReprocessPanel() {
     }
   };
 
+  const pauseRef = { current: false };
+
   const runFull = async () => {
     setRunning(true);
-    setTestMode(false);
+    setCompleted(false);
+    setPaused(false);
+    pauseRef.current = false;
     setTestDetails(null);
-    const totals = { batch: 0, totalBatches: 0, processed: 0, extracted: 0, skipped: 0, errors: 0, totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0 };
+    const totals = {
+      batch: 0, totalBatches: 0, processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
+      totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0,
+      totalCashflow: stats?.totalCashflow || 0, currentSubject: "", byCompany: {} as Record<string, number>,
+    };
     const batchSize = 10;
-    const maxBatches = Math.ceil((stats?.totalEmails || 2062) / batchSize);
+    const maxBatches = Math.ceil((stats?.totalEmails || 2069) / batchSize);
     totals.totalBatches = maxBatches;
 
     try {
       for (let i = 0; i < maxBatches; i++) {
+        if (pauseRef.current) break;
+
         totals.batch = i + 1;
         setProgress({ ...totals });
 
@@ -80,19 +99,30 @@ function ClaudeReprocessPanel() {
         totals.processed += data.processed || 0;
         totals.extracted += data.extracted || 0;
         totals.skipped += data.skipped || 0;
+        totals.ignored += data.ignored || 0;
         totals.errors += data.errors || 0;
         totals.totalInvoices = data.total_invoices || totals.totalInvoices;
+        totals.totalCashflow = data.total_cashflow || totals.totalCashflow;
+        totals.currentSubject = data.current_subject || "";
+        if (data.by_company) totals.byCompany = data.by_company;
 
         setProgress({ ...totals });
 
-        if ((data.processed || 0) === 0) break; // No more to process
+        if ((data.processed || 0) === 0) break;
       }
-      toast.success(`Full reprocess complete: ${totals.extracted} invoices from ${totals.processed} emails`);
+      setCompleted(true);
+      refetchStats();
+      toast.success(`Reprocess complete: ${totals.extracted} invoices from ${totals.processed} emails`);
     } catch (err) {
       toast.error("Reprocess failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setRunning(false);
     }
+  };
+
+  const handleStop = () => {
+    pauseRef.current = true;
+    setPaused(true);
   };
 
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
@@ -104,7 +134,7 @@ function ClaudeReprocessPanel() {
           <Zap className="h-4 w-4 text-primary" /> Claude Invoice Extraction
         </CardTitle>
         <CardDescription>
-          Extract invoices using Claude claude-sonnet-4-20250514 — {stats?.totalEmails ?? "..."} emails, {stats?.totalInvoices ?? "..."} invoices so far
+          Full reprocess with all brain rules — {stats?.totalEmails ?? "..."} emails, {stats?.totalInvoices ?? "..."} invoices, {stats?.totalCashflow ?? "..."} cashflow entries
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -121,23 +151,39 @@ function ClaudeReprocessPanel() {
 
         {running && progress && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-primary font-medium">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Batch {progress.batch}/{progress.totalBatches} — Processing...
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-primary font-medium">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Full reprocess — Batch {progress.batch}/{progress.totalBatches}
+              </div>
+              <Button onClick={handleStop} variant="outline" size="sm" className="gap-1.5 text-destructive">
+                Stop
+              </Button>
             </div>
-            <Progress value={pct} className="h-2" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+            <Progress value={pct} className="h-2.5" />
+            <p className="text-xs text-muted-foreground truncate">
+              Currently reading: "{progress.currentSubject}"
+            </p>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-center">
               <div>
                 <div className="text-lg font-bold">{progress.processed}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Processed</div>
               </div>
               <div>
-                <div className="text-lg font-bold text-green-500">{progress.extracted}</div>
+                <div className="text-lg font-bold text-success">{progress.extracted}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Invoices</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-agent-blue">{progress.totalCashflow}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Cashflow</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-muted-foreground">{progress.skipped}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Skipped</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-muted-foreground">{progress.ignored}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Ignored</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-destructive">{progress.errors}</div>
@@ -148,42 +194,76 @@ function ClaudeReprocessPanel() {
         )}
 
         {!running && progress && (
-          <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-            <p className="font-medium text-sm">✅ Reprocess complete</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+          <div className="rounded-xl bg-muted/50 p-5 space-y-4">
+            <p className="font-heading font-semibold text-sm">
+              {completed ? "✅ Reprocess complete" : "⏸ Reprocess paused"} — {progress.processed.toLocaleString()} emails processed
+            </p>
+
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-center">
               <div>
                 <div className="text-lg font-bold">{progress.processed}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Processed</div>
               </div>
               <div>
-                <div className="text-lg font-bold text-green-500">{progress.extracted}</div>
+                <div className="text-lg font-bold text-success">{progress.extracted}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Invoices</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-agent-blue">{progress.totalCashflow}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Cashflow</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-muted-foreground">{progress.skipped}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Skipped</div>
               </div>
               <div>
+                <div className="text-lg font-bold text-muted-foreground">{progress.ignored}</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Ignored</div>
+              </div>
+              <div>
                 <div className="text-lg font-bold text-destructive">{progress.errors}</div>
                 <div className="text-[10px] text-muted-foreground uppercase">Errors</div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Total invoices in DB: {progress.totalInvoices}</p>
-            <Button onClick={runFull} variant="outline" size="sm" className="gap-1.5 mt-2">
-              <RefreshCw className="h-3 w-3" /> Run again
-            </Button>
+
+            {/* Company breakdown */}
+            {Object.keys(progress.byCompany).length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">By Company</p>
+                {Object.entries(progress.byCompany)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([company, count]) => (
+                    <div key={company} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">{company}</span>
+                      <span className="font-mono font-semibold">{count}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <Button onClick={runFull} variant="outline" size="sm" className="gap-1.5">
+                <RefreshCw className="h-3 w-3" /> {completed ? "Run again" : "Resume"}
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+                <a href="/agent/invoices">View invoices →</a>
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5" asChild>
+                <a href="/cashflow">View cashflow →</a>
+              </Button>
+            </div>
           </div>
         )}
 
         {testDetails && (
           <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1 max-h-48 overflow-auto">
-            <p className="font-medium">🧪 Test results (check browser console for raw Claude responses):</p>
+            <p className="font-medium">🧪 Test results:</p>
             {testDetails.map((d: any, i: number) => (
-              <div key={i} className="flex gap-2">
-                <Badge variant={d.status === "extracted" ? "default" : "outline"} className="text-[10px]">
+              <div key={i} className="flex gap-2 items-center">
+                <Badge variant={d.status === "extracted" ? "default" : d.status === "ignored" ? "secondary" : "outline"} className="text-[10px]">
                   {d.status}
                 </Badge>
-                <span className="truncate">{d.email_id}</span>
+                <span className="truncate flex-1">{d.subject || d.email_id}</span>
               </div>
             ))}
           </div>
