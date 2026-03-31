@@ -156,6 +156,17 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
               <span className="ml-1 hidden sm:inline">{att.parse_status === "pending" || att.parse_status === "pending_upload" ? "Auto-fetching" : "Fetch"}</span>
             </Button>
           )}
+          {isPdf && att.parse_status === "stored" && !att.extracted_summary && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => extractInvoice.mutate({ attachment_id: att.id })}
+              disabled={extractInvoice.isPending}
+            >
+              {extractInvoice.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              <span className="ml-1 hidden sm:inline">Extract</span>
+            </Button>
+          )
         </div>
       </div>
 
