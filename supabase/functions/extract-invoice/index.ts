@@ -482,7 +482,7 @@ async function processAttachment(
       }
 
       console.log(`✅ PDF extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}`);
-      return { email_id: att.email_id, attachment_id: att.id, status: "extracted" };
+      return { email_id: att.email_id, attachment_id: att.id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence };
 
     } catch (e) {
       console.error(`Claude document API error for ${att.id}:`, e instanceof Error ? e.message : JSON.stringify(e));
