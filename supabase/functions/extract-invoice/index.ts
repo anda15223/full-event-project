@@ -34,7 +34,29 @@ const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: st
   "odin seafoods": { company: "The Fish Project ApS", location: null },
   "kollek": { company: "The Fish Project ApS", location: null },
   "team kollek": { company: "The Fish Project ApS", location: null },
+  "h.w. larsen": { company: "The Fish Project ApS", location: null },
+  "hw larsen": { company: "The Fish Project ApS", location: null },
 };
+
+/* ── Suppliers/content to ALWAYS ignore (never create invoices) ── */
+const IGNORE_SUPPLIERS = ["livet på øen", "livet paa øen", "livet paa oen"];
+const IGNORE_KEYWORDS = /kontoudtog|kontoopgørelse|account\s*statement/i;
+
+function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
+  const sn = (supplierName || "").toLowerCase();
+  for (const ign of IGNORE_SUPPLIERS) {
+    if (sn.includes(ign)) return true;
+  }
+  const combined = `${subject || ""} ${bodyText || ""}`;
+  return IGNORE_KEYWORDS.test(combined);
+}
+
+/* ── Rykker (payment reminder) detection ── */
+const RYKKER_PATTERN = /rykker|rykke|betalingspåmindelse|påmindelse/i;
+
+function isRykker(subject: string | null, bodyText: string | null): boolean {
+  return RYKKER_PATTERN.test(subject || "") || RYKKER_PATTERN.test((bodyText || "").substring(0, 2000));
+}
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
   const sn = (supplierName || "").toLowerCase();
@@ -76,6 +98,16 @@ COMPANY MAPPING RULES — never deviate:
 - Odin Seafood / Odin → ALWAYS The Fish Project ApS
 - Kollek ApS / Team Kollek → ALWAYS The Fish Project ApS, payment = PBS on due date
   - Kollek location = read delivery address: Aarhus → "The Fish Project Aarhus", Helsingør → "The Fish Project Helsingør", Reffen → "The Fish Project Reffen", Søborg → "Søborg Storage", unclear → "Copenhagen Central Storage"
+- H.W. Larsen A/S → ALWAYS The Fish Project ApS, category = equipment
+
+IGNORE RULES — return is_invoice: false:
+- Livet på Øen → always ignore, never an invoice
+- Any document containing "kontoudtog" or "kontoopgørelse" → bank statement, never an invoice
+
+URGENT FLAGS:
+- Any email/document containing "rykker" or "betalingspåmindelse" → this is a payment reminder
+  Set status = "overdue", add extraction_notes = "RYKKER - payment reminder"
+  Try to identify which original invoice this reminder is for
 
 EXTRACTION RULES:
 - Always prefer PDF text over email body for invoice data
@@ -276,6 +308,12 @@ async function processEmailBody(
     .eq("id", emailId).single();
 
   if (!email) return { email_id: emailId, status: "error", error: "Email not found" };
+
+  // Check ignore rules
+  if (shouldIgnore(email.sender, email.subject, email.body_clean_text || email.body_text)) {
+    console.log(`Ignoring email ${emailId}: matches ignore rule (Livet på Øen / kontoudtog)`);
+    return { email_id: emailId, status: "ignored", error: "Matched ignore rule" };
+  }
 
   const bodyText = email.body_clean_text || email.body_text || "";
   if (!bodyText || bodyText.trim().length < 20) {
@@ -523,11 +561,20 @@ async function callClaudeExtraction(
       return { ...id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
     }
 
+    // Check ignore rules on extracted supplier
+    if (shouldIgnore(invoiceData.supplier_name, null, text)) {
+      console.log(`Ignoring extraction for ${emailId}: supplier matched ignore rule`);
+      return { ...id, status: "ignored", error: "Supplier matched ignore rule" };
+    }
+
     // Apply company mapping rules
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
 
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
-    const status = confidence >= 0.7 ? "pending" : "needs_review";
+    // Check for rykker (payment reminder) → force overdue
+    const rykkerDetected = isRykker(emailContext, text);
+    const status = rykkerDetected ? "overdue" : (confidence >= 0.7 ? "pending" : "needs_review");
+    const notes = rykkerDetected ? "RYKKER — payment reminder received" : (invoiceData.extraction_notes || null);
 
     if (attachmentId) {
       await supabase.from("email_attachments").update({
@@ -574,9 +621,11 @@ async function callClaudeExtraction(
       source_type: invoiceData.source_type || "email",
       status,
       confidence,
+      overdue_flag: rykkerDetected || false,
       pdf_url: pdfUrl,
       payment_account: invoiceData.payment_account || null,
       payment_reference: invoiceData.payment_reference || null,
+      notes,
     };
     if (existingInvoice && existingInvoice.length > 0) {
       await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);

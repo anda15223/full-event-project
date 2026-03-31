@@ -72,6 +72,11 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
           {/* Top row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
+              {invoice.notes?.toLowerCase().includes("rykker") && (
+                <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md bg-destructive text-destructive-foreground border border-destructive/40 animate-pulse">
+                  ⚠ RYKKER
+                </span>
+              )}
               <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md border ${statusStyle(sl)}`}>
                 {sl}
               </span>
