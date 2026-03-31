@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import {
   RefreshCw, Mail, FileText, CheckSquare, Search, ArrowLeft,
   Clock, Building2, User, Paperclip, Download, Globe, RotateCcw,
-  Loader2, File, Image as ImageIcon, Eye, X,
+  Loader2, File, Image as ImageIcon, Eye, X, Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   useEmails, useSyncAndClassify, useFetchEmailBody,
   useEmailAttachments, useReparseEmail, useFetchAttachment,
+  useExtractInvoice,
   type Email, type EmailAttachment,
 } from "@/hooks/useEmailAgent";
 
@@ -98,6 +99,7 @@ function HtmlEmailBody({ html }: { html: string }) {
 
 function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storageBaseUrl: string }) {
   const fetchAttachment = useFetchAttachment();
+  const extractInvoice = useExtractInvoice();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const Icon = getAttachmentIcon(att.mime_type);
   const downloadUrl = att.storage_path ? `${storageBaseUrl}/${att.storage_path}` : null;
@@ -152,6 +154,17 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
             <Button variant="outline" size="sm" onClick={handleFetch} disabled={isFetching || att.parse_status === "pending" || att.parse_status === "pending_upload"}>
               {isFetching || att.parse_status === "pending" || att.parse_status === "pending_upload" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
               <span className="ml-1 hidden sm:inline">{att.parse_status === "pending" || att.parse_status === "pending_upload" ? "Auto-fetching" : "Fetch"}</span>
+            </Button>
+          )}
+          {isPdf && att.parse_status === "stored" && !att.extracted_summary && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => extractInvoice.mutate({ attachment_id: att.id })}
+              disabled={extractInvoice.isPending}
+            >
+              {extractInvoice.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              <span className="ml-1 hidden sm:inline">Extract</span>
             </Button>
           )}
         </div>

@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { FileText, Building2, DollarSign, Calendar, Hash, Package } from "lucide-react";
+import { FileText, Building2, DollarSign, Calendar, Hash, Package, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEmailInvoices, useCompanies } from "@/hooks/useEmailAgent";
+import { useEmailInvoices, useCompanies, useExtractAllInvoices } from "@/hooks/useEmailAgent";
 
 export default function AgentInvoices() {
   const [filterCompany, setFilterCompany] = useState<string>("all");
@@ -12,6 +13,7 @@ export default function AgentInvoices() {
     company: filterCompany !== "all" ? filterCompany : undefined,
   });
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
+  const extractAll = useExtractAllInvoices();
 
   const grouped = useMemo(() => {
     if (!invoices) return {};
@@ -55,18 +57,29 @@ export default function AgentInvoices() {
             Invoices extracted from classified emails, grouped by company
           </p>
         </div>
-        <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-48 bg-card border-border">
-            <Building2 className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter company" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Companies</SelectItem>
-            {companies?.map((c) => (
-              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => extractAll.mutate()}
+            disabled={extractAll.isPending}
+            className="gap-2"
+          >
+            {extractAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Extract from PDFs
+          </Button>
+          <Select value={filterCompany} onValueChange={setFilterCompany}>
+            <SelectTrigger className="w-48 bg-card border-border">
+              <Building2 className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter company" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Companies</SelectItem>
+              {companies?.map((c) => (
+                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Summary cards */}

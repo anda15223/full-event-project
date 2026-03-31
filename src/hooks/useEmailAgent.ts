@@ -551,6 +551,56 @@ export function useFetchEmailBody(emailId: string | null) {
   });
 }
 
+// Extract invoice data from PDF attachments using AI
+export function useExtractInvoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { email_id?: string; attachment_id?: string; batch?: boolean }) => {
+      const { data, error } = await supabase.functions.invoke("extract-invoice", {
+        body: params,
+      });
+      if (error) throw error;
+      return data as { extracted: number; errors: number; total: number; results: any[] };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      if (data.extracted > 0) {
+        toast.success(`Extracted ${data.extracted} invoice(s) from attachments`);
+      } else if (data.errors > 0) {
+        toast.error(`Invoice extraction failed for ${data.errors} attachment(s)`);
+      } else {
+        toast.info("No document attachments found to extract");
+      }
+    },
+    onError: (err: Error) => {
+      toast.error("Invoice extraction failed: " + err.message);
+    },
+  });
+}
+
+// Batch extract all unprocessed invoice attachments
+export function useExtractAllInvoices() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("extract-invoice", {
+        body: { batch: true },
+      });
+      if (error) throw error;
+      return data as { extracted: number; errors: number; total: number; results: any[] };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      toast.success(`Batch extraction: ${data.extracted} invoices extracted, ${data.errors} errors`);
+    },
+    onError: (err: Error) => {
+      toast.error("Batch extraction failed: " + err.message);
+    },
+  });
+}
+
 // Fetch a single attachment on demand (downloads from IMAP → storage)
 export function useFetchAttachment() {
   const queryClient = useQueryClient();
