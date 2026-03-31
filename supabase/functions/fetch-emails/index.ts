@@ -201,8 +201,8 @@ serve(async (req) => {
 
     /* ── SEARCH ─── */
     let searchCmd = "SEARCH ALL";
-    if (since_date) {
-      const d = new Date(since_date);
+    {
+      const d = new Date(effectiveSinceDate);
       if (Number.isNaN(d.getTime())) {
         return new Response(
           JSON.stringify({ error: { since_date: ["Invalid date"] } }),
