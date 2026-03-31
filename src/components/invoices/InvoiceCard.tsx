@@ -54,6 +54,7 @@ function leftBorder(inv: Invoice) {
 export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const [showPayment, setShowPayment] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [localPdfUrl, setLocalPdfUrl] = useState(invoice.pdf_url);
   const updateField = useUpdateInvoiceField();
   const sl = statusLabel(invoice);
 
