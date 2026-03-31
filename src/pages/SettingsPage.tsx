@@ -113,6 +113,7 @@ function ClaudeReprocessPanel() {
       batch: 0, totalBatches: 0, processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
       totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0,
       totalCashflow: stats?.totalCashflow || 0, currentSubject: "", byCompany: {} as Record<string, number>,
+      errorBreakdown: {} as Record<string, number>,
     };
     const batchSize = 20;
     const maxBatches = Math.ceil((stats?.totalEmails || 369) / batchSize);
