@@ -148,18 +148,6 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
       })();
     }
   }, [open, inv.id, inv.pdf_url, inv.email_id]);
-    // Load email info
-    if (inv.email_id) {
-      (async () => {
-        const { data } = await supabase
-          .from("emails")
-          .select("sender, subject")
-          .eq("id", inv.email_id!)
-          .single();
-        if (data) setEmailInfo(data);
-      })();
-    }
-  }, [open, inv.id, inv.pdf_url, inv.email_id]);
 
   // Focus first input on open
   useEffect(() => {
