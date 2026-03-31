@@ -75,7 +75,7 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [emailInfo, setEmailInfo] = useState<{ sender: string; subject: string } | null>(null);
+  const [emailInfo, setEmailInfo] = useState<{ sender: string; subject: string; received_at?: string; body_html?: string; body_clean_text?: string } | null>(null);
 
   // Reset form when invoice changes
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
       (async () => {
         const { data } = await supabase
           .from("emails")
-          .select("sender, subject")
+          .select("sender, subject, received_at, body_html, body_clean_text")
           .eq("id", inv.email_id!)
           .single();
         if (data) setEmailInfo(data);
@@ -315,6 +315,11 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                     <div className="text-xs text-muted-foreground">
                       <span className="font-semibold text-foreground">Subject:</span> {emailInfo.subject}
                     </div>
+                    {emailInfo.received_at && (
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Date:</span> {new Date(emailInfo.received_at).toLocaleDateString("da-DK", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="flex-1 p-4">
@@ -336,6 +341,40 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                       >
                         <embed src={pdfUrl} type="application/pdf" className="w-full h-full" />
                       </object>
+                    </div>
+                  ) : emailInfo?.body_html || emailInfo?.body_clean_text ? (
+                    <div className="h-full rounded-xl border border-border/40 overflow-hidden flex flex-col">
+                      <div className="px-4 py-2 bg-secondary/40 border-b border-border/30 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Email Source — No PDF</span>
+                        </div>
+                        {inv.source_type === "web_order" && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-warning/10 text-warning border border-warning/20">Web Order</span>
+                        )}
+                      </div>
+
+                      {inv.source_type === "web_order" && (
+                        <div className="mx-4 mt-3 p-3 rounded-lg bg-primary/5 border border-primary/10 text-sm space-y-1">
+                          <p className="font-semibold text-primary text-xs">Web order — key fields</p>
+                          {inv.invoice_number && <p className="text-xs text-muted-foreground">Order number: <span className="font-mono font-medium text-foreground">{inv.invoice_number}</span></p>}
+                          {inv.location && <p className="text-xs text-muted-foreground">Delivery location: <span className="font-medium text-foreground">{inv.location}</span></p>}
+                          <p className="text-xs text-muted-foreground">VAT added: <span className="font-medium text-foreground">25% on top of order total</span></p>
+                        </div>
+                      )}
+
+                      <div className="flex-1 overflow-auto px-4 py-3">
+                        {emailInfo.body_html ? (
+                          <div
+                            className="text-sm prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/80 prose-a:text-primary"
+                            dangerouslySetInnerHTML={{ __html: emailInfo.body_html }}
+                          />
+                        ) : (
+                          <pre className="text-sm whitespace-pre-wrap font-sans text-foreground/80 leading-relaxed">
+                            {emailInfo.body_clean_text}
+                          </pre>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="h-full rounded-xl border border-border/40 bg-secondary/20 flex items-center justify-center">
