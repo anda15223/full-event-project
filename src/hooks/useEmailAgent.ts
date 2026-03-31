@@ -141,11 +141,12 @@ export function useCompanies() {
   });
 }
 
+// Stage 1: Fetch & store emails (NO AI processing)
 export function useFetchEmails() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (sinceDate?: string) => {
-      const limit = 10; // Header-only fetch is lightweight, 10 per batch is safe
+      const limit = 5;
       let offset = 0;
       let totalFound = 0;
       let totalFetched = 0;
@@ -161,50 +162,38 @@ export function useFetchEmails() {
           if (error) throw error;
 
           consecutiveErrors = 0;
-          const fetched = data?.fetched || 0;
           totalFound = data?.total_found || totalFound;
-          totalFetched += fetched;
+          totalFetched += data?.fetched || 0;
           totalInserted += data?.inserted || 0;
-          offset = data?.next_offset ?? offset + fetched;
-          hasMore = Boolean(data?.has_more) && fetched > 0;
+          offset = data?.next_offset ?? offset + (data?.fetched || 0);
+          hasMore = Boolean(data?.has_more) && (data?.fetched || 0) > 0;
 
-          if (fetched === 0) hasMore = false;
-
-          // Invalidate after each batch so UI updates
           queryClient.invalidateQueries({ queryKey: ["emails"] });
 
-          // Small delay between batches to let the worker cool down
           if (hasMore) {
-            await new Promise(r => setTimeout(r, 1500));
+            await new Promise(r => setTimeout(r, 2000));
           }
         } catch (err: any) {
           consecutiveErrors++;
           console.warn(`Fetch batch error (attempt ${consecutiveErrors}):`, err);
-          if (consecutiveErrors >= 2) {
-            // Stop after 2 consecutive errors but return partial results
-            break;
-          }
-          // Wait before retry
+          if (consecutiveErrors >= 2) break;
           await new Promise(r => setTimeout(r, 3000));
         }
       }
 
-      return {
-        total_found: totalFound,
-        fetched: totalFetched,
-        inserted: totalInserted,
-      };
+      return { total_found: totalFound, fetched: totalFetched, inserted: totalInserted };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["emails"] });
-      toast.success(`Fetched ${data.fetched || 0} emails, ${data.inserted || 0} stored`);
+      toast.success(`Stage 1 complete: ${data.fetched} emails fetched, ${data.inserted} new stored`);
     },
     onError: (err: Error) => {
-      toast.error("Failed to fetch emails: " + err.message);
+      toast.error("Fetch failed: " + err.message);
     },
   });
 }
 
+// Stage 2: Classify stored emails (AI processing)
 export function useClassifyEmails() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -219,7 +208,7 @@ export function useClassifyEmails() {
       queryClient.invalidateQueries({ queryKey: ["emails"] });
       queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
       queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
-      toast.success(`Classified ${data.processed || 0} emails`);
+      toast.success(`Stage 2: Classified ${data.processed || 0} emails`);
     },
     onError: (err: Error) => {
       toast.error("Classification failed: " + err.message);
@@ -237,29 +226,135 @@ export function useClassifyAllEmails() {
       
       while (hasMore) {
         const { data, error } = await supabase.functions.invoke("classify-emails", {
-          body: { batch_size: 20 },
+          body: { batch_size: 10 },
         });
         if (error) throw error;
         
         totalProcessed += data.processed || 0;
         totalErrors += data.errors || 0;
         
-        if ((data.processed || 0) === 0) {
-          hasMore = false;
-        }
+        if ((data.processed || 0) === 0) hasMore = false;
         
         queryClient.invalidateQueries({ queryKey: ["emails"] });
         queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
         queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+
+        if (hasMore) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
       
       return { processed: totalProcessed, errors: totalErrors };
     },
     onSuccess: (data) => {
-      toast.success(`Classified all: ${data.processed} emails processed, ${data.errors} errors`);
+      toast.success(`Stage 2 complete: ${data.processed} classified, ${data.errors} errors`);
     },
     onError: (err: Error) => {
       toast.error("Classify all failed: " + err.message);
+    },
+  });
+}
+
+// Full pipeline: Stage 1 (fetch) → Stage 2 (classify all)
+export function useSyncAndClassify() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (sinceDate?: string) => {
+      // STAGE 1: Fetch & store all emails
+      toast.info("Stage 1: Fetching emails from mailbox...");
+      const limit = 5;
+      let offset = 0;
+      let totalFetched = 0;
+      let totalInserted = 0;
+      let hasMore = true;
+      let consecutiveErrors = 0;
+
+      while (hasMore) {
+        try {
+          const { data, error } = await supabase.functions.invoke("fetch-emails", {
+            body: { since_date: sinceDate, limit, offset },
+          });
+          if (error) throw error;
+          consecutiveErrors = 0;
+          totalFetched += data?.fetched || 0;
+          totalInserted += data?.inserted || 0;
+          offset = data?.next_offset ?? offset + (data?.fetched || 0);
+          hasMore = Boolean(data?.has_more) && (data?.fetched || 0) > 0;
+          queryClient.invalidateQueries({ queryKey: ["emails"] });
+          if (hasMore) await new Promise(r => setTimeout(r, 2000));
+        } catch {
+          consecutiveErrors++;
+          if (consecutiveErrors >= 2) break;
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+
+      toast.info(`Stage 1 done: ${totalFetched} fetched, ${totalInserted} new. Starting classification...`);
+
+      // STAGE 2: Classify all unprocessed
+      let totalProcessed = 0;
+      let totalErrors = 0;
+      let classifyMore = true;
+
+      while (classifyMore) {
+        try {
+          const { data, error } = await supabase.functions.invoke("classify-emails", {
+            body: { batch_size: 10 },
+          });
+          if (error) throw error;
+          totalProcessed += data.processed || 0;
+          totalErrors += data.errors || 0;
+          if ((data.processed || 0) === 0) classifyMore = false;
+          queryClient.invalidateQueries({ queryKey: ["emails"] });
+          queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+          if (classifyMore) await new Promise(r => setTimeout(r, 1000));
+        } catch {
+          break;
+        }
+      }
+
+      return { fetched: totalFetched, inserted: totalInserted, classified: totalProcessed, errors: totalErrors };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["emails"] });
+      queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+      toast.success(`Pipeline complete: ${data.fetched} fetched, ${data.inserted} new, ${data.classified} classified`);
+    },
+    onError: (err: Error) => {
+      toast.error("Sync pipeline failed: " + err.message);
+    },
+  });
+}
+
+// Reprocess a single email (reset processed flag, then re-classify)
+export function useReprocessEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (emailId: string) => {
+      // Reset the email to unprocessed
+      const { error: resetError } = await supabase
+        .from("emails")
+        .update({ processed: false, classification: null, company: null, summary: null, confidence: null, needs_review: false, review_reason: null, action_required: false })
+        .eq("id", emailId);
+      if (resetError) throw resetError;
+
+      // Re-classify just this email
+      const { data, error } = await supabase.functions.invoke("classify-emails", {
+        body: { email_ids: [emailId], batch_size: 1 },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["emails"] });
+      queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+      toast.success("Email reprocessed successfully");
+    },
+    onError: (err: Error) => {
+      toast.error("Reprocess failed: " + err.message);
     },
   });
 }

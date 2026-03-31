@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail, Search, Filter, RefreshCw, Zap, ChevronDown, ChevronRight,
+  Mail, Search, RefreshCw, Zap, RotateCcw,
   AlertTriangle, Clock, FileText, CheckCircle, XCircle, Building2,
-  Eye, Tag,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
   useFetchEmails,
   useClassifyEmails,
   useClassifyAllEmails,
+  useSyncAndClassify,
+  useReprocessEmail,
   useUpdateEmail,
   type Email,
 } from "@/hooks/useEmailAgent";
@@ -52,6 +54,8 @@ export default function AgentInbox() {
   const fetchEmails = useFetchEmails();
   const classifyEmails = useClassifyEmails();
   const classifyAll = useClassifyAllEmails();
+  const syncAndClassify = useSyncAndClassify();
+  const reprocessEmail = useReprocessEmail();
   const updateEmail = useUpdateEmail();
 
   const filteredEmails = (emails || []).filter((e) => {
@@ -66,6 +70,9 @@ export default function AgentInbox() {
 
   const unprocessedCount = (emails || []).filter((e) => !e.processed).length;
   const reviewCount = (emails || []).filter((e) => e.needs_review).length;
+  const totalCount = (emails || []).length;
+
+  const isBusy = fetchEmails.isPending || classifyEmails.isPending || classifyAll.isPending || syncAndClassify.isPending;
 
   return (
     <div className="space-y-6">
@@ -77,47 +84,78 @@ export default function AgentInbox() {
             Email Agent Inbox
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            AI-powered email classification & task extraction
+            Pipeline: IMAP → Database → AI Classification → UI
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Input
             type="date"
             value={sinceDate}
             onChange={(e) => setSinceDate(e.target.value)}
             className="w-40 bg-card border-border"
           />
+          {/* Full pipeline button */}
+          <Button
+            onClick={() => syncAndClassify.mutate(sinceDate || undefined)}
+            disabled={isBusy}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncAndClassify.isPending ? "animate-spin" : ""}`} />
+            {syncAndClassify.isPending ? "Syncing..." : "Sync Emails"}
+          </Button>
+          {/* Individual stage buttons */}
           <Button
             onClick={() => fetchEmails.mutate(sinceDate || undefined)}
-            disabled={fetchEmails.isPending}
+            disabled={isBusy}
             variant="outline"
             className="border-border"
+            title="Stage 1 only: Fetch & store"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${fetchEmails.isPending ? "animate-spin" : ""}`} />
-            Fetch
-          </Button>
-          <Button
-            onClick={() => classifyEmails.mutate(undefined)}
-            disabled={classifyEmails.isPending || classifyAll.isPending || unprocessedCount === 0}
-            variant="outline"
-            className="border-border"
-          >
-            <Zap className={`h-4 w-4 mr-2 ${classifyEmails.isPending ? "animate-pulse" : ""}`} />
-            Classify Batch ({unprocessedCount})
+            Fetch Only
           </Button>
           <Button
             onClick={() => classifyAll.mutate()}
-            disabled={classifyAll.isPending || classifyEmails.isPending || unprocessedCount === 0}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={isBusy || unprocessedCount === 0}
+            variant="outline"
+            className="border-border"
+            title="Stage 2 only: Classify unprocessed"
           >
             <Zap className={`h-4 w-4 mr-2 ${classifyAll.isPending ? "animate-pulse" : ""}`} />
-            {classifyAll.isPending ? "Classifying..." : `Classify All (${unprocessedCount})`}
+            Classify ({unprocessedCount})
           </Button>
         </div>
       </div>
 
+      {/* Pipeline status */}
+      {isBusy && (
+        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm text-primary flex items-center gap-2">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          {syncAndClassify.isPending ? "Running full pipeline (Fetch → Store → Classify)..." :
+           fetchEmails.isPending ? "Stage 1: Fetching from IMAP & storing..." :
+           classifyAll.isPending ? "Stage 2: AI classification in progress..." :
+           "Processing..."}
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
+        <button
+          onClick={() => setFilterClassification("all")}
+          className={`p-3 rounded-lg border transition-all ${
+            filterClassification === "all" ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/50"
+          }`}
+        >
+          <div className="text-sm text-muted-foreground">Total</div>
+          <div className="text-xl font-bold text-foreground">{totalCount}</div>
+        </button>
+        <button
+          onClick={() => setFilterClassification(filterClassification === "pending" ? "all" : "pending")}
+          className={`p-3 rounded-lg border transition-all border-border bg-card hover:border-primary/50`}
+        >
+          <div className="text-sm text-muted-foreground">Pending</div>
+          <div className="text-xl font-bold text-foreground">{unprocessedCount}</div>
+        </button>
         {["invoice", "task", "waiting", "information", "irrelevant"].map((cls) => {
           const count = (emails || []).filter((e) => e.classification === cls).length;
           return (
@@ -188,7 +226,7 @@ export default function AgentInbox() {
               <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No emails found</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Use "Fetch" to pull emails from your inbox
+                Use "Sync Emails" to fetch & classify
               </p>
             </div>
           ) : (
@@ -214,9 +252,13 @@ export default function AgentInbox() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    {email.classification && (
+                    {email.classification ? (
                       <Badge variant="outline" className={`text-[10px] ${classificationColors[email.classification] || ""}`}>
                         {email.classification}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] border-muted text-muted-foreground">
+                        pending
                       </Badge>
                     )}
                     {email.needs_review && (
@@ -250,16 +292,36 @@ export default function AgentInbox() {
                 exit={{ opacity: 0, x: -10 }}
                 className="border border-border rounded-lg bg-card p-5 space-y-4"
               >
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">
-                    {selectedEmail.subject || "(no subject)"}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">{selectedEmail.sender}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedEmail.received_at
-                      ? new Date(selectedEmail.received_at).toLocaleString()
-                      : ""}
-                  </p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      {selectedEmail.subject || "(no subject)"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">{selectedEmail.sender}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedEmail.received_at
+                        ? new Date(selectedEmail.received_at).toLocaleString()
+                        : ""}
+                    </p>
+                  </div>
+                  {/* Reprocess button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => reprocessEmail.mutate(selectedEmail.id)}
+                    disabled={reprocessEmail.isPending}
+                    title="Re-run AI classification on this email"
+                  >
+                    <RotateCcw className={`h-4 w-4 mr-1 ${reprocessEmail.isPending ? "animate-spin" : ""}`} />
+                    Reprocess
+                  </Button>
+                </div>
+
+                {/* Processing status */}
+                <div className="flex items-center gap-2">
+                  <Badge variant={selectedEmail.processed ? "default" : "outline"} className={selectedEmail.processed ? "bg-accent text-accent-foreground" : "border-muted text-muted-foreground"}>
+                    {selectedEmail.processed ? "Processed" : "Pending"}
+                  </Badge>
                 </div>
 
                 {/* Classification & Company */}
@@ -276,7 +338,7 @@ export default function AgentInbox() {
                       {selectedEmail.company}
                     </Badge>
                   )}
-                  {selectedEmail.confidence !== null && (
+                  {selectedEmail.confidence !== null && selectedEmail.confidence !== undefined && (
                     <Badge variant="outline" className="text-muted-foreground border-border">
                       {Math.round((selectedEmail.confidence || 0) * 100)}% conf
                     </Badge>
@@ -293,7 +355,6 @@ export default function AgentInbox() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {selectedEmail.review_reason || "Low confidence classification"}
                     </p>
-                    {/* Manual override controls */}
                     <div className="flex gap-2 mt-3">
                       <Select
                         onValueChange={(val) =>
@@ -350,7 +411,7 @@ export default function AgentInbox() {
                     Email Body
                   </h3>
                   <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-[300px] overflow-y-auto bg-secondary/50 rounded-lg p-3">
-                    {selectedEmail.body_text || "(empty)"}
+                    {selectedEmail.body_text || "(no body — headers only)"}
                   </div>
                 </div>
               </motion.div>
