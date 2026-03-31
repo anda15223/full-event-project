@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      cashflow_entries: {
+        Row: {
+          amount: number | null
+          bc_catering_branch: string | null
+          company: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          direction: string
+          email_id: string | null
+          entry_date: string | null
+          entry_type: string
+          id: string
+          location: string | null
+          reference: string | null
+          relates_to_invoice_id: string | null
+          source_email_sender: string | null
+          status: string | null
+          supplier_name: string | null
+        }
+        Insert: {
+          amount?: number | null
+          bc_catering_branch?: string | null
+          company?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          direction?: string
+          email_id?: string | null
+          entry_date?: string | null
+          entry_type?: string
+          id?: string
+          location?: string | null
+          reference?: string | null
+          relates_to_invoice_id?: string | null
+          source_email_sender?: string | null
+          status?: string | null
+          supplier_name?: string | null
+        }
+        Update: {
+          amount?: number | null
+          bc_catering_branch?: string | null
+          company?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          direction?: string
+          email_id?: string | null
+          entry_date?: string | null
+          entry_type?: string
+          id?: string
+          location?: string | null
+          reference?: string | null
+          relates_to_invoice_id?: string | null
+          source_email_sender?: string | null
+          status?: string | null
+          supplier_name?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active: boolean
