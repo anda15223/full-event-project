@@ -14,8 +14,10 @@ const RequestSchema = z.object({
   force: z.boolean().optional(),
 });
 
-// Reduced to 2 MB to stay well within CPU/memory limits
-const MAX_RFC822_BYTES = 2 * 1024 * 1024;
+// Cap at 3 MB for full fetch — enough for most emails with small attachments
+const MAX_RFC822_BYTES = 3 * 1024 * 1024;
+// Partial fetch limit for very large emails — 500KB captures headers + text body
+const PARTIAL_FETCH_BYTES = 512000;
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
@@ -269,17 +271,16 @@ serve(async (req) => {
     const sizeMatch = structRes.match(/RFC822\.SIZE\s+(\d+)/i);
     const rfc822Size = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
 
-    // For very large emails (>2MB), only fetch headers + text parts, skip attachment binary
+    // For very large emails (>3MB), only fetch partial to get headers + text body
     const isLargeEmail = rfc822Size > MAX_RFC822_BYTES;
 
     let rawEmail: Uint8Array | null = null;
     let fetchedPartially = false;
 
     if (isLargeEmail) {
-      // Fetch only the first 200KB which should contain headers + text body
-      // Attachments will be fetched on-demand via fetch-email-attachment
-      console.log(`Large email (${rfc822Size} bytes), fetching partial (headers+text only)`);
-      const partialBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (BODY.PEEK[]<0.204800>)`, 220000);
+      // Fetch first 500KB — enough for headers + text body in multipart emails
+      console.log(`Large email (${rfc822Size} bytes), fetching partial (${PARTIAL_FETCH_BYTES} bytes)`);
+      const partialBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (BODY.PEEK[]<0.${PARTIAL_FETCH_BYTES}>)`, PARTIAL_FETCH_BYTES + 20000);
       const partialAscii = latin1(partialBytes);
       rawEmail = extractBinaryLiteral(partialBytes, partialAscii);
       fetchedPartially = true;
