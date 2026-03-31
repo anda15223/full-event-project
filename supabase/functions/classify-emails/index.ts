@@ -185,6 +185,7 @@ ${bodySnippet ? `Body:\n${bodySnippet}` : "(no body text available — classify 
           needs_review: needsReview,
           review_reason: needsReview ? (parsed.review_reason || "Low confidence or unknown company") : null,
           processed: true,
+          language: parsed.language || "unknown",
         }).eq("id", email.id);
 
         // Create task if present
