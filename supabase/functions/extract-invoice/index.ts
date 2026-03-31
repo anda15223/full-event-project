@@ -643,7 +643,7 @@ async function callClaudeExtraction(
     }
 
     console.log(`✅ Extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, confidence=${confidence}, status=${status}`);
-    return { ...id, status: "extracted" };
+    return { ...id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence };
 
   } catch (err) {
     console.error("Claude extraction error for", emailId, ":", err instanceof Error ? err.message : JSON.stringify(err));
