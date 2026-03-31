@@ -437,6 +437,7 @@ export function useReparseEmail() {
     onSuccess: (_data, emailId) => {
       queryClient.invalidateQueries({ queryKey: ["emails"] });
       queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      queryClient.invalidateQueries({ queryKey: ["email_attachments", emailId] });
       queryClient.invalidateQueries({ queryKey: ["email_body", emailId] });
       toast.success("Email re-parsed from server");
     },

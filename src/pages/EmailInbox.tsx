@@ -149,9 +149,9 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
               </Button>
             </a>
           ) : (
-            <Button variant="outline" size="sm" onClick={handleFetch} disabled={isFetching}>
-              {isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
-              <span className="ml-1 hidden sm:inline">Fetch</span>
+            <Button variant="outline" size="sm" onClick={handleFetch} disabled={isFetching || att.parse_status === "pending" || att.parse_status === "pending_upload"}>
+              {isFetching || att.parse_status === "pending" || att.parse_status === "pending_upload" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              <span className="ml-1 hidden sm:inline">{att.parse_status === "pending" || att.parse_status === "pending_upload" ? "Auto-fetching" : "Fetch"}</span>
             </Button>
           )}
         </div>
