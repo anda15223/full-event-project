@@ -386,7 +386,7 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
               </div>
 
               {/* Right — Editable fields (45%) */}
-              <div className="w-[45%] overflow-y-auto p-6 space-y-5">
+              <div className="w-[45%] overflow-y-auto overscroll-contain p-6 space-y-5" style={{ maxHeight: '100%' }}>
                 {/* Supplier */}
                 <div className="space-y-1.5">
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Supplier</Label>
