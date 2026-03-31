@@ -338,15 +338,18 @@ function ClaudeReprocessPanel() {
           <div className="rounded-xl bg-muted/50 p-4 space-y-3">
             <p className="font-heading font-semibold text-sm">
               🧪 Test results — {testDetails.length} emails tested
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                {testDetails.filter((d: any) => d.status === "extracted").length} extracted · {testDetails.filter((d: any) => d.status === "skipped").length} skipped · {testDetails.filter((d: any) => d.status === "error").length} errors
+              </span>
             </p>
             <div className="space-y-1.5">
               {testDetails.map((d: any, i: number) => {
                 const icon = d.status === "extracted" ? "✅" : d.status === "ignored" ? "🚫" : d.status === "error" ? "⚠️" : "⏭";
-                const supplier = d.supplier || "—";
+                const supplier = d.supplier_name || d.supplier || "—";
                 const amount = d.amount;
                 const company = d.company || "";
                 const currency = d.currency || "DKK";
-                const skipReason = d.results?.[0]?.error || d.error || "";
+                const skipReason = d.error || d.results?.[0]?.error || "";
                 return (
                   <div key={i} className="flex items-center gap-3 text-sm py-1.5 border-b border-border/50 last:border-0">
                     <span className="w-5 text-center">{icon}</span>
