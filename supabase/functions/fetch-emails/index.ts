@@ -35,26 +35,39 @@ function stripHtml(html: string) {
     .replace(/&quot;/gi, '"');
 }
 
+function bytesFromBinaryString(value: string) {
+  return Uint8Array.from(Array.from(value, (char: string) => char.charCodeAt(0)));
+}
+
 function decodeQuotedPrintable(value: string) {
   return value
     .replace(/=\r?\n/g, "")
-    .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    .replace(/=([0-9A-F]{2})/gi, (_match: string, hex: string) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    );
 }
 
 function decodeMimeWords(value: string | null | undefined) {
   if (!value) return "";
 
-  return value.replace(/=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g, (match, _charset, encoding, text) => {
+  return value.replace(/=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g, (
+    match: string,
+    _charset: string,
+    encoding: string,
+    text: string,
+  ) => {
     try {
       if (encoding.toUpperCase() === "B") {
-        return new TextDecoder("utf-8").decode(Uint8Array.from(atob(text), (char) => char.charCodeAt(0)));
+        return new TextDecoder("utf-8").decode(bytesFromBinaryString(atob(text)));
       }
 
       const qp = text
         .replace(/_/g, " ")
-        .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+        .replace(/=([0-9A-F]{2})/gi, (_match: string, hex: string) =>
+          String.fromCharCode(parseInt(hex, 16)),
+        );
 
-      return new TextDecoder("utf-8").decode(Uint8Array.from(qp, (char) => char.charCodeAt(0)));
+      return new TextDecoder("utf-8").decode(bytesFromBinaryString(qp));
     } catch {
       return match;
     }
