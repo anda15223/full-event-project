@@ -328,7 +328,11 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                           </Button>
                         </a>
                       </div>
-                      <iframe src={`${pdfUrl}#toolbar=1&navpanes=0`} className="flex-1 w-full border-0" title="Invoice PDF" />
+                      <iframe
+                        src={`https://docs.google.com/gview?url=${encodeURIComponent(pdfUrl)}&embedded=true`}
+                        className="flex-1 w-full border-0"
+                        title="Invoice PDF"
+                      />
                     </div>
                   ) : (
                     <div className="h-full rounded-xl border border-border/40 bg-secondary/20 flex items-center justify-center">
