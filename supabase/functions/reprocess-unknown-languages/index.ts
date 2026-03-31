@@ -9,7 +9,8 @@ const corsHeaders = {
 };
 
 const RequestSchema = z.object({
-  batch_size: z.number().int().min(1).max(50).optional().default(50),
+  batch_size: z.number().int().min(1).max(200).optional().default(200),
+  max_total: z.number().int().min(1).max(2000).optional().default(200),
   dry_run: z.boolean().optional().default(false),
   reparse_from_imap: z.boolean().optional().default(false),
 });
