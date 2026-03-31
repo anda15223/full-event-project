@@ -1,9 +1,104 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Mail, MessageCircle, Key, Server } from "lucide-react";
+import { Settings, Mail, MessageCircle, Key, RefreshCw, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+
+function ReprocessPanel() {
+  const [running, setRunning] = useState(false);
+  const [results, setResults] = useState<{
+    processed: number;
+    changed_to_da: number;
+    changed_to_en: number;
+    changed_to_ro: number;
+    still_unknown: number;
+    total_unknown: number;
+  } | null>(null);
+
+  const { data: unknownCount, refetch } = useQuery({
+    queryKey: ["unknown-email-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("emails")
+        .select("id", { count: "exact", head: true })
+        .eq("language", "unknown");
+      return count || 0;
+    },
+  });
+
+  const runBatch = async () => {
+    setRunning(true);
+    setResults(null);
+    const totals = { processed: 0, changed_to_da: 0, changed_to_en: 0, changed_to_ro: 0, still_unknown: 0, total_unknown: 0 };
+
+    try {
+      for (let i = 0; i < 5; i++) {
+        const { data, error } = await supabase.functions.invoke("reprocess-unknown-languages", {
+          body: { batch_size: 20, max_total: 20, dry_run: false, reparse_from_imap: true },
+        });
+        if (error) throw error;
+        totals.processed += data.processed;
+        totals.changed_to_da += data.changed_to_da;
+        totals.changed_to_en += data.changed_to_en;
+        totals.changed_to_ro += data.changed_to_ro;
+        totals.still_unknown += data.still_unknown;
+        totals.total_unknown = data.total_unknown;
+        if (data.total_unknown === 0) break;
+      }
+      setResults(totals);
+      refetch();
+      toast.success(`Reprocessed ${totals.processed} emails — ${totals.processed - totals.still_unknown} now detected`);
+    } catch (err) {
+      toast.error("Reprocess failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <Card className="glass-panel">
+      <CardHeader>
+        <CardTitle className="text-base font-heading flex items-center gap-2">
+          <RefreshCw className="h-4 w-4 text-primary" /> Email Reprocessing
+        </CardTitle>
+        <CardDescription>Fix language detection for emails with missing or garbled text</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Emails with unknown language: <span className="font-semibold text-foreground">{unknownCount ?? "..."}</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Each click processes ~100 emails with IMAP re-fetch
+            </p>
+          </div>
+          <Button onClick={runBatch} disabled={running || unknownCount === 0}>
+            {running ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Reprocess batch"}
+          </Button>
+        </div>
+
+        {results && (
+          <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+            <p className="font-medium">Batch complete — {results.processed} processed</p>
+            <div className="grid grid-cols-2 gap-x-4 text-muted-foreground">
+              <span>→ Danish: {results.changed_to_da}</span>
+              <span>→ English: {results.changed_to_en}</span>
+              <span>→ Romanian: {results.changed_to_ro}</span>
+              <span>→ Still unknown: {results.still_unknown}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Remaining: {results.total_unknown} unknown</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SettingsPage() {
   return (
@@ -15,7 +110,8 @@ export default function SettingsPage() {
         <p className="text-muted-foreground text-sm mt-1">Configure your integrations and API keys</p>
       </div>
 
-      {/* Email */}
+      <ReprocessPanel />
+
       <Card className="glass-panel">
         <CardHeader>
           <CardTitle className="text-base font-heading flex items-center gap-2">
@@ -53,7 +149,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp */}
       <Card className="glass-panel">
         <CardHeader>
           <CardTitle className="text-base font-heading flex items-center gap-2">
@@ -78,7 +173,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* API Keys */}
       <Card className="glass-panel">
         <CardHeader>
           <CardTitle className="text-base font-heading flex items-center gap-2">
