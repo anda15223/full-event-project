@@ -143,7 +143,7 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
       (async () => {
         const { data } = await supabase
           .from("emails")
-          .select("sender, subject")
+          .select("sender, subject, received_at, body_html, body_clean_text")
           .eq("id", inv.email_id!)
           .single();
         if (data) setEmailInfo(data);
