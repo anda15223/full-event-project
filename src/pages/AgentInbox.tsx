@@ -51,6 +51,7 @@ export default function AgentInbox() {
   });
   const fetchEmails = useFetchEmails();
   const classifyEmails = useClassifyEmails();
+  const classifyAll = useClassifyAllEmails();
   const updateEmail = useUpdateEmail();
 
   const filteredEmails = (emails || []).filter((e) => {
