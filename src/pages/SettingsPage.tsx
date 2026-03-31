@@ -177,8 +177,8 @@ function ClaudeReprocessPanel() {
           break;
         }
 
-        // Wait 10 seconds between batches to avoid Claude rate limits
-        await new Promise(r => setTimeout(r, 10000));
+        // 3 second pause between batches — parallel handles rate limiting internally
+        await new Promise(r => setTimeout(r, 3000));
       }
       setCompleted(true);
       saveProgress(null, false);
