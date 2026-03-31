@@ -561,11 +561,20 @@ async function callClaudeExtraction(
       return { ...id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
     }
 
+    // Check ignore rules on extracted supplier
+    if (shouldIgnore(invoiceData.supplier_name, null, text)) {
+      console.log(`Ignoring extraction for ${emailId}: supplier matched ignore rule`);
+      return { ...id, status: "ignored", error: "Supplier matched ignore rule" };
+    }
+
     // Apply company mapping rules
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
 
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
-    const status = confidence >= 0.7 ? "pending" : "needs_review";
+    // Check for rykker (payment reminder) → force overdue
+    const rykkerDetected = isRykker(emailContext, text);
+    const status = rykkerDetected ? "overdue" : (confidence >= 0.7 ? "pending" : "needs_review");
+    const notes = rykkerDetected ? "RYKKER — payment reminder received" : (invoiceData.extraction_notes || null);
 
     if (attachmentId) {
       await supabase.from("email_attachments").update({
