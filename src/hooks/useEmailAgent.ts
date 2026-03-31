@@ -579,21 +579,42 @@ export function useExtractInvoice() {
   });
 }
 
-// Batch extract all unprocessed invoice attachments
+// Batch extract all unprocessed invoice attachments (loops until done)
 export function useExtractAllInvoices() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("extract-invoice", {
-        body: { batch: true },
-      });
-      if (error) throw error;
-      return data as { extracted: number; errors: number; total: number; results: any[] };
+      let totalExtracted = 0;
+      let totalErrors = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase.functions.invoke("extract-invoice", {
+          body: { batch: true },
+        });
+        if (error) throw error;
+
+        totalExtracted += data.extracted || 0;
+        totalErrors += data.errors || 0;
+
+        queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+
+        // Stop if nothing was processed (no more unextracted attachments)
+        if ((data.extracted || 0) === 0 && (data.errors || 0) === 0) {
+          hasMore = false;
+        } else {
+          // Brief pause between batches to avoid resource limits
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+
+      return { extracted: totalExtracted, errors: totalErrors };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
       queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
-      toast.success(`Batch extraction: ${data.extracted} invoices extracted, ${data.errors} errors`);
+      toast.success(`Batch extraction complete: ${data.extracted} invoices extracted, ${data.errors} errors`);
     },
     onError: (err: Error) => {
       toast.error("Batch extraction failed: " + err.message);
