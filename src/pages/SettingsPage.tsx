@@ -131,8 +131,8 @@ function ClaudeReprocessPanel() {
       totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0,
       totalCashflow: stats?.totalCashflow || 0, currentSubject: "", byCompany: {} as Record<string, number>,
     };
-    const batchSize = 10;
-    const maxBatches = Math.ceil((stats?.totalEmails || 2069) / batchSize);
+    const batchSize = 20;
+    const maxBatches = Math.ceil((stats?.totalEmails || 369) / batchSize);
     totals.totalBatches = maxBatches;
     let offset = 0;
 
@@ -149,7 +149,7 @@ function ClaudeReprocessPanel() {
         saveProgress(snap, true);
 
         const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
-          body: { test_mode: false, batch_size: batchSize, offset },
+          body: { test_mode: false, batch_size: batchSize, offset, parallel: 5 },
         });
         if (error) throw error;
 
@@ -177,8 +177,8 @@ function ClaudeReprocessPanel() {
           break;
         }
 
-        // Wait 10 seconds between batches to avoid Claude rate limits
-        await new Promise(r => setTimeout(r, 10000));
+        // 3 second pause between batches — parallel handles rate limiting internally
+        await new Promise(r => setTimeout(r, 3000));
       }
       setCompleted(true);
       saveProgress(null, false);

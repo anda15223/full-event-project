@@ -7,7 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/* Suppliers/senders to always ignore */
 const IGNORE_SENDERS = ["livet på øen", "livet paa øen", "livet paa oen"];
 const IGNORE_SUBJECTS = /kontoudtog|kontoopgørelse|account\s*statement/i;
 
@@ -26,18 +25,19 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const batchSize = body.batch_size || 10;
+    const batchSize = body.batch_size || 20;
     const testMode = body.test_mode || false;
     const offset = body.offset || 0;
+    const parallel = body.parallel || 5; // how many simultaneous extract calls
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Reprocess: test=${testMode}, batch=${batchSize}, offset=${offset}`);
+    console.log(`Reprocess: test=${testMode}, batch=${batchSize}, offset=${offset}, parallel=${parallel}`);
 
-    // Test mode should pick likely invoice candidates, not arbitrary recent emails.
-    // Full mode keeps processing invoice-classified emails with offset pagination.
+    // Test mode: pick invoice-classified or has_attachments emails
+    // Full mode: only invoice-classified emails
     let query;
     if (testMode) {
       query = supabase
@@ -71,18 +71,18 @@ serve(async (req) => {
 
     const emailIds = emails.map((e: any) => e.id);
 
-    // Filter out emails that already have invoices — but NOT in test mode (we want to see results)
+    // Filter out emails that already have invoices — skip in test mode
     let toProcess: string[];
     if (testMode) {
       toProcess = emailIds;
-      console.log(`Test mode: processing all ${toProcess.length} emails (ignoring existing invoices)`);
+      console.log(`Test mode: processing all ${toProcess.length} emails`);
     } else {
       const { data: existingInvoices } = await supabase
         .from("invoices").select("email_id").in("email_id", emailIds);
       const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
       toProcess = emailIds.filter((id: string) => !existingIds.has(id));
 
-      console.log(`Batch offset=${offset}: ${emails.length} invoice emails fetched, ${existingIds.size} already have invoices, ${toProcess.length} to process`);
+      console.log(`Batch offset=${offset}: ${emails.length} fetched, ${existingIds.size} already done, ${toProcess.length} to process`);
 
       if (toProcess.length === 0) {
         return new Response(JSON.stringify({
@@ -99,120 +99,102 @@ serve(async (req) => {
     let errors = 0;
     const details: any[] = [];
     let currentSubject = "";
-
     const extractUrl = `${supabaseUrl}/functions/v1/extract-invoice`;
 
-    for (const emailId of toProcess) {
-      const email = emails.find((e: any) => e.id === emailId);
-      currentSubject = email?.subject || "";
+    // Process in parallel batches
+    for (let i = 0; i < toProcess.length; i += parallel) {
+      const chunk = toProcess.slice(i, i + parallel);
+      console.log(`▶ Parallel batch ${Math.floor(i / parallel) + 1}: ${chunk.length} emails`);
 
-      // Check ignore rules before calling Claude
-      const ignoreReason = email ? shouldSkipEmail(email) : null;
-      if (ignoreReason) {
-        console.log(`Ignoring ${emailId}: ${ignoreReason} — "${currentSubject}"`);
-        await supabase.from("emails").update({
-          router_status: "ignored",
-          assigned_agent: "ignore_agent",
-        }).eq("id", emailId);
-        ignored++;
-        details.push({ email_id: emailId, status: "ignored", reason: ignoreReason, subject: currentSubject });
-        continue;
+      const results = await Promise.allSettled(
+        chunk.map(async (emailId) => {
+          const email = emails.find((e: any) => e.id === emailId);
+          const subject = email?.subject || "";
+
+          // Check ignore rules before calling Claude
+          const ignoreReason = email ? shouldSkipEmail(email) : null;
+          if (ignoreReason) {
+            await supabase.from("emails").update({
+              router_status: "ignored", assigned_agent: "ignore_agent",
+            }).eq("id", emailId);
+            return { email_id: emailId, status: "ignored", reason: ignoreReason, subject };
+          }
+
+          // Call extract-invoice with retry for rate limits
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const response = await fetch(extractUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
+              body: JSON.stringify({ email_id: emailId }),
+            });
+
+            if (response.status === 429) {
+              const wait = Math.pow(2, attempt) * 5000;
+              console.log(`⏳ Rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1})`);
+              await new Promise(r => setTimeout(r, wait));
+              continue;
+            }
+
+            const responseText = await response.text();
+            let data: any;
+            try { data = JSON.parse(responseText); } catch {
+              return { email_id: emailId, status: "error", error: "Non-JSON response", subject };
+            }
+
+            if (!response.ok) {
+              return { email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, subject };
+            }
+
+            const ex = data?.extracted || 0;
+            const er = data?.errors || 0;
+            return {
+              email_id: emailId,
+              status: ex > 0 ? "extracted" : (er > 0 ? "error" : "skipped"),
+              subject,
+              extracted: ex,
+              results: data.results,
+              error: er > 0 ? (data.results?.[0]?.error || "extraction error") : undefined,
+            };
+          }
+          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", subject };
+        })
+      );
+
+      // Collect results from Promise.allSettled
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          const r = result.value;
+          if (r.status === "extracted") extracted += (r.extracted || 1);
+          else if (r.status === "ignored") ignored++;
+          else if (r.status === "error") errors++;
+          else skipped++;
+          currentSubject = r.subject || currentSubject;
+          details.push(r);
+        } else {
+          errors++;
+          details.push({ email_id: "unknown", status: "error", error: result.reason?.message || "Promise rejected" });
+        }
       }
 
-      try {
-        console.log(`▶ Calling extract-invoice for ${emailId}: "${currentSubject}"`);
-        
-        const response = await fetch(extractUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({ email_id: emailId }),
-        });
-
-        const responseText = await response.text();
-        let data: any;
-        try {
-          data = JSON.parse(responseText);
-        } catch {
-          errors++;
-          console.error(`Non-JSON response for ${emailId}:`, responseText.substring(0, 300));
-          details.push({ email_id: emailId, status: "error", error: "Non-JSON response", subject: currentSubject });
-          continue;
-        }
-
-        // Handle rate limit — wait 65 seconds and retry once
-        if (response.status === 429 || (data.error && typeof data.error === 'string' && data.error.includes("rate_limit"))) {
-          console.log(`⏳ Rate limited on ${emailId}, waiting 65s then retrying...`);
-          await new Promise(r => setTimeout(r, 65000));
-          
-          const retryResponse = await fetch(extractUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${supabaseKey}`,
-            },
-            body: JSON.stringify({ email_id: emailId }),
-          });
-          const retryText = await retryResponse.text();
-          try { data = JSON.parse(retryText); } catch {
-            errors++;
-            details.push({ email_id: emailId, status: "error", error: "Retry non-JSON", subject: currentSubject });
-            continue;
-          }
-          if (!retryResponse.ok) {
-            errors++;
-            details.push({ email_id: emailId, status: "error", error: "Retry: " + (data.error || `HTTP ${retryResponse.status}`), subject: currentSubject });
-            continue;
-          }
-        } else if (!response.ok) {
-          errors++;
-          console.error(`HTTP ${response.status} for ${emailId}:`, JSON.stringify(data).substring(0, 300));
-          details.push({ email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, subject: currentSubject });
-          continue;
-        }
-
-        const ex = data?.extracted || 0;
-        const er = data?.errors || 0;
-        extracted += ex;
-        if (er > 0) errors += er;
-        if (ex === 0 && er === 0) skipped++;
-        
-        console.log(`${ex > 0 ? '✅' : '⏭'} ${emailId}: extracted=${ex}, errors=${er}, subject="${currentSubject}"`);
-        details.push({
-          email_id: emailId,
-          status: ex > 0 ? "extracted" : (er > 0 ? "error" : "skipped"),
-          subject: currentSubject,
-          extracted: ex,
-          results: data.results,
-        });
-
-        // 5 second delay between emails to stay under 30k tokens/min
-        await new Promise(r => setTimeout(r, 5000));
-
-      } catch (err) {
-        errors++;
-        console.error(`Exception for ${emailId}:`, err instanceof Error ? err.message : JSON.stringify(err));
-        details.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown", subject: currentSubject });
+      // Small pause between parallel batches (2s instead of 5s per email)
+      if (i + parallel < toProcess.length) {
+        await new Promise(r => setTimeout(r, 2000));
       }
     }
 
     // Get current counts
-    const { count: totalEmails } = await supabase
-      .from("emails").select("id", { count: "exact", head: true })
-      .eq("classification", "invoice")
-      .gte("received_at", "2026-01-01T00:00:00.000Z");
+    const [
+      { count: totalEmails },
+      { count: totalInvoices },
+      { count: totalCashflow },
+    ] = await Promise.all([
+      supabase.from("emails").select("id", { count: "exact", head: true })
+        .eq("classification", "invoice").gte("received_at", "2026-01-01T00:00:00.000Z"),
+      supabase.from("invoices").select("id", { count: "exact", head: true }),
+      supabase.from("cashflow_entries").select("id", { count: "exact", head: true }),
+    ]);
 
-    const { count: totalInvoices } = await supabase
-      .from("invoices").select("id", { count: "exact", head: true });
-
-    const { count: totalCashflow } = await supabase
-      .from("cashflow_entries").select("id", { count: "exact", head: true });
-
-    // Company breakdown
-    const { data: companyBreakdown } = await supabase
-      .from("invoices").select("company");
+    const { data: companyBreakdown } = await supabase.from("invoices").select("company");
     const byCompany: Record<string, number> = {};
     for (const inv of companyBreakdown || []) {
       const c = inv.company || "Unknown";
@@ -223,10 +205,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       processed: toProcess.length,
-      extracted,
-      skipped,
-      ignored,
-      errors,
+      extracted, skipped, ignored, errors,
       total_emails: totalEmails || 0,
       total_invoices: totalInvoices || 0,
       total_cashflow: totalCashflow || 0,

@@ -83,72 +83,25 @@ function looksLikeInvoiceContent(text: string): boolean {
   return (hasKeyword && hasAmount) || (hasKeyword && hasDate) || (hasAmount && hasDate);
 }
 
-const CLAUDE_EXTRACTION_PROMPT = `You are an expert invoice data extractor. You receive text from a PDF document or an email body.
+const CLAUDE_EXTRACTION_PROMPT = `Extract invoice data from the text. Return ONLY valid JSON, no markdown.
 
-COMPANY MAPPING RULES — never deviate:
-- The Fish Project Reffen → Blue Fish ApS
-- The Fish Project Helsingør → The Fish Project ApS
-- Fish Bistro → Aegean ApS
-- Gaia → Aegean ApS
-- Inco Danmark A/S → The Fish Project ApS, PBS payment, central storage
-- BC Catering Roskilde (shop@bccs.dk / info@bccr.dk) → web order, add 25% VAT, The Fish Project ApS or Blue Fish ApS based on location
-- BC Catering Skanderborg (omk.administration@bccr.dk) → PBS cashflow only, Aegean ApS
-- Sepio → ALWAYS The Fish Project ApS
-- Kavsman → ALWAYS The Fish Project ApS
-- Odin Seafood / Odin → ALWAYS The Fish Project ApS
-- Kollek ApS / Team Kollek → ALWAYS The Fish Project ApS, payment = PBS on due date
-  - Kollek location = read delivery address: Aarhus → "The Fish Project Aarhus", Helsingør → "The Fish Project Helsingør", Reffen → "The Fish Project Reffen", Søborg → "Søborg Storage", unclear → "Copenhagen Central Storage"
-- H.W. Larsen A/S → ALWAYS The Fish Project ApS, category = equipment
+COMPANY RULES:
+- Reffen → Blue Fish ApS
+- Helsingør → The Fish Project ApS
+- Fish Bistro/Gaia → Aegean ApS
+- Inco Danmark → The Fish Project ApS
+- BC Catering Roskilde (bccs.dk) → web order +25% VAT
+- BC Catering Skanderborg (bccr.dk) → PBS cashflow, Aegean ApS
+- Sepio/Kavsman/Odin/Kollek/HW Larsen → The Fish Project ApS
+- Livet på Øen/kontoudtog → is_invoice: false
 
-IGNORE RULES — return is_invoice: false:
-- Livet på Øen → always ignore, never an invoice
-- Any document containing "kontoudtog" or "kontoopgørelse" → bank statement, never an invoice
+Return:
+{"is_invoice":true,"supplier_name":"","invoice_number":"","invoice_date":"YYYY-MM-DD","due_date":"YYYY-MM-DD","amount":0,"vat_amount":0,"total_with_vat":0,"currency":"DKK","company":"","location":"","what_was_bought":"","payment_account":"","payment_reference":"","confidence":0.0,"extraction_notes":""}
 
-URGENT FLAGS:
-- Any email/document containing "rykker" or "betalingspåmindelse" → this is a payment reminder
-  Set status = "overdue", add extraction_notes = "RYKKER - payment reminder"
-  Try to identify which original invoice this reminder is for
-
-EXTRACTION RULES:
-- Always prefer PDF text over email body for invoice data
-- If no PDF, extract from email body
-- Extract from ANY email containing amounts, dates, or supplier references
-- Never skip an email just because confidence is low
-- Confidence below 0.7 → save with status needs_review
-- Confidence above 0.7 → save with status pending
-- Always extract: supplier_name, invoice_number, invoice_date, due_date, amount, vat_amount, total_with_vat, currency, company, location, what_was_bought, payment_method
-- Currency default is DKK
-- VAT default is 25% of amount if not stated
-- The document may be in Danish, Romanian, or English — output in English
-- Dates must be YYYY-MM-DD format
-
-Return only valid JSON, no explanation, no markdown:
-{
-  "is_invoice": true,
-  "supplier_name": "",
-  "invoice_number": "",
-  "invoice_date": "YYYY-MM-DD",
-  "due_date": "YYYY-MM-DD",
-  "amount": 0.00,
-  "vat_amount": 0.00,
-  "total_with_vat": 0.00,
-  "currency": "DKK",
-  "company": "",
-  "location": "",
-  "what_was_bought": "",
-  "payment_account": "",
-  "payment_reference": "",
-  "payment_method": "",
-  "source_type": "",
-  "confidence": 0.00,
-  "extraction_notes": ""
-}
-
-If the text does NOT contain any invoice data at all, return:
-{"is_invoice": false, "confidence": 0, "extraction_notes": "reason"}`;
+If NOT an invoice: {"is_invoice":false,"confidence":0,"extraction_notes":"reason"}`;
 
 /* ── Call Claude via direct fetch (no SDK needed) ── */
-async function callClaude(apiKey: string, messages: Array<{ role: string; content: any }>, maxTokens = 2048): Promise<any> {
+async function callClaude(apiKey: string, messages: Array<{ role: string; content: any }>, maxTokens = 500): Promise<any> {
   console.log("Calling Claude API with model claude-sonnet-4-20250514...");
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -346,6 +299,20 @@ async function processAttachment(
   if (!att.storage_path) {
     console.log(`Attachment ${att.id}: no storage_path, skipping`);
     return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path" };
+  }
+
+  // Check if PDF text was already extracted — use cached text
+  if (att.extracted_text && att.extracted_text.length > 100) {
+    console.log(`Using cached extracted text for ${att.id} (${att.extracted_text.length} chars)`);
+    const mt = (att.mime_type || "").toLowerCase();
+    const pdfUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${att.storage_path}`;
+    const emailContext = await getEmailContext(supabase, att.email_id);
+    const { data: parentEmail } = await supabase.from("emails").select("company").eq("id", att.email_id).single();
+    return await callClaudeExtraction(
+      supabase, att.email_id, att.id, pdfUrl,
+      att.extracted_text.substring(0, 15000), emailContext,
+      parentEmail?.company, claudeKey
+    );
   }
 
   console.log(`Downloading attachment ${att.id} from ${att.storage_path}`);
