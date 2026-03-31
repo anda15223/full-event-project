@@ -23,10 +23,17 @@ const LOCATION_COMPANY_MAP: Record<string, string> = {
   "gaia": "Aegean ApS",
 };
 
-const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: string }> = {
+const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: string | null }> = {
   "inco": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco danmark": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco københavn": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
+  "sepio": { company: "The Fish Project ApS", location: null },
+  "kavsman": { company: "The Fish Project ApS", location: null },
+  "odin": { company: "The Fish Project ApS", location: null },
+  "odin seafood": { company: "The Fish Project ApS", location: null },
+  "odin seafoods": { company: "The Fish Project ApS", location: null },
+  "kollek": { company: "The Fish Project ApS", location: null },
+  "team kollek": { company: "The Fish Project ApS", location: null },
 };
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
@@ -64,6 +71,11 @@ COMPANY MAPPING RULES — never deviate:
 - Inco Danmark A/S → The Fish Project ApS, PBS payment, central storage
 - BC Catering Roskilde (shop@bccs.dk / info@bccr.dk) → web order, add 25% VAT, The Fish Project ApS or Blue Fish ApS based on location
 - BC Catering Skanderborg (omk.administration@bccr.dk) → PBS cashflow only, Aegean ApS
+- Sepio → ALWAYS The Fish Project ApS
+- Kavsman → ALWAYS The Fish Project ApS
+- Odin Seafood / Odin → ALWAYS The Fish Project ApS
+- Kollek ApS / Team Kollek → ALWAYS The Fish Project ApS, payment = PBS on due date
+  - Kollek location = read delivery address: Aarhus → "The Fish Project Aarhus", Helsingør → "The Fish Project Helsingør", Reffen → "The Fish Project Reffen", Søborg → "Søborg Storage", unclear → "Copenhagen Central Storage"
 
 EXTRACTION RULES:
 - Always prefer PDF text over email body for invoice data

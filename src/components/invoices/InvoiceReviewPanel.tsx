@@ -32,8 +32,11 @@ const LOCATIONS = [
   "Copenhagen Central Storage",
   "The Fish Project Reffen",
   "The Fish Project Helsingør",
+  "The Fish Project Aarhus",
   "Fish Bistro",
   "Gaia",
+  "Søborg Storage",
+  "Central Storage — The Fish Project",
 ];
 
 interface Props {
