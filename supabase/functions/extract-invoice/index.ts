@@ -422,14 +422,22 @@ async function processAttachment(
         parse_error: null,
       }).eq("id", att.id);
 
-      // Parse Claude's JSON response directly
+      // Parse Claude's JSON response with robust extraction
       let invoiceData: any = null;
       try {
-        const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        let cleaned = responseText
+          .replace(/```json\s*/gi, "")
+          .replace(/```\s*/g, "")
+          .trim();
+        const jsonStart = cleaned.search(/[\{\[]/);
+        const jsonEnd = cleaned.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+        }
+        cleaned = cleaned.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]").replace(/[\x00-\x1F\x7F]/g, "");
         invoiceData = JSON.parse(cleaned);
-      } catch {
-        console.error(`Failed to parse Claude PDF response for ${att.id}`);
-        // Fall back to structured extraction with whatever text we got
+      } catch (parseErr) {
+        console.error(`Failed to parse Claude PDF response for ${att.id}:`, parseErr instanceof Error ? parseErr.message : parseErr);
         return await callClaudeExtraction(
           supabase, att.email_id, att.id, pdfUrl,
           responseText.substring(0, 15000), emailContext,
@@ -437,7 +445,15 @@ async function processAttachment(
         );
       }
 
-      if (!invoiceData || invoiceData.is_invoice === false) {
+      // Debug logging
+      console.log(`=== PDF PARSED KEYS for ${att.id} ===`, Object.keys(invoiceData));
+      console.log(`=== PDF is_invoice ===`, typeof invoiceData.is_invoice, invoiceData.is_invoice);
+
+      // Handle is_invoice as string OR boolean
+      const isNotInvoice = invoiceData.is_invoice === false || invoiceData.is_invoice === "false";
+
+      if (!invoiceData || isNotInvoice) {
+        console.log(`⏭ PDF not invoice: ${att.id} — ${invoiceData?.extraction_notes || "no notes"}`);
         return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
       }
 
