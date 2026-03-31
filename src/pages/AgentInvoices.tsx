@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ChevronDown, Sparkles } from "lucide-react";
+import { FileText, ChevronDown, Sparkles, Package, Wrench, Receipt, CreditCard, AlertTriangle } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import InvoiceMetrics from "@/components/invoices/InvoiceMetrics";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
@@ -8,11 +8,17 @@ import InvoiceCard from "@/components/invoices/InvoiceCard";
 import SyncPanel from "@/components/invoices/SyncPanel";
 import type { Invoice } from "@/hooks/useInvoices";
 
-const SECTIONS = [
-  { key: "overdue", label: "🔴 Overdue", filter: (i: Invoice) => i.status === "overdue" || !!i.overdue_flag },
+const CATEGORY_SECTIONS = [
+  {
+    key: "overdue",
+    label: "🔴 Overdue",
+    icon: AlertTriangle,
+    filter: (i: Invoice) => i.status === "overdue" || !!i.overdue_flag,
+  },
   {
     key: "due_week",
     label: "🟡 Due This Week",
+    icon: CreditCard,
     filter: (i: Invoice) => {
       if (!i.due_date || i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
       const d = new Date(i.due_date);
@@ -22,15 +28,60 @@ const SECTIONS = [
     },
   },
   {
-    key: "upcoming",
-    label: "🔵 Due Later",
+    key: "supplier_invoice",
+    label: "📦 Supplier Invoices",
+    icon: Package,
     filter: (i: Invoice) => {
-      if (!i.due_date || i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
-      const week = new Date(); week.setDate(week.getDate() + 7);
-      return new Date(i.due_date) > week;
+      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      const d = i.due_date ? new Date(i.due_date) : null;
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const week = new Date(today); week.setDate(week.getDate() + 7);
+      if (d && d >= today && d <= week) return false;
+      return !i.category || i.category === "supplier_invoice";
     },
   },
-  { key: "paid", label: "✅ Paid", filter: (i: Invoice) => i.status === "paid" },
+  {
+    key: "equipment",
+    label: "🔧 Equipment",
+    icon: Wrench,
+    filter: (i: Invoice) => {
+      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      return i.category === "equipment";
+    },
+  },
+  {
+    key: "operating_expense",
+    label: "📱 Bills & Operating Expenses",
+    icon: Receipt,
+    filter: (i: Invoice) => {
+      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      return i.category === "operating_expense";
+    },
+  },
+  {
+    key: "cashflow_pbs",
+    label: "🏦 PBS / Direct Debits",
+    icon: CreditCard,
+    filter: (i: Invoice) => {
+      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      return i.category === "cashflow_pbs";
+    },
+  },
+  {
+    key: "rykker",
+    label: "⚠ Payment Reminders (Rykker)",
+    icon: AlertTriangle,
+    filter: (i: Invoice) => {
+      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      return i.category === "rykker";
+    },
+  },
+  {
+    key: "paid",
+    label: "✅ Paid",
+    icon: CreditCard,
+    filter: (i: Invoice) => i.status === "paid",
+  },
 ];
 
 export default function AgentInvoices() {
@@ -54,11 +105,10 @@ export default function AgentInvoices() {
   const companies = useMemo(() => [...new Set(allInvoices.map((i) => i.company).filter(Boolean))] as string[], [allInvoices]);
   const locations = useMemo(() => [...new Set(allInvoices.map((i) => i.location).filter(Boolean))] as string[], [allInvoices]);
 
-  // For metrics, always use unfiltered data
   const { data: allData } = useInvoices({});
   const metricsData = allData || [];
 
-  const sections = SECTIONS.map((s) => ({
+  const sections = CATEGORY_SECTIONS.map((s) => ({
     ...s,
     invoices: allInvoices.filter(s.filter),
   })).filter((s) => s.invoices.length > 0);
@@ -79,13 +129,9 @@ export default function AgentInvoices() {
         </p>
       </div>
 
-      {/* Email Sync Panel */}
       <SyncPanel />
-
-      {/* Metrics */}
       <InvoiceMetrics invoices={metricsData} />
 
-      {/* Filters */}
       <InvoiceFilters
         status={status} setStatus={setStatus}
         company={company} setCompany={setCompany}
@@ -96,7 +142,6 @@ export default function AgentInvoices() {
         locations={locations}
       />
 
-      {/* Sections */}
       {isLoading ? (
         <div className="text-center py-16 text-muted-foreground">Loading invoices...</div>
       ) : allInvoices.length === 0 ? (
