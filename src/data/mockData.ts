@@ -156,5 +156,17 @@ export const invoiceStats = {
   paid: mockInvoices.filter(i => i.status === "paid").length,
   faktura: mockInvoices.filter(i => i.invoiceType === "faktura").length,
   pbs: mockInvoices.filter(i => i.invoiceType === "pbs").length,
-  totalAmount: "25,042.00",
+  totalAmount: "85,436.00",
 };
+
+// Get unique suppliers with their totals
+export function getSupplierStats() {
+  const suppliers: Record<string, { count: number; total: number; invoices: Invoice[] }> = {};
+  mockInvoices.forEach(inv => {
+    if (!suppliers[inv.supplier]) suppliers[inv.supplier] = { count: 0, total: 0, invoices: [] };
+    suppliers[inv.supplier].count++;
+    suppliers[inv.supplier].total += parseFloat(inv.amount.replace(/,/g, ""));
+    suppliers[inv.supplier].invoices.push(inv);
+  });
+  return suppliers;
+}
