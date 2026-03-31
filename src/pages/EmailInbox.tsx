@@ -296,7 +296,8 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                <p>Email body could not be retrieved</p>
+                <p>{bodyData?.error ? `Error: ${bodyData.error}` : "Email body could not be retrieved"}</p>
+                <p className="text-xs mt-1">The email may be too large or the server timed out. Try re-parsing.</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -304,7 +305,8 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
                   onClick={() => reparseEmail.mutate(email.id)}
                   disabled={reparseEmail.isPending}
                 >
-                  <RotateCcw className="h-3 w-3 mr-1" /> Try re-parsing
+                  <RotateCcw className={`h-3 w-3 mr-1 ${reparseEmail.isPending ? "animate-spin" : ""}`} />
+                  {reparseEmail.isPending ? "Re-parsing..." : "Try re-parsing"}
                 </Button>
               </div>
             )}
