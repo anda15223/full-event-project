@@ -62,20 +62,28 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        amber: {
-          400: "hsl(42 90% 55%)",
-          500: "hsl(42 90% 50%)",
-          600: "hsl(42 90% 42%)",
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
-        teal: {
-          400: "hsl(174 60% 50%)",
-          500: "hsl(174 60% 45%)",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        agent: {
+          purple: "hsl(var(--agent-purple))",
+          teal: "hsl(var(--agent-teal))",
+          amber: "hsl(var(--agent-amber))",
+          rose: "hsl(var(--agent-rose))",
+          blue: "hsl(var(--agent-blue))",
         },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
       },
       keyframes: {
         "accordion-down": {
