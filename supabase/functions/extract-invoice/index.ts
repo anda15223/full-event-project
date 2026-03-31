@@ -667,6 +667,7 @@ async function callClaudeExtraction(
       payment_account: invoiceData.payment_account || null,
       payment_reference: invoiceData.payment_reference || null,
       notes,
+      category: finalCategory,
     };
     if (existingInvoice && existingInvoice.length > 0) {
       await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
