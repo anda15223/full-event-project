@@ -67,7 +67,7 @@ export function useInvoices(filters?: {
   return useQuery({
     queryKey: ["invoices", filters],
     queryFn: async () => {
-      let q = supabase.from("invoices").select("*");
+      let q = (supabase as any).from("invoices").select("*");
       if (filters?.status && filters.status !== "all") {
         if (filters.status === "due_this_week") {
           const today = new Date().toISOString().split("T")[0];
