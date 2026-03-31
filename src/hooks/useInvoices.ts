@@ -169,15 +169,13 @@ export function useUpdateInvoiceField() {
       oldValue: string;
       supplierName: string;
     }) => {
-      // Update the invoice
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("invoices")
         .update({ [field]: value })
         .eq("id", invoiceId);
       if (error) throw error;
 
-      // Record correction
-      await supabase.from("supplier_corrections").insert({
+      await (supabase as any).from("supplier_corrections").insert({
         supplier_name: supplierName,
         field_corrected: field,
         old_value: oldValue,
