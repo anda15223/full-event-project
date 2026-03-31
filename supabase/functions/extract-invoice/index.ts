@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "npm:zod@3.25.76";
-import Anthropic from "npm:@anthropic-ai/sdk@0.27.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -104,6 +103,38 @@ Return only valid JSON, no explanation, no markdown:
 If the text does NOT contain any invoice data at all, return:
 {"is_invoice": false, "confidence": 0, "extraction_notes": "reason"}`;
 
+/* ── Call Claude via direct fetch (no SDK needed) ── */
+async function callClaude(apiKey: string, messages: Array<{ role: string; content: any }>, maxTokens = 2048): Promise<any> {
+  console.log("Calling Claude API with model claude-sonnet-4-20250514...");
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: maxTokens,
+      messages,
+    }),
+  });
+
+  const responseText = await response.text();
+  
+  if (!response.ok) {
+    console.error("Claude API HTTP error:", response.status, responseText);
+    throw new Error(`Claude API error ${response.status}: ${responseText.substring(0, 500)}`);
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    console.error("Claude response not JSON:", responseText.substring(0, 500));
+    throw new Error("Claude returned non-JSON response");
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -118,14 +149,16 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    
     const claudeKey = Deno.env.get("AIAGENTS");
     if (!claudeKey) {
+      console.error("AIAGENTS secret not found in environment");
       return new Response(JSON.stringify({ error: "AIAGENTS (Claude API key) not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("AIAGENTS secret found, length:", claudeKey.length);
 
-    const anthropic = new Anthropic({ apiKey: claudeKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
     const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
 
@@ -137,10 +170,10 @@ serve(async (req) => {
           status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const result = await processAttachment(supabase, att, supabaseUrl, anthropic);
+      const result = await processAttachment(supabase, att, supabaseUrl, claudeKey);
       results.push(result);
     } else if (parsed.data.email_id) {
-      const result = await processEmail(supabase, parsed.data.email_id, supabaseUrl, anthropic);
+      const result = await processEmail(supabase, parsed.data.email_id, supabaseUrl, claudeKey);
       results.push(...result);
     } else if (parsed.data.batch) {
       const { data: invoiceEmails } = await supabase
@@ -158,7 +191,7 @@ serve(async (req) => {
 
         for (const emailId of toProcess) {
           try {
-            const result = await processEmail(supabase, emailId, supabaseUrl, anthropic);
+            const result = await processEmail(supabase, emailId, supabaseUrl, claudeKey);
             results.push(...result);
           } catch (err) {
             results.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown" });
@@ -180,7 +213,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Extract invoice error:", error);
+    console.error("Extract invoice top-level error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -189,7 +222,7 @@ serve(async (req) => {
 
 /* ── Process a full email ── */
 async function processEmail(
-  supabase: any, emailId: string, supabaseUrl: string, anthropic: Anthropic
+  supabase: any, emailId: string, supabaseUrl: string, claudeKey: string
 ): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string }>> {
   const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
 
@@ -207,14 +240,14 @@ async function processEmail(
   let extractedFromAttachment = false;
   for (const att of docAtts) {
     if (att.storage_path) {
-      const result = await processAttachment(supabase, att, supabaseUrl, anthropic);
+      const result = await processAttachment(supabase, att, supabaseUrl, claudeKey);
       results.push(result);
       if (result.status === "extracted") extractedFromAttachment = true;
     }
   }
 
   if (!extractedFromAttachment) {
-    const result = await processEmailBody(supabase, emailId, anthropic);
+    const result = await processEmailBody(supabase, emailId, claudeKey);
     results.push(result);
   }
 
@@ -223,7 +256,7 @@ async function processEmail(
 
 /* ── Extract from email body ── */
 async function processEmailBody(
-  supabase: any, emailId: string, anthropic: Anthropic
+  supabase: any, emailId: string, claudeKey: string
 ): Promise<{ email_id: string; status: string; error?: string }> {
   const { data: email } = await supabase
     .from("emails")
@@ -252,13 +285,13 @@ async function processEmailBody(
   return await callClaudeExtraction(
     supabase, emailId, null, null,
     bodyText.substring(0, 15000), emailContext,
-    email.company, anthropic
+    email.company, claudeKey
   );
 }
 
 /* ── Process a single attachment ── */
 async function processAttachment(
-  supabase: any, att: any, supabaseUrl: string, anthropic: Anthropic
+  supabase: any, att: any, supabaseUrl: string, claudeKey: string
 ): Promise<{ email_id: string; attachment_id: string; status: string; error?: string }> {
   if (!att.storage_path) {
     return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path" };
@@ -277,8 +310,6 @@ async function processAttachment(
   if (mt.includes("pdf")) {
     const arrayBuffer = await fileData.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
-
-    // Try basic text extraction first
     const textContent = tryExtractPdfText(bytes);
 
     if (textContent && textContent.trim().length > 50) {
@@ -294,18 +325,14 @@ async function processAttachment(
       base64 = btoa(base64);
 
       try {
-        const visionResponse = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: "Extract ALL text from this PDF document. Return the complete text content, preserving structure (tables, line items, totals). Include all numbers, dates, names, and amounts." },
-              { type: "image", source: { type: "base64", media_type: "application/pdf", data: base64 } },
-            ],
-          }],
-        });
-        extractedText = visionResponse.content[0]?.type === "text" ? visionResponse.content[0].text : "";
+        const visionData = await callClaude(claudeKey, [{
+          role: "user",
+          content: [
+            { type: "text", text: "Extract ALL text from this PDF document. Return the complete text content, preserving structure (tables, line items, totals). Include all numbers, dates, names, and amounts." },
+            { type: "image", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+          ],
+        }], 4096);
+        extractedText = visionData.content?.[0]?.text || "";
       } catch (e) {
         console.error("Claude vision fallback error:", e);
         extractedText = textContent || "";
@@ -333,7 +360,7 @@ async function processAttachment(
   return await callClaudeExtraction(
     supabase, att.email_id, att.id, pdfUrl,
     extractedText.substring(0, 15000), emailContext,
-    parentEmail?.company, anthropic
+    parentEmail?.company, claudeKey
   );
 }
 
@@ -341,31 +368,27 @@ async function processAttachment(
 async function callClaudeExtraction(
   supabase: any, emailId: string, attachmentId: string | null, pdfUrl: string | null,
   text: string, emailContext: string, emailCompany: string | null,
-  anthropic: Anthropic
+  claudeKey: string
 ): Promise<{ email_id: string; attachment_id?: string; status: string; error?: string }> {
   const id = { email_id: emailId, ...(attachmentId ? { attachment_id: attachmentId } : {}) };
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: `${CLAUDE_EXTRACTION_PROMPT}\n\n--- EMAIL CONTEXT ---\n${emailContext}\n\n--- DOCUMENT TEXT ---\n${text}`,
-        },
-      ],
-    });
+    const claudeData = await callClaude(claudeKey, [
+      {
+        role: "user",
+        content: `${CLAUDE_EXTRACTION_PROMPT}\n\n--- EMAIL CONTEXT ---\n${emailContext}\n\n--- DOCUMENT TEXT ---\n${text}`,
+      },
+    ]);
 
-    const responseText = response.content[0]?.type === "text" ? response.content[0].text : "";
-    console.log(`Claude raw response for ${emailId}:`, responseText.substring(0, 500));
+    const responseText = claudeData.content?.[0]?.text || "";
+    console.log(`Claude response for ${emailId}:`, responseText.substring(0, 500));
 
     let invoiceData: any = null;
     try {
-      // Strip markdown fences if present
       const cleaned = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       invoiceData = JSON.parse(cleaned);
     } catch {
+      console.error("Failed to parse Claude response as JSON:", responseText.substring(0, 300));
       return { ...id, status: "error", error: "Could not parse Claude response" };
     }
 
@@ -373,7 +396,7 @@ async function callClaudeExtraction(
       return { ...id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
     }
 
-    // Apply company mapping rules (hardcoded override)
+    // Apply company mapping rules
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
 
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
@@ -438,7 +461,7 @@ async function callClaudeExtraction(
     return { ...id, status: "extracted" };
 
   } catch (err) {
-    console.error("Claude extraction error:", err);
+    console.error("Claude extraction error for", emailId, ":", err instanceof Error ? err.message : JSON.stringify(err));
     return { ...id, status: "error", error: err instanceof Error ? err.message : "Claude API error" };
   }
 }
