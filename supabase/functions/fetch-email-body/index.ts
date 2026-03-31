@@ -85,7 +85,8 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-/** Decode a single MIME part body given its headers */
+/** Decode a single MIME part body given its headers.
+ *  Body is a Latin-1 string (raw bytes preserved as char codes 0-255) */
 function decodePart(body: string, partHeaders: string): string {
   const ct = getHeader(partHeaders, "Content-Type");
   const cte = getHeader(partHeaders, "Content-Transfer-Encoding").toLowerCase();
@@ -96,12 +97,10 @@ function decodePart(body: string, partHeaders: string): string {
     if (cte === "base64") return decodeWithCharset(b64ToBytes(body), charset);
   } catch { /* fall through */ }
 
-  // No transfer encoding — try charset decode on raw bytes
-  if (charset.toLowerCase() !== "utf-8" && charset.toLowerCase() !== "us-ascii") {
-    const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
-    return decodeWithCharset(bytes, charset);
-  }
-  return body;
+  // For 8bit/7bit/binary or no CTE: body is Latin-1 string with raw bytes
+  // Convert to byte array and decode with proper charset
+  const bytes = Uint8Array.from(Array.from(body, c => c.charCodeAt(0)));
+  return decodeWithCharset(bytes, charset);
 }
 
 /**
