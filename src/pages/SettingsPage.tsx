@@ -86,7 +86,10 @@ function ClaudeReprocessPanel() {
 
     try {
       for (let i = 0; i < maxBatches; i++) {
-        if (pauseRef.current) break;
+        if (pauseRef.current) {
+          toast.info("Reprocess stopped by user");
+          break;
+        }
 
         totals.batch = i + 1;
         setProgress({ ...totals });
@@ -109,6 +112,13 @@ function ClaudeReprocessPanel() {
         setProgress({ ...totals });
 
         if ((data.processed || 0) === 0) break;
+        if (pauseRef.current) {
+          toast.info("Reprocess stopped by user");
+          break;
+        }
+
+        // Wait 8 seconds between batches to avoid Claude rate limits
+        await new Promise(r => setTimeout(r, 8000));
       }
       setCompleted(true);
       refetchStats();
