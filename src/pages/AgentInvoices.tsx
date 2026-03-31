@@ -79,6 +79,9 @@ export default function AgentInvoices() {
         </p>
       </div>
 
+      {/* Email Sync Panel */}
+      <SyncPanel />
+
       {/* Metrics */}
       <InvoiceMetrics invoices={metricsData} />
 
