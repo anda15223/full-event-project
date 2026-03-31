@@ -13,6 +13,7 @@ export default function AgentInvoices() {
     company: filterCompany !== "all" ? filterCompany : undefined,
   });
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
+  const extractAll = useExtractAllInvoices();
 
   const grouped = useMemo(() => {
     if (!invoices) return {};
