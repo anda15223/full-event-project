@@ -4,6 +4,7 @@ import {
   X, ShieldCheck, ExternalLink, Copy, Check, CreditCard,
   AlertTriangle, Trash2, Mail, Save,
 } from "lucide-react";
+import PdfViewer from "./PdfViewer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
