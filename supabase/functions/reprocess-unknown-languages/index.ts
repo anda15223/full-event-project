@@ -52,9 +52,23 @@ function detectLanguage(text: string | null | undefined): string {
   if (hasRomanianChars || romanianScore >= 2) return "ro";
   if (englishScore >= 2) return "en";
 
-  // English as default for readable ASCII text
-  if (cleaned.length >= 20 && /^[\x20-\x7E\r\n]+$/.test(cleaned.substring(0, 200))) {
-    return "en";
+  // German signals
+  const germanSignals = [
+    "rechnung", "zahlung", "lieferung", "bestellung", "angebot",
+    "sehr geehrte", "mit freundlichen", "grüße", "hiermit", "bitte",
+    "newsletter", "klicken sie", "abmelden",
+  ];
+  const germanScore = germanSignals.filter(s => cleaned.includes(s)).length;
+  const hasGermanChars = /[äöüÄÖÜß]/.test(text.substring(0, 500));
+  if (hasGermanChars || germanScore >= 2) return "de";
+
+  if (englishScore >= 1) return "en";
+
+  // English as default for readable text (allow unicode spaces/punctuation)
+  if (cleaned.length >= 20) {
+    // If text has mostly printable chars (latin letters, digits, common punctuation)
+    const printableCount = (cleaned.match(/[a-zA-Z0-9\s.,!?@#$%&*()\-_+=:;'"<>/\\]/g) || []).length;
+    if (printableCount / cleaned.length > 0.6) return "en";
   }
 
   return "unknown";
