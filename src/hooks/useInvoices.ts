@@ -25,6 +25,7 @@ export type Invoice = {
   confidence: number | null;
   source_type: string | null;
   notes: string | null;
+  category: string | null;
 };
 
 export type Supplier = {
@@ -63,6 +64,7 @@ export function useInvoices(filters?: {
   location?: string;
   supplier?: string;
   sort?: string;
+  category?: string;
 }) {
   return useQuery({
     queryKey: ["invoices", filters],
@@ -81,6 +83,7 @@ export function useInvoices(filters?: {
       if (filters?.company && filters.company !== "all") q = q.eq("company", filters.company);
       if (filters?.location && filters.location !== "all") q = q.eq("location", filters.location);
       if (filters?.supplier) q = q.ilike("supplier_name", `%${filters.supplier}%`);
+      if (filters?.category && filters.category !== "all") q = q.eq("category", filters.category);
 
       const sortField = filters?.sort || "due_date";
       q = q.order(sortField, { ascending: sortField === "due_date", nullsFirst: false });
@@ -122,13 +125,32 @@ export function useMarkAsPaid() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoice: Invoice) => {
-      // Update invoice status
+      const paidDate = new Date().toISOString().split("T")[0];
+
+      // 1. Update invoice status
       const { error: updateErr } = await (supabase as any)
         .from("invoices")
         .update({ status: "paid", overdue_flag: false })
         .eq("id", invoice.id);
       if (updateErr) throw updateErr;
 
+      // 2. Create cashflow entry
+      await (supabase as any).from("cashflow_entries").insert({
+        relates_to_invoice_id: invoice.id,
+        supplier_name: invoice.supplier_name,
+        amount: invoice.total_with_vat || invoice.amount,
+        currency: invoice.currency || "DKK",
+        company: invoice.company,
+        location: invoice.location,
+        description: invoice.what_was_bought,
+        reference: invoice.payment_reference,
+        direction: "out",
+        entry_type: invoice.category === "cashflow_pbs" ? "pbs_debit" : "bank_transfer",
+        entry_date: paidDate,
+        status: "recorded",
+      });
+
+      // 3. Create ledger entry
       const { error: ledgerErr } = await (supabase as any).from("ledger").insert({
         invoice_id: invoice.id,
         supplier_name: invoice.supplier_name,
@@ -138,7 +160,7 @@ export function useMarkAsPaid() {
         company: invoice.company,
         location: invoice.location,
         what_was_bought: invoice.what_was_bought,
-        paid_date: new Date().toISOString().split("T")[0],
+        paid_date: paidDate,
         payment_reference: invoice.payment_reference,
         invoice_number: invoice.invoice_number,
       });
@@ -147,7 +169,8 @@ export function useMarkAsPaid() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["ledger"] });
-      toast.success("Invoice moved to ledger");
+      qc.invalidateQueries({ queryKey: ["cashflow-entries"] });
+      toast.success("Invoice marked as paid → cashflow + ledger updated");
     },
     onError: () => toast.error("Failed to mark as paid"),
   });
