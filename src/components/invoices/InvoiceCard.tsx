@@ -56,6 +56,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [localPdfUrl, setLocalPdfUrl] = useState(invoice.pdf_url);
   const updateField = useUpdateInvoiceField();
+  const markAsPaid = useMarkAsPaid();
   const sl = statusLabel(invoice);
 
   const isWebOrder = invoice.source_type === "web_order";
