@@ -86,6 +86,88 @@ function HtmlEmailBody({ html }: { html: string }) {
   );
 }
 
+function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storageBaseUrl: string }) {
+  const fetchAttachment = useFetchAttachment();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const Icon = getAttachmentIcon(att.mime_type);
+  const downloadUrl = att.storage_path ? `${storageBaseUrl}/${att.storage_path}` : null;
+  const isImage = att.mime_type?.startsWith("image/");
+  const isPdf = att.mime_type?.includes("pdf");
+  const canPreview = isImage || isPdf;
+  const isFetching = fetchAttachment.isPending;
+
+  const handleFetch = async () => {
+    const result = await fetchAttachment.mutateAsync(att.id);
+    if (result?.url && canPreview) setPreviewUrl(result.url);
+  };
+
+  const handlePreview = () => {
+    if (downloadUrl) setPreviewUrl(downloadUrl);
+    else handleFetch();
+  };
+
+  return (
+    <>
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+        <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{att.filename || "Unnamed"}</p>
+          <p className="text-xs text-muted-foreground">
+            {att.mime_type} · {formatFileSize(att.size || 0)}
+            {att.parse_status === "stored" && <span className="text-green-500 ml-2">● Stored</span>}
+            {att.parse_status === "pending" && <span className="text-yellow-500 ml-2">● Not downloaded</span>}
+            {att.parse_status === "failed" && <span className="text-destructive ml-2">● Failed</span>}
+          </p>
+          {att.extracted_summary && (
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{att.extracted_summary}</p>
+          )}
+        </div>
+        <div className="flex gap-1.5 shrink-0">
+          {canPreview && (
+            <Button variant="outline" size="sm" onClick={handlePreview} disabled={isFetching}>
+              {isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+              <span className="ml-1 hidden sm:inline">Preview</span>
+            </Button>
+          )}
+          {downloadUrl ? (
+            <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Download className="h-3 w-3" /><span className="ml-1 hidden sm:inline">Open</span>
+              </Button>
+            </a>
+          ) : (
+            <Button variant="outline" size="sm" onClick={handleFetch} disabled={isFetching}>
+              {isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              <span className="ml-1 hidden sm:inline">Fetch</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Quick preview overlay */}
+      {previewUrl && (
+        <div className="relative mt-2 rounded-lg border border-border overflow-hidden bg-background">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm"
+            onClick={() => setPreviewUrl(null)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          {isImage ? (
+            <img src={previewUrl} alt={att.filename || "Attachment"} className="max-h-[500px] w-auto mx-auto" />
+          ) : isPdf ? (
+            <iframe src={previewUrl} className="w-full h-[600px] border-0" title={att.filename || "PDF preview"} />
+          ) : null}
+        </div>
+      )}
+    </>
+  );
+}
+
 function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
   const config = classificationConfig[email.classification || ""];
   const { data: bodyData, isLoading: bodyLoading } = useFetchEmailBody(email.id);
@@ -207,33 +289,9 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
                 <Paperclip className="h-3 w-3 inline mr-1" /> {attachments.length} Attachment{attachments.length > 1 ? "s" : ""}
               </div>
               <div className="space-y-2">
-                {attachments.filter(a => !a.is_inline).map(att => {
-                  const Icon = getAttachmentIcon(att.mime_type);
-                  const downloadUrl = att.storage_path ? `${storageBaseUrl}/${att.storage_path}` : null;
-                  return (
-                    <div key={att.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-                      <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{att.filename || "Unnamed"}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {att.mime_type} · {formatFileSize(att.size)}
-                        </p>
-                        {att.extracted_summary && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{att.extracted_summary}</p>
-                        )}
-                      </div>
-                      {downloadUrl && (
-                        <a href={downloadUrl} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm">
-                            <Download className="h-3 w-3 mr-1" /> Open
-                          </Button>
-                        </a>
-                      )}
-                    </div>
-                  );
-                })}
+                {attachments.filter(a => !a.is_inline).map(att => (
+                  <AttachmentItem key={att.id} att={att} storageBaseUrl={storageBaseUrl} />
+                ))}
               </div>
             </div>
           )}
