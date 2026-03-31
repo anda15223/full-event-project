@@ -4,7 +4,8 @@ import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const RequestSchema = z.object({
@@ -13,7 +14,38 @@ const RequestSchema = z.object({
   offset: z.number().int().min(0).optional(),
 });
 
-function normalizeText(value: string | null | undefined) {
+/* ── Lightweight header-only helpers ────────────────────────── */
+
+function decodeMimeWords(value: string): string {
+  return value.replace(
+    /=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g,
+    (_match: string, _charset: string, encoding: string, text: string) => {
+      try {
+        if (encoding.toUpperCase() === "B") {
+          const bytes = Uint8Array.from(
+            Array.from(atob(text), (c: string) => c.charCodeAt(0)),
+          );
+          return new TextDecoder("utf-8").decode(bytes);
+        }
+        // Quoted-printable
+        const qp = text
+          .replace(/_/g, " ")
+          .replace(
+            /=([0-9A-F]{2})/gi,
+            (_m: string, hex: string) => String.fromCharCode(parseInt(hex, 16)),
+          );
+        const bytes = Uint8Array.from(
+          Array.from(qp, (c: string) => c.charCodeAt(0)),
+        );
+        return new TextDecoder("utf-8").decode(bytes);
+      } catch {
+        return _match;
+      }
+    },
+  );
+}
+
+function normalizeText(value: string | null | undefined): string {
   return (value || "")
     .replace(/\u0000/g, "")
     .replace(/\r/g, "")
@@ -22,136 +54,45 @@ function normalizeText(value: string | null | undefined) {
     .trim();
 }
 
-function stripHtml(html: string) {
-  return html
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&#39;/gi, "'")
-    .replace(/&quot;/gi, '"');
-}
-
-function bytesFromBinaryString(value: string) {
-  return Uint8Array.from(Array.from(value, (char: string) => char.charCodeAt(0)));
-}
-
-function decodeQuotedPrintable(value: string) {
-  return value
-    .replace(/=\r?\n/g, "")
-    .replace(/=([0-9A-F]{2})/gi, (_match: string, hex: string) =>
-      String.fromCharCode(parseInt(hex, 16)),
-    );
-}
-
-function decodeMimeWords(value: string | null | undefined) {
-  if (!value) return "";
-
-  return value.replace(/=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g, (
-    match: string,
-    _charset: string,
-    encoding: string,
-    text: string,
-  ) => {
-    try {
-      if (encoding.toUpperCase() === "B") {
-        return new TextDecoder("utf-8").decode(bytesFromBinaryString(atob(text)));
-      }
-
-      const qp = text
-        .replace(/_/g, " ")
-        .replace(/=([0-9A-F]{2})/gi, (_match: string, hex: string) =>
-          String.fromCharCode(parseInt(hex, 16)),
-        );
-
-      return new TextDecoder("utf-8").decode(bytesFromBinaryString(qp));
-    } catch {
-      return match;
-    }
-  });
-}
-
-function toIsoString(dateValue: string | null | undefined) {
+function toIsoString(dateValue: string | null | undefined): string {
   if (!dateValue) return new Date().toISOString();
-
-  const parsedDate = new Date(dateValue);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return new Date().toISOString();
-  }
-
-  return parsedDate.toISOString();
+  const d = new Date(dateValue);
+  return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 }
 
-function extractUid(fetchResponse: string) {
-  return fetchResponse.match(/UID (\d+)/)?.[1] ?? null;
-}
-
-function extractLiterals(fetchResponse: string) {
-  const literals: string[] = [];
-  const literalRegex = /\{(\d+)\}\r\n/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = literalRegex.exec(fetchResponse)) !== null) {
-    const size = Number.parseInt(match[1], 10);
-    const start = match.index + match[0].length;
-    const literal = fetchResponse.slice(start, start + size);
-    literals.push(literal);
-    literalRegex.lastIndex = start + size;
-  }
-
-  return literals;
-}
-
-function parseHeaderBlock(headerBlock: string) {
+function parseHeaders(headerBlock: string) {
+  // Unfold continuation lines
   const unfolded = headerBlock.replace(/\r?\n[ \t]+/g, " ");
 
-  const getHeader = (name: string) => {
-    const match = unfolded.match(new RegExp(`^${name}:\\s*(.+)$`, "im"));
-    return decodeMimeWords(normalizeText(match?.[1] ?? null)) || null;
+  const get = (name: string): string | null => {
+    const m = unfolded.match(new RegExp(`^${name}:\\s*(.+)$`, "im"));
+    return m ? decodeMimeWords(normalizeText(m[1])) : null;
   };
 
   return {
-    subject: getHeader("Subject") || "(no subject)",
-    sender: getHeader("From") || "unknown",
-    date: getHeader("Date"),
-    messageId: getHeader("Message-ID"),
+    subject: get("Subject") || "(no subject)",
+    sender: get("From") || "unknown",
+    date: get("Date"),
+    messageId: get("Message-ID"),
   };
 }
 
-function extractBodySnippet(bodySection: string) {
-  const decoded = decodeQuotedPrintable(bodySection);
-  const stripped = decoded.includes("<html") ? stripHtml(decoded) : decoded;
-
-  return normalizeText(
-    stripped
-      .replace(/Content-[^\n]+/gi, " ")
-      .replace(/--[^\n]+/g, " "),
-  ).slice(0, 2500);
-}
+/* ── IMAP I/O ─────────────────────────────────────────────── */
 
 async function readResponse(
   conn: Deno.Conn,
   decoder: TextDecoder,
-  isComplete: (response: string) => boolean,
-  maxChunks = 120,
-) {
-  const buffer = new Uint8Array(32768);
+  isComplete: (r: string) => boolean,
+  maxChunks = 80,
+): Promise<string> {
+  const buf = new Uint8Array(16384);
   let response = "";
-
   for (let i = 0; i < maxChunks; i++) {
-    const bytesRead = await conn.read(buffer);
-    if (bytesRead === null) break;
-
-    response += decoder.decode(buffer.subarray(0, bytesRead));
-
-    if (isComplete(response)) {
-      break;
-    }
+    const n = await conn.read(buf);
+    if (n === null) break;
+    response += decoder.decode(buf.subarray(0, n));
+    if (isComplete(response)) break;
   }
-
   return response;
 }
 
@@ -161,19 +102,17 @@ async function sendCommand(
   decoder: TextDecoder,
   tag: string,
   command: string,
-) {
+): Promise<string> {
   await conn.write(encoder.encode(`${tag} ${command}\r\n`));
-
   return readResponse(
     conn,
     decoder,
-    (response) =>
-      response.includes(`${tag} OK`) ||
-      response.includes(`${tag} NO`) ||
-      response.includes(`${tag} BAD`),
-    160,
+    (r) => r.includes(`${tag} OK`) || r.includes(`${tag} NO`) || r.includes(`${tag} BAD`),
+    120,
   );
 }
+
+/* ── Main handler ─────────────────────────────────────────── */
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -184,35 +123,30 @@ serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const parsedRequest = RequestSchema.safeParse(body);
-
-    if (!parsedRequest.success) {
+    const parsed = RequestSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: parsedRequest.error.flatten().fieldErrors }),
+        JSON.stringify({ error: parsed.error.flatten().fieldErrors }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const { since_date, limit = 3, offset = 0 } = parsedRequest.data;
+    // Default limit is 10 — header-only fetch is cheap
+    const { since_date, limit = 10, offset = 0 } = parsed.data;
 
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
     const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
     const IMAP_HOST = Deno.env.get("IMAP_HOST") || "imap.one.com";
-    const IMAP_PORT = Number.parseInt(Deno.env.get("IMAP_PORT") || "993", 10);
+    const IMAP_PORT = parseInt(Deno.env.get("IMAP_PORT") || "993", 10);
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!IMAP_EMAIL || !IMAP_PASSWORD) {
       return new Response(
-        JSON.stringify({
-          error: "IMAP credentials not configured",
-          setup_required: true,
-          message: "Please add IMAP_EMAIL, IMAP_PASSWORD, and optionally IMAP_HOST secrets",
-        }),
+        JSON.stringify({ error: "IMAP credentials not configured", setup_required: true }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
     if (!supabaseUrl || !supabaseKey) {
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
@@ -220,57 +154,84 @@ serve(async (req) => {
       );
     }
 
+    /* ── Connect & authenticate ─── */
     conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
+    const enc = new TextEncoder();
+    const dec = new TextDecoder();
 
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
+    await readResponse(conn, dec, (r) => r.includes("\r\n"), 10);
 
-    await readResponse(conn, decoder, (response) => response.includes("\r\n"), 20);
-
-    const loginResponse = await sendCommand(conn, encoder, decoder, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`);
-    if (!loginResponse.includes("A1 OK")) {
+    const loginRes = await sendCommand(conn, enc, dec, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`);
+    if (!loginRes.includes("A1 OK")) {
       return new Response(
-        JSON.stringify({ error: "IMAP login failed", details: loginResponse }),
+        JSON.stringify({ error: "IMAP login failed" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const selectResponse = await sendCommand(conn, encoder, decoder, "A2", "SELECT INBOX");
-    const existsMatch = selectResponse.match(/\* (\d+) EXISTS/);
-    const totalEmails = existsMatch ? Number.parseInt(existsMatch[1], 10) : 0;
+    const selRes = await sendCommand(conn, enc, dec, "A2", "SELECT INBOX");
+    const existsMatch = selRes.match(/\* (\d+) EXISTS/);
+    const totalEmails = existsMatch ? parseInt(existsMatch[1], 10) : 0;
 
     if (totalEmails === 0) {
-      await sendCommand(conn, encoder, decoder, "A99", "LOGOUT");
+      await sendCommand(conn, enc, dec, "A99", "LOGOUT");
       return new Response(
-        JSON.stringify({ emails: [], total: 0, fetched: 0, inserted: 0, skipped: 0, has_more: false, next_offset: offset }),
+        JSON.stringify({ total_found: 0, fetched: 0, inserted: 0, skipped: 0, has_more: false, next_offset: offset }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    let searchCommand = "SEARCH ALL";
+    /* ── SEARCH ─── */
+    let searchCmd = "SEARCH ALL";
     if (since_date) {
-      const date = new Date(since_date);
-      if (Number.isNaN(date.getTime())) {
+      const d = new Date(since_date);
+      if (Number.isNaN(d.getTime())) {
         return new Response(
           JSON.stringify({ error: { since_date: ["Invalid date"] } }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      searchCommand = `SEARCH SINCE ${date.getDate()}-${months[date.getMonth()]}-${date.getFullYear()}`;
+      searchCmd = `SEARCH SINCE ${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
     }
 
-    const searchResponse = await sendCommand(conn, encoder, decoder, "A3", searchCommand);
-    const searchLine = searchResponse.split("\r\n").find((line) => line.startsWith("* SEARCH"));
-    const messageIds = searchLine
+    const searchRes = await sendCommand(conn, enc, dec, "A3", searchCmd);
+    const searchLine = searchRes.split("\r\n").find((l) => l.startsWith("* SEARCH"));
+    const msgNums = searchLine
       ? searchLine.replace("* SEARCH ", "").trim().split(" ").filter(Boolean).map(Number)
       : [];
 
-    const pageEnd = Math.max(0, messageIds.length - offset);
+    const pageEnd = Math.max(0, msgNums.length - offset);
     const pageStart = Math.max(0, pageEnd - limit);
-    const fetchIds = messageIds.slice(pageStart, pageEnd);
+    const fetchIds = msgNums.slice(pageStart, pageEnd);
 
+    if (fetchIds.length === 0) {
+      await sendCommand(conn, enc, dec, "A99", "LOGOUT");
+      return new Response(
+        JSON.stringify({ total_found: msgNums.length, fetched: 0, inserted: 0, skipped: 0, has_more: false, next_offset: offset }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    /* ── FETCH headers only (single command for all messages) ─── */
+    const seqRange = fetchIds.join(",");
+    const tag = "F1";
+    const fetchRes = await sendCommand(
+      conn,
+      enc,
+      dec,
+      tag,
+      `FETCH ${seqRange} (UID BODY.PEEK[HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)])`,
+    );
+
+    await sendCommand(conn, enc, dec, "A99", "LOGOUT");
+    conn.close();
+    conn = null;
+
+    /* ── Parse the multi-message response ─── */
+    // Each message response looks like:
+    // * <seq> FETCH (UID <uid> BODY[HEADER.FIELDS ...] {<size>}\r\n<headers>\r\n)\r\n
+    const msgPattern = /\* (\d+) FETCH \((?:.*?UID (\d+).*?|.*?)\{(\d+)\}\r\n/g;
     const emails: Array<{
       message_id: string;
       subject: string;
@@ -279,45 +240,28 @@ serve(async (req) => {
       received_at: string;
     }> = [];
 
-    for (const seqNum of fetchIds) {
-      const tag = `F${seqNum}`;
-      const fetchResponse = await sendCommand(
-        conn,
-        encoder,
-        decoder,
-        tag,
-        `FETCH ${seqNum} (UID BODY.PEEK[HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)] BODY.PEEK[TEXT]<0.2500>)`,
-      );
+    let match: RegExpExecArray | null;
+    while ((match = msgPattern.exec(fetchRes)) !== null) {
+      const seqNum = match[1];
+      const uid = match[2] || null;
+      const literalSize = parseInt(match[3], 10);
+      const headerStart = match.index + match[0].length;
+      const headerBlock = fetchRes.substring(headerStart, headerStart + literalSize);
 
-      const literals = extractLiterals(fetchResponse);
-      const uid = extractUid(fetchResponse);
-      const headerBlock = literals[0] ?? "";
-      const bodySection = literals[1] ?? "";
-
-      if (!headerBlock && !bodySection) {
-        console.error("No FETCH literals found for message", seqNum);
-        continue;
-      }
-
-      const headers = parseHeaderBlock(headerBlock);
-      const bodyText = extractBodySnippet(bodySection);
+      const headers = parseHeaders(headerBlock);
       const messageId = headers.messageId || (uid ? `imap-uid-${uid}` : `imap-seq-${seqNum}`);
 
       emails.push({
         message_id: messageId,
         subject: headers.subject,
         sender: headers.sender,
-        body_text: bodyText,
+        body_text: "", // Body fetched later during classification if needed
         received_at: toIsoString(headers.date),
       });
     }
 
-    await sendCommand(conn, encoder, decoder, "A99", "LOGOUT");
-    conn.close();
-    conn = null;
-
+    /* ── Upsert to database ─── */
     const supabase = createClient(supabaseUrl, supabaseKey);
-
     let inserted = 0;
     let skipped = 0;
 
@@ -331,7 +275,7 @@ serve(async (req) => {
           received_at: email.received_at,
           processed: false,
         },
-        { onConflict: "message_id" },
+        { onConflict: "message_id", ignoreDuplicates: true },
       );
 
       if (error) {
@@ -345,7 +289,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        total_found: messageIds.length,
+        total_found: msgNums.length,
         fetched: emails.length,
         inserted,
         skipped,
@@ -362,11 +306,7 @@ serve(async (req) => {
     );
   } finally {
     if (conn) {
-      try {
-        conn.close();
-      } catch {
-        // ignore close errors
-      }
+      try { conn.close(); } catch { /* ignore */ }
     }
   }
 });
