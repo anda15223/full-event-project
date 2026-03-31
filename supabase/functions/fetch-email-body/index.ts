@@ -14,8 +14,10 @@ const RequestSchema = z.object({
   force: z.boolean().optional(),
 });
 
-// Reduced to 2 MB to stay well within CPU/memory limits
-const MAX_RFC822_BYTES = 2 * 1024 * 1024;
+// Cap at 3 MB for full fetch — enough for most emails with small attachments
+const MAX_RFC822_BYTES = 3 * 1024 * 1024;
+// Partial fetch limit for very large emails — 500KB captures headers + text body
+const PARTIAL_FETCH_BYTES = 512000;
 
 /* ── Helpers ────────────────────────────────────────────────── */
 
