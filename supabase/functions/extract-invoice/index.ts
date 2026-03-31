@@ -158,7 +158,14 @@ serve(async (req) => {
             extractedText = textContent;
           } else {
             // Use AI vision to read the PDF (send as base64 image)
-            const base64 = btoa(String.fromCharCode(...bytes));
+            // Chunk the conversion to avoid stack overflow on large files
+            let base64 = "";
+            const chunkSize = 32768;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+              const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+              base64 += String.fromCharCode.apply(null, Array.from(chunk));
+            }
+            base64 = btoa(base64);
             const visionResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
               method: "POST",
               headers: {
