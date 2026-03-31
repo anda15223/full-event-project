@@ -29,12 +29,14 @@ const COMPANIES = [
 ];
 
 const LOCATIONS = [
-  "Copenhagen Central Storage",
+  "Copenhagen Storage",
   "The Fish Project Reffen",
   "The Fish Project Helsingør",
   "The Fish Project Aarhus",
   "Fish Bistro",
   "Gaia",
+  "Gaia Aarhus",
+  "Gentofte",
   "Søborg Storage",
   "Central Storage — The Fish Project",
 ];

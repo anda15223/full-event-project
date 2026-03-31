@@ -27,6 +27,8 @@ const LOCATION_COMPANY_MAP: Record<string, string> = {
 };
 
 const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: string | null }> = {
+  "jeka": { company: "MCA Trading ApS", location: null },
+  "jeka fish": { company: "MCA Trading ApS", location: null },
   "inco": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco danmark": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco københavn": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
@@ -63,9 +65,22 @@ function isRykker(subject: string | null, bodyText: string | null): boolean {
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
   const sn = (supplierName || "").toLowerCase();
+  
+  // Check supplier overrides first
   for (const [key, val] of Object.entries(SUPPLIER_COMPANY_OVERRIDES)) {
-    if (sn.includes(key)) return val;
+    if (sn.includes(key)) {
+      // For Jeka Fish, resolve location based on delivery address
+      if (key.includes("jeka")) {
+        const loc = (location || "").toLowerCase();
+        const resolvedLocation = (loc.includes("aarhus") || loc.includes("århus"))
+          ? "The Fish Project Aarhus"
+          : "Copenhagen Storage";
+        return { company: "MCA Trading ApS", location: resolvedLocation };
+      }
+      return val;
+    }
   }
+  
   const loc = (location || "").toLowerCase();
   for (const [key, company] of Object.entries(LOCATION_COMPANY_MAP)) {
     if (loc.includes(key)) return { company, location };
