@@ -386,3 +386,35 @@ export function useUpdateTask() {
     },
   });
 }
+
+// Fetch full email body on-demand
+export function useFetchEmailBody(emailId: string | null) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: ["email_body", emailId],
+    enabled: !!emailId,
+    staleTime: Infinity,
+    queryFn: async () => {
+      if (!emailId) return null;
+
+      // Check if body already in cache from emails query
+      const cached = queryClient.getQueryData<Email[]>(["emails"]);
+      const cachedEmail = cached?.find(e => e.id === emailId);
+      if (cachedEmail?.body_text && cachedEmail.body_text.length > 10) {
+        return cachedEmail.body_text;
+      }
+
+      const { data, error } = await supabase.functions.invoke("fetch-email-body", {
+        body: { email_id: emailId },
+      });
+      if (error) throw error;
+
+      // Update the emails cache with the body
+      if (data?.body_text) {
+        queryClient.invalidateQueries({ queryKey: ["emails"] });
+      }
+
+      return data?.body_text || "(empty)";
+    },
+  });
+}
