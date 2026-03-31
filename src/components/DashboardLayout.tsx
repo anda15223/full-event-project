@@ -7,7 +7,7 @@ import {
 import {
   LayoutDashboard, Brain, FolderOpen, FileText,
   ListTodo, ClipboardList, AlertTriangle, Settings,
-  PanelLeft, Zap, Globe, Wrench,
+  PanelLeft, Zap, Globe, Wrench, BookOpen,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ChatPanel from "@/components/ChatPanel";
