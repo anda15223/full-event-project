@@ -75,7 +75,8 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
   const [customLocation, setCustomLocation] = useState("");
   const [useCustomLocation, setUseCustomLocation] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfStoragePath, setPdfStoragePath] = useState<string | null>(null);
+  const [pdfAttachmentId, setPdfAttachmentId] = useState<string | null>(null);
   const [emailInfo, setEmailInfo] = useState<{ sender: string; subject: string; received_at?: string; body_html?: string; body_clean_text?: string } | null>(null);
 
   // Reset form when invoice changes
@@ -100,22 +101,26 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
     setCustomLocation(LOCATIONS.includes(inv.location || "") ? "" : (inv.location || ""));
   }, [inv.id]);
 
-  // Load PDF URL — try direct url first, then signed url from attachment
+  // Resolve PDF source — find storage path or attachment ID
   useEffect(() => {
     if (!open) return;
-    setPdfUrl(null);
+    setPdfStoragePath(null);
+    setPdfAttachmentId(null);
     
-    const loadPdf = async () => {
-      // If invoice has a pdf_url, check if it's a storage path or full URL
+    const loadPdfSource = async () => {
+      // If invoice has a pdf_url, extract storage path from it
       if (inv.pdf_url) {
         if (inv.pdf_url.startsWith("http")) {
-          setPdfUrl(inv.pdf_url);
+          // Extract storage path from full URL
+          const match = inv.pdf_url.match(/email-attachments\/(.+)$/);
+          if (match) {
+            setPdfStoragePath(match[1]);
+          } else {
+            // Fallback: use full URL as storage path (might be a different format)
+            setPdfStoragePath(inv.pdf_url);
+          }
         } else {
-          // It's a storage path, create signed URL
-          const { data: signed } = await supabase.storage
-            .from("email-attachments")
-            .createSignedUrl(inv.pdf_url, 3600);
-          if (signed?.signedUrl) setPdfUrl(signed.signedUrl);
+          setPdfStoragePath(inv.pdf_url);
         }
         return;
       }
@@ -124,20 +129,21 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
       if (inv.email_id) {
         const { data } = await supabase
           .from("email_attachments")
-          .select("storage_path, filename")
+          .select("id, storage_path")
           .eq("email_id", inv.email_id!)
           .ilike("mime_type", "%pdf%")
           .limit(1);
-        if (data?.[0]?.storage_path) {
-          const { data: signed } = await supabase.storage
-            .from("email-attachments")
-            .createSignedUrl(data[0].storage_path, 3600);
-          if (signed?.signedUrl) setPdfUrl(signed.signedUrl);
+        if (data?.[0]) {
+          if (data[0].storage_path) {
+            setPdfStoragePath(data[0].storage_path);
+          } else {
+            setPdfAttachmentId(data[0].id);
+          }
         }
       }
     };
     
-    loadPdf();
+    loadPdfSource();
     
     // Load email info
     if (inv.email_id) {
@@ -324,18 +330,13 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                   </div>
                 )}
                 <div className="flex-1 p-4">
-                  {pdfUrl ? (
+                  {(pdfStoragePath || pdfAttachmentId) ? (
                     <div className="h-full rounded-xl border border-border/40 overflow-hidden flex flex-col">
                       <div className="px-4 py-2 bg-secondary/40 border-b border-border/30 flex items-center justify-between shrink-0">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">PDF Document</span>
-                        <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1">
-                            <ExternalLink className="h-3 w-3" /> Open in new tab
-                          </Button>
-                        </a>
                       </div>
                       <div className="flex-1">
-                        <PdfViewer pdfUrl={pdfUrl} />
+                        <PdfViewer storagePath={pdfStoragePath || undefined} attachmentId={pdfAttachmentId || undefined} />
                       </div>
                     </div>
                   ) : emailInfo?.body_html || emailInfo?.body_clean_text ? (
