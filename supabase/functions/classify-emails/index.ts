@@ -349,6 +349,66 @@ serve(async (req) => {
           .filter(Boolean)
           .join("\n\n");
 
+        // ── BC Catering pre-routing (before AI call) ──
+        const bcRouting = detectBcCateringFlow(
+          email.sender || "",
+          email.subject || "",
+          bodySource
+        );
+
+        if (bcRouting && bcRouting.flow === "pbs_debit") {
+          // Route directly to cashflow agent — no AI needed
+          const firstLoc = bcRouting.locations[0];
+          await supabase.from("emails").update({
+            classification: "cashflow",
+            company: firstLoc.company,
+            summary: `PBS direct debit — BC Catering ${bcRouting.branch === "roskilde" ? "Roskilde" : "Skanderborg"}`,
+            action_required: false,
+            confidence: 0.95,
+            needs_review: false,
+            processed: true,
+            assigned_agent: "cashflow_agent",
+            reader_status: "parsed",
+            router_status: "routed",
+          }).eq("id", email.id);
+
+          // Create cashflow entry for each location
+          for (const loc of bcRouting.locations) {
+            await supabase.from("cashflow_entries").insert({
+              entry_date: email.received_at ? new Date(email.received_at).toISOString().split("T")[0] : null,
+              direction: "out",
+              entry_type: "pbs_debit",
+              supplier_name: `BC Catering ${bcRouting.branch === "roskilde" ? "Roskilde" : "Skanderborg"}`,
+              company: loc.company,
+              location: loc.location,
+              description: email.subject || "PBS direct debit",
+              email_id: email.id,
+              source_email_sender: email.sender,
+              bc_catering_branch: bcRouting.branch,
+            });
+          }
+
+          results.push({ email_id: email.id, status: "classified" });
+          continue;
+        }
+
+        // If BC Catering review — flag for review queue
+        if (bcRouting && bcRouting.flow === "review") {
+          await supabase.from("emails").update({
+            classification: "unknown",
+            company: bcRouting.locations[0].company,
+            summary: `BC Catering Roskilde email — unclear type, needs manual review`,
+            needs_review: true,
+            review_reason: "BC Catering email type unclear (not web order or PBS)",
+            processed: true,
+            assigned_agent: "review_queue",
+            reader_status: "parsed",
+            router_status: "routed",
+          }).eq("id", email.id);
+          results.push({ email_id: email.id, status: "classified" });
+          continue;
+        }
+
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: {
