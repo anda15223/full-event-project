@@ -23,9 +23,21 @@ export default function AgentInvoices() {
   const weekFromNow = new Date(today);
   weekFromNow.setDate(weekFromNow.getDate() + 7);
 
+  const groupByCurrency = (items: typeof allInvoices) => {
+    const groups: Record<string, number> = {};
+    items.forEach(i => {
+      const cur = i.currency || "DKK";
+      groups[cur] = (groups[cur] || 0) + (i.amount || 0);
+    });
+    return groups;
+  };
+
+  const formatByCurrency = (groups: Record<string, number>) =>
+    Object.entries(groups).map(([cur, amt]) => `${amt.toLocaleString("da-DK")} ${cur}`).join(" · ");
+
   const metrics = useMemo(() => {
     const total = allInvoices.length;
-    const totalAmount = allInvoices.reduce((s, i) => s + (i.amount || 0), 0);
+    const totalByCurrency = groupByCurrency(allInvoices);
     const overdue = allInvoices.filter(i => i.due_date && new Date(i.due_date) < today).length;
     const dueThisWeek = allInvoices.filter(i => {
       if (!i.due_date) return false;
@@ -33,7 +45,7 @@ export default function AgentInvoices() {
       return d >= today && d <= weekFromNow;
     }).length;
     const companiesCount = new Set(allInvoices.map(i => i.company).filter(Boolean)).size;
-    return { total, totalAmount, overdue, dueThisWeek, companiesCount };
+    return { total, totalByCurrency, overdue, dueThisWeek, companiesCount };
   }, [allInvoices]);
 
   // Smart sections
