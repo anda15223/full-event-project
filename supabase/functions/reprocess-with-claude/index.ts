@@ -13,14 +13,15 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const batchSize = body.batch_size || 5;
-    const testMode = body.test_mode || false; // true = only 5 most recent invoice emails
-    const jobId = body.job_id || null;
+    const testMode = body.test_mode || false;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Find emails to reprocess: skipped/pending or no invoice created
+    console.log(`Reprocess started: test_mode=${testMode}, batch_size=${batchSize}`);
+
+    // Find emails to reprocess
     let query = supabase
       .from("emails")
       .select("id, subject, classification, router_status")
@@ -28,15 +29,18 @@ serve(async (req) => {
       .order("received_at", { ascending: false });
 
     if (testMode) {
-      // Test mode: only 5 most recent invoice-classified emails
       query = query.eq("classification", "invoice").limit(5);
     } else {
-      // Full mode: emails that were skipped, pending, or have no invoice
       query = query.limit(batchSize);
     }
 
     const { data: emails, error: queryError } = await query;
-    if (queryError) throw queryError;
+    if (queryError) {
+      console.error("Query error:", queryError);
+      throw queryError;
+    }
+
+    console.log(`Found ${emails?.length || 0} emails to process`);
 
     if (!emails || emails.length === 0) {
       return new Response(JSON.stringify({
@@ -45,31 +49,53 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Filter to emails without an invoice record
+    // Filter to emails without an invoice record (unless test mode)
     const emailIds = emails.map(e => e.id);
     const { data: existingInvoices } = await supabase
       .from("invoices").select("email_id").in("email_id", emailIds);
     const existingIds = new Set((existingInvoices || []).map(i => i.email_id));
 
-    // In test mode, process all 5 even if they have invoices (to show Claude response)
     const toProcess = testMode
       ? emailIds
       : emailIds.filter(id => !existingIds.has(id));
+
+    console.log(`Will process ${toProcess.length} emails (${existingIds.size} already have invoices)`);
 
     let extracted = 0;
     let skipped = 0;
     let errors = 0;
     const details: any[] = [];
 
+    // Call extract-invoice directly via HTTP (not supabase.functions.invoke)
+    const extractUrl = `${supabaseUrl}/functions/v1/extract-invoice`;
+
     for (const emailId of toProcess) {
       try {
-        const { data, error } = await supabase.functions.invoke("extract-invoice", {
-          body: { email_id: emailId },
+        console.log(`Processing email ${emailId}...`);
+        const response = await fetch(extractUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ email_id: emailId }),
         });
 
-        if (error) {
+        const responseText = await response.text();
+        let data: any;
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          console.error(`Non-JSON response for ${emailId}:`, responseText.substring(0, 300));
           errors++;
-          details.push({ email_id: emailId, status: "error", error: error.message });
+          details.push({ email_id: emailId, status: "error", error: "Non-JSON response from extract-invoice" });
+          continue;
+        }
+
+        if (!response.ok) {
+          console.error(`Extract error for ${emailId}:`, response.status, data);
+          errors++;
+          details.push({ email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}` });
           continue;
         }
 
@@ -79,22 +105,15 @@ serve(async (req) => {
         if (er > 0) errors += er;
         if (ex === 0 && er === 0) skipped++;
         details.push({ email_id: emailId, status: ex > 0 ? "extracted" : "skipped", data });
+        console.log(`Email ${emailId}: extracted=${ex}, errors=${er}`);
       } catch (err) {
+        console.error(`Exception processing ${emailId}:`, err);
         errors++;
         details.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown" });
       }
     }
 
-    // Update job progress if provided
-    if (jobId) {
-      await supabase.from("email_sync_jobs").update({
-        total_processed: extracted + skipped + errors,
-        total_invoices_extracted: extracted,
-        total_skipped: skipped,
-      }).eq("id", jobId);
-    }
-
-    // Get remaining count
+    // Get counts
     const { count: remaining } = await supabase
       .from("emails")
       .select("id", { count: "exact", head: true })
@@ -103,6 +122,8 @@ serve(async (req) => {
     const { count: invoiceCount } = await supabase
       .from("invoices")
       .select("id", { count: "exact", head: true });
+
+    console.log(`Batch complete: processed=${toProcess.length}, extracted=${extracted}, skipped=${skipped}, errors=${errors}`);
 
     return new Response(JSON.stringify({
       processed: toProcess.length,
@@ -116,7 +137,7 @@ serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
-    console.error("Reprocess error:", error);
+    console.error("Reprocess top-level error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
