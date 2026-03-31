@@ -98,6 +98,16 @@ COMPANY MAPPING RULES — never deviate:
 - Odin Seafood / Odin → ALWAYS The Fish Project ApS
 - Kollek ApS / Team Kollek → ALWAYS The Fish Project ApS, payment = PBS on due date
   - Kollek location = read delivery address: Aarhus → "The Fish Project Aarhus", Helsingør → "The Fish Project Helsingør", Reffen → "The Fish Project Reffen", Søborg → "Søborg Storage", unclear → "Copenhagen Central Storage"
+- H.W. Larsen A/S → ALWAYS The Fish Project ApS, category = equipment
+
+IGNORE RULES — return is_invoice: false:
+- Livet på Øen → always ignore, never an invoice
+- Any document containing "kontoudtog" or "kontoopgørelse" → bank statement, never an invoice
+
+URGENT FLAGS:
+- Any email/document containing "rykker" or "betalingspåmindelse" → this is a payment reminder
+  Set status = "overdue", add extraction_notes = "RYKKER - payment reminder"
+  Try to identify which original invoice this reminder is for
 
 EXTRACTION RULES:
 - Always prefer PDF text over email body for invoice data
