@@ -12,10 +12,9 @@ const RequestSchema = z.object({ email_id: z.string().uuid() });
 
 /* ── MIME helpers ── */
 
-function decodeQuotedPrintable(text: string, charset = "utf-8"): string {
-  // Replace soft line breaks, then collect raw bytes
+/** Build raw byte array from QP-encoded text */
+function qpToBytes(text: string): Uint8Array {
   const cleaned = text.replace(/=\r?\n/g, "");
-  // Build byte array: hex-encoded bytes become actual bytes, plain ASCII stays as-is
   const byteArray: number[] = [];
   let i = 0;
   while (i < cleaned.length) {
@@ -27,17 +26,30 @@ function decodeQuotedPrintable(text: string, charset = "utf-8"): string {
       i++;
     }
   }
-  try {
-    return new TextDecoder(charset).decode(Uint8Array.from(byteArray));
-  } catch { return cleaned; }
+  return Uint8Array.from(byteArray);
 }
 
-function decodeBase64(text: string, charset = "utf-8"): string {
+/** Build raw byte array from base64 text */
+function b64ToBytes(text: string): Uint8Array {
+  const cleaned = text.replace(/\s/g, "");
+  return Uint8Array.from(Array.from(atob(cleaned), c => c.charCodeAt(0)));
+}
+
+/** Decode bytes with charset, trying UTF-8 first if result looks like mojibake */
+function decodeWithCharset(bytes: Uint8Array, charset: string): string {
+  // Always try UTF-8 first
   try {
-    const cleaned = text.replace(/\s/g, "");
-    const bytes = Uint8Array.from(Array.from(atob(cleaned), c => c.charCodeAt(0)));
+    const utf8 = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    // If it decoded without errors, it's valid UTF-8
+    return utf8;
+  } catch {
+    // Not valid UTF-8, use declared charset
+  }
+  try {
     return new TextDecoder(charset).decode(bytes);
-  } catch { return text; }
+  } catch {
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  }
 }
 
 function getHeader(headers: string, name: string): string {
