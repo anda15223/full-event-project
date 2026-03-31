@@ -7,24 +7,39 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/* Suppliers/senders to always ignore */
+const IGNORE_SENDERS = ["livet på øen", "livet paa øen", "livet paa oen"];
+const IGNORE_SUBJECTS = /kontoudtog|kontoopgørelse|account\s*statement/i;
+
+function shouldSkipEmail(email: any): string | null {
+  const sender = (email.sender || "").toLowerCase();
+  for (const ign of IGNORE_SENDERS) {
+    if (sender.includes(ign)) return "ignore:livet_paa_oen";
+  }
+  const subject = (email.subject || "").toLowerCase();
+  if (IGNORE_SUBJECTS.test(subject)) return "ignore:kontoudtog";
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const body = await req.json().catch(() => ({}));
-    const batchSize = body.batch_size || 5;
+    const batchSize = body.batch_size || 10;
     const testMode = body.test_mode || false;
+    const skipExisting = body.skip_existing !== false; // default true
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Reprocess started: test_mode=${testMode}, batch_size=${batchSize}`);
+    console.log(`Reprocess: test=${testMode}, batch=${batchSize}, skipExisting=${skipExisting}`);
 
     // Find emails to reprocess
     let query = supabase
       .from("emails")
-      .select("id, subject, classification, router_status")
+      .select("id, subject, sender, classification, router_status")
       .gte("received_at", "2026-01-01T00:00:00.000Z")
       .order("received_at", { ascending: false });
 
@@ -35,43 +50,56 @@ serve(async (req) => {
     }
 
     const { data: emails, error: queryError } = await query;
-    if (queryError) {
-      console.error("Query error:", queryError);
-      throw queryError;
-    }
-
-    console.log(`Found ${emails?.length || 0} emails to process`);
+    if (queryError) throw queryError;
 
     if (!emails || emails.length === 0) {
       return new Response(JSON.stringify({
-        processed: 0, extracted: 0, skipped: 0, errors: 0,
+        processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
         message: "No emails to process",
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Filter to emails without an invoice record (unless test mode)
-    const emailIds = emails.map(e => e.id);
-    const { data: existingInvoices } = await supabase
-      .from("invoices").select("email_id").in("email_id", emailIds);
-    const existingIds = new Set((existingInvoices || []).map(i => i.email_id));
+    // Filter out already-processed emails (those that already have invoices)
+    const emailIds = emails.map((e: any) => e.id);
+    let toProcess = emailIds;
 
-    const toProcess = testMode
-      ? emailIds
-      : emailIds.filter(id => !existingIds.has(id));
+    if (skipExisting && !testMode) {
+      const { data: existingInvoices } = await supabase
+        .from("invoices").select("email_id").in("email_id", emailIds);
+      const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
+      toProcess = emailIds.filter((id: string) => !existingIds.has(id));
+    }
 
-    console.log(`Will process ${toProcess.length} emails (${existingIds.size} already have invoices)`);
+    console.log(`Processing ${toProcess.length} of ${emails.length} emails`);
 
     let extracted = 0;
     let skipped = 0;
+    let ignored = 0;
     let errors = 0;
     const details: any[] = [];
+    let currentSubject = "";
 
-    // Call extract-invoice directly via HTTP (not supabase.functions.invoke)
     const extractUrl = `${supabaseUrl}/functions/v1/extract-invoice`;
 
     for (const emailId of toProcess) {
+      const email = emails.find((e: any) => e.id === emailId);
+      currentSubject = email?.subject || "";
+
+      // Check ignore rules before calling Claude
+      const ignoreReason = email ? shouldSkipEmail(email) : null;
+      if (ignoreReason) {
+        console.log(`Ignoring ${emailId}: ${ignoreReason}`);
+        // Mark email as ignored
+        await supabase.from("emails").update({
+          router_status: "ignored",
+          assigned_agent: "ignore_agent",
+        }).eq("id", emailId);
+        ignored++;
+        details.push({ email_id: emailId, status: "ignored", reason: ignoreReason, subject: currentSubject });
+        continue;
+      }
+
       try {
-        console.log(`Processing email ${emailId}...`);
         const response = await fetch(extractUrl, {
           method: "POST",
           headers: {
@@ -86,16 +114,14 @@ serve(async (req) => {
         try {
           data = JSON.parse(responseText);
         } catch {
-          console.error(`Non-JSON response for ${emailId}:`, responseText.substring(0, 300));
           errors++;
-          details.push({ email_id: emailId, status: "error", error: "Non-JSON response from extract-invoice" });
+          details.push({ email_id: emailId, status: "error", error: "Non-JSON response", subject: currentSubject });
           continue;
         }
 
         if (!response.ok) {
-          console.error(`Extract error for ${emailId}:`, response.status, data);
           errors++;
-          details.push({ email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}` });
+          details.push({ email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, subject: currentSubject });
           continue;
         }
 
@@ -104,40 +130,62 @@ serve(async (req) => {
         extracted += ex;
         if (er > 0) errors += er;
         if (ex === 0 && er === 0) skipped++;
-        details.push({ email_id: emailId, status: ex > 0 ? "extracted" : "skipped", data });
-        console.log(`Email ${emailId}: extracted=${ex}, errors=${er}`);
+        details.push({
+          email_id: emailId,
+          status: ex > 0 ? "extracted" : "skipped",
+          subject: currentSubject,
+          data,
+        });
       } catch (err) {
-        console.error(`Exception processing ${emailId}:`, err);
         errors++;
-        details.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown" });
+        details.push({ email_id: emailId, status: "error", error: err instanceof Error ? err.message : "Unknown", subject: currentSubject });
       }
     }
 
-    // Get counts
-    const { count: remaining } = await supabase
+    // Get current counts
+    const { count: totalEmails } = await supabase
       .from("emails")
       .select("id", { count: "exact", head: true })
       .gte("received_at", "2026-01-01T00:00:00.000Z");
 
-    const { count: invoiceCount } = await supabase
+    const { count: totalInvoices } = await supabase
       .from("invoices")
       .select("id", { count: "exact", head: true });
 
-    console.log(`Batch complete: processed=${toProcess.length}, extracted=${extracted}, skipped=${skipped}, errors=${errors}`);
+    const { count: totalCashflow } = await supabase
+      .from("cashflow_entries")
+      .select("id", { count: "exact", head: true });
+
+    // Company breakdown
+    const { data: companyBreakdown } = await supabase
+      .from("invoices")
+      .select("company");
+
+    const byCompany: Record<string, number> = {};
+    for (const inv of companyBreakdown || []) {
+      const c = inv.company || "Unknown";
+      byCompany[c] = (byCompany[c] || 0) + 1;
+    }
+
+    console.log(`Batch done: processed=${toProcess.length}, extracted=${extracted}, skipped=${skipped}, ignored=${ignored}, errors=${errors}`);
 
     return new Response(JSON.stringify({
       processed: toProcess.length,
       extracted,
       skipped,
+      ignored,
       errors,
-      total_emails: remaining || 0,
-      total_invoices: invoiceCount || 0,
+      total_emails: totalEmails || 0,
+      total_invoices: totalInvoices || 0,
+      total_cashflow: totalCashflow || 0,
+      by_company: byCompany,
+      current_subject: currentSubject,
       test_mode: testMode,
       details,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
-    console.error("Reprocess top-level error:", error);
+    console.error("Reprocess error:", error);
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
