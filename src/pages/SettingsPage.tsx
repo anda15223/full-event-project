@@ -359,24 +359,29 @@ function ClaudeReprocessPanel() {
             <div className="space-y-1.5">
               {testDetails.map((d: any, i: number) => {
                 const icon = d.status === "extracted" ? "✅" : d.status === "ignored" ? "🚫" : d.status === "error" ? "⚠️" : "⏭";
-                const supplier = d.results?.[0]?.supplier_name || d.supplier || "—";
-                const amount = d.results?.[0]?.amount || d.amount;
-                const company = d.results?.[0]?.company || d.company || "";
-                const currency = d.results?.[0]?.currency || "DKK";
+                const supplier = d.supplier || "—";
+                const amount = d.amount;
+                const company = d.company || "";
+                const currency = d.currency || "DKK";
+                const skipReason = d.results?.[0]?.error || d.error || "";
                 return (
-                  <div key={i} className="flex items-center gap-3 text-sm py-1 border-b border-border/50 last:border-0">
+                  <div key={i} className="flex items-center gap-3 text-sm py-1.5 border-b border-border/50 last:border-0">
                     <span className="w-5 text-center">{icon}</span>
                     <Badge
                       variant={d.status === "extracted" ? "default" : d.status === "ignored" ? "secondary" : d.status === "error" ? "destructive" : "outline"}
-                      className="text-[10px] w-20 justify-center"
+                      className="text-[10px] w-20 justify-center shrink-0"
                     >
                       {d.status}
                     </Badge>
-                    <span className="flex-1 truncate font-medium">{supplier}</span>
-                    <span className="w-28 text-right font-mono text-xs">
+                    <span className="flex-1 truncate font-medium">
+                      {d.status === "extracted" ? supplier : (d.subject || d.email_id)}
+                    </span>
+                    <span className="w-28 text-right font-mono text-xs shrink-0">
                       {amount ? `${currency} ${Number(amount).toLocaleString("da-DK")}` : "—"}
                     </span>
-                    <span className="w-44 text-right text-muted-foreground text-xs truncate">{company}</span>
+                    <span className="w-44 text-right text-muted-foreground text-xs truncate shrink-0">
+                      {d.status === "extracted" ? company : skipReason.substring(0, 60)}
+                    </span>
                   </div>
                 );
               })}
