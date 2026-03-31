@@ -133,6 +133,7 @@ function ClaudeReprocessPanel() {
   const handleStop = () => {
     pauseRef.current = true;
     setPaused(true);
+    setRunning(false);
   };
 
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
