@@ -36,7 +36,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground text-sm mt-1">Your AI-powered operations dashboard</p>
         </div>
         <Button
-          onClick={() => syncAndClassify.mutate()}
+          onClick={() => syncAndClassify.mutate(undefined)}
           disabled={syncAndClassify.isPending}
           className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
