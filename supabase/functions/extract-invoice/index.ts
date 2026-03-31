@@ -621,9 +621,11 @@ async function callClaudeExtraction(
       source_type: invoiceData.source_type || "email",
       status,
       confidence,
+      overdue_flag: rykkerDetected || false,
       pdf_url: pdfUrl,
       payment_account: invoiceData.payment_account || null,
       payment_reference: invoiceData.payment_reference || null,
+      notes,
     };
     if (existingInvoice && existingInvoice.length > 0) {
       await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
