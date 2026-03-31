@@ -115,7 +115,9 @@ function ClaudeReprocessPanel() {
         }
 
         totals.batch = i + 1;
-        setProgress({ ...totals });
+        const snap = { ...totals };
+        setProgress(snap);
+        saveProgress(snap, true);
 
         const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
           body: { test_mode: false, batch_size: batchSize },
@@ -132,7 +134,9 @@ function ClaudeReprocessPanel() {
         totals.currentSubject = data.current_subject || "";
         if (data.by_company) totals.byCompany = data.by_company;
 
-        setProgress({ ...totals });
+        const snap2 = { ...totals };
+        setProgress(snap2);
+        saveProgress(snap2, true);
 
         if ((data.processed || 0) === 0) break;
         if (pauseRef.current) {
