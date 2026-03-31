@@ -14,46 +14,110 @@ const RequestSchema = z.object({
   force: z.boolean().optional(),
 });
 
-// Cap at 3 MB for full fetch — enough for most emails with small attachments
 const MAX_RFC822_BYTES = 3 * 1024 * 1024;
-// Partial fetch limit for very large emails — 500KB captures headers + text body
 const PARTIAL_FETCH_BYTES = 512000;
 
-/* ── Helpers ────────────────────────────────────────────────── */
+/* ── Charset decoding ──────────────────────────────────────── */
+
+function decodeWithCharset(rawBytes: Uint8Array, charsetHint: string | null): string {
+  const charsets = [
+    charsetHint,
+    "utf-8",
+    "iso-8859-1",
+    "windows-1252",
+    "latin1",
+  ].filter(Boolean) as string[];
+
+  for (const charset of charsets) {
+    try {
+      const normalizedCharset = charset.toLowerCase().replace(/^(x-|cs)/, "");
+      const decoded = new TextDecoder(normalizedCharset, { fatal: false }).decode(rawBytes);
+      // If less than 2% replacement chars, accept this charset
+      const replacementCount = (decoded.match(/\uFFFD/g) || []).length;
+      if (decoded.length > 0 && replacementCount / decoded.length < 0.02) {
+        return decoded;
+      }
+    } catch {
+      continue;
+    }
+  }
+  // Last resort: latin1 never fails
+  return new TextDecoder("latin1").decode(rawBytes);
+}
+
+/* ── HTML to clean text ────────────────────────────────────── */
 
 function htmlToCleanText(html: string): string {
+  if (!html) return "";
   return html
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, " ")
-    .replace(/<img[^>]*width\s*=\s*["']?1["']?[^>]*>/gi, " ")
-    .replace(/<img[^>]*height\s*=\s*["']?1["']?[^>]*>/gi, " ")
-    .replace(/<(br|\/p|\/div|\/tr|\/li|\/h[1-6])\b[^>]*>/gi, "\n")
+    // Remove script and style blocks entirely
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, "")
+    // Remove tracking pixels
+    .replace(/<img[^>]*width\s*=\s*["']?1["']?[^>]*>/gi, "")
+    .replace(/<img[^>]*height\s*=\s*["']?1["']?[^>]*>/gi, "")
+    // Replace block elements with newlines
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<\/(h[1-6])>/gi, "\n\n")
     .replace(/<\/?(table|tbody|thead|tfoot)\b[^>]*>/gi, "\n")
     .replace(/<\/?td\b[^>]*>/gi, " | ")
-    .replace(/<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, "$2")
+    // Remove all remaining HTML tags
     .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">").replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
-    .replace(/&aelig;/gi, "æ").replace(/&oslash;/gi, "ø").replace(/&aring;/gi, "å")
-    .replace(/&AElig;/g, "Æ").replace(/&Oslash;/g, "Ø").replace(/&Aring;/g, "Å")
+    // Decode HTML entities (including Danish/Romanian)
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&aelig;/gi, "æ")
+    .replace(/&oslash;/gi, "ø")
+    .replace(/&aring;/gi, "å")
+    .replace(/&AElig;/g, "Æ")
+    .replace(/&Oslash;/g, "Ø")
+    .replace(/&Aring;/g, "Å")
+    .replace(/&#(\d+);/g, (_, code) => {
+      try { return String.fromCharCode(parseInt(code, 10)); } catch { return " "; }
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      try { return String.fromCharCode(parseInt(hex, 16)); } catch { return " "; }
+    })
+    .replace(/&[a-zA-Z]+;/g, " ")
+    // Clean tracking links
     .replace(/https?:\/\/[^\s]*unsubscribe[^\s]*/gi, "[unsubscribe]")
     .replace(/https?:\/\/[^\s]*track[^\s]*/gi, "[tracking-link]")
     .replace(/https?:\/\/[^\s]*click[^\s]*/gi, "[tracked-link]")
-    .replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    // Normalize whitespace
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function normalizeWhitespace(value: string | null | undefined): string {
   return (value || "").replace(/\u0000/g, "").replace(/\r/g, "").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+/* ── Binary/base64 detection ───────────────────────────────── */
+
 function looksLikeBinary(text: string): boolean {
   if (!text || text.length < 100) return false;
-  if (/^[A-Za-z0-9+/=\r\n\s]{200,}$/.test(text.trim())) return true;
-  const base64Chars = (text.match(/[A-Za-z0-9+/=]/g) || []).length;
-  if (base64Chars / text.length > 0.95 && text.length > 500) return true;
+  const trimmed = text.trim();
+  // Long base64 blob check
+  if (/^[A-Za-z0-9+/=\r\n\s]{200,}$/.test(trimmed)) return true;
+  const base64Chars = (trimmed.match(/[A-Za-z0-9+/=]/g) || []).length;
+  if (base64Chars / trimmed.length > 0.95 && trimmed.length > 500) return true;
   return false;
+}
+
+function isBase64BinaryContent(content: string, mimeType?: string): boolean {
+  const binaryTypes = ["application/pdf", "application/octet-stream", "image/", "audio/", "video/"];
+  if (mimeType && binaryTypes.some(t => mimeType.toLowerCase().startsWith(t))) return true;
+  return looksLikeBinary(content);
 }
 
 function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null): boolean {
@@ -64,6 +128,43 @@ function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null):
   if (sample.length > 80 && questionMarks > Math.max(12, Math.floor(sample.length * 0.18))) return true;
   if (!bodyHtml && /content-type:|mime-version:|content-transfer-encoding:/i.test(sample)) return true;
   return false;
+}
+
+/* ── Language detection heuristic ──────────────────────────── */
+
+function detectLanguage(text: string | null | undefined): string {
+  if (!text || text.trim().length < 20) return "unknown";
+
+  const cleaned = text.trim().substring(0, 500).toLowerCase();
+
+  // Danish signals
+  const danishSignals = [
+    "faktura", "betaling", "vedr", "venlig hilsen", "bestilling", "levering",
+    "tak for", "med venlig", "kære", "hermed", "fremsendes", "dato",
+    "tilbud", "ordre", "forsikring", "aftale", "virksomhed", "selskab",
+    "indkøb", "varenr", "moms", "beløb", "antal", "pris",
+  ];
+  const romanianSignals = [
+    "factura", "plata", "termen", "societate", "societatea", "furnizor",
+    "client", "suma", "total", "deviz", "comanda", "livrare",
+    "chitanta", "bon fiscal", "scadent", "platit",
+  ];
+
+  const danishScore = danishSignals.filter(s => cleaned.includes(s)).length;
+  const romanianScore = romanianSignals.filter(s => cleaned.includes(s)).length;
+
+  const hasDanishChars = /[æøåÆØÅ]/.test(text.substring(0, 500));
+  const hasRomanianChars = /[ăâîșțĂÂÎȘȚ]/.test(text.substring(0, 500));
+
+  if (hasDanishChars || danishScore >= 2) return "da";
+  if (hasRomanianChars || romanianScore >= 2) return "ro";
+
+  // English as default for readable latin text with no special signals
+  if (cleaned.length >= 20 && /^[\x20-\x7E\r\n]+$/.test(cleaned.substring(0, 200))) {
+    return "en";
+  }
+
+  return "unknown";
 }
 
 /* ── IMAP low-level ─────────────────────────────────────────── */
@@ -114,10 +215,16 @@ function extractBinaryLiteral(rawBytes: Uint8Array, ascii: string): Uint8Array |
   return rawBytes.slice(start, start + size);
 }
 
-function extractCharsetFromRawEmail(rawEmail: Uint8Array): string {
-  const preview = latin1(rawEmail.slice(0, Math.min(rawEmail.length, 16384)));
-  const match = preview.match(/charset\s*=\s*["']?([^"';\r\n]+)/i);
-  return match?.[1] || "utf-8";
+function extractAllCharsets(rawEmail: Uint8Array): string[] {
+  const preview = latin1(rawEmail.slice(0, Math.min(rawEmail.length, 32768)));
+  const charsets: string[] = [];
+  const regex = /charset\s*=\s*["']?([^"';\r\n\s]+)/gi;
+  let m;
+  while ((m = regex.exec(preview)) !== null) {
+    const cs = m[1].toLowerCase().replace(/^(x-|cs)/, "");
+    if (!charsets.includes(cs)) charsets.push(cs);
+  }
+  return charsets.length > 0 ? charsets : ["utf-8"];
 }
 
 function normalizeContentId(value: string | null | undefined): string | null {
@@ -266,28 +373,23 @@ serve(async (req) => {
       });
     }
 
-    /* ── Step 1: Fetch BODYSTRUCTURE to know size before downloading ── */
+    /* ── Fetch size then content ─────────────────────────────── */
     const structRes = latin1(await imapCmd(conn, "S1", `UID FETCH ${uid} (RFC822.SIZE)`, 4096));
     const sizeMatch = structRes.match(/RFC822\.SIZE\s+(\d+)/i);
     const rfc822Size = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
-
-    // For very large emails (>3MB), only fetch partial to get headers + text body
     const isLargeEmail = rfc822Size > MAX_RFC822_BYTES;
 
     let rawEmail: Uint8Array | null = null;
     let fetchedPartially = false;
 
     if (isLargeEmail) {
-      // Fetch first 500KB — enough for headers + text body in multipart emails
       console.log(`Large email (${rfc822Size} bytes), fetching partial (${PARTIAL_FETCH_BYTES} bytes)`);
       const partialBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (BODY.PEEK[]<0.${PARTIAL_FETCH_BYTES}>)`, PARTIAL_FETCH_BYTES + 20000);
-      const partialAscii = latin1(partialBytes);
-      rawEmail = extractBinaryLiteral(partialBytes, partialAscii);
+      rawEmail = extractBinaryLiteral(partialBytes, latin1(partialBytes));
       fetchedPartially = true;
     } else {
       const rawFetchBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (RFC822)`, MAX_RFC822_BYTES);
-      const rawAscii = latin1(rawFetchBytes);
-      rawEmail = extractBinaryLiteral(rawFetchBytes, rawAscii);
+      rawEmail = extractBinaryLiteral(rawFetchBytes, latin1(rawFetchBytes));
     }
 
     await imapCmd(conn, "A99", "LOGOUT", 1024);
@@ -300,32 +402,77 @@ serve(async (req) => {
       });
     }
 
-    /* ── Parse MIME ──────────────────────────────────────────── */
-    const charset = extractCharsetFromRawEmail(rawEmail);
+    /* ── Parse MIME with PostalMime ──────────────────────────── */
+    const detectedCharsets = extractAllCharsets(rawEmail);
+    const primaryCharset = detectedCharsets[0] || "utf-8";
     const parsedEmail = await PostalMime.parse(rawEmail) as any;
 
-    // Body extraction
+    // Extract body text — PostalMime handles MIME tree, QP, base64 decoding
     let bodyText = normalizeWhitespace(parsedEmail.text || "");
     let bodyHtml = typeof parsedEmail.html === "string" ? parsedEmail.html : parsedEmail.html ? String(parsedEmail.html) : "";
     const rawAttachments = Array.isArray(parsedEmail.attachments) ? parsedEmail.attachments : [];
 
-    // Filter out base64/binary content that leaked into body fields
-    if (looksLikeBinary(bodyText)) bodyText = "";
-    if (looksLikeBinary(bodyHtml)) bodyHtml = "";
+    // Fix 1: If bodyText looks garbled (high replacement chars), re-decode with detected charset
+    if (bodyText && bodyText.length > 0) {
+      const replacementCount = (bodyText.match(/\uFFFD/g) || []).length;
+      if (bodyText.length > 20 && replacementCount / bodyText.length > 0.02) {
+        // Try re-decoding the raw bytes with detected charsets
+        const rawTextBytes = new TextEncoder().encode(bodyText);
+        bodyText = decodeWithCharset(rawTextBytes, primaryCharset);
+      }
+    }
 
-    /* ── Filter & deduplicate attachments (metadata only for large emails) ── */
+    // Fix 2: Filter out base64/binary content that leaked into body fields
+    if (isBase64BinaryContent(bodyText)) bodyText = "";
+    if (isBase64BinaryContent(bodyHtml)) bodyHtml = "";
+
+    // Fix 3: If bodyText is empty but bodyHtml exists, extract clean text from HTML
+    // This handles HTML-only emails
+    let bodyCleanText = "";
+    if (bodyText && bodyText.length > 10 && !looksLikeBinary(bodyText)) {
+      bodyCleanText = normalizeWhitespace(bodyText);
+    }
+    if (!bodyCleanText && bodyHtml && bodyHtml.length > 10) {
+      bodyCleanText = htmlToCleanText(bodyHtml);
+    }
+    if (!bodyCleanText && bodyText) {
+      bodyCleanText = normalizeWhitespace(bodyText);
+    }
+
+    // Fix 4: If clean text still looks broken, try re-extracting from HTML with charset fix
+    if (bodyCleanText && looksBrokenContent(bodyCleanText, null)) {
+      if (bodyHtml) {
+        const reExtracted = htmlToCleanText(bodyHtml);
+        if (reExtracted && reExtracted.length > 10 && !looksBrokenContent(reExtracted, null)) {
+          bodyCleanText = reExtracted;
+        }
+      }
+    }
+
+    // Fix 5: Final fallback message
+    if (!bodyCleanText || bodyCleanText.length < 5) {
+      if (rawAttachments.length > 0) {
+        const attNames = rawAttachments.map((a: any) => a.filename).filter(Boolean).join(", ");
+        bodyCleanText = `No readable body text — see attachments: ${attNames || "attached files"}`;
+      } else {
+        bodyCleanText = "No readable body text found.";
+      }
+    }
+
+    // Fix 6: Detect language locally using heuristic
+    const detectedLang = detectLanguage(bodyCleanText);
+
+    /* ── Filter & deduplicate attachments ─────────────────────── */
     const seen = new Set<string>();
     const validAttachments: any[] = [];
     for (const att of rawAttachments) {
       const mimeType = (att.mimeType || "application/octet-stream").toLowerCase();
       const filename = att.filename || "";
 
-      // Skip multipart boundaries and invalid parts
       if (mimeType.startsWith("multipart/")) continue;
       if (filename.toLowerCase().includes("boundary")) continue;
 
-      // For large emails, we may not have full attachment content
-      // but we still record metadata
+      // Never treat attachment-disposition parts as body text
       let fileSize = 0;
       if (att.content) {
         if (att.content instanceof Uint8Array) fileSize = att.content.byteLength;
@@ -334,10 +481,8 @@ serve(async (req) => {
       }
       if (att.size) fileSize = att.size;
 
-      // Skip truly empty parts (but allow 0-size metadata for large email partial fetches)
       if (fileSize === 0 && !fetchedPartially) continue;
 
-      // Deduplicate by filename+size
       const dedupeKey = `${filename}|${fileSize}`;
       if (seen.has(dedupeKey) && filename) continue;
       seen.add(dedupeKey);
@@ -345,7 +490,6 @@ serve(async (req) => {
       validAttachments.push(att);
     }
 
-    // Delete old attachment records
     if (!fetchedPartially || validAttachments.length > 0) {
       await supabase.from("email_attachments").delete().eq("email_id", email_id);
     }
@@ -390,38 +534,29 @@ serve(async (req) => {
       });
     }
 
-    // Replace CID references in HTML
     if (bodyHtml && cidMap.size > 0) {
       bodyHtml = replaceCidSources(bodyHtml, cidMap);
     }
 
-    // Generate clean text for AI
-    let bodyCleanText = normalizeWhitespace(bodyHtml ? htmlToCleanText(bodyHtml) : bodyText);
-    if (!bodyCleanText && attachmentRecords.length > 0) {
-      const attachNames = attachmentRecords.map(a => a.filename).join(", ");
-      bodyCleanText = `No body content. See attachments: ${attachNames}`;
-    }
-
     const parseSucceeded = Boolean(bodyText || bodyHtml || attachmentRecords.length > 0);
 
-    // Insert attachment records
     if (attachmentRecords.length > 0) {
       const { error: attachInsErr } = await supabase.from("email_attachments").insert(attachmentRecords as any);
       if (attachInsErr) console.error("Failed to save attachment records:", attachInsErr);
     }
 
-    // Update the email row
     await supabase.from("emails").update({
       body_text: bodyText || null,
       body_html: bodyHtml || null,
       body_clean_text: bodyCleanText || null,
-      charset,
+      charset: primaryCharset,
+      language: detectedLang,
       parse_status: parseSucceeded ? "parsed" : "failed",
       parse_error: parseSucceeded ? null : "Could not parse MIME content",
       has_attachments: attachmentRecords.length > 0,
     }).eq("id", email_id);
 
-    // ── Background: upload small attachment blobs (skip for large/partial) ──
+    // Background: upload small attachment blobs
     if (!fetchedPartially && validAttachments.length > 0) {
       const bgWork = (async () => {
         for (let i = 0; i < validAttachments.length; i++) {
@@ -433,15 +568,10 @@ serve(async (req) => {
             if (att.content instanceof Uint8Array) bytes = att.content;
             else if (att.content instanceof ArrayBuffer) bytes = new Uint8Array(att.content);
             else continue;
-            
             if (bytes.byteLength === 0) continue;
-
             const { error: upErr } = await supabase.storage
               .from("email-attachments")
-              .upload(rec.storage_path, bytes, {
-                contentType: rec.mime_type,
-                upsert: true,
-              });
+              .upload(rec.storage_path, bytes, { contentType: rec.mime_type, upsert: true });
             const status = upErr ? "failed" : "stored";
             await supabase.from("email_attachments")
               .update({ parse_status: status, parse_error: upErr?.message || null })
@@ -462,6 +592,7 @@ serve(async (req) => {
       parse_status: parseSucceeded ? "parsed" : "failed",
       has_attachments: attachmentRecords.length > 0,
       attachment_count: attachmentRecords.length,
+      language: detectedLang,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
