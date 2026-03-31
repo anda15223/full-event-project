@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const DEFAULT_EMAIL_SINCE_DATE = "2026-02-01T00:00:00.000Z";
+
 export type Email = {
   id: string;
   message_id: string | null;
@@ -93,6 +95,7 @@ export function useEmails(filters?: {
       let query = supabase
         .from("emails")
         .select("*")
+        .gte("received_at", DEFAULT_EMAIL_SINCE_DATE)
         .order("received_at", { ascending: false });
 
       if (filters?.classification) query = query.eq("classification", filters.classification);

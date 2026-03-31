@@ -14,6 +14,8 @@ const RequestSchema = z.object({
   offset: z.number().int().min(0).optional(),
 });
 
+const DEFAULT_SINCE_DATE = "2026-02-01";
+
 /* ── Lightweight header-only helpers ────────────────────────── */
 
 function decodeWithCharset(bytes: Uint8Array, charset: string): string {
