@@ -96,7 +96,7 @@ export function useSuppliers() {
   return useQuery({
     queryKey: ["suppliers"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("suppliers").select("*");
+      const { data, error } = await (supabase as any).from("suppliers").select("*");
       if (error) throw error;
       return data as Supplier[];
     },
