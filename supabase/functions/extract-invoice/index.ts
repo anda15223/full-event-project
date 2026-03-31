@@ -101,7 +101,7 @@ Return:
 If NOT an invoice: {"is_invoice":false,"confidence":0,"extraction_notes":"reason"}`;
 
 /* ── Call Claude via direct fetch (no SDK needed) ── */
-async function callClaude(apiKey: string, messages: Array<{ role: string; content: any }>, maxTokens = 2048): Promise<any> {
+async function callClaude(apiKey: string, messages: Array<{ role: string; content: any }>, maxTokens = 500): Promise<any> {
   console.log("Calling Claude API with model claude-sonnet-4-20250514...");
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
