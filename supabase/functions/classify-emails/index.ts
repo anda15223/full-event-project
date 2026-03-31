@@ -1,14 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const RequestSchema = z.object({
+  email_ids: z.array(z.string().uuid()).optional(),
+  batch_size: z.number().int().min(1).max(20).optional(),
+});
+
 const COMPANIES = [
   "M.C.A. Holding ApS",
-  "MCA Trading ApS", 
+  "MCA Trading ApS",
   "The Fish Project ApS",
   "Blue Fish ApS",
   "Aegean ApS",
@@ -87,55 +93,132 @@ Return ONLY valid JSON matching this schema:
   }
 }`;
 
+function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null): boolean {
+  const sample = (bodyHtml || bodyText || "").trim();
+  if (!sample) return true;
+  if (/^[A-Za-z0-9+/=\r\n\s]{180,}$/.test(sample) && !/[<>]/.test(sample)) return true;
+  const questionMarks = (sample.match(/\?/g) || []).length;
+  if (sample.length > 80 && questionMarks > Math.max(12, Math.floor(sample.length * 0.18))) return true;
+  return false;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email_ids, batch_size = 20 } = await req.json();
-    
+    const parsed = RequestSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { email_ids, batch_size = 5 } = parsed.data;
+    const safeBatchSize = Math.min(batch_size, 5);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
+
     if (!LOVABLE_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get unprocessed emails
-    let query = supabase.from("emails").select("*").eq("processed", false).limit(batch_size);
+    let query = supabase
+      .from("emails")
+      .select("*")
+      .eq("processed", false)
+      .order("received_at", { ascending: false })
+      .limit(safeBatchSize);
+
     if (email_ids && email_ids.length > 0) {
       query = supabase.from("emails").select("*").in("id", email_ids);
     }
-    
+
     const { data: emails, error: fetchError } = await query;
     if (fetchError) throw fetchError;
+
     if (!emails || emails.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No unprocessed emails found", processed: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ message: "No unprocessed emails found", processed: 0, errors: 0, results: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const results: Array<{ email_id: string; status: string; error?: string }> = [];
 
     for (const email of emails) {
       try {
-        // Use body_clean_text (AI-optimized) > body_text > empty
-        const bodySource = (email.body_clean_text || email.body_text || "").substring(0, 3000);
-        const emailContent = `
-Subject: ${email.subject || "(no subject)"}
-From: ${email.sender || "unknown"}
-Date: ${email.received_at || "unknown"}
-Has Attachments: ${email.has_attachments ? "yes" : "no"}
-${bodySource ? `Body:\n${bodySource}` : "(no body text available — classify based on subject and sender)"}
-`;
+        let bodyText = email.body_text as string | null;
+        let bodyHtml = email.body_html as string | null;
+        let bodyCleanText = email.body_clean_text as string | null;
+        let parseStatus = email.parse_status as string | null;
+
+        const needsParse =
+          parseStatus !== "parsed" ||
+          looksBrokenContent(bodyText, bodyHtml) ||
+          !(bodyCleanText || bodyText || bodyHtml);
+
+        if (needsParse) {
+          const { data: parsedBody, error: parseError } = await supabase.functions.invoke("fetch-email-body", {
+            body: { email_id: email.id, force: true },
+          });
+
+          if (parseError) {
+            results.push({ email_id: email.id, status: "error", error: `Parse failed: ${parseError.message}` });
+            continue;
+          }
+
+          bodyText = parsedBody?.body_text || null;
+          bodyHtml = parsedBody?.body_html || null;
+          bodyCleanText = parsedBody?.body_clean_text || null;
+          parseStatus = parsedBody?.parse_status || null;
+        }
+
+        if (parseStatus !== "parsed" && !(bodyCleanText || bodyText || bodyHtml)) {
+          results.push({ email_id: email.id, status: "error", error: "Email body parsing incomplete" });
+          continue;
+        }
+
+        const { data: attachments } = await supabase
+          .from("email_attachments")
+          .select("filename, mime_type, extracted_text, extracted_summary, document_type, is_inline")
+          .eq("email_id", email.id)
+          .eq("is_inline", false)
+          .limit(5);
+
+        const attachmentContext = (attachments || [])
+          .map((attachment) => {
+            const detail = attachment.extracted_summary || attachment.extracted_text || "";
+            return [
+              `Filename: ${attachment.filename || "Unnamed"}`,
+              `MIME type: ${attachment.mime_type || "unknown"}`,
+              attachment.document_type ? `Document type: ${attachment.document_type}` : null,
+              detail ? `Content:\n${detail.slice(0, 1500)}` : null,
+            ]
+              .filter(Boolean)
+              .join("\n");
+          })
+          .filter(Boolean)
+          .join("\n\n---\n\n");
+
+        const bodySource = (bodyCleanText || bodyText || "").substring(0, 5000);
+        const emailContent = [
+          `Subject: ${email.subject || "(no subject)"}`,
+          `From: ${email.sender || "unknown"}`,
+          `Date: ${email.received_at || "unknown"}`,
+          `Has Attachments: ${email.has_attachments ? "yes" : "no"}`,
+          bodySource ? `Body:\n${bodySource}` : "(no parsed body available)",
+          attachmentContext ? `Attachment context:\n${attachmentContext}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
 
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -161,86 +244,79 @@ ${bodySource ? `Body:\n${bodySource}` : "(no body text available — classify ba
 
         const aiData = await aiResponse.json();
         const content = aiData.choices?.[0]?.message?.content || "";
-        
-        // Parse JSON from response (handle markdown code blocks)
-        let parsed;
+
+        let classification;
         try {
           const jsonStr = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          parsed = JSON.parse(jsonStr);
+          classification = JSON.parse(jsonStr);
         } catch {
           console.error("Failed to parse AI response:", content);
           results.push({ email_id: email.id, status: "error", error: "Parse error" });
           continue;
         }
 
-        // Validate company
-        const company = COMPANIES.includes(parsed.company) ? parsed.company : "Unknown";
-        const needsReview = company === "Unknown" || (parsed.confidence && parsed.confidence < 0.7) || parsed.needs_review;
+        const company = COMPANIES.includes(classification.company) ? classification.company : "Unknown";
+        const needsReview = company === "Unknown" || (classification.confidence && classification.confidence < 0.7) || classification.needs_review;
 
-        // Update email record
         await supabase.from("emails").update({
-          classification: parsed.classification,
+          classification: classification.classification,
           company,
-          summary: parsed.summary,
-          action_required: parsed.action_required || false,
-          confidence: parsed.confidence || 0,
+          summary: classification.summary,
+          action_required: classification.action_required || false,
+          confidence: classification.confidence || 0,
           needs_review: needsReview,
-          review_reason: needsReview ? (parsed.review_reason || "Low confidence or unknown company") : null,
+          review_reason: needsReview ? (classification.review_reason || "Low confidence or unknown company") : null,
           processed: true,
-          language: parsed.language || "unknown",
+          language: classification.language || "unknown",
         }).eq("id", email.id);
 
-        // Create task if present
-        if (parsed.task && parsed.task.title) {
+        if (classification.task && classification.task.title) {
           await supabase.from("email_tasks").insert({
             email_id: email.id,
-            title: parsed.task.title,
+            title: classification.task.title,
             company,
-            priority: parsed.task.priority || "normal",
-            status: parsed.task.status || "to_do",
-            due_date: parsed.task.due_date || null,
-            owner: parsed.task.owner || "Alexandra",
-            notes: parsed.task.notes || null,
+            priority: classification.task.priority || "normal",
+            status: classification.task.status || "to_do",
+            due_date: classification.task.due_date || null,
+            owner: classification.task.owner || "Alexandra",
+            notes: classification.task.notes || null,
           });
         }
 
-        // Create invoice if present
-        if (parsed.invoice && parsed.classification === "invoice") {
+        if (classification.invoice && classification.classification === "invoice") {
           await supabase.from("email_invoices").insert({
             email_id: email.id,
             company,
-            supplier_name: parsed.invoice.supplier_name || null,
-            invoice_number: parsed.invoice.invoice_number || null,
-            invoice_date: parsed.invoice.invoice_date || null,
-            due_date: parsed.invoice.due_date || null,
-            amount: parsed.invoice.amount || null,
-            currency: parsed.invoice.currency || "DKK",
-            vat: parsed.invoice.vat || null,
-            attachment_present: parsed.invoice.attachment_present || false,
+            supplier_name: classification.invoice.supplier_name || null,
+            invoice_number: classification.invoice.invoice_number || null,
+            invoice_date: classification.invoice.invoice_date || null,
+            due_date: classification.invoice.due_date || null,
+            amount: classification.invoice.amount || null,
+            currency: classification.invoice.currency || "DKK",
+            vat: classification.invoice.vat || null,
+            attachment_present: classification.invoice.attachment_present || false,
           });
         }
 
         results.push({ email_id: email.id, status: "classified" });
-      } catch (e) {
-        console.error(`Error processing email ${email.id}:`, e);
-        results.push({ email_id: email.id, status: "error", error: e.message });
+      } catch (error) {
+        console.error(`Error processing email ${email.id}:`, error);
+        results.push({ email_id: email.id, status: "error", error: error instanceof Error ? error.message : "Unknown error" });
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        processed: results.filter(r => r.status === "classified").length,
-        errors: results.filter(r => r.status === "error").length,
-        results,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
-  } catch (e) {
-    console.error("Classification error:", e);
-    return new Response(
-      JSON.stringify({ error: e.message || "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({
+      processed: results.filter((result) => result.status === "classified").length,
+      errors: results.filter((result) => result.status === "error").length,
+      results,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Classification error:", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

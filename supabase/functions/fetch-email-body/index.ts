@@ -8,273 +8,424 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const RequestSchema = z.object({ email_id: z.string().uuid() });
+const RequestSchema = z.object({
+  email_id: z.string().uuid(),
+  force: z.boolean().optional(),
+});
 
-/* ── HTML → clean text for AI ── */
+const MAX_RFC822_BYTES = 12 * 1024 * 1024;
+const MAX_ATTACHMENT_TEXT_BYTES = 6 * 1024 * 1024;
+const MAX_SUMMARY_INPUT = 6000;
+
 function htmlToCleanText(html: string): string {
   return html
-    .replace(/<img[^>]*width\s*=\s*["']?1["']?[^>]*>/gi, "")
-    .replace(/<img[^>]*height\s*=\s*["']?1["']?[^>]*>/gi, "")
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<\/tr>/gi, "\n")
-    .replace(/<\/li>/gi, "\n")
-    .replace(/<\/h[1-6]>/gi, "\n\n")
-    .replace(/<\/td>/gi, " | ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, " ")
+    .replace(/<img[^>]*width\s*=\s*["']?1["']?[^>]*>/gi, " ")
+    .replace(/<img[^>]*height\s*=\s*["']?1["']?[^>]*>/gi, " ")
+    .replace(/<(br|\/p|\/div|\/tr|\/li|\/h[1-6])\b[^>]*>/gi, "\n")
+    .replace(/<\/?(table|tbody|thead|tfoot)\b[^>]*>/gi, "\n")
+    .replace(/<\/?td\b[^>]*>/gi, " | ")
+    .replace(/<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, "$2")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
     .replace(/&aelig;/gi, "æ")
     .replace(/&oslash;/gi, "ø")
     .replace(/&aring;/gi, "å")
-    .replace(/https?:\/\/[^\s]*click[^\s]*/gi, "[link]")
-    .replace(/https?:\/\/[^\s]*track[^\s]*/gi, "[link]")
+    .replace(/&AElig;/g, "Æ")
+    .replace(/&Oslash;/g, "Ø")
+    .replace(/&Aring;/g, "Å")
     .replace(/https?:\/\/[^\s]*unsubscribe[^\s]*/gi, "[unsubscribe]")
+    .replace(/https?:\/\/[^\s]*track[^\s]*/gi, "[tracking-link]")
+    .replace(/https?:\/\/[^\s]*click[^\s]*/gi, "[tracked-link]")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-/* ── Decode helpers ── */
-function decodeQuotedPrintable(input: string): Uint8Array {
-  const lines = input.replace(/=\r?\n/g, "").split(/\r?\n/);
-  const bytes: number[] = [];
-  for (const line of lines) {
-    for (let i = 0; i < line.length; i++) {
-      if (line[i] === "=" && i + 2 < line.length) {
-        const hex = line.substring(i + 1, i + 3);
-        const val = parseInt(hex, 16);
-        if (!isNaN(val)) { bytes.push(val); i += 2; continue; }
-      }
-      bytes.push(line.charCodeAt(i));
-    }
-    bytes.push(13, 10);
-  }
-  return new Uint8Array(bytes);
+function normalizeWhitespace(value: string | null | undefined): string {
+  return (value || "")
+    .replace(/\u0000/g, "")
+    .replace(/\r/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
-function decodeBase64Bytes(input: string): Uint8Array {
-  const clean = input.replace(/[\r\n\s]/g, "");
-  const binary = atob(clean);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null): boolean {
+  const sample = (bodyHtml || bodyText || "").trim();
+  if (!sample) return true;
+  if (/^[A-Za-z0-9+/=\r\n\s]{180,}$/.test(sample) && !/[<>]/.test(sample)) return true;
+  const questionMarks = (sample.match(/\?/g) || []).length;
+  if (sample.length > 80 && questionMarks > Math.max(12, Math.floor(sample.length * 0.18))) return true;
+  if (!bodyHtml && /content-type:|mime-version:|content-transfer-encoding:/i.test(sample)) return true;
+  return false;
 }
 
-function decodeWithCharset(bytes: Uint8Array, charset: string): string {
-  const cs = (charset || "utf-8").toLowerCase().replace(/[^a-z0-9-]/g, "");
-  const map: Record<string, string> = {
-    "utf8": "utf-8", "iso88591": "iso-8859-1", "latin1": "iso-8859-1",
-    "windows1252": "windows-1252", "cp1252": "windows-1252",
-    "iso885915": "iso-8859-15", "usascii": "utf-8", "ascii": "utf-8",
-  };
-  const resolved = map[cs.replace(/-/g, "")] || cs || "utf-8";
-  try { return new TextDecoder(resolved, { fatal: true }).decode(bytes); }
-  catch { try { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); }
-  catch { return new TextDecoder("iso-8859-1").decode(bytes); } }
-}
-
-/* ── IMAP helpers ── */
 function concatU8(arrays: Uint8Array[], total: number): Uint8Array {
-  const r = new Uint8Array(total); let o = 0;
-  for (const a of arrays) { r.set(a, o); o += a.length; }
-  return r;
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const part of arrays) {
+    result.set(part, offset);
+    offset += part.length;
+  }
+  return result;
 }
 
-function u8Contains(data: Uint8Array, s: string): boolean {
-  const sb = new TextEncoder().encode(s);
-  outer: for (let i = 0; i <= data.length - sb.length; i++) {
-    for (let j = 0; j < sb.length; j++) if (data[i + j] !== sb[j]) continue outer;
+function u8Contains(data: Uint8Array, text: string): boolean {
+  const needle = new TextEncoder().encode(text);
+  outer: for (let i = 0; i <= data.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (data[i + j] !== needle[j]) continue outer;
+    }
     return true;
   }
   return false;
 }
 
-async function readRaw(conn: Deno.Conn, isDone: (d: Uint8Array) => boolean, max = 512000): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = []; let total = 0;
-  const buf = new Uint8Array(32768);
-  for (let i = 0; i < 500; i++) {
+async function readRaw(conn: Deno.Conn, isDone: (data: Uint8Array) => boolean, max = MAX_RFC822_BYTES): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const buf = new Uint8Array(65536);
+
+  for (let i = 0; i < 1200; i++) {
     const n = await conn.read(buf);
     if (n === null) break;
-    const c = buf.slice(0, n); chunks.push(c); total += n;
-    if (isDone(concatU8(chunks, total)) || total > max) break;
+    const chunk = buf.slice(0, n);
+    chunks.push(chunk);
+    total += n;
+    const merged = concatU8(chunks, total);
+    if (isDone(merged) || total > max) break;
   }
+
   return concatU8(chunks, total);
 }
 
-async function imapCmd(conn: Deno.Conn, tag: string, cmd: string, max = 512000): Promise<Uint8Array> {
+async function imapCmd(conn: Deno.Conn, tag: string, cmd: string, max = MAX_RFC822_BYTES): Promise<Uint8Array> {
   await conn.write(new TextEncoder().encode(`${tag} ${cmd}\r\n`));
-  return readRaw(conn, d => u8Contains(d, `${tag} OK`) || u8Contains(d, `${tag} NO`) || u8Contains(d, `${tag} BAD`), max);
+  return readRaw(
+    conn,
+    (data) => u8Contains(data, `${tag} OK`) || u8Contains(data, `${tag} NO`) || u8Contains(data, `${tag} BAD`),
+    max,
+  );
 }
 
 function latin1(data: Uint8Array): string {
   return new TextDecoder("iso-8859-1").decode(data);
 }
 
-function decodeMimePart(raw: string, encoding: string, charset: string): string {
-  const enc = encoding.toLowerCase();
-  let bytes: Uint8Array;
-  if (enc === "base64") bytes = decodeBase64Bytes(raw);
-  else if (enc === "quoted-printable") bytes = decodeQuotedPrintable(raw);
-  else {
-    bytes = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+function extractBinaryLiteral(rawBytes: Uint8Array, ascii: string): Uint8Array | null {
+  const match = ascii.match(/\{(\d+)\}\r\n/);
+  if (!match) return null;
+  const size = parseInt(match[1], 10);
+  const start = ascii.indexOf(match[0]) + match[0].length;
+  return rawBytes.slice(start, start + size);
+}
+
+function decodeWithCharset(bytes: Uint8Array, charset?: string | null): string {
+  const normalized = (charset || "utf-8").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const map: Record<string, string> = {
+    utf8: "utf-8",
+    iso88591: "iso-8859-1",
+    latin1: "iso-8859-1",
+    windows1252: "windows-1252",
+    cp1252: "windows-1252",
+    usascii: "utf-8",
+    ascii: "utf-8",
+  };
+  const resolved = map[normalized.replace(/-/g, "")] || normalized || "utf-8";
+
+  try {
+    return new TextDecoder(resolved, { fatal: true }).decode(bytes);
+  } catch {
+    try {
+      return new TextDecoder("utf-8").decode(bytes);
+    } catch {
+      return new TextDecoder("iso-8859-1").decode(bytes);
+    }
   }
-  return decodeWithCharset(bytes, charset);
 }
 
-function extractLiteral(ascii: string): string | null {
-  const m = ascii.match(/\{(\d+)\}\r\n/);
-  if (!m) return null;
-  const size = parseInt(m[1], 10);
-  const start = ascii.indexOf(m[0]) + m[0].length;
-  return ascii.substring(start, start + size);
+function extractCharsetFromRawEmail(rawEmail: Uint8Array): string {
+  const preview = latin1(rawEmail.slice(0, Math.min(rawEmail.length, 16384)));
+  const match = preview.match(/charset\s*=\s*["']?([^"';\r\n]+)/i);
+  return match?.[1] || "utf-8";
 }
 
-/* Auto-detect encoding from content if BODYSTRUCTURE regex fails */
-function detectEncoding(content: string): string {
-  const trimmed = content.trim();
-  // Base64: lines of alphanumeric+/+= chars, typically 76 chars wide
-  if (/^[A-Za-z0-9+/=\r\n\s]+$/.test(trimmed) && trimmed.length > 40) {
-    // Check if most lines are ~76 chars (base64 hallmark)
-    const lines = trimmed.split(/\r?\n/).filter(l => l.trim().length > 0);
-    const longLines = lines.filter(l => l.trim().length >= 60);
-    if (longLines.length > lines.length * 0.5) return "base64";
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
+function bytesFromUnknown(input: unknown): Uint8Array {
+  if (input instanceof Uint8Array) return input;
+  if (input instanceof ArrayBuffer) return new Uint8Array(input);
+  if (ArrayBuffer.isView(input)) return new Uint8Array(input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength));
+  if (typeof input === "string") {
+    try {
+      const binary = atob(input.replace(/[\r\n\s]/g, ""));
+      return Uint8Array.from(Array.from(binary, (char) => char.charCodeAt(0)));
+    } catch {
+      return new TextEncoder().encode(input);
+    }
   }
-  // Quoted-printable: contains =XX sequences
-  if (/=[0-9A-F]{2}/i.test(trimmed) && (trimmed.includes("=\r\n") || trimmed.includes("=\n") || (trimmed.match(/=[0-9A-F]{2}/gi) || []).length > 3)) {
-    return "quoted-printable";
+  return new Uint8Array();
+}
+
+function normalizeContentId(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.replace(/[<>]/g, "").trim() || null;
+}
+
+function safeFilename(filename: string | null | undefined, fallback: string): string {
+  return (filename || fallback).replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceCidSources(html: string, cidMap: Map<string, string>): string {
+  let output = html;
+  for (const [cid, url] of cidMap.entries()) {
+    const escaped = escapeRegex(cid);
+    output = output.replace(new RegExp(`cid:<${escaped}>`, "gi"), url);
+    output = output.replace(new RegExp(`cid:${escaped}`, "gi"), url);
   }
-  return "7bit";
+  return output;
 }
 
-/* Extract encoding for a specific MIME type from BODYSTRUCTURE */
-function findPartEncoding(bs: string, mimeType: "PLAIN" | "HTML"): string {
-  // BODYSTRUCTURE part format: ("TEXT" "PLAIN" ("CHARSET" "...") NIL NIL "BASE64" size)
-  // We need to find the encoding field which comes after: type subtype params id description encoding
-  const pattern = new RegExp(
-    `"TEXT"\\s+"${mimeType}"\\s+` +     // type subtype
-    `(?:\\([^)]*\\)|NIL)\\s+` +          // params
-    `(?:"[^"]*"|NIL)\\s+` +             // id
-    `(?:"[^"]*"|NIL)\\s+` +             // description
-    `"(7BIT|8BIT|QUOTED-PRINTABLE|BASE64)"`, // encoding
-    "i"
-  );
-  const m = bs.match(pattern);
-  return m ? m[1].toLowerCase() : "";
+function buildStoragePath(emailId: string, filename: string, index: number, isInline: boolean): string {
+  const folder = isInline ? "inline" : "files";
+  return `${emailId}/${folder}/${index}-${safeFilename(filename, `attachment-${index}`)}`;
 }
 
-/* ── Parse BODYSTRUCTURE for attachment metadata ── */
-interface AttachmentMeta {
-  partNum: string;
-  filename: string;
-  mimeType: string;
-  size: number;
-  disposition: string;
-  isInline: boolean;
-  cid: string | null;
+function detectDocumentType(mimeType: string, filename: string): string {
+  const lowerName = filename.toLowerCase();
+  const lowerMime = mimeType.toLowerCase();
+  if (lowerMime.includes("pdf")) return "pdf";
+  if (lowerMime.includes("wordprocessingml") || lowerName.endsWith(".docx")) return "docx";
+  if (lowerMime.includes("spreadsheetml") || lowerMime.includes("excel") || lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls") || lowerName.endsWith(".csv")) return "spreadsheet";
+  if (lowerMime.startsWith("image/")) return "image";
+  if (lowerMime.startsWith("text/")) return "text";
+  return "file";
 }
 
-function parseAttachmentsFromBS(bs: string): AttachmentMeta[] {
-  const attachments: AttachmentMeta[] = [];
-  const upper = bs.toUpperCase();
-  
-  // Find attachment parts by looking for "ATTACHMENT" or non-text parts with filenames
-  // Match patterns like ("APPLICATION" "PDF" ... "ATTACHMENT" ("FILENAME" "invoice.pdf"))
-  // or ("IMAGE" "JPEG" ... )
-  
-  // Strategy: find all non-text MIME type declarations and extract info
-  // Pattern for basic part: ("TYPE" "SUBTYPE" (params) ID DESC ENCODING SIZE)
-  const partRegex = /\("([A-Z]+)"\s+"([A-Z0-9._+-]+)"/gi;
-  let match;
-  let partIndex = 0;
-  
-  while ((match = partRegex.exec(bs)) !== null) {
-    const type = match[1].toLowerCase();
-    const subtype = match[2].toLowerCase();
-    
-    if (type === "text" || type === "multipart") continue;
-    
-    partIndex++;
-    const afterMatch = bs.substring(match.index);
-    
-    // Try to extract filename
-    let filename = `attachment_${partIndex}`;
-    const fnMatch = afterMatch.match(/"(?:FILENAME|NAME)"\s+"([^"]+)"/i);
-    if (fnMatch) filename = fnMatch[1];
-    
-    // Try to extract size
-    let size = 0;
-    const sizeMatch = afterMatch.match(/"(?:BASE64|QUOTED-PRINTABLE|7BIT|8BIT)"\s+(\d+)/i);
-    if (sizeMatch) size = parseInt(sizeMatch[1], 10);
-    
-    // Check disposition
-    const isInline = /\bINLINE\b/i.test(afterMatch.substring(0, 200));
-    const disposition = isInline ? "inline" : "attachment";
-    
-    // Check CID
-    let cid: string | null = null;
-    const cidMatch = afterMatch.match(/<([^>]+)>/);
-    if (cidMatch && isInline) cid = cidMatch[1];
-    
-    // Determine part number heuristically
-    // For multipart/mixed: attachments are usually part 2, 3, etc.
-    // We'll assign based on order found
-    const partNum = String(partIndex + 1); // text is usually 1, attachments start at 2
-    
-    attachments.push({
-      partNum,
-      filename,
-      mimeType: `${type}/${subtype}`,
-      size,
-      disposition,
-      isInline,
-      cid,
+async function extractPdfText(bytes: Uint8Array): Promise<string | null> {
+  try {
+    const pdfjs = await import("npm:pdfjs-dist@4.10.38/legacy/build/pdf.mjs");
+    const task = pdfjs.getDocument({
+      data: bytes,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      disableFontFace: true,
     });
+    const pdf = await task.promise;
+    const pages: string[] = [];
+
+    for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+      const page = await pdf.getPage(pageNo);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item: any) => (typeof item?.str === "string" ? item.str : ""))
+        .join(" ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+      if (pageText) pages.push(pageText);
+    }
+
+    return pages.join("\n\n").trim() || null;
+  } catch (error) {
+    console.error("PDF extraction failed:", error);
+    return null;
   }
-  
-  return attachments;
+}
+
+async function extractDocxText(bytes: Uint8Array): Promise<string | null> {
+  try {
+    const mammoth = await import("npm:mammoth@1.8.0");
+    const result = await mammoth.extractRawText({ arrayBuffer: toArrayBuffer(bytes) });
+    return normalizeWhitespace(result.value) || null;
+  } catch (error) {
+    console.error("DOCX extraction failed:", error);
+    return null;
+  }
+}
+
+async function extractSpreadsheetText(bytes: Uint8Array): Promise<string | null> {
+  try {
+    const XLSX = await import("npm:xlsx@0.18.5");
+    const workbook = XLSX.read(bytes, { type: "array" });
+    const sheets = workbook.SheetNames.map((sheetName: string) => {
+      const sheet = workbook.Sheets[sheetName];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false }).trim();
+      return csv ? `Sheet: ${sheetName}\n${csv}` : "";
+    }).filter(Boolean);
+    return normalizeWhitespace(sheets.join("\n\n")) || null;
+  } catch (error) {
+    console.error("Spreadsheet extraction failed:", error);
+    return null;
+  }
+}
+
+async function extractAttachmentText(bytes: Uint8Array, mimeType: string, filename: string): Promise<string | null> {
+  if (!bytes.length || bytes.length > MAX_ATTACHMENT_TEXT_BYTES) return null;
+
+  const lowerMime = mimeType.toLowerCase();
+  const lowerName = filename.toLowerCase();
+
+  if (lowerMime === "application/pdf" || lowerName.endsWith(".pdf")) {
+    return extractPdfText(bytes);
+  }
+
+  if (lowerMime.includes("wordprocessingml") || lowerName.endsWith(".docx")) {
+    return extractDocxText(bytes);
+  }
+
+  if (
+    lowerMime.includes("spreadsheetml") ||
+    lowerMime.includes("excel") ||
+    lowerName.endsWith(".xlsx") ||
+    lowerName.endsWith(".xls") ||
+    lowerName.endsWith(".csv")
+  ) {
+    return extractSpreadsheetText(bytes);
+  }
+
+  if (lowerMime.startsWith("text/") || lowerMime.includes("json") || lowerMime.includes("xml")) {
+    const charsetMatch = mimeType.match(/charset=([^;]+)/i);
+    return normalizeWhitespace(decodeWithCharset(bytes, charsetMatch?.[1] || "utf-8")) || null;
+  }
+
+  return null;
+}
+
+async function summarizeAttachment(
+  apiKey: string | null,
+  filename: string,
+  mimeType: string,
+  extractedText: string | null,
+): Promise<{ extracted_summary: string | null; document_type: string | null }> {
+  const fallbackType = detectDocumentType(mimeType, filename);
+  if (!apiKey || !extractedText) {
+    return { extracted_summary: null, document_type: fallbackType };
+  }
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Return only valid JSON with keys document_type and extracted_summary. document_type should be one of: invoice, contract, report, spreadsheet, statement, receipt, letter, image, other. extracted_summary must be concise business English.",
+          },
+          {
+            role: "user",
+            content: `Filename: ${filename}\nMIME type: ${mimeType}\n\nAttachment text:\n${extractedText.slice(0, MAX_SUMMARY_INPUT)}`,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) throw new Error(`AI ${response.status}`);
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content || "{}";
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    return {
+      extracted_summary: typeof parsed.extracted_summary === "string" ? parsed.extracted_summary.trim() : null,
+      document_type: typeof parsed.document_type === "string" ? parsed.document_type.trim() : fallbackType,
+    };
+  } catch (error) {
+    console.error("Attachment summarization failed:", error);
+    return { extracted_summary: null, document_type: fallbackType };
+  }
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   let conn: Deno.Conn | null = null;
+
   try {
     const body = await req.json().catch(() => ({}));
     const parsed = RequestSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
+    const { email_id, force = false } = parsed.data;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: email, error: dbErr } = await supabase
+    const { data: email, error: emailError } = await supabase
       .from("emails")
-      .select("message_id, body_text, body_html, parse_status")
-      .eq("id", parsed.data.email_id)
+      .select("id, message_id, body_text, body_html, body_clean_text, parse_status, has_attachments")
+      .eq("id", email_id)
       .single();
 
-    if (dbErr || !email) {
-      return new Response(JSON.stringify({ error: "Email not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (emailError || !email) {
+      return new Response(JSON.stringify({ error: "Email not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // If already parsed, return cached
-    if (email.parse_status === "parsed" && (email.body_html || (email.body_text && email.body_text.length > 20))) {
-      return new Response(JSON.stringify({
-        body_text: email.body_text,
-        body_html: email.body_html,
-        parse_status: "parsed",
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    let existingAttachmentCount = 0;
+    if (email.has_attachments) {
+      const { count } = await supabase
+        .from("email_attachments")
+        .select("id", { count: "exact", head: true })
+        .eq("email_id", email_id);
+      existingAttachmentCount = count || 0;
+    }
+
+    const hasUsableCache =
+      !force &&
+      email.parse_status === "parsed" &&
+      !looksBrokenContent(email.body_text, email.body_html) &&
+      (!email.has_attachments || existingAttachmentCount > 0);
+
+    if (hasUsableCache) {
+      return new Response(
+        JSON.stringify({
+          body_text: email.body_text,
+          body_html: email.body_html,
+          body_clean_text: email.body_clean_text,
+          parse_status: "parsed",
+          has_attachments: email.has_attachments,
+          attachment_count: existingAttachmentCount,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const messageId = email.message_id;
+    if (!messageId) {
+      await supabase.from("emails").update({ parse_status: "failed", parse_error: "Missing message_id" }).eq("id", email_id);
+      return new Response(JSON.stringify({ error: "Email has no message id" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
@@ -283,163 +434,179 @@ serve(async (req) => {
     const IMAP_PORT = parseInt(Deno.env.get("IMAP_PORT") || "993", 10);
 
     if (!IMAP_EMAIL || !IMAP_PASSWORD) {
-      return new Response(JSON.stringify({ error: "IMAP credentials not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP credentials not configured" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
-    await readRaw(conn, d => u8Contains(d, "\r\n"), 4096);
+    await readRaw(conn, (data) => u8Contains(data, "\r\n"), 4096);
 
     const loginRes = await imapCmd(conn, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
     if (!u8Contains(loginRes, "A1 OK")) {
-      return new Response(JSON.stringify({ error: "IMAP login failed" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "IMAP login failed" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     await imapCmd(conn, "A2", "SELECT INBOX", 4096);
 
-    // Find UID
     let uid: string | null = null;
-    const messageId = email.message_id || "";
     if (messageId.startsWith("imap-uid-")) {
       uid = messageId.replace("imap-uid-", "");
     } else if (messageId.startsWith("<") || messageId.includes("@")) {
-      const searchRes = latin1(await imapCmd(conn, "A3", `UID SEARCH HEADER Message-ID "${messageId}"`, 4096));
-      const searchLine = searchRes.split("\r\n").find(l => l.startsWith("* SEARCH"));
+      const searchRes = latin1(await imapCmd(conn, "A3", `UID SEARCH HEADER Message-ID "${messageId}"`, 8192));
+      const searchLine = searchRes.split("\r\n").find((line) => line.startsWith("* SEARCH"));
       const uids = searchLine ? searchLine.replace("* SEARCH ", "").trim().split(" ").filter(Boolean) : [];
       uid = uids[0] || null;
     }
 
     if (!uid) {
       await imapCmd(conn, "A99", "LOGOUT", 1024);
-      conn.close(); conn = null;
-      await supabase.from("emails").update({ parse_status: "failed", parse_error: "Email not found on server" }).eq("id", parsed.data.email_id);
-      return new Response(JSON.stringify({ error: "Could not find email on server" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      conn.close();
+      conn = null;
+      await supabase.from("emails").update({ parse_status: "failed", parse_error: "Email not found on server" }).eq("id", email_id);
+      return new Response(JSON.stringify({ error: "Could not find email on server" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Fetch BODYSTRUCTURE (lightweight - no content downloaded)
-    const bsRes = latin1(await imapCmd(conn, "B1", `UID FETCH ${uid} (BODYSTRUCTURE)`, 16384));
-    console.log("BODYSTRUCTURE length:", bsRes.length);
-
-    const bsUpper = bsRes.toUpperCase();
-    const isMultipart = bsUpper.includes('"ALTERNATIVE"') || bsUpper.includes('"MIXED"') || bsUpper.includes('"RELATED"');
-    const hasAttachments = bsUpper.includes('"ATTACHMENT"') || (bsUpper.includes('"MIXED"') && (bsUpper.includes('"APPLICATION"') || bsUpper.includes('"IMAGE"')));
-    
-    // Extract charset
-    let charset = "utf-8";
-    const charsetMatch = bsRes.match(/"CHARSET"\s+"([^"]+)"/i);
-    if (charsetMatch) charset = charsetMatch[1];
-
-    // Parse attachment metadata from BODYSTRUCTURE
-    const attachmentMetas = hasAttachments ? parseAttachmentsFromBS(bsRes) : [];
-    console.log(`Found ${attachmentMetas.length} attachments in BODYSTRUCTURE`);
-
-    // Fetch text parts only (no attachments - they're fetched on demand)
-    let bodyText = "";
-    let bodyHtml = "";
-
-    if (isMultipart) {
-      const hasMixed = bsUpper.includes('"MIXED"');
-      const hasAlternative = bsUpper.includes('"ALTERNATIVE"');
-      const textPartNum = hasMixed && hasAlternative ? "1.1" : "1";
-      const htmlPartNum = hasMixed && hasAlternative ? "1.2" : "2";
-
-      // Fetch text/plain
-      try {
-        const textRes = await imapCmd(conn, "T1", `UID FETCH ${uid} (BODY.PEEK[${textPartNum}])`, 256000);
-        const textContent = extractLiteral(latin1(textRes));
-        if (textContent) {
-          const enc = findPartEncoding(bsRes, "PLAIN") || detectEncoding(textContent);
-          console.log(`Text encoding: ${enc}, content length: ${textContent.length}`);
-          bodyText = decodeMimePart(textContent, enc, charset);
-        }
-      } catch (e) { console.log("Text part fetch error:", e); }
-
-      // Fetch text/html
-      try {
-        const htmlRes = await imapCmd(conn, "T2", `UID FETCH ${uid} (BODY.PEEK[${htmlPartNum}])`, 256000);
-        const htmlContent = extractLiteral(latin1(htmlRes));
-        if (htmlContent) {
-          const enc = findPartEncoding(bsRes, "HTML") || detectEncoding(htmlContent);
-          console.log(`HTML encoding: ${enc}, content length: ${htmlContent.length}`);
-          bodyHtml = decodeMimePart(htmlContent, enc, charset);
-        }
-      } catch (e) { console.log("HTML part fetch error:", e); }
-
-      // Fallback
-      if (!bodyText && !bodyHtml) {
-        try {
-          const fbRes = await imapCmd(conn, "T3", `UID FETCH ${uid} (BODY.PEEK[1])`, 256000);
-          const fbContent = extractLiteral(latin1(fbRes));
-          if (fbContent) {
-            const enc = detectEncoding(fbContent);
-            const decoded = decodeMimePart(fbContent, enc, charset);
-            if (decoded.includes("<") && decoded.includes(">")) bodyHtml = decoded;
-            else bodyText = decoded;
-          }
-        } catch (e) { console.log("Fallback fetch error:", e); }
-      }
-    } else {
-      const textRes = await imapCmd(conn, "T1", `UID FETCH ${uid} (BODY.PEEK[TEXT])`, 256000);
-      const textContent = extractLiteral(latin1(textRes));
-      if (textContent) {
-        const enc = detectEncoding(textContent);
-        const decoded = decodeMimePart(textContent, enc, charset);
-        if (bsUpper.includes('"HTML"')) bodyHtml = decoded;
-        else bodyText = decoded;
-      }
-    }
-
-    // Logout
+    const rawFetchBytes = await imapCmd(conn, "R1", `UID FETCH ${uid} (RFC822)`, MAX_RFC822_BYTES);
     await imapCmd(conn, "A99", "LOGOUT", 1024);
-    conn.close(); conn = null;
+    conn.close();
+    conn = null;
 
-    const bodyCleanText = bodyHtml ? htmlToCleanText(bodyHtml) : bodyText;
+    const rawAscii = latin1(rawFetchBytes);
+    const rawEmail = extractBinaryLiteral(rawFetchBytes, rawAscii);
 
-    // Save attachment metadata to DB (content NOT downloaded yet)
-    if (attachmentMetas.length > 0) {
-      // Delete old attachment records for this email
-      await supabase.from("email_attachments").delete().eq("email_id", parsed.data.email_id);
-      
-      const records = attachmentMetas.map(att => ({
-        email_id: parsed.data.email_id,
-        filename: att.filename,
-        mime_type: att.mimeType,
-        size: att.size,
-        content_disposition: att.disposition,
-        is_inline: att.isInline,
-        cid: att.cid,
-        part_number: att.partNum,
-        storage_path: null, // Not downloaded yet
-        parse_status: "pending", // Will be fetched on demand
-      }));
-
-      const { error: attErr } = await supabase.from("email_attachments").insert(records);
-      if (attErr) console.error("Failed to save attachment metadata:", attErr);
+    if (!rawEmail || rawEmail.length === 0) {
+      await supabase.from("emails").update({ parse_status: "failed", parse_error: "Could not extract RFC822 message" }).eq("id", email_id);
+      return new Response(JSON.stringify({ error: "Could not extract raw email" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Update email record
+    const charset = extractCharsetFromRawEmail(rawEmail);
+    const { default: PostalMime } = await import("npm:postal-mime");
+    const parsedEmail = await PostalMime.parse(rawEmail, {
+      attachmentEncoding: "arraybuffer",
+      rfc822Attachments: true,
+      forceRfc822Attachments: false,
+    }) as any;
+
+    let bodyText = normalizeWhitespace(parsedEmail.text || "");
+    let bodyHtml = typeof parsedEmail.html === "string" ? parsedEmail.html : parsedEmail.html ? String(parsedEmail.html) : "";
+    const attachments = Array.isArray(parsedEmail.attachments) ? parsedEmail.attachments : [];
+
+    await supabase.from("email_attachments").delete().eq("email_id", email_id);
+
+    const cidMap = new Map<string, string>();
+    const attachmentRecords: Array<Record<string, unknown>> = [];
+
+    for (let index = 0; index < attachments.length; index++) {
+      const attachment = attachments[index] as any;
+      const fileBytes = bytesFromUnknown(attachment.content);
+      const filename = safeFilename(attachment.filename, `attachment-${index + 1}`);
+      const mimeType = attachment.mimeType || "application/octet-stream";
+      const isInline = attachment.disposition === "inline" || attachment.related === true;
+      const cid = normalizeContentId(attachment.contentId);
+      const storagePath = buildStoragePath(email_id, filename, index + 1, isInline);
+      const publicUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${storagePath}`;
+
+      let parseStatus = "stored";
+      let parseError: string | null = null;
+      let extractedText: string | null = null;
+      let extractedSummary: string | null = null;
+      let documentType: string | null = detectDocumentType(mimeType, filename);
+
+      const { error: uploadError } = await supabase.storage
+        .from("email-attachments")
+        .upload(storagePath, fileBytes, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        parseStatus = "failed";
+        parseError = uploadError.message;
+      } else {
+        extractedText = await extractAttachmentText(fileBytes, mimeType, filename);
+        const summary = await summarizeAttachment(lovableApiKey, filename, mimeType, extractedText);
+        extractedSummary = summary.extracted_summary;
+        documentType = summary.document_type || documentType;
+
+        if (cid) cidMap.set(cid, publicUrl);
+      }
+
+      attachmentRecords.push({
+        email_id,
+        filename,
+        mime_type: mimeType,
+        size: fileBytes.byteLength,
+        content_disposition: attachment.disposition || (isInline ? "inline" : "attachment"),
+        is_inline: isInline,
+        cid,
+        part_number: null,
+        storage_path: uploadError ? null : storagePath,
+        extracted_text: extractedText,
+        extracted_summary: extractedSummary,
+        document_type: documentType,
+        parse_status: parseStatus,
+        parse_error: parseError,
+      });
+    }
+
+    if (bodyHtml && cidMap.size > 0) {
+      bodyHtml = replaceCidSources(bodyHtml, cidMap);
+    }
+
+    const bodyCleanText = normalizeWhitespace(bodyHtml ? htmlToCleanText(bodyHtml) : bodyText);
+    const parseSucceeded = Boolean(bodyText || bodyHtml || attachmentRecords.length > 0);
+
+    if (attachmentRecords.length > 0) {
+      const { error: attachmentInsertError } = await supabase.from("email_attachments").insert(attachmentRecords as any);
+      if (attachmentInsertError) {
+        console.error("Failed to save attachment records:", attachmentInsertError);
+      }
+    }
+
     await supabase.from("emails").update({
       body_text: bodyText || bodyCleanText || null,
       body_html: bodyHtml || null,
       body_clean_text: bodyCleanText || null,
       charset,
-      parse_status: (bodyText || bodyHtml) ? "parsed" : "failed",
-      parse_error: (bodyText || bodyHtml) ? null : "Could not extract body content",
-      has_attachments: attachmentMetas.length > 0,
-    }).eq("id", parsed.data.email_id);
+      parse_status: parseSucceeded ? "parsed" : "failed",
+      parse_error: parseSucceeded ? null : "Could not parse MIME content",
+      has_attachments: attachmentRecords.length > 0,
+    }).eq("id", email_id);
 
     return new Response(JSON.stringify({
-      body_text: bodyText || bodyCleanText,
-      body_html: bodyHtml,
-      body_clean_text: bodyCleanText,
-      parse_status: (bodyText || bodyHtml) ? "parsed" : "failed",
-      has_attachments: attachmentMetas.length > 0,
-      attachment_count: attachmentMetas.length,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
+      body_text: bodyText || bodyCleanText || null,
+      body_html: bodyHtml || null,
+      body_clean_text: bodyCleanText || null,
+      parse_status: parseSucceeded ? "parsed" : "failed",
+      has_attachments: attachmentRecords.length > 0,
+      attachment_count: attachmentRecords.length,
+    }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Fetch email body error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } finally {
-    if (conn) { try { conn.close(); } catch { /* */ } }
+    if (conn) {
+      try {
+        conn.close();
+      } catch {
+        // ignore
+      }
+    }
   }
 });
