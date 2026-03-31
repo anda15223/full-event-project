@@ -7,7 +7,7 @@ import {
 import {
   LayoutDashboard, Brain, FolderOpen, FileText,
   ListTodo, ClipboardList, AlertTriangle, Settings,
-  PanelLeft, Zap, Globe, Wrench,
+  PanelLeft, Zap, Globe, Wrench, BookOpen,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ChatPanel from "@/components/ChatPanel";
@@ -21,6 +21,7 @@ const navItems = [
   { icon: Wrench, label: "Operations", path: "/agent/operations", color: "bg-agent-purple" },
   { icon: Globe, label: "Romania", path: "/agent/romania", color: "bg-agent-blue" },
   { icon: ClipboardList, label: "Non-Email Tasks", path: "/tasks", color: "bg-agent-gray" },
+  { icon: BookOpen, label: "Ledger", path: "/ledger", color: "bg-agent-green" },
   { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
 ];
 
