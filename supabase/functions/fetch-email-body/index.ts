@@ -75,34 +75,33 @@ function concatU8(arrays: Uint8Array[], total: number): Uint8Array {
   return result;
 }
 
-function u8Contains(data: Uint8Array, text: string): boolean {
-  const needle = new TextEncoder().encode(text);
-  outer: for (let i = 0; i <= data.length - needle.length; i++) {
-    for (let j = 0; j < needle.length; j++) { if (data[i + j] !== needle[j]) continue outer; }
-    return true;
-  }
-  return false;
+function appendTail(tail: string, chunk: Uint8Array, decoder: TextDecoder, maxChars = 8192): string {
+  const next = tail + decoder.decode(chunk, { stream: true });
+  return next.length > maxChars ? next.slice(-maxChars) : next;
 }
 
-async function readRaw(conn: Deno.Conn, isDone: (data: Uint8Array) => boolean, max = MAX_RFC822_BYTES): Promise<Uint8Array> {
+async function readRaw(conn: Deno.Conn, isDone: (tail: string) => boolean, max = MAX_RFC822_BYTES): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   let total = 0;
   const buf = new Uint8Array(65536);
+  const decoder = new TextDecoder("iso-8859-1");
+  let tail = "";
   for (let i = 0; i < 1200; i++) {
     const n = await conn.read(buf);
     if (n === null) break;
     const chunk = buf.slice(0, n);
     chunks.push(chunk);
     total += n;
-    const merged = concatU8(chunks, total);
-    if (isDone(merged) || total > max) break;
+    tail = appendTail(tail, chunk, decoder);
+    if (isDone(tail) || total > max) break;
   }
+  decoder.decode();
   return concatU8(chunks, total);
 }
 
 async function imapCmd(conn: Deno.Conn, tag: string, cmd: string, max = MAX_RFC822_BYTES): Promise<Uint8Array> {
   await conn.write(new TextEncoder().encode(`${tag} ${cmd}\r\n`));
-  return readRaw(conn, (data) => u8Contains(data, `${tag} OK`) || u8Contains(data, `${tag} NO`) || u8Contains(data, `${tag} BAD`), max);
+  return readRaw(conn, (tail) => tail.includes(`${tag} OK`) || tail.includes(`${tag} NO`) || tail.includes(`${tag} BAD`), max);
 }
 
 function latin1(data: Uint8Array): string { return new TextDecoder("iso-8859-1").decode(data); }
@@ -119,10 +118,6 @@ function extractCharsetFromRawEmail(rawEmail: Uint8Array): string {
   const preview = latin1(rawEmail.slice(0, Math.min(rawEmail.length, 16384)));
   const match = preview.match(/charset\s*=\s*["']?([^"';\r\n]+)/i);
   return match?.[1] || "utf-8";
-}
-
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
 }
 
 function bytesFromUnknown(input: unknown): Uint8Array {
@@ -254,10 +249,10 @@ serve(async (req) => {
     }
 
     conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
-    await readRaw(conn, (data) => u8Contains(data, "\r\n"), 4096);
+    await readRaw(conn, (tail) => tail.includes("\r\n"), 4096);
 
     const loginRes = await imapCmd(conn, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
-    if (!u8Contains(loginRes, "A1 OK")) {
+    if (!latin1(loginRes).includes("A1 OK")) {
       return new Response(JSON.stringify({ error: "IMAP login failed" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
