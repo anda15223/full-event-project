@@ -315,6 +315,11 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                     <div className="text-xs text-muted-foreground">
                       <span className="font-semibold text-foreground">Subject:</span> {emailInfo.subject}
                     </div>
+                    {emailInfo.received_at && (
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Date:</span> {new Date(emailInfo.received_at).toLocaleDateString("da-DK", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="flex-1 p-4">
