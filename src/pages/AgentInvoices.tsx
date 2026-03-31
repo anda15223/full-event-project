@@ -122,7 +122,7 @@ export default function AgentInvoices() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Total Invoices", value: metrics.total, icon: FileText, color: "text-foreground", bg: "bg-secondary/60" },
-          { label: "Total Amount", value: `${metrics.totalAmount.toLocaleString("da-DK")} DKK`, icon: DollarSign, color: "text-agent-green", bg: "bg-agent-green/6" },
+          { label: "Total Amount", value: formatByCurrency(metrics.totalByCurrency), icon: DollarSign, color: "text-agent-green", bg: "bg-agent-green/6" },
           { label: "Overdue", value: metrics.overdue, icon: AlertTriangle, color: "text-destructive", bg: "bg-destructive/6" },
           { label: "Due This Week", value: metrics.dueThisWeek, icon: Clock, color: "text-warning", bg: "bg-warning/6" },
         ].map((m, i) => (
