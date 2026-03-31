@@ -166,7 +166,7 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
               {extractInvoice.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
               <span className="ml-1 hidden sm:inline">Extract</span>
             </Button>
-          )
+          )}
         </div>
       </div>
 
