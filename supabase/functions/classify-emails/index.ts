@@ -83,7 +83,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email_ids, batch_size = 5 } = await req.json();
+    const { email_ids, batch_size = 20 } = await req.json();
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

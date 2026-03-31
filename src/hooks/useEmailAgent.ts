@@ -144,7 +144,7 @@ export function useFetchEmails() {
   return useMutation({
     mutationFn: async (sinceDate?: string) => {
       const { data, error } = await supabase.functions.invoke("fetch-emails", {
-        body: { since_date: sinceDate, limit: 50 },
+        body: { since_date: sinceDate, limit: 200 },
       });
       if (error) throw error;
       return data;
@@ -164,7 +164,7 @@ export function useClassifyEmails() {
   return useMutation({
     mutationFn: async (emailIds?: string[]) => {
       const { data, error } = await supabase.functions.invoke("classify-emails", {
-        body: { email_ids: emailIds, batch_size: 10 },
+        body: { email_ids: emailIds, batch_size: 20 },
       });
       if (error) throw error;
       return data;
@@ -177,6 +177,45 @@ export function useClassifyEmails() {
     },
     onError: (err: Error) => {
       toast.error("Classification failed: " + err.message);
+    },
+  });
+}
+
+export function useClassifyAllEmails() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      let totalProcessed = 0;
+      let totalErrors = 0;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const { data, error } = await supabase.functions.invoke("classify-emails", {
+          body: { batch_size: 20 },
+        });
+        if (error) throw error;
+        
+        totalProcessed += data.processed || 0;
+        totalErrors += data.errors || 0;
+        
+        // Stop if no more emails to process
+        if ((data.processed || 0) === 0) {
+          hasMore = false;
+        }
+        
+        // Invalidate queries after each batch so UI updates
+        queryClient.invalidateQueries({ queryKey: ["emails"] });
+        queryClient.invalidateQueries({ queryKey: ["email_tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["email_invoices"] });
+      }
+      
+      return { processed: totalProcessed, errors: totalErrors };
+    },
+    onSuccess: (data) => {
+      toast.success(`Classified all: ${data.processed} emails processed, ${data.errors} errors`);
+    },
+    onError: (err: Error) => {
+      toast.error("Classify all failed: " + err.message);
     },
   });
 }
