@@ -8,7 +8,7 @@ import type { Invoice } from "@/hooks/useInvoices";
 import { useUpdateInvoiceField } from "@/hooks/useInvoices";
 import PaymentCopyPanel from "./PaymentCopyPanel";
 import InlineEdit from "./InlineEdit";
-import InvoicePreviewSheet from "./InvoicePreviewSheet";
+import InvoiceReviewPanel from "./InvoiceReviewPanel";
 import PdfUploadButton from "./PdfUploadButton";
 
 const LOCATION_COLORS: Record<string, string> = {
@@ -202,7 +202,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
       </motion.div>
 
       {/* Preview sheet */}
-      <InvoicePreviewSheet invoice={invoice} open={previewOpen} onOpenChange={setPreviewOpen} />
+      <InvoiceReviewPanel invoice={invoice} open={previewOpen} onOpenChange={setPreviewOpen} />
     </>
   );
 }
