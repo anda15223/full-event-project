@@ -67,10 +67,11 @@ serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    const emailIds = emails.map((e: any) => e.id);
+
     // Filter out emails that already have invoices — but NOT in test mode (we want to see results)
     let toProcess: string[];
     if (testMode) {
-      // Test mode: process all fetched emails regardless of existing invoices
       toProcess = emailIds;
       console.log(`Test mode: processing all ${toProcess.length} emails (ignoring existing invoices)`);
     } else {
