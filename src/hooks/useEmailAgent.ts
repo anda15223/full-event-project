@@ -506,7 +506,6 @@ export function useFetchEmailBody(emailId: string | null) {
       
       if (error) {
         console.error("fetch-email-body error:", error);
-        // Return a fallback instead of throwing, so the UI can handle gracefully
         return {
           body_text: null,
           body_html: null,
@@ -516,6 +515,25 @@ export function useFetchEmailBody(emailId: string | null) {
           attachment_count: 0,
           error: error.message || "Failed to fetch email body",
         };
+      }
+
+      const { data: attachments } = await supabase
+        .from("email_attachments")
+        .select("id, is_inline, parse_status")
+        .eq("email_id", emailId)
+        .eq("is_inline", false);
+
+      const pendingAttachments = (attachments || []).filter((att) => att.parse_status !== "stored");
+      if (pendingAttachments.length > 0) {
+        Promise.allSettled(
+          pendingAttachments.map((att) =>
+            supabase.functions.invoke("fetch-email-attachment", {
+              body: { attachment_id: att.id },
+            })
+          )
+        ).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["email_attachments", emailId] });
+        });
       }
 
       queryClient.invalidateQueries({ queryKey: ["emails"] });
