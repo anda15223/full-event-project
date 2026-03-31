@@ -23,10 +23,17 @@ const LOCATION_COMPANY_MAP: Record<string, string> = {
   "gaia": "Aegean ApS",
 };
 
-const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: string }> = {
+const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: string | null }> = {
   "inco": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco danmark": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco københavn": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
+  "sepio": { company: "The Fish Project ApS", location: null },
+  "kavsman": { company: "The Fish Project ApS", location: null },
+  "odin": { company: "The Fish Project ApS", location: null },
+  "odin seafood": { company: "The Fish Project ApS", location: null },
+  "odin seafoods": { company: "The Fish Project ApS", location: null },
+  "kollek": { company: "The Fish Project ApS", location: null },
+  "team kollek": { company: "The Fish Project ApS", location: null },
 };
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
