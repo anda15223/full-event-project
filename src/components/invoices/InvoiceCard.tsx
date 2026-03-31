@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Invoice } from "@/hooks/useInvoices";
-import { useUpdateInvoiceField } from "@/hooks/useInvoices";
+import { useUpdateInvoiceField, useMarkAsPaid } from "@/hooks/useInvoices";
 import PaymentCopyPanel from "./PaymentCopyPanel";
 import InlineEdit from "./InlineEdit";
 import InvoiceReviewPanel from "./InvoiceReviewPanel";
