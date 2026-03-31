@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,7 +67,7 @@ function ClaudeReprocessPanel() {
     }
   };
 
-  const pauseRef = { current: false };
+  const pauseRef = useRef(false);
 
   const runFull = async () => {
     setRunning(true);
@@ -86,7 +86,10 @@ function ClaudeReprocessPanel() {
 
     try {
       for (let i = 0; i < maxBatches; i++) {
-        if (pauseRef.current) break;
+        if (pauseRef.current) {
+          toast.info("Reprocess stopped by user");
+          break;
+        }
 
         totals.batch = i + 1;
         setProgress({ ...totals });
@@ -109,6 +112,13 @@ function ClaudeReprocessPanel() {
         setProgress({ ...totals });
 
         if ((data.processed || 0) === 0) break;
+        if (pauseRef.current) {
+          toast.info("Reprocess stopped by user");
+          break;
+        }
+
+        // Wait 8 seconds between batches to avoid Claude rate limits
+        await new Promise(r => setTimeout(r, 8000));
       }
       setCompleted(true);
       refetchStats();
@@ -123,6 +133,7 @@ function ClaudeReprocessPanel() {
   const handleStop = () => {
     pauseRef.current = true;
     setPaused(true);
+    setRunning(false);
   };
 
   const pct = progress ? Math.round((progress.processed / Math.max(progress.totalEmails, 1)) * 100) : 0;
