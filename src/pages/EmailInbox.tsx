@@ -126,8 +126,9 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
           <p className="text-sm font-medium text-foreground truncate">{att.filename || "Unnamed"}</p>
           <p className="text-xs text-muted-foreground">
             {att.mime_type} · {formatFileSize(att.size || 0)}
-            {att.parse_status === "stored" && <span className="text-green-500 ml-2">● Stored</span>}
-            {att.parse_status === "pending" && <span className="text-yellow-500 ml-2">● Not downloaded</span>}
+            {att.parse_status === "stored" && <span className="text-primary ml-2">● Ready</span>}
+            {att.parse_status === "pending" && <span className="text-muted-foreground ml-2">● Fetching...</span>}
+            {att.parse_status === "pending_upload" && <span className="text-muted-foreground ml-2">● Preparing...</span>}
             {att.parse_status === "failed" && <span className="text-destructive ml-2">● Failed</span>}
           </p>
           {att.extracted_summary && (

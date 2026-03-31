@@ -115,6 +115,12 @@ export function useEmailAttachments(emailId: string | null) {
   return useQuery({
     queryKey: ["email_attachments", emailId],
     enabled: !!emailId,
+    refetchInterval: (query) => {
+      const rows = (query.state.data || []) as EmailAttachment[];
+      return rows.some((att) => att.parse_status && att.parse_status !== "stored" && att.parse_status !== "failed")
+        ? 3000
+        : false;
+    },
     queryFn: async () => {
       if (!emailId) return [];
       const { data, error } = await supabase
