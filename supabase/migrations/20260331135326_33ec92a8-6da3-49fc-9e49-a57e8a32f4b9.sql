@@ -1,0 +1,1 @@
+create unique index if not exists emails_message_id_unique_idx on public.emails (message_id);
