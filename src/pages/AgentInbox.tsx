@@ -98,11 +98,20 @@ export default function AgentInbox() {
           </Button>
           <Button
             onClick={() => classifyEmails.mutate(undefined)}
-            disabled={classifyEmails.isPending || unprocessedCount === 0}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={classifyEmails.isPending || classifyAll.isPending || unprocessedCount === 0}
+            variant="outline"
+            className="border-border"
           >
             <Zap className={`h-4 w-4 mr-2 ${classifyEmails.isPending ? "animate-pulse" : ""}`} />
-            Classify ({unprocessedCount})
+            Classify Batch ({unprocessedCount})
+          </Button>
+          <Button
+            onClick={() => classifyAll.mutate()}
+            disabled={classifyAll.isPending || classifyEmails.isPending || unprocessedCount === 0}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Zap className={`h-4 w-4 mr-2 ${classifyAll.isPending ? "animate-pulse" : ""}`} />
+            {classifyAll.isPending ? "Classifying..." : `Classify All (${unprocessedCount})`}
           </Button>
         </div>
       </div>
