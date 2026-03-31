@@ -126,7 +126,7 @@ serve(async (req) => {
       });
     }
 
-    const { batch_size, dry_run, reparse_from_imap } = parsed.data;
+    const { batch_size, max_total, dry_run, reparse_from_imap } = parsed.data;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
