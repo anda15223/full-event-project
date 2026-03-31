@@ -13,14 +13,23 @@ const RequestSchema = z.object({ email_id: z.string().uuid() });
 /* ── MIME helpers ── */
 
 function decodeQuotedPrintable(text: string, charset = "utf-8"): string {
-  const decoded = text
-    .replace(/=\r?\n/g, "") // soft line breaks
-    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-  if (charset.toLowerCase() === "utf-8" || charset.toLowerCase() === "us-ascii") return decoded;
+  // Replace soft line breaks, then collect raw bytes
+  const cleaned = text.replace(/=\r?\n/g, "");
+  // Build byte array: hex-encoded bytes become actual bytes, plain ASCII stays as-is
+  const byteArray: number[] = [];
+  let i = 0;
+  while (i < cleaned.length) {
+    if (cleaned[i] === "=" && i + 2 < cleaned.length && /[0-9A-Fa-f]{2}/.test(cleaned.substring(i + 1, i + 3))) {
+      byteArray.push(parseInt(cleaned.substring(i + 1, i + 3), 16));
+      i += 3;
+    } else {
+      byteArray.push(cleaned.charCodeAt(i));
+      i++;
+    }
+  }
   try {
-    const bytes = Uint8Array.from(Array.from(decoded, c => c.charCodeAt(0)));
-    return new TextDecoder(charset).decode(bytes);
-  } catch { return decoded; }
+    return new TextDecoder(charset).decode(Uint8Array.from(byteArray));
+  } catch { return cleaned; }
 }
 
 function decodeBase64(text: string, charset = "utf-8"): string {
