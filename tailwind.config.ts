@@ -71,11 +71,12 @@ export default {
           foreground: "hsl(var(--success-foreground))",
         },
         agent: {
-          purple: "hsl(var(--agent-purple))",
-          teal: "hsl(var(--agent-teal))",
-          amber: "hsl(var(--agent-amber))",
-          rose: "hsl(var(--agent-rose))",
           blue: "hsl(var(--agent-blue))",
+          purple: "hsl(var(--agent-purple))",
+          green: "hsl(var(--agent-green))",
+          orange: "hsl(var(--agent-orange))",
+          gray: "hsl(var(--agent-gray))",
+          rose: "hsl(var(--agent-rose))",
         },
       },
       borderRadius: {
