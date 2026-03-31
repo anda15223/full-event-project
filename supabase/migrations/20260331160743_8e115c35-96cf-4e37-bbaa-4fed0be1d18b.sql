@@ -1,0 +1,1 @@
+ALTER TABLE public.emails ADD COLUMN IF NOT EXISTS model_used text DEFAULT NULL;

@@ -4,7 +4,8 @@ import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const RequestSchema = z.object({
@@ -29,7 +30,6 @@ Your job is to analyze each email and return structured JSON. ALL output text (s
 
 LANGUAGE DETECTION:
 - Detect the email language: "en" (English), "da" (Danish), "ro" (Romanian), "unknown" if unclear
-- Use language as a signal for company assignment (Romanian → likely "Romania", Danish → likely Danish companies) but always validate with context
 
 KEYWORD AWARENESS (multi-language):
 - Invoice: invoice, payment, bill (EN) | faktura, betaling (DA) | factură, plată (RO)
@@ -92,6 +92,34 @@ Return ONLY valid JSON matching this schema:
     "attachment_present": true/false
   }
 }`;
+
+/* ── AI Router: choose the right model per email ─────────── */
+
+function chooseModel(email: any, attachments: any[]): string {
+  const body = (email.body_clean_text || email.body_text || "").toLowerCase();
+  const subject = (email.subject || "").toLowerCase();
+  const hasAttachments = email.has_attachments || attachments.length > 0;
+  const hasPdfOrDoc = attachments.some((a: any) => {
+    const mt = (a.mime_type || "").toLowerCase();
+    const fn = (a.filename || "").toLowerCase();
+    return mt.includes("pdf") || mt.includes("word") || fn.endsWith(".pdf") || fn.endsWith(".docx");
+  });
+  const bodyLength = body.length;
+  const lang = (email.language || "").toLowerCase();
+
+  // Invoice keywords in 3 languages
+  const invoiceKeywords = /faktura|factură|factura|invoice|payment due|betaling|plată/;
+  const looksLikeInvoice = invoiceKeywords.test(body) || invoiceKeywords.test(subject);
+
+  // DEEP MODEL: Claude-equivalent (gemini-2.5-pro) for complex cases
+  if (hasPdfOrDoc) return "google/gemini-2.5-pro";
+  if (looksLikeInvoice && hasAttachments) return "google/gemini-2.5-pro";
+  if (bodyLength > 3000) return "google/gemini-2.5-pro";
+  if ((lang === "da" || lang === "ro") && bodyLength > 800) return "google/gemini-2.5-pro";
+
+  // FAST MODEL: GPT-equivalent (gemini-3-flash) for simple cases
+  return "google/gemini-3-flash-preview";
+}
 
 function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null): boolean {
   const sample = (bodyHtml || bodyText || "").trim();
@@ -227,7 +255,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: chooseModel(email, attachments || []),
             messages: [
               { role: "system", content: SYSTEM_PROMPT },
               { role: "user", content: `Classify this email:\n\n${emailContent}` },
@@ -258,6 +286,8 @@ serve(async (req) => {
         const company = COMPANIES.includes(classification.company) ? classification.company : "Unknown";
         const needsReview = company === "Unknown" || (classification.confidence && classification.confidence < 0.7) || classification.needs_review;
 
+        const modelUsed = chooseModel(email, attachments || []);
+
         await supabase.from("emails").update({
           classification: classification.classification,
           company,
@@ -268,7 +298,49 @@ serve(async (req) => {
           review_reason: needsReview ? (classification.review_reason || "Low confidence or unknown company") : null,
           processed: true,
           language: classification.language || "unknown",
+          model_used: modelUsed,
         }).eq("id", email.id);
+
+        // FALLBACK: If fast model gave low confidence, retry with deep model
+        if (modelUsed.includes("flash") && classification.confidence && classification.confidence < 0.7) {
+          console.log(`Low confidence (${classification.confidence}) from fast model for ${email.id}, retrying with deep model`);
+          try {
+            const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "google/gemini-2.5-pro",
+                messages: [
+                  { role: "system", content: SYSTEM_PROMPT },
+                  { role: "user", content: `Classify this email:\n\n${emailContent}` },
+                ],
+              }),
+            });
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              const retryContent = retryData.choices?.[0]?.message?.content || "";
+              const retryJson = JSON.parse(retryContent.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+              if (retryJson.confidence && retryJson.confidence > classification.confidence) {
+                const retryCompany = COMPANIES.includes(retryJson.company) ? retryJson.company : "Unknown";
+                const retryNeedsReview = retryCompany === "Unknown" || retryJson.confidence < 0.7 || retryJson.needs_review;
+                await supabase.from("emails").update({
+                  classification: retryJson.classification,
+                  company: retryCompany,
+                  summary: retryJson.summary,
+                  action_required: retryJson.action_required || false,
+                  confidence: retryJson.confidence,
+                  needs_review: retryNeedsReview,
+                  review_reason: retryNeedsReview ? (retryJson.review_reason || "Low confidence") : null,
+                  language: retryJson.language || "unknown",
+                  model_used: "google/gemini-2.5-pro",
+                }).eq("id", email.id);
+                classification = retryJson;
+              }
+            }
+          } catch (retryErr) {
+            console.error("Deep model retry failed:", retryErr);
+          }
+        }
 
         if (classification.task && classification.task.title) {
           await supabase.from("email_tasks").insert({
