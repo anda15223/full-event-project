@@ -16,30 +16,45 @@ const RequestSchema = z.object({
 
 /* ── Lightweight header-only helpers ────────────────────────── */
 
+function decodeWithCharset(bytes: Uint8Array, charset: string): string {
+  const normalized = (charset || "utf-8").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const map: Record<string, string> = {
+    utf8: "utf-8",
+    iso88591: "iso-8859-1",
+    latin1: "iso-8859-1",
+    windows1252: "windows-1252",
+    cp1252: "windows-1252",
+    usascii: "utf-8",
+    ascii: "utf-8",
+  };
+  const resolved = map[normalized.replace(/-/g, "")] || normalized || "utf-8";
+  try {
+    return new TextDecoder(resolved, { fatal: true }).decode(bytes);
+  } catch {
+    try {
+      return new TextDecoder("utf-8").decode(bytes);
+    } catch {
+      return new TextDecoder("iso-8859-1").decode(bytes);
+    }
+  }
+}
+
 function decodeMimeWords(value: string): string {
   return value.replace(
     /=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g,
-    (_match: string, _charset: string, encoding: string, text: string) => {
+    (match: string, charset: string, encoding: string, text: string) => {
       try {
         if (encoding.toUpperCase() === "B") {
-          const bytes = Uint8Array.from(
-            Array.from(atob(text), (c: string) => c.charCodeAt(0)),
-          );
-          return new TextDecoder("utf-8").decode(bytes);
+          const bytes = Uint8Array.from(Array.from(atob(text), (char: string) => char.charCodeAt(0)));
+          return decodeWithCharset(bytes, charset);
         }
-        // Quoted-printable
         const qp = text
           .replace(/_/g, " ")
-          .replace(
-            /=([0-9A-F]{2})/gi,
-            (_m: string, hex: string) => String.fromCharCode(parseInt(hex, 16)),
-          );
-        const bytes = Uint8Array.from(
-          Array.from(qp, (c: string) => c.charCodeAt(0)),
-        );
-        return new TextDecoder("utf-8").decode(bytes);
+          .replace(/=([0-9A-F]{2})/gi, (_m: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+        const bytes = Uint8Array.from(Array.from(qp, (char: string) => char.charCodeAt(0)));
+        return decodeWithCharset(bytes, charset);
       } catch {
-        return _match;
+        return match;
       }
     },
   );

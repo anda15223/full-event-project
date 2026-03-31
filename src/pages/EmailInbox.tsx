@@ -39,6 +39,25 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function buildEmailDocument(html: string) {
+  const baseEnhancements = `<meta charset="utf-8"><base target="_blank" /><style>
+    html, body { margin: 0; padding: 0; background: transparent; }
+    body { overflow-wrap: anywhere; }
+    img { max-width: 100%; height: auto; }
+    table { max-width: 100%; border-collapse: collapse; }
+    iframe { max-width: 100%; }
+  </style>`;
+
+  if (/<html[\s>]/i.test(html)) {
+    if (/<head[\s>]/i.test(html)) {
+      return html.replace(/<head([^>]*)>/i, `<head$1>${baseEnhancements}`);
+    }
+    return html.replace(/<html([^>]*)>/i, `<html$1><head>${baseEnhancements}</head>`);
+  }
+
+  return `<!DOCTYPE html><html><head>${baseEnhancements}</head><body>${html}</body></html>`;
+}
+
 /** Safely render HTML email body in a sandboxed iframe */
 function HtmlEmailBody({ html }: { html: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -47,30 +66,21 @@ function HtmlEmailBody({ html }: { html: string }) {
     if (!iframeRef.current) return;
     const doc = iframeRef.current.contentDocument;
     if (!doc) return;
-    // Inject sanitized HTML with base styles
+
     doc.open();
-    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: #e0e0e0; background: transparent; margin: 0; padding: 0; line-height: 1.6; word-wrap: break-word; }
-      a { color: #6dd5ed; }
-      img { max-width: 100%; height: auto; }
-      table { border-collapse: collapse; max-width: 100%; }
-      td, th { padding: 4px 8px; }
-    </style></head><body>${html}</body></html>`);
+    doc.write(buildEmailDocument(html));
     doc.close();
 
-    // Auto-resize iframe to content
-    const resizeObserver = new ResizeObserver(() => {
+    const resize = () => {
       if (iframeRef.current && doc.body) {
-        iframeRef.current.style.height = Math.max(200, doc.body.scrollHeight + 20) + "px";
+        iframeRef.current.style.height = Math.max(220, doc.documentElement.scrollHeight + 16) + "px";
       }
-    });
+    };
+
+    const resizeObserver = new ResizeObserver(resize);
     if (doc.body) resizeObserver.observe(doc.body);
-    // Initial resize
-    setTimeout(() => {
-      if (iframeRef.current && doc.body) {
-        iframeRef.current.style.height = Math.max(200, doc.body.scrollHeight + 20) + "px";
-      }
-    }, 100);
+    if (doc.documentElement) resizeObserver.observe(doc.documentElement);
+    setTimeout(resize, 80);
 
     return () => resizeObserver.disconnect();
   }, [html]);
@@ -79,7 +89,7 @@ function HtmlEmailBody({ html }: { html: string }) {
     <iframe
       ref={iframeRef}
       sandbox="allow-same-origin"
-      className="w-full border-0 min-h-[200px]"
+      className="w-full border-0 min-h-[220px]"
       style={{ background: "transparent" }}
       title="Email content"
     />
