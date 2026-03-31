@@ -9,6 +9,7 @@ import { useUpdateInvoiceField } from "@/hooks/useInvoices";
 import PaymentCopyPanel from "./PaymentCopyPanel";
 import InlineEdit from "./InlineEdit";
 import InvoicePreviewSheet from "./InvoicePreviewSheet";
+import PdfUploadButton from "./PdfUploadButton";
 
 const LOCATION_COLORS: Record<string, string> = {
   "Fish Bistro": "bg-agent-blue/10 text-agent-blue border-agent-blue/20",
@@ -53,6 +54,7 @@ function leftBorder(inv: Invoice) {
 export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
   const [showPayment, setShowPayment] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [localPdfUrl, setLocalPdfUrl] = useState(invoice.pdf_url);
   const updateField = useUpdateInvoiceField();
   const sl = statusLabel(invoice);
 
@@ -168,6 +170,9 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
               <Copy className="h-3 w-3" /> Payment details
               <ChevronDown className={`h-3 w-3 transition-transform ${showPayment ? "rotate-180" : ""}`} />
             </Button>
+            {!localPdfUrl && (
+              <PdfUploadButton invoiceId={invoice.id} onUploaded={(url) => setLocalPdfUrl(url)} />
+            )}
             {invoice.status !== "paid" && (
               <Button
                 size="sm"
