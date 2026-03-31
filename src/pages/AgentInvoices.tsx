@@ -57,18 +57,29 @@ export default function AgentInvoices() {
             Invoices extracted from classified emails, grouped by company
           </p>
         </div>
-        <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-48 bg-card border-border">
-            <Building2 className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter company" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Companies</SelectItem>
-            {companies?.map((c) => (
-              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => extractAll.mutate()}
+            disabled={extractAll.isPending}
+            className="gap-2"
+          >
+            {extractAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Extract from PDFs
+          </Button>
+          <Select value={filterCompany} onValueChange={setFilterCompany}>
+            <SelectTrigger className="w-48 bg-card border-border">
+              <Building2 className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter company" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Companies</SelectItem>
+              {companies?.map((c) => (
+                <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Summary cards */}
