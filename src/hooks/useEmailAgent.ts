@@ -145,7 +145,7 @@ export function useFetchEmails() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (sinceDate?: string) => {
-      const limit = 100;
+      const limit = 15;
       let offset = 0;
       let totalFound = 0;
       let totalFetched = 0;
