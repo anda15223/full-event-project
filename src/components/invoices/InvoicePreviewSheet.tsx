@@ -10,6 +10,8 @@ import {
 import type { Invoice } from "@/hooks/useInvoices";
 import { useMarkAsPaid } from "@/hooks/useInvoices";
 import { toast } from "sonner";
+import PdfUploadButton from "./PdfUploadButton";
+import { useQueryClient } from "@tanstack/react-query";
 
 function DetailRow({ icon: Icon, label, value, className }: { icon: any; label: string; value: string; className?: string }) {
   return (
