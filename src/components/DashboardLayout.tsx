@@ -14,6 +14,7 @@ import {
 import {
   LayoutDashboard, Mail, CheckSquare, Settings,
   MessageCircle, Users, Flame, FileText, Cpu, PanelLeft, Home,
+  Bot, ListTodo, Receipt, AlertTriangle, Separator,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
@@ -26,6 +27,13 @@ const menuItems = [
   { icon: FileText, label: "Invoices", path: "/invoices" },
   { icon: Flame, label: "Priority Matrix", path: "/priority" },
   { icon: Settings, label: "Settings", path: "/settings" },
+];
+
+const agentItems = [
+  { icon: Bot, label: "Agent Inbox", path: "/agent/inbox" },
+  { icon: ListTodo, label: "Agent Tasks", path: "/agent/tasks" },
+  { icon: Receipt, label: "Agent Invoices", path: "/agent/invoices" },
+  { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
 ];
 
 function SidebarNav() {
