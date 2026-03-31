@@ -287,6 +287,12 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
               <div className="whitespace-pre-wrap text-sm text-foreground leading-relaxed">
                 {bodyText}
               </div>
+            ) : isAttachmentOnly ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Paperclip className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="font-medium text-foreground">This email contains attachment(s) only</p>
+                <p className="text-sm mt-1">No readable body text — see attachments below.</p>
+              </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
