@@ -33,7 +33,7 @@ export default function AgentInvoices() {
   };
 
   const formatByCurrency = (groups: Record<string, number>) =>
-    Object.entries(groups).map(([cur, amt]) => `${amt.toLocaleString("da-DK")} ${cur}`).join(" · ");
+    Object.entries(groups).filter(([, amt]) => amt > 0).map(([cur, amt]) => `${amt.toLocaleString("da-DK")} ${cur}`).join(" · ") || "0";
 
   const metrics = useMemo(() => {
     const total = allInvoices.length;
