@@ -309,15 +309,19 @@ serve(async (req) => {
           parse_error: null,
         }).eq("id", att.id);
 
-        // Step 6: Upsert to email_invoices
-        // Check if invoice already exists for this email
+        // Step 5b: Build public PDF URL from attachment storage path
+        const pdfUrl = att.storage_path
+          ? `${supabaseUrl}/storage/v1/object/public/email-attachments/${att.storage_path}`
+          : null;
+
+        // Step 6: Upsert to email_invoices (legacy)
         const { data: existing } = await supabase
           .from("email_invoices")
           .select("id")
           .eq("email_id", att.email_id)
           .limit(1);
 
-        const invoiceRecord = {
+        const emailInvoiceRecord = {
           email_id: att.email_id,
           supplier_name: invoiceData.supplier_name || null,
           invoice_number: invoiceData.invoice_number || null,
@@ -329,7 +333,7 @@ serve(async (req) => {
           attachment_present: true,
         };
 
-        // Also get company from parent email
+        // Get company from parent email
         const { data: parentEmail } = await supabase
           .from("emails")
           .select("company")
@@ -337,17 +341,48 @@ serve(async (req) => {
           .single();
 
         if (parentEmail?.company) {
-          (invoiceRecord as any).company = parentEmail.company;
+          (emailInvoiceRecord as any).company = parentEmail.company;
         }
 
         if (existing && existing.length > 0) {
-          await supabase.from("email_invoices").update(invoiceRecord).eq("id", existing[0].id);
+          await supabase.from("email_invoices").update(emailInvoiceRecord).eq("id", existing[0].id);
         } else {
-          await supabase.from("email_invoices").insert(invoiceRecord);
+          await supabase.from("email_invoices").insert(emailInvoiceRecord);
+        }
+
+        // Step 7: Upsert to invoices table WITH pdf_url for triple verification
+        const { data: existingInvoice } = await supabase
+          .from("invoices")
+          .select("id")
+          .eq("email_id", att.email_id)
+          .limit(1);
+
+        const invoiceRecord = {
+          email_id: att.email_id,
+          supplier_name: invoiceData.supplier_name || null,
+          invoice_number: invoiceData.invoice_number || null,
+          invoice_date: invoiceData.invoice_date || null,
+          due_date: invoiceData.due_date || null,
+          amount: invoiceData.amount || null,
+          total_with_vat: invoiceData.amount || null,
+          vat_amount: invoiceData.vat || null,
+          currency: invoiceData.currency || "DKK",
+          what_was_bought: invoiceData.summary || null,
+          company: parentEmail?.company || null,
+          source_type: "email",
+          status: "pending",
+          confidence: 0.9,
+          pdf_url: pdfUrl,
+        };
+
+        if (existingInvoice && existingInvoice.length > 0) {
+          await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
+        } else {
+          await supabase.from("invoices").insert(invoiceRecord);
         }
 
         results.push({ email_id: att.email_id, attachment_id: att.id, status: "extracted" });
-        console.log(`Extracted invoice from ${att.filename}: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}`);
+        console.log(`Extracted invoice from ${att.filename}: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, pdf_url: ${pdfUrl ? "YES" : "NO"}`);
 
       } catch (err) {
         console.error(`Error processing attachment ${att.id}:`, err);
