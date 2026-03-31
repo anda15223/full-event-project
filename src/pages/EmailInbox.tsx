@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   useEmails, useSyncAndClassify, useFetchEmailBody,
   useEmailAttachments, useReparseEmail, useFetchAttachment,
+  useExtractInvoice,
   type Email, type EmailAttachment,
 } from "@/hooks/useEmailAgent";
 
