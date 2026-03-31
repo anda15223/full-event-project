@@ -19,6 +19,8 @@ import AgentInbox from "./pages/AgentInbox";
 import AgentTasks from "./pages/AgentTasks";
 import AgentInvoices from "./pages/AgentInvoices";
 import AgentReviewQueue from "./pages/AgentReviewQueue";
+import AgentOperations from "./pages/AgentOperations";
+import AgentRomania from "./pages/AgentRomania";
 
 const queryClient = new QueryClient();
 
