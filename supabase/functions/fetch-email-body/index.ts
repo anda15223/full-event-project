@@ -276,8 +276,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Could not find email on server", body_text: "" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch the FULL message (RFC822) — up to 500KB to handle real-world emails
-    const fetchRes = await sendCommand(conn, enc, dec, "F1", `UID FETCH ${uid} (BODY.PEEK[])`, 512000);
+    // Fetch the FULL message (RFC822) using Latin-1 decoder to preserve raw bytes
+    const fetchRes = await sendCommand(conn, enc, rawDec, "F1", `UID FETCH ${uid} (BODY.PEEK[])`, 512000);
 
     await sendCommand(conn, enc, dec, "A99", "LOGOUT", 1024);
     conn.close(); conn = null;
