@@ -121,6 +121,34 @@ function chooseModel(email: any, attachments: any[]): string {
   return "google/gemini-3-flash-preview";
 }
 
+/* ── Agent Assignment: route email to the right specialized agent ── */
+function deriveAssignedAgent(classification: any, company: string): string {
+  // Romania agent takes priority for Romanian operations
+  if (company === "Romania") return "romania_agent";
+  
+  // Route by classification
+  switch (classification.classification) {
+    case "invoice": return "invoice_agent";
+    case "task": {
+      // Sub-route tasks to accounting/system vs operational vs general task
+      const summary = (classification.summary || "").toLowerCase();
+      const taskNotes = (classification.task?.notes || "").toLowerCase();
+      const combined = summary + " " + taskNotes;
+      if (/renew|system|integration|e-conomic|bank|accounting|finance|admin/.test(combined)) {
+        return "accounting_agent";
+      }
+      if (/event|festival|zoo|partner|logistics|booking|venue|supplier coordination/.test(combined)) {
+        return "operational_agent";
+      }
+      return "task_agent";
+    }
+    case "waiting": return classification.action_required ? "task_agent" : "fyi_agent";
+    case "information": return "fyi_agent";
+    case "irrelevant": return "ignore_agent";
+    default: return "task_agent";
+  }
+}
+
 function looksBrokenContent(bodyText?: string | null, bodyHtml?: string | null): boolean {
   const sample = (bodyHtml || bodyText || "").trim();
   if (!sample) return true;
