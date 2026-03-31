@@ -413,6 +413,7 @@ export type Database = {
       invoices: {
         Row: {
           amount: number | null
+          category: string | null
           company: string | null
           confidence: number | null
           created_at: string
@@ -437,6 +438,7 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          category?: string | null
           company?: string | null
           confidence?: number | null
           created_at?: string
@@ -461,6 +463,7 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          category?: string | null
           company?: string | null
           confidence?: number | null
           created_at?: string

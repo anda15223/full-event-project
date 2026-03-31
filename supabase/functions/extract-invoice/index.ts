@@ -70,6 +70,35 @@ function resolveCompany(supplierName: string | null, location: string | null, em
   return { company: emailCompany || null, location };
 }
 
+/* ── Category assignment ── */
+function assignCategory(invoiceData: any): string {
+  const supplier = (invoiceData.supplier_name || "").toLowerCase();
+  const bought = (invoiceData.what_was_bought || "").toLowerCase();
+
+  // Phone bills
+  if (["lebara", "tdc", "telenor", "yousee", "3 denmark", "one.com"].some(s => supplier.includes(s))) {
+    invoiceData.what_was_bought = invoiceData.what_was_bought || "Phone/Communication bill";
+    return "operating_expense";
+  }
+  // Equipment
+  if (supplier.includes("larsen") || bought.includes("equipment") || bought.includes("udstyr")) {
+    return "equipment";
+  }
+  // Subscriptions
+  if (["esmiley", "subscription", "abonnement"].some(s => supplier.includes(s) || bought.includes(s))) {
+    return "operating_expense";
+  }
+  // Rykker
+  if (invoiceData.extraction_notes?.toLowerCase().includes("rykker") || invoiceData.status === "overdue") {
+    return "rykker";
+  }
+  // PBS
+  if (["pbs", "direct debit"].some(s => (invoiceData.payment_method || "").toLowerCase().includes(s))) {
+    return "cashflow_pbs";
+  }
+  return "supplier_invoice";
+}
+
 /* ── Invoice-like content detection ── */
 const INVOICE_KEYWORDS = /faktura|invoice|betaling|nota|kvittering|ordre|levering|regning|payment|bill|receipt|factură|plată|bilag|kreditnota|debitnota|tilbud|overførsel/i;
 const AMOUNT_PATTERN = /(?:DKK|kr\.?|EUR|€|RON|USD|\$|SEK|NOK)\s*[\d.,]+|[\d.,]+\s*(?:DKK|kr\.?|EUR|€|RON)/i;
@@ -426,6 +455,7 @@ async function processAttachment(
 
       // Apply company mapping and save
       const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, parentEmail?.company);
+      const category = assignCategory(invoiceData);
       const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.85 : 0.5);
       const status = confidence >= 0.7 ? "pending" : "needs_review";
 
@@ -474,6 +504,7 @@ async function processAttachment(
         pdf_url: pdfUrl,
         payment_account: invoiceData.payment_account || null,
         payment_reference: invoiceData.payment_reference || null,
+        category,
       };
       if (existingInvoice && existingInvoice.length > 0) {
         await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
@@ -578,10 +609,11 @@ async function callClaudeExtraction(
 
     // Apply company mapping rules
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
+    const category = assignCategory(invoiceData);
 
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
-    // Check for rykker (payment reminder) → force overdue
     const rykkerDetected = isRykker(emailContext, text);
+    const finalCategory = rykkerDetected ? "rykker" : category;
     const status = rykkerDetected ? "overdue" : (confidence >= 0.7 ? "pending" : "needs_review");
     const notes = rykkerDetected ? "RYKKER — payment reminder received" : (invoiceData.extraction_notes || null);
 
@@ -635,6 +667,7 @@ async function callClaudeExtraction(
       payment_account: invoiceData.payment_account || null,
       payment_reference: invoiceData.payment_reference || null,
       notes,
+      category: finalCategory,
     };
     if (existingInvoice && existingInvoice.length > 0) {
       await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
