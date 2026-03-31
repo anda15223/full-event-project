@@ -14,6 +14,7 @@ import {
   useCompanies,
   useFetchEmails,
   useClassifyEmails,
+  useClassifyAllEmails,
   useUpdateEmail,
   type Email,
 } from "@/hooks/useEmailAgent";
