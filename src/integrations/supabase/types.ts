@@ -14,7 +14,187 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      companies: {
+        Row: {
+          active: boolean
+          country_group: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          country_group?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          country_group?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      email_invoices: {
+        Row: {
+          amount: number | null
+          attachment_present: boolean | null
+          company: string | null
+          created_at: string
+          currency: string | null
+          due_date: string | null
+          email_id: string | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          supplier_name: string | null
+          vat: number | null
+        }
+        Insert: {
+          amount?: number | null
+          attachment_present?: boolean | null
+          company?: string | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          email_id?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          supplier_name?: string | null
+          vat?: number | null
+        }
+        Update: {
+          amount?: number | null
+          attachment_present?: boolean | null
+          company?: string | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          email_id?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          supplier_name?: string | null
+          vat?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_invoices_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_tasks: {
+        Row: {
+          company: string | null
+          created_at: string
+          due_date: string | null
+          email_id: string | null
+          id: string
+          notes: string | null
+          owner: string | null
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          due_date?: string | null
+          email_id?: string | null
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          due_date?: string | null
+          email_id?: string | null
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_tasks_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      emails: {
+        Row: {
+          action_required: boolean | null
+          body_text: string | null
+          classification: string | null
+          company: string | null
+          confidence: number | null
+          created_at: string
+          id: string
+          message_id: string | null
+          needs_review: boolean | null
+          processed: boolean | null
+          received_at: string | null
+          review_reason: string | null
+          sender: string | null
+          subject: string | null
+          summary: string | null
+        }
+        Insert: {
+          action_required?: boolean | null
+          body_text?: string | null
+          classification?: string | null
+          company?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          needs_review?: boolean | null
+          processed?: boolean | null
+          received_at?: string | null
+          review_reason?: string | null
+          sender?: string | null
+          subject?: string | null
+          summary?: string | null
+        }
+        Update: {
+          action_required?: boolean | null
+          body_text?: string | null
+          classification?: string | null
+          company?: string | null
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          message_id?: string | null
+          needs_review?: boolean | null
+          processed?: boolean | null
+          received_at?: string | null
+          review_reason?: string | null
+          sender?: string | null
+          subject?: string | null
+          summary?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
