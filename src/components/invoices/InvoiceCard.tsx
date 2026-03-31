@@ -202,7 +202,7 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
       </motion.div>
 
       {/* Preview sheet */}
-      <InvoicePreviewSheet invoice={invoice} open={previewOpen} onOpenChange={setPreviewOpen} />
+      <InvoiceReviewPanel invoice={invoice} open={previewOpen} onOpenChange={setPreviewOpen} />
     </>
   );
 }
