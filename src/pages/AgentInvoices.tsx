@@ -5,6 +5,7 @@ import { useInvoices } from "@/hooks/useInvoices";
 import InvoiceMetrics from "@/components/invoices/InvoiceMetrics";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
 import InvoiceCard from "@/components/invoices/InvoiceCard";
+import SyncPanel from "@/components/invoices/SyncPanel";
 import type { Invoice } from "@/hooks/useInvoices";
 
 const SECTIONS = [
