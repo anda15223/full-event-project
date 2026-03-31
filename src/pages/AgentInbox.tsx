@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Search, RefreshCw, Zap, RotateCcw,
   AlertTriangle, Clock, FileText, CheckCircle, XCircle, Building2,
-  Eye,
+  Eye, FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,11 +30,11 @@ const classificationIcons: Record<string, React.ReactNode> = {
 };
 
 const classificationColors: Record<string, string> = {
-  invoice: "bg-chart-1/20 text-chart-1 border-chart-1/30",
-  task: "bg-accent/20 text-accent border-accent/30",
-  waiting: "bg-chart-3/20 text-chart-3 border-chart-3/30",
-  information: "bg-muted text-muted-foreground border-border",
-  irrelevant: "bg-destructive/20 text-destructive border-destructive/30",
+  invoice: "bg-agent-green/10 text-agent-green border-agent-green/20",
+  task: "bg-agent-orange/10 text-agent-orange border-agent-orange/20",
+  waiting: "bg-warning/10 text-warning border-warning/20",
+  information: "bg-secondary text-muted-foreground border-border",
+  irrelevant: "bg-destructive/8 text-destructive border-destructive/20",
 };
 
 export default function AgentInbox() {
@@ -75,40 +75,37 @@ export default function AgentInbox() {
   const isBusy = fetchEmails.isPending || classifyEmails.isPending || classifyAll.isPending || syncAndClassify.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-            <Mail className="h-6 w-6 text-primary" />
-            Email Agent Inbox
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Pipeline: IMAP → Database → AI Classification → UI
-          </p>
+        <div className="page-header !mb-0">
+          <div className="flex items-center gap-2 mb-2">
+            <FolderOpen className="h-4 w-4 text-agent-purple" />
+            <span className="section-label text-agent-purple">Email Organizer Agent</span>
+          </div>
+          <h1 className="page-title">Organized Inbox</h1>
+          <p className="page-subtitle">Pipeline: IMAP → Database → AI Classification</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Input
             type="date"
             value={sinceDate}
             onChange={(e) => setSinceDate(e.target.value)}
-            className="w-40 bg-card border-border"
+            className="w-40 bg-card border-border/50 rounded-xl"
           />
-          {/* Full pipeline button */}
           <Button
             onClick={() => syncAndClassify.mutate(sinceDate || undefined)}
             disabled={isBusy}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-sm"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${syncAndClassify.isPending ? "animate-spin" : ""}`} />
             {syncAndClassify.isPending ? "Syncing..." : "Sync Emails"}
           </Button>
-          {/* Individual stage buttons */}
           <Button
             onClick={() => fetchEmails.mutate(sinceDate || undefined)}
             disabled={isBusy}
             variant="outline"
-            className="border-border"
+            className="border-border/50 rounded-xl"
             title="Stage 1 only: Fetch & store"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${fetchEmails.isPending ? "animate-spin" : ""}`} />
@@ -118,7 +115,7 @@ export default function AgentInbox() {
             onClick={() => classifyAll.mutate()}
             disabled={isBusy || unprocessedCount === 0}
             variant="outline"
-            className="border-border"
+            className="border-border/50 rounded-xl"
             title="Stage 2 only: Classify unprocessed"
           >
             <Zap className={`h-4 w-4 mr-2 ${classifyAll.isPending ? "animate-pulse" : ""}`} />
@@ -129,7 +126,7 @@ export default function AgentInbox() {
 
       {/* Pipeline status */}
       {isBusy && (
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm text-primary flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-primary/6 border border-primary/15 text-sm text-primary flex items-center gap-2">
           <RefreshCw className="h-4 w-4 animate-spin" />
           {syncAndClassify.isPending ? "Running full pipeline (Fetch → Store → Classify)..." :
            fetchEmails.isPending ? "Stage 1: Fetching from IMAP & storing..." :
@@ -138,59 +135,48 @@ export default function AgentInbox() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
-        <button
-          onClick={() => setFilterClassification("all")}
-          className={`p-3 rounded-lg border transition-all ${
-            filterClassification === "all" ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/50"
-          }`}
-        >
-          <div className="text-sm text-muted-foreground">Total</div>
-          <div className="text-xl font-bold text-foreground">{totalCount}</div>
-        </button>
-        <button
-          onClick={() => setFilterClassification(filterClassification === "pending" ? "all" : "pending")}
-          className={`p-3 rounded-lg border transition-all border-border bg-card hover:border-primary/50`}
-        >
-          <div className="text-sm text-muted-foreground">Pending</div>
-          <div className="text-xl font-bold text-foreground">{unprocessedCount}</div>
-        </button>
-        {["invoice", "task", "waiting", "information", "irrelevant"].map((cls) => {
-          const count = (emails || []).filter((e) => e.classification === cls).length;
-          return (
-            <button
-              key={cls}
-              onClick={() => setFilterClassification(filterClassification === cls ? "all" : cls)}
-              className={`p-3 rounded-lg border transition-all ${
-                filterClassification === cls
-                  ? "border-primary bg-primary/10"
-                  : "border-border bg-card hover:border-primary/50"
-              }`}
-            >
-              <div className="flex items-center gap-2 text-sm">
-                {classificationIcons[cls]}
-                <span className="capitalize">{cls}</span>
-              </div>
-              <div className="text-xl font-bold mt-1 text-foreground">{count}</div>
-            </button>
-          );
-        })}
+      {/* Stats chips */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: "all", label: "All", count: totalCount },
+          { key: "pending", label: "Pending", count: unprocessedCount },
+          ...["invoice", "task", "waiting", "information", "irrelevant"].map(cls => ({
+            key: cls,
+            label: cls.charAt(0).toUpperCase() + cls.slice(1),
+            count: (emails || []).filter(e => e.classification === cls).length,
+          })),
+        ].map(chip => (
+          <button
+            key={chip.key}
+            onClick={() => setFilterClassification(chip.key === "pending" ? "all" : chip.key)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
+              filterClassification === chip.key
+                ? "bg-primary/10 text-primary border border-primary/20"
+                : "bg-card border border-border/40 text-muted-foreground hover:border-border/60 hover:text-foreground"
+            }`}
+          >
+            {chip.key !== "all" && chip.key !== "pending" && classificationIcons[chip.key] && (
+              <span className="inline-flex mr-1.5 align-middle">{classificationIcons[chip.key]}</span>
+            )}
+            {chip.label}
+            <span className="ml-1.5 font-semibold">{chip.count}</span>
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search emails..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-card border-border"
+            className="pl-10 bg-card border-border/40 rounded-xl"
           />
         </div>
         <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-48 bg-card border-border">
+          <SelectTrigger className="w-48 bg-card border-border/40 rounded-xl">
             <Building2 className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Company" />
           </SelectTrigger>
@@ -203,7 +189,7 @@ export default function AgentInbox() {
           </SelectContent>
         </Select>
         <Select value={filterReview} onValueChange={setFilterReview}>
-          <SelectTrigger className="w-40 bg-card border-border">
+          <SelectTrigger className="w-40 bg-card border-border/40 rounded-xl">
             <AlertTriangle className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Review" />
           </SelectTrigger>
@@ -216,18 +202,16 @@ export default function AgentInbox() {
       </div>
 
       {/* Email List + Detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
         {/* List */}
         <div className="lg:col-span-2 space-y-2 max-h-[600px] overflow-y-auto pr-1">
           {isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">Loading emails...</div>
+            <div className="text-center py-16 text-muted-foreground">Loading emails...</div>
           ) : filteredEmails.length === 0 ? (
-            <div className="text-center py-12">
-              <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground">No emails found</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Use "Sync Emails" to fetch & classify
-              </p>
+            <div className="text-center py-16">
+              <Mail className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No emails found</p>
+              <p className="text-xs text-muted-foreground mt-1">Use "Sync Emails" to fetch & classify</p>
             </div>
           ) : (
             filteredEmails.map((email) => (
@@ -236,10 +220,10 @@ export default function AgentInbox() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => setSelectedEmail(email)}
-                className={`w-full text-left p-3 rounded-lg border transition-all ${
+                className={`w-full text-left p-3.5 rounded-xl border transition-all ${
                   selectedEmail?.id === email.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-card hover:border-primary/30"
+                    ? "border-primary/25 bg-primary/4 shadow-sm"
+                    : "border-border/30 bg-card hover:border-border/50 hover:shadow-sm"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -247,9 +231,7 @@ export default function AgentInbox() {
                     <p className="text-sm font-medium text-foreground truncate">
                       {email.subject || "(no subject)"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {email.sender}
-                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{email.sender}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     {email.classification ? (
@@ -257,22 +239,16 @@ export default function AgentInbox() {
                         {email.classification}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[10px] border-muted text-muted-foreground">
-                        pending
-                      </Badge>
+                      <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground">pending</Badge>
                     )}
-                    {email.needs_review && (
-                      <AlertTriangle className="h-3 w-3 text-primary" />
-                    )}
+                    {email.needs_review && <AlertTriangle className="h-3 w-3 text-warning" />}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   {email.company && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">
-                      {email.company}
-                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary/80 text-secondary-foreground">{email.company}</span>
                   )}
-                  <span className="text-[10px] text-muted-foreground ml-auto">
+                  <span className="text-[10px] text-muted-foreground/50 ml-auto">
                     {email.received_at ? new Date(email.received_at).toLocaleDateString() : ""}
                   </span>
                 </div>
@@ -290,81 +266,72 @@ export default function AgentInbox() {
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="border border-border rounded-lg bg-card p-5 space-y-4"
+                className="premium-card p-6 space-y-5"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-foreground">
+                    <h2 className="text-lg font-heading font-semibold text-foreground">
                       {selectedEmail.subject || "(no subject)"}
                     </h2>
-                    <p className="text-sm text-muted-foreground">{selectedEmail.sender}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedEmail.received_at
-                        ? new Date(selectedEmail.received_at).toLocaleString()
-                        : ""}
+                    <p className="text-sm text-muted-foreground mt-0.5">{selectedEmail.sender}</p>
+                    <p className="text-xs text-muted-foreground/60 mt-0.5">
+                      {selectedEmail.received_at ? new Date(selectedEmail.received_at).toLocaleString() : ""}
                     </p>
                   </div>
-                  {/* Reprocess button */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => reprocessEmail.mutate(selectedEmail.id)}
                     disabled={reprocessEmail.isPending}
-                    title="Re-run AI classification on this email"
+                    className="rounded-xl border-border/40"
                   >
                     <RotateCcw className={`h-4 w-4 mr-1 ${reprocessEmail.isPending ? "animate-spin" : ""}`} />
                     Reprocess
                   </Button>
                 </div>
 
-                {/* Processing status */}
                 <div className="flex items-center gap-2">
-                  <Badge variant={selectedEmail.processed ? "default" : "outline"} className={selectedEmail.processed ? "bg-accent text-accent-foreground" : "border-muted text-muted-foreground"}>
+                  <Badge variant={selectedEmail.processed ? "default" : "outline"} className={`rounded-lg ${selectedEmail.processed ? "bg-success/10 text-success border-success/20" : "border-border/50 text-muted-foreground"}`}>
                     {selectedEmail.processed ? "Processed" : "Pending"}
                   </Badge>
                 </div>
 
-                {/* Classification & Company */}
                 <div className="flex flex-wrap gap-2">
                   {selectedEmail.classification && (
-                    <Badge variant="outline" className={classificationColors[selectedEmail.classification] || ""}>
+                    <Badge variant="outline" className={`rounded-lg ${classificationColors[selectedEmail.classification] || ""}`}>
                       {classificationIcons[selectedEmail.classification]}
                       <span className="ml-1 capitalize">{selectedEmail.classification}</span>
                     </Badge>
                   )}
                   {selectedEmail.company && (
-                    <Badge variant="outline" className="border-accent/30 text-accent">
+                    <Badge variant="outline" className="rounded-lg border-agent-green/20 text-agent-green bg-agent-green/6">
                       <Building2 className="h-3 w-3 mr-1" />
                       {selectedEmail.company}
                     </Badge>
                   )}
                   {selectedEmail.confidence !== null && selectedEmail.confidence !== undefined && (
-                    <Badge variant="outline" className="text-muted-foreground border-border">
+                    <Badge variant="outline" className="rounded-lg text-muted-foreground border-border/40">
                       {Math.round((selectedEmail.confidence || 0) * 100)}% conf
                     </Badge>
                   )}
                 </div>
 
-                {/* Review Warning */}
                 {selectedEmail.needs_review && (
-                  <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
-                    <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                  <div className="p-4 rounded-xl bg-warning/6 border border-warning/15">
+                    <div className="flex items-center gap-2 text-warning text-sm font-medium">
                       <AlertTriangle className="h-4 w-4" />
                       Needs Manual Review
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1.5">
                       {selectedEmail.review_reason || "Low confidence classification"}
                     </p>
                     <div className="flex gap-2 mt-3">
                       <Select
                         onValueChange={(val) =>
-                          updateEmail.mutate({
-                            id: selectedEmail.id,
-                            updates: { company: val, needs_review: false },
-                          })
+                          updateEmail.mutate({ id: selectedEmail.id, updates: { company: val, needs_review: false } })
                         }
                       >
-                        <SelectTrigger className="w-48 h-8 text-xs bg-card">
+                        <SelectTrigger className="w-48 h-8 text-xs bg-card rounded-lg">
                           <SelectValue placeholder="Reassign company" />
                         </SelectTrigger>
                         <SelectContent>
@@ -376,13 +343,10 @@ export default function AgentInbox() {
                       </Select>
                       <Select
                         onValueChange={(val) =>
-                          updateEmail.mutate({
-                            id: selectedEmail.id,
-                            updates: { classification: val, needs_review: false },
-                          })
+                          updateEmail.mutate({ id: selectedEmail.id, updates: { classification: val, needs_review: false } })
                         }
                       >
-                        <SelectTrigger className="w-36 h-8 text-xs bg-card">
+                        <SelectTrigger className="w-36 h-8 text-xs bg-card rounded-lg">
                           <SelectValue placeholder="Reclassify" />
                         </SelectTrigger>
                         <SelectContent>
@@ -395,30 +359,19 @@ export default function AgentInbox() {
                   </div>
                 )}
 
-                {/* Summary */}
                 {selectedEmail.summary && (
                   <div>
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                      AI Summary
-                    </h3>
-                    <p className="text-sm text-foreground">{selectedEmail.summary}</p>
+                    <h3 className="section-label mb-2">AI Summary</h3>
+                    <p className="text-sm text-foreground/80 leading-relaxed bg-secondary/40 p-4 rounded-xl">
+                      {selectedEmail.summary}
+                    </p>
                   </div>
                 )}
-
-                {/* Body */}
-                <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                    Email Body
-                  </h3>
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap max-h-[300px] overflow-y-auto bg-secondary/50 rounded-lg p-3">
-                    {selectedEmail.body_text || "(no body — headers only)"}
-                  </div>
-                </div>
               </motion.div>
             ) : (
-              <div className="border border-border rounded-lg bg-card p-12 text-center">
-                <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">Select an email to view details</p>
+              <div className="premium-card p-12 text-center">
+                <Mail className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-muted-foreground font-medium">Select an email to view details</p>
               </div>
             )}
           </AnimatePresence>

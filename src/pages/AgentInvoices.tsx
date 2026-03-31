@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { FileText, Building2, DollarSign, Calendar, Hash, Package, Loader2, Sparkles } from "lucide-react";
+import { FileText, Building2, Calendar, Hash, Package, Loader2, Sparkles, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,37 +38,33 @@ export default function AgentInvoices() {
     return totals;
   }, [grouped]);
 
-  // Separate Danish vs Romania
-  const danishCompanies = Object.keys(grouped).filter(
-    (c) => c !== "Romania" && c !== "Unknown"
-  );
+  const danishCompanies = Object.keys(grouped).filter(c => c !== "Romania" && c !== "Unknown");
   const hasRomania = !!grouped["Romania"];
   const hasUnknown = !!grouped["Unknown"];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-foreground flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            Extracted Invoices
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Invoices extracted from classified emails, grouped by company
-          </p>
+        <div className="page-header !mb-0">
+          <div className="flex items-center gap-2 mb-2">
+            <FileText className="h-4 w-4 text-agent-green" />
+            <span className="section-label text-agent-green">Invoice Intelligence Agent</span>
+          </div>
+          <h1 className="page-title">Invoice Intelligence</h1>
+          <p className="page-subtitle">Invoices extracted from classified emails, grouped by company</p>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             onClick={() => extractAll.mutate()}
             disabled={extractAll.isPending}
-            className="gap-2"
+            className="gap-2 rounded-xl border-border/40"
           >
             {extractAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             Extract from PDFs
           </Button>
           <Select value={filterCompany} onValueChange={setFilterCompany}>
-            <SelectTrigger className="w-48 bg-card border-border">
+            <SelectTrigger className="w-48 bg-card border-border/40 rounded-xl">
               <Building2 className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter company" />
             </SelectTrigger>
@@ -83,94 +79,52 @@ export default function AgentInvoices() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <p className="text-xs text-muted-foreground">Total Invoices</p>
-          <p className="text-2xl font-bold text-foreground">{(invoices || []).length}</p>
-        </div>
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <p className="text-xs text-muted-foreground">Companies</p>
-          <p className="text-2xl font-bold text-foreground">{Object.keys(grouped).length}</p>
-        </div>
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <p className="text-xs text-muted-foreground">Total Amount</p>
-          <p className="text-2xl font-bold text-primary">
-            {(invoices || []).reduce((s, i) => s + (i.amount || 0), 0).toLocaleString("da-DK")} DKK
-          </p>
-        </div>
-        <div className="p-4 rounded-lg border border-border bg-card">
-          <p className="text-xs text-muted-foreground">With Attachments</p>
-          <p className="text-2xl font-bold text-accent">
-            {(invoices || []).filter((i) => i.attachment_present).length}
-          </p>
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Total Invoices", value: (invoices || []).length, color: "text-foreground" },
+          { label: "Companies", value: Object.keys(grouped).length, color: "text-foreground" },
+          { label: "Total Amount", value: `${(invoices || []).reduce((s, i) => s + (i.amount || 0), 0).toLocaleString("da-DK")} DKK`, color: "text-agent-green" },
+          { label: "With Attachments", value: (invoices || []).filter(i => i.attachment_present).length, color: "text-agent-purple" },
+        ].map((card) => (
+          <div key={card.label} className="premium-card p-5">
+            <p className="metric-label !mt-0 mb-2">{card.label}</p>
+            <p className={`text-2xl font-bold font-heading tracking-tight ${card.color}`}>{card.value}</p>
+          </div>
+        ))}
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading invoices...</div>
+        <div className="text-center py-16 text-muted-foreground">Loading invoices...</div>
       ) : (invoices || []).length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">No invoices extracted yet</p>
+        <div className="text-center py-16">
+          <FileText className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">No invoices extracted yet</p>
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Danish companies */}
           {danishCompanies.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                🇩🇰 Danish Companies
-              </h2>
+              <h2 className="section-label mb-4">🇩🇰 Danish Companies</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {danishCompanies.map((company) => (
-                  <CompanyInvoiceCard
-                    key={company}
-                    company={company}
-                    invoices={grouped[company]}
-                    totals={companyTotals[company]}
-                    expanded={expandedCompany === company}
-                    onToggle={() =>
-                      setExpandedCompany(expandedCompany === company ? null : company)
-                    }
-                  />
+                  <CompanyInvoiceCard key={company} company={company} invoices={grouped[company]} totals={companyTotals[company]}
+                    expanded={expandedCompany === company} onToggle={() => setExpandedCompany(expandedCompany === company ? null : company)} />
                 ))}
               </div>
             </div>
           )}
-
-          {/* Romania */}
           {hasRomania && (
             <div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                🇷🇴 Romania (Grouped)
-              </h2>
-              <CompanyInvoiceCard
-                company="Romania"
-                invoices={grouped["Romania"]}
-                totals={companyTotals["Romania"]}
-                expanded={expandedCompany === "Romania"}
-                onToggle={() =>
-                  setExpandedCompany(expandedCompany === "Romania" ? null : "Romania")
-                }
-              />
+              <h2 className="section-label mb-4">🇷🇴 Romania</h2>
+              <CompanyInvoiceCard company="Romania" invoices={grouped["Romania"]} totals={companyTotals["Romania"]}
+                expanded={expandedCompany === "Romania"} onToggle={() => setExpandedCompany(expandedCompany === "Romania" ? null : "Romania")} />
             </div>
           )}
-
-          {/* Unknown */}
           {hasUnknown && (
             <div>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                ⚠️ Unknown Company
-              </h2>
-              <CompanyInvoiceCard
-                company="Unknown"
-                invoices={grouped["Unknown"]}
-                totals={companyTotals["Unknown"]}
-                expanded={expandedCompany === "Unknown"}
-                onToggle={() =>
-                  setExpandedCompany(expandedCompany === "Unknown" ? null : "Unknown")
-                }
-              />
+              <h2 className="section-label mb-4">⚠️ Unknown Company</h2>
+              <CompanyInvoiceCard company="Unknown" invoices={grouped["Unknown"]} totals={companyTotals["Unknown"]}
+                expanded={expandedCompany === "Unknown"} onToggle={() => setExpandedCompany(expandedCompany === "Unknown" ? null : "Unknown")} />
             </div>
           )}
         </div>
@@ -180,71 +134,43 @@ export default function AgentInvoices() {
 }
 
 function CompanyInvoiceCard({
-  company,
-  invoices,
-  totals,
-  expanded,
-  onToggle,
+  company, invoices, totals, expanded, onToggle,
 }: {
-  company: string;
-  invoices: any[];
-  totals: { count: number; total: number; currency: string };
-  expanded: boolean;
-  onToggle: () => void;
+  company: string; invoices: any[]; totals: { count: number; total: number; currency: string }; expanded: boolean; onToggle: () => void;
 }) {
   return (
-    <motion.div
-      layout
-      className="border border-border rounded-lg bg-card overflow-hidden"
-    >
-      <button
-        onClick={onToggle}
-        className="w-full p-4 flex items-center justify-between hover:bg-secondary/50 transition-colors"
-      >
+    <motion.div layout className="premium-card overflow-hidden">
+      <button onClick={onToggle} className="w-full p-5 flex items-center justify-between hover:bg-secondary/30 transition-colors">
         <div className="text-left">
-          <p className="font-medium text-foreground">{company}</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="font-heading font-semibold text-foreground">{company}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             {totals.count} invoice{totals.count !== 1 ? "s" : ""} ·{" "}
-            <span className="text-primary font-medium">
-              {totals.total.toLocaleString("da-DK")} {totals.currency}
-            </span>
+            <span className="text-agent-green font-semibold">{totals.total.toLocaleString("da-DK")} {totals.currency}</span>
           </p>
         </div>
-        <motion.div animate={{ rotate: expanded ? 90 : 0 }}>
-          <Package className="h-4 w-4 text-muted-foreground" />
+        <motion.div animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </motion.div>
       </button>
 
       {expanded && (
-        <div className="border-t border-border divide-y divide-border">
+        <div className="border-t border-border/30 divide-y divide-border/30">
           {invoices.map((inv) => (
-            <div key={inv.id} className="p-3 text-sm">
+            <div key={inv.id} className="p-4 text-sm hover:bg-secondary/20 transition-colors">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground">
-                  {inv.supplier_name || "Unknown supplier"}
-                </span>
+                <span className="font-medium text-foreground">{inv.supplier_name || "Unknown supplier"}</span>
                 {inv.amount !== null && (
-                  <span className="text-primary font-medium">
+                  <span className="text-agent-green font-semibold">
                     {inv.amount.toLocaleString("da-DK")} {inv.currency || "DKK"}
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2 mt-1 text-[10px] text-muted-foreground">
-                {inv.invoice_number && (
-                  <span><Hash className="h-3 w-3 inline" /> {inv.invoice_number}</span>
-                )}
-                {inv.invoice_date && (
-                  <span><Calendar className="h-3 w-3 inline" /> {new Date(inv.invoice_date).toLocaleDateString()}</span>
-                )}
-                {inv.due_date && (
-                  <span className="text-primary">Due: {new Date(inv.due_date).toLocaleDateString()}</span>
-                )}
-                {inv.vat !== null && (
-                  <span>VAT: {inv.vat.toLocaleString("da-DK")}</span>
-                )}
-                {inv.attachment_present && (
-                  <Badge variant="outline" className="text-[9px] h-4">📎 Attachment</Badge>
-                )}
+              <div className="flex flex-wrap gap-2.5 mt-2 text-[10px] text-muted-foreground">
+                {inv.invoice_number && <span className="flex items-center gap-1"><Hash className="h-3 w-3" /> {inv.invoice_number}</span>}
+                {inv.invoice_date && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(inv.invoice_date).toLocaleDateString()}</span>}
+                {inv.due_date && <span className="text-warning font-medium">Due: {new Date(inv.due_date).toLocaleDateString()}</span>}
+                {inv.vat !== null && <span>VAT: {inv.vat.toLocaleString("da-DK")}</span>}
+                {inv.attachment_present && <Badge variant="outline" className="text-[9px] h-4 rounded-md">📎 Attachment</Badge>}
               </div>
             </div>
           ))}
