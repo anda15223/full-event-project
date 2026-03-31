@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import EmailInbox from "./pages/EmailInbox";
+import EmailMemory from "./pages/EmailMemory";
 import TaskBoard from "./pages/TaskBoard";
 import Invoices from "./pages/Invoices";
 import PriorityView from "./pages/PriorityView";
@@ -30,6 +31,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+          <Route path="/email-memory" element={<DashboardLayout><EmailMemory /></DashboardLayout>} />
           <Route path="/emails" element={<DashboardLayout><EmailInbox /></DashboardLayout>} />
           <Route path="/tasks" element={<DashboardLayout><TaskBoard /></DashboardLayout>} />
           <Route path="/invoices" element={<DashboardLayout><Invoices /></DashboardLayout>} />
