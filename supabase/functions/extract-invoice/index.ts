@@ -150,14 +150,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
-    const claudeKey = Deno.env.get("AIAGENTS");
+    const claudeKey = Deno.env.get("aiagents") || Deno.env.get("AIAGENTS");
     if (!claudeKey) {
-      console.error("AIAGENTS secret not found in environment");
-      return new Response(JSON.stringify({ error: "AIAGENTS (Claude API key) not configured" }), {
+      console.error("aiagents/AIAGENTS secret not found in environment");
+      return new Response(JSON.stringify({ error: "Claude API key (aiagents) not configured" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    console.log("AIAGENTS secret found, length:", claudeKey.length);
+    console.log("Claude API key found, length:", claudeKey.length);
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string }> = [];
