@@ -4,6 +4,7 @@ import {
   X, ShieldCheck, ExternalLink, Copy, Check, CreditCard,
   AlertTriangle, Trash2, Mail, Save,
 } from "lucide-react";
+import PdfViewer from "./PdfViewer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -333,14 +334,9 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                           </Button>
                         </a>
                       </div>
-                      <object
-                        data={pdfUrl}
-                        type="application/pdf"
-                        className="flex-1 w-full border-0"
-                        title="Invoice PDF"
-                      >
-                        <embed src={pdfUrl} type="application/pdf" className="w-full h-full" />
-                      </object>
+                      <div className="flex-1">
+                        <PdfViewer pdfUrl={pdfUrl} />
+                      </div>
                     </div>
                   ) : emailInfo?.body_html || emailInfo?.body_clean_text ? (
                     <div className="h-full rounded-xl border border-border/40 overflow-hidden flex flex-col">
