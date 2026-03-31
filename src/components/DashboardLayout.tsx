@@ -111,6 +111,7 @@ function SidebarNav() {
           })}
         </SidebarMenu>
 
+        <SidebarMenu className="px-2 mt-4 pt-4 border-t border-border">
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Back to Home">
               <NavLink to="/" className="h-10 transition-all font-normal" activeClassName="">
