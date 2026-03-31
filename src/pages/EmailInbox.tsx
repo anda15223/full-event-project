@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import {
   RefreshCw, Mail, FileText, CheckSquare, Search, ArrowLeft,
   Clock, Building2, User, Paperclip, Download, Globe, RotateCcw,
-  Loader2, File, Image as ImageIcon, Eye, X,
+  Loader2, File, Image as ImageIcon, Eye, X, Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
