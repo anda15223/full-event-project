@@ -329,13 +329,13 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
                     )}
                   </div>
                 )}
-                <div className="flex-1 p-4">
+                <div className="flex-1 p-4 overflow-hidden">
                   {(pdfStoragePath || pdfAttachmentId) ? (
                     <div className="h-full rounded-xl border border-border/40 overflow-hidden flex flex-col">
                       <div className="px-4 py-2 bg-secondary/40 border-b border-border/30 flex items-center justify-between shrink-0">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">PDF Document</span>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 overflow-hidden">
                         <PdfViewer storagePath={pdfStoragePath || undefined} attachmentId={pdfAttachmentId || undefined} />
                       </div>
                     </div>
