@@ -10,23 +10,46 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Progress } from "@/components/ui/progress";
 
+const STORAGE_KEY = "claude-reprocess-progress";
+
+type ReprocessProgress = {
+  batch: number;
+  totalBatches: number;
+  processed: number;
+  extracted: number;
+  skipped: number;
+  ignored: number;
+  errors: number;
+  totalEmails: number;
+  totalInvoices: number;
+  totalCashflow: number;
+  currentSubject: string;
+  byCompany: Record<string, number>;
+};
+
+function loadSavedProgress(): { running: boolean; progress: ReprocessProgress | null } {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { running: false, progress: null };
+    const saved = JSON.parse(raw);
+    // If it was marked running but page was closed, show as paused
+    return { running: false, progress: saved.progress || null };
+  } catch { return { running: false, progress: null }; }
+}
+
+function saveProgress(progress: ReprocessProgress | null, running: boolean) {
+  if (progress) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ progress, running }));
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 function ClaudeReprocessPanel() {
+  const saved = loadSavedProgress();
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [progress, setProgress] = useState<{
-    batch: number;
-    totalBatches: number;
-    processed: number;
-    extracted: number;
-    skipped: number;
-    ignored: number;
-    errors: number;
-    totalEmails: number;
-    totalInvoices: number;
-    totalCashflow: number;
-    currentSubject: string;
-    byCompany: Record<string, number>;
-  } | null>(null);
+  const [progress, setProgress] = useState<ReprocessProgress | null>(saved.progress);
   const [testDetails, setTestDetails] = useState<any[] | null>(null);
   const [completed, setCompleted] = useState(false);
 
