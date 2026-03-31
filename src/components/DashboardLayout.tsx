@@ -17,14 +17,15 @@ import {
   PanelLeft, Sparkles, Home,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
+import ChatPanel from "@/components/ChatPanel";
 
 const agentNav = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Brain, label: "Email Memory", path: "/email-memory" },
-  { icon: FolderOpen, label: "Organized Inbox", path: "/agent/inbox" },
-  { icon: FileText, label: "Invoice Intelligence", path: "/agent/invoices" },
-  { icon: ListTodo, label: "Action Center", path: "/agent/tasks" },
-  { icon: ClipboardList, label: "Non-Email Tasks", path: "/tasks" },
+  { icon: Brain, label: "Email Memory", path: "/email-memory", dot: "bg-agent-blue" },
+  { icon: FolderOpen, label: "Organized Inbox", path: "/agent/inbox", dot: "bg-agent-purple" },
+  { icon: FileText, label: "Invoice Intelligence", path: "/agent/invoices", dot: "bg-agent-green" },
+  { icon: ListTodo, label: "Action Center", path: "/agent/tasks", dot: "bg-agent-orange" },
+  { icon: ClipboardList, label: "Non-Email Tasks", path: "/tasks", dot: "bg-agent-gray" },
   { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
 ];
 
@@ -38,7 +39,7 @@ function SidebarNav() {
   const location = useLocation();
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="h-16 justify-center">
         <div className="flex items-center gap-3 px-2 w-full">
           <button
@@ -49,11 +50,11 @@ function SidebarNav() {
           </button>
           {!isCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-7 w-7 rounded-lg bg-primary/15 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-primary" />
+              <div className="h-7 w-7 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
               </div>
-              <span className="font-heading font-semibold tracking-tight truncate text-foreground text-sm">
-                AI Operations
+              <span className="font-heading font-semibold tracking-tight truncate text-foreground text-[15px]">
+                AI Ops
               </span>
             </div>
           )}
@@ -61,9 +62,8 @@ function SidebarNav() {
       </SidebarHeader>
 
       <SidebarContent className="gap-0 px-2">
-        {/* Agent Navigation */}
         {!isCollapsed && (
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-2 mt-2 px-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-1.5 mt-2 px-3">
             Agents
           </p>
         )}
@@ -77,9 +77,14 @@ function SidebarNav() {
                   <NavLink
                     to={item.path}
                     className="h-9 transition-all font-normal text-[13px] rounded-lg"
-                    activeClassName="bg-primary/10 text-primary font-medium"
+                    activeClassName="bg-primary/8 text-primary font-medium"
                   >
-                    <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                    <div className="relative">
+                      <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                      {"dot" in item && item.dot && (
+                        <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${item.dot} border-2 border-sidebar-background`} />
+                      )}
+                    </div>
                     {!isCollapsed && <span>{item.label}</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -88,10 +93,9 @@ function SidebarNav() {
           })}
         </SidebarMenu>
 
-        {/* Utility */}
-        <div className="mt-auto pt-4 border-t border-border/40">
+        <div className="mt-auto pt-4 border-t border-sidebar-border">
           {!isCollapsed && (
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-2 px-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em] mb-1.5 px-3">
               System
             </p>
           )}
@@ -104,7 +108,7 @@ function SidebarNav() {
                     <NavLink
                       to={item.path}
                       className="h-9 transition-all font-normal text-[13px] rounded-lg"
-                      activeClassName="bg-primary/10 text-primary font-medium"
+                      activeClassName="bg-primary/8 text-primary font-medium"
                     >
                       <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                       {!isCollapsed && <span>{item.label}</span>}
@@ -134,7 +138,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen flex w-full">
         <SidebarNav />
         <SidebarInset>
-          <header className="h-12 flex items-center border-b border-border/30 bg-background/80 backdrop-blur-xl px-4 sticky top-0 z-40">
+          <header className="h-12 flex items-center border-b border-border/50 bg-card/80 backdrop-blur-xl px-5 sticky top-0 z-40">
             <SidebarTrigger className="mr-4 md:hidden" />
             <div className="flex items-center gap-2 ml-auto">
               <div className="h-1.5 w-1.5 rounded-full bg-success pulse-soft" />
@@ -145,6 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </main>
         </SidebarInset>
+        <ChatPanel />
       </div>
     </SidebarProvider>
   );
