@@ -156,7 +156,7 @@ serve(async (req) => {
       );
     }
 
-    const { since_date, limit = 100, offset = 0 } = parsedRequest.data;
+    const { since_date, limit = 5, offset = 0 } = parsedRequest.data;
 
     const IMAP_EMAIL = Deno.env.get("IMAP_EMAIL");
     const IMAP_PASSWORD = Deno.env.get("IMAP_PASSWORD");
