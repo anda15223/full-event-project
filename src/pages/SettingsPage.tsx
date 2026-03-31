@@ -83,38 +83,16 @@ function ClaudeReprocessPanel() {
       if (error) throw error;
       console.log("🧪 Claude test results:", JSON.stringify(data, null, 2));
 
-      // Enrich details with invoice data from DB for extracted emails
-      const extractedIds = (data.details || [])
-        .filter((d: any) => d.status === "extracted")
-        .map((d: any) => d.email_id);
+      // Details now come with supplier_name, amount, company directly from extract-invoice
+      setTestDetails(data.details || []);
 
-      let invoiceMap: Record<string, any> = {};
-      if (extractedIds.length > 0) {
-        const { data: invoices, error: invError } = await supabase
-          .from("invoices")
-          .select("email_id, supplier_name, amount, currency, company, invoice_number")
-          .in("email_id", extractedIds)
-          .order("created_at", { ascending: false });
-        console.log("📦 Invoice enrichment query:", { extractedIds, invoices, invError });
-        for (const inv of invoices || []) {
-          if (inv.email_id && !invoiceMap[inv.email_id]) {
-            invoiceMap[inv.email_id] = inv;
-          }
-        }
-      }
+      // Show total invoice count
+      const { count: totalInv } = await supabase
+        .from("invoices")
+        .select("id", { count: "exact", head: true });
+      console.log("📦 Total invoices in database:", totalInv);
 
-      const enriched = (data.details || []).map((d: any) => ({
-        ...d,
-        supplier: invoiceMap[d.email_id]?.supplier_name ?? null,
-        amount: invoiceMap[d.email_id]?.amount ?? null,
-        company: invoiceMap[d.email_id]?.company ?? null,
-        currency: invoiceMap[d.email_id]?.currency || "DKK",
-        invoice_number: invoiceMap[d.email_id]?.invoice_number ?? null,
-      }));
-      console.log("📦 Enriched details:", enriched);
-
-      setTestDetails(enriched);
-      toast.success(`Test complete: ${data.extracted ?? 0} invoices extracted from ${data.processed ?? 0} emails`);
+      toast.success(`Test complete: ${data.extracted ?? 0} invoices extracted from ${data.processed ?? 0} emails · ${totalInv} total invoices in DB`);
     } catch (err) {
       toast.error("Test failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
