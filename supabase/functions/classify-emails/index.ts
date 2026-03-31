@@ -121,16 +121,89 @@ function chooseModel(email: any, attachments: any[]): string {
   return "google/gemini-3-flash-preview";
 }
 
+/* ── BC Catering dual-flow pre-routing ─────────────────────── */
+
+interface BcCateringRouting {
+  flow: "web_order" | "pbs_debit" | "review";
+  agent: string;
+  branch: "roskilde" | "skanderborg";
+  locations: Array<{ location: string; company: string }>;
+}
+
+function detectBcCateringFlow(sender: string, subject: string, body: string): BcCateringRouting | null {
+  const s = (sender || "").toLowerCase();
+  const subj = (subject || "").toLowerCase();
+  const b = (body || "").toLowerCase();
+
+  // Skanderborg — always PBS, always Aegean ApS
+  if (s.includes("omk.administration@bccr.dk")) {
+    return {
+      flow: "pbs_debit",
+      agent: "cashflow_agent",
+      branch: "skanderborg",
+      locations: [
+        { location: "Fish Bistro", company: "Aegean ApS" },
+        { location: "Gaia", company: "Aegean ApS" },
+      ],
+    };
+  }
+
+  // Roskilde — dual flow
+  if (s.includes("shop@bccs.dk") || s.includes("info@bccr.dk")) {
+    // Web order signals
+    if (subj.includes("kopi af webordre") || subj.includes("weborder") || subj.includes("web order") ||
+        /bestilling|ordre|order\s*#|varenr/i.test(b.substring(0, 1000))) {
+      return {
+        flow: "web_order",
+        agent: "invoice_agent",
+        branch: "roskilde",
+        locations: [
+          { location: "The Fish Project Reffen", company: "Blue Fish ApS" },
+          { location: "The Fish Project Helsingør", company: "The Fish Project ApS" },
+        ],
+      };
+    }
+    // PBS signals
+    if (/pbs|betalingsservice|direct debit|automatisk betaling|debit|trukket|hævet/.test(subj + " " + b.substring(0, 1000))) {
+      return {
+        flow: "pbs_debit",
+        agent: "cashflow_agent",
+        branch: "roskilde",
+        locations: [
+          { location: "The Fish Project Reffen", company: "Blue Fish ApS" },
+          { location: "The Fish Project Helsingør", company: "The Fish Project ApS" },
+        ],
+      };
+    }
+    // Unclear — review queue
+    return {
+      flow: "review",
+      agent: "review_queue",
+      branch: "roskilde",
+      locations: [
+        { location: "The Fish Project Reffen", company: "Blue Fish ApS" },
+        { location: "The Fish Project Helsingør", company: "The Fish Project ApS" },
+      ],
+    };
+  }
+
+  return null;
+}
+
 /* ── Agent Assignment: route email to the right specialized agent ── */
 function deriveAssignedAgent(classification: any, company: string): string {
   // Romania agent takes priority for Romanian operations
   if (company === "Romania") return "romania_agent";
   
+  // Cashflow classification
+  if (classification.classification === "cashflow" || classification.classification === "pbs_debit") {
+    return "cashflow_agent";
+  }
+  
   // Route by classification
   switch (classification.classification) {
     case "invoice": return "invoice_agent";
     case "task": {
-      // Sub-route tasks to accounting/system vs operational vs general task
       const summary = (classification.summary || "").toLowerCase();
       const taskNotes = (classification.task?.notes || "").toLowerCase();
       const combined = summary + " " + taskNotes;
@@ -275,6 +348,66 @@ serve(async (req) => {
         ]
           .filter(Boolean)
           .join("\n\n");
+
+        // ── BC Catering pre-routing (before AI call) ──
+        const bcRouting = detectBcCateringFlow(
+          email.sender || "",
+          email.subject || "",
+          bodySource
+        );
+
+        if (bcRouting && bcRouting.flow === "pbs_debit") {
+          // Route directly to cashflow agent — no AI needed
+          const firstLoc = bcRouting.locations[0];
+          await supabase.from("emails").update({
+            classification: "cashflow",
+            company: firstLoc.company,
+            summary: `PBS direct debit — BC Catering ${bcRouting.branch === "roskilde" ? "Roskilde" : "Skanderborg"}`,
+            action_required: false,
+            confidence: 0.95,
+            needs_review: false,
+            processed: true,
+            assigned_agent: "cashflow_agent",
+            reader_status: "parsed",
+            router_status: "routed",
+          }).eq("id", email.id);
+
+          // Create cashflow entry for each location
+          for (const loc of bcRouting.locations) {
+            await supabase.from("cashflow_entries").insert({
+              entry_date: email.received_at ? new Date(email.received_at).toISOString().split("T")[0] : null,
+              direction: "out",
+              entry_type: "pbs_debit",
+              supplier_name: `BC Catering ${bcRouting.branch === "roskilde" ? "Roskilde" : "Skanderborg"}`,
+              company: loc.company,
+              location: loc.location,
+              description: email.subject || "PBS direct debit",
+              email_id: email.id,
+              source_email_sender: email.sender,
+              bc_catering_branch: bcRouting.branch,
+            });
+          }
+
+          results.push({ email_id: email.id, status: "classified" });
+          continue;
+        }
+
+        // If BC Catering review — flag for review queue
+        if (bcRouting && bcRouting.flow === "review") {
+          await supabase.from("emails").update({
+            classification: "unknown",
+            company: bcRouting.locations[0].company,
+            summary: `BC Catering Roskilde email — unclear type, needs manual review`,
+            needs_review: true,
+            review_reason: "BC Catering email type unclear (not web order or PBS)",
+            processed: true,
+            assigned_agent: "review_queue",
+            reader_status: "parsed",
+            router_status: "routed",
+          }).eq("id", email.id);
+          results.push({ email_id: email.id, status: "classified" });
+          continue;
+        }
 
         const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
