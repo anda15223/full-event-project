@@ -493,3 +493,24 @@ export function useFetchEmailBody(emailId: string | null) {
     },
   });
 }
+
+// Fetch a single attachment on demand (downloads from IMAP → storage)
+export function useFetchAttachment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (attachmentId: string) => {
+      const { data, error } = await supabase.functions.invoke("fetch-email-attachment", {
+        body: { attachment_id: attachmentId },
+      });
+      if (error) throw error;
+      return data as { storage_path: string; url: string; parse_status: string };
+    },
+    onSuccess: (_data, attachmentId) => {
+      queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      toast.success("Attachment downloaded");
+    },
+    onError: (err: Error) => {
+      toast.error("Attachment download failed: " + err.message);
+    },
+  });
+}
