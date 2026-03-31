@@ -1,8 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { Brain, Users, Building2, Clock, Globe, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Brain, Users, Building2, Clock, Globe, Tag, FileDown } from "lucide-react";
 import { useEmails, useCompanies, useEmailInvoices } from "@/hooks/useEmailAgent";
 import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { exportMemoryDocument } from "@/lib/exportMemoryDoc";
+import { toast } from "sonner";
 
 export default function EmailMemory() {
   const { data: emails } = useEmails();
@@ -36,15 +39,50 @@ export default function EmailMemory() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [invoices]);
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await exportMemoryDocument({
+        totalEmails: emails?.length || 0,
+        senders: stats.senders,
+        suppliers,
+        companies: (companies || []).map(c => ({ name: c.name, emailCount: stats.companies.get(c.name) || 0 })),
+        languages: stats.languages,
+        recentEmails: stats.recentSubjects.map(e => ({
+          sender: e.sender || "Unknown",
+          subject: e.subject || "",
+          company: e.company || "",
+          classification: e.classification || "",
+          date: e.received_at ? new Date(e.received_at).toLocaleDateString() : "",
+        })),
+      });
+      toast.success("Memory report exported as Word document");
+    } catch (err) {
+      toast.error("Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="page-header">
-        <div className="flex items-center gap-2 mb-2">
-          <Brain className="h-4 w-4 text-agent-blue" />
-          <span className="section-label text-agent-blue">Email Memory Agent</span>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Brain className="h-4 w-4 text-agent-blue" />
+              <span className="section-label text-agent-blue">Email Memory Agent</span>
+            </div>
+            <h1 className="page-title">Email Memory</h1>
+            <p className="page-subtitle">Everything the system has learned from your emails</p>
+          </div>
+          <Button onClick={handleExport} disabled={exporting} className="gap-2 bg-agent-blue hover:bg-agent-blue/90">
+            <FileDown className="h-4 w-4" />
+            {exporting ? "Exporting…" : "Export as Word"}
+          </Button>
         </div>
-        <h1 className="page-title">Email Memory</h1>
-        <p className="page-subtitle">Everything the system has learned from your emails</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
