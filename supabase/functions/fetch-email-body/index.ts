@@ -246,7 +246,9 @@ serve(async (req) => {
 
     conn = await Deno.connectTls({ hostname: IMAP_HOST, port: IMAP_PORT });
     const enc = new TextEncoder();
-    const dec = new TextDecoder();
+    const dec = new TextDecoder("utf-8");
+    // Latin-1 decoder preserves raw bytes (0x00-0xFF) for MIME parsing
+    const rawDec = new TextDecoder("iso-8859-1");
 
     await readResponse(conn, dec, r => r.includes("\r\n"), 8192);
     const loginRes = await sendCommand(conn, enc, dec, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
