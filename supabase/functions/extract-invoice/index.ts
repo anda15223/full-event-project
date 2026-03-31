@@ -309,6 +309,12 @@ async function processEmailBody(
 
   if (!email) return { email_id: emailId, status: "error", error: "Email not found" };
 
+  // Check ignore rules
+  if (shouldIgnore(email.sender, email.subject, email.body_clean_text || email.body_text)) {
+    console.log(`Ignoring email ${emailId}: matches ignore rule (Livet på Øen / kontoudtog)`);
+    return { email_id: emailId, status: "ignored", error: "Matched ignore rule" };
+  }
+
   const bodyText = email.body_clean_text || email.body_text || "";
   if (!bodyText || bodyText.trim().length < 20) {
     return { email_id: emailId, status: "skipped", error: "No body text" };
