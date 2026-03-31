@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Search, RefreshCw, Zap, RotateCcw,
   AlertTriangle, Clock, FileText, CheckCircle, XCircle, Building2,
-  Eye, FolderOpen, Inbox, MessageSquare,
+  Eye, FolderOpen, Inbox, MessageSquare, ChevronDown,
+  DollarSign, Wrench, CalendarClock, BellRing, FileCheck,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,35 +16,244 @@ import {
   useSyncAndClassify, useReprocessEmail, useUpdateEmail, type Email,
 } from "@/hooks/useEmailAgent";
 
-const classificationIcons: Record<string, React.ReactNode> = {
-  invoice: <FileText className="h-4 w-4" />,
-  task: <CheckCircle className="h-4 w-4" />,
-  waiting: <Clock className="h-4 w-4" />,
-  information: <Eye className="h-4 w-4" />,
-  irrelevant: <XCircle className="h-4 w-4" />,
-};
+/* ── Section config matching the PDF reference ── */
+interface EmailSection {
+  key: string;
+  label: string;
+  emoji: string;
+  description: string;
+  color: string;
+  borderColor: string;
+  iconColor: string;
+  icon: React.ReactNode;
+  filter: (e: Email) => boolean;
+  columns: string[];
+  defaultCollapsed?: boolean;
+  renderStyle: "table" | "list" | "compact";
+}
 
-const classificationColors: Record<string, string> = {
-  invoice: "bg-agent-green/10 text-agent-green border-agent-green/20",
-  task: "bg-agent-orange/10 text-agent-orange border-agent-orange/20",
-  waiting: "bg-warning/10 text-warning border-warning/20",
-  information: "bg-secondary text-muted-foreground border-border",
-  irrelevant: "bg-destructive/8 text-destructive border-destructive/20",
-};
+const SECTIONS: EmailSection[] = [
+  {
+    key: "invoices",
+    label: "INVOICES — To Process",
+    emoji: "💰",
+    description: "Invoice emails requiring processing and payment",
+    color: "bg-agent-green/4",
+    borderColor: "border-agent-green/20",
+    iconColor: "text-agent-green",
+    icon: <DollarSign className="h-4 w-4" />,
+    filter: (e) => e.classification === "invoice" && e.action_required !== false,
+    columns: ["Supplier / Sender", "Subject", "Company", "Action"],
+    renderStyle: "table",
+  },
+  {
+    key: "overdue",
+    label: "OVERDUE / REMINDERS",
+    emoji: "⚠️",
+    description: "Reminders and overdue items requiring immediate attention",
+    color: "bg-destructive/4",
+    borderColor: "border-destructive/25",
+    iconColor: "text-destructive",
+    icon: <BellRing className="h-4 w-4" />,
+    filter: (e) =>
+      e.action_required === true &&
+      e.classification !== "invoice" &&
+      (e.summary?.toLowerCase().includes("overdue") ||
+        e.summary?.toLowerCase().includes("reminder") ||
+        e.summary?.toLowerCase().includes("rykker") ||
+        e.summary?.toLowerCase().includes("unpaid") ||
+        e.subject?.toLowerCase().includes("rykker") ||
+        e.subject?.toLowerCase().includes("reminder") ||
+        e.subject?.toLowerCase().includes("overdue") ||
+        e.subject?.toLowerCase().includes("unpaid") ||
+        false),
+    columns: ["Sender", "Subject", "Company", "Action"],
+    renderStyle: "table",
+  },
+  {
+    key: "settlement",
+    label: "SETTLEMENT DOCS",
+    emoji: "📋",
+    description: "Settlement documentation to review and file",
+    color: "bg-agent-blue/4",
+    borderColor: "border-agent-blue/20",
+    iconColor: "text-agent-blue",
+    icon: <FileCheck className="h-4 w-4" />,
+    filter: (e) =>
+      e.classification === "information" &&
+      (e.summary?.toLowerCase().includes("settlement") ||
+        e.summary?.toLowerCase().includes("afregning") ||
+        e.subject?.toLowerCase().includes("settlement") ||
+        e.subject?.toLowerCase().includes("afregning") ||
+        false),
+    columns: ["From", "Entity", "Action"],
+    renderStyle: "table",
+  },
+  {
+    key: "accounting",
+    label: "ACCOUNTING / SYSTEM TASKS",
+    emoji: "🔧",
+    description: "System renewals, integrations, and accounting actions",
+    color: "bg-agent-purple/4",
+    borderColor: "border-agent-purple/20",
+    iconColor: "text-agent-purple",
+    icon: <Wrench className="h-4 w-4" />,
+    filter: (e) =>
+      e.classification === "task" &&
+      (e.summary?.toLowerCase().includes("renew") ||
+        e.summary?.toLowerCase().includes("system") ||
+        e.summary?.toLowerCase().includes("integration") ||
+        e.summary?.toLowerCase().includes("e-conomic") ||
+        e.summary?.toLowerCase().includes("bank") ||
+        e.subject?.toLowerCase().includes("renew") ||
+        e.subject?.toLowerCase().includes("e-conomic") ||
+        e.subject?.toLowerCase().includes("integration") ||
+        false),
+    columns: ["From", "Subject", "Action"],
+    renderStyle: "table",
+  },
+  {
+    key: "operational",
+    label: "OPERATIONAL / EVENTS",
+    emoji: "📌",
+    description: "Events, operations, and items requiring reply or action",
+    color: "bg-agent-orange/4",
+    borderColor: "border-agent-orange/20",
+    iconColor: "text-agent-orange",
+    icon: <CalendarClock className="h-4 w-4" />,
+    filter: (e) =>
+      (e.classification === "task" || (e.classification === "waiting" && e.action_required)) &&
+      !(
+        e.summary?.toLowerCase().includes("renew") ||
+        e.summary?.toLowerCase().includes("system") ||
+        e.summary?.toLowerCase().includes("integration") ||
+        e.summary?.toLowerCase().includes("e-conomic") ||
+        e.summary?.toLowerCase().includes("bank") ||
+        e.subject?.toLowerCase().includes("renew") ||
+        e.subject?.toLowerCase().includes("e-conomic") ||
+        e.subject?.toLowerCase().includes("integration")
+      ),
+    columns: ["From", "Subject", "Action"],
+    renderStyle: "table",
+  },
+  {
+    key: "needs_review",
+    label: "NEEDS REVIEW",
+    emoji: "🔍",
+    description: "Low-confidence AI classifications requiring manual review",
+    color: "bg-warning/4",
+    borderColor: "border-warning/25",
+    iconColor: "text-warning",
+    icon: <AlertTriangle className="h-4 w-4" />,
+    filter: (e) => e.needs_review === true,
+    columns: ["Sender", "Subject", "Classification", "Confidence"],
+    renderStyle: "table",
+  },
+  {
+    key: "fyi",
+    label: "FYI / CONFIRMED — No Action Needed",
+    emoji: "✅",
+    description: "Confirmations, delivery notes, and informational emails",
+    color: "bg-success/4",
+    borderColor: "border-success/20",
+    iconColor: "text-success",
+    icon: <CheckCircle className="h-4 w-4" />,
+    filter: (e) =>
+      (e.classification === "information" || e.classification === "waiting") &&
+      !e.action_required &&
+      !e.needs_review &&
+      !(
+        e.summary?.toLowerCase().includes("settlement") ||
+        e.summary?.toLowerCase().includes("afregning") ||
+        e.subject?.toLowerCase().includes("settlement") ||
+        e.subject?.toLowerCase().includes("afregning")
+      ),
+    columns: [],
+    defaultCollapsed: true,
+    renderStyle: "list",
+  },
+  {
+    key: "ignore",
+    label: "IGNORE — Clutter",
+    emoji: "🗑️",
+    description: "Newsletters, promotions, and irrelevant emails",
+    color: "bg-secondary/40",
+    borderColor: "border-border/30",
+    iconColor: "text-muted-foreground",
+    icon: <Trash2 className="h-4 w-4" />,
+    filter: (e) => e.classification === "irrelevant" && !e.needs_review,
+    columns: [],
+    defaultCollapsed: true,
+    renderStyle: "compact",
+  },
+];
 
+/* ── Helper: derive suggested action from email ── */
+function deriveAction(email: Email): string {
+  if (email.classification === "invoice") return "Process & pay";
+  if (email.action_required) {
+    if (email.summary?.toLowerCase().includes("reply")) return "Reply";
+    if (email.summary?.toLowerCase().includes("pay")) return "PAY NOW";
+    if (email.summary?.toLowerCase().includes("renew")) return "Renew";
+    if (email.summary?.toLowerCase().includes("review")) return "Review";
+    if (email.summary?.toLowerCase().includes("check")) return "Check";
+    if (email.summary?.toLowerCase().includes("fill")) return "Fill in";
+    if (email.summary?.toLowerCase().includes("confirm")) return "Confirm";
+    return "Action needed";
+  }
+  if (email.classification === "information") return "Review & file";
+  if (email.classification === "waiting") return "Awaiting response";
+  return "—";
+}
+
+/* ── Assign emails to sections (each email goes to first matching) ── */
+function assignToSections(emails: Email[]): Map<string, Email[]> {
+  const map = new Map<string, Email[]>();
+  SECTIONS.forEach(s => map.set(s.key, []));
+
+  const assigned = new Set<string>();
+  // needs_review first (can appear in any classification)
+  for (const email of emails) {
+    if (email.needs_review) {
+      map.get("needs_review")!.push(email);
+      assigned.add(email.id);
+    }
+  }
+  // then by section priority order
+  for (const section of SECTIONS) {
+    if (section.key === "needs_review") continue;
+    for (const email of emails) {
+      if (assigned.has(email.id)) continue;
+      if (section.filter(email)) {
+        map.get(section.key)!.push(email);
+        assigned.add(email.id);
+      }
+    }
+  }
+  // unassigned → fyi
+  for (const email of emails) {
+    if (!assigned.has(email.id) && email.processed) {
+      map.get("fyi")!.push(email);
+    }
+  }
+  return map;
+}
+
+/* ── Main component ── */
 export default function AgentInbox() {
   const [search, setSearch] = useState("");
-  const [filterClassification, setFilterClassification] = useState<string>("all");
   const [filterCompany, setFilterCompany] = useState<string>("all");
-  const [filterReview, setFilterReview] = useState<string>("all");
-  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [sinceDate, setSinceDate] = useState("");
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    SECTIONS.forEach(s => { if (s.defaultCollapsed) init[s.key] = true; });
+    return init;
+  });
+  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 
   const { data: companies } = useCompanies();
   const { data: emails, isLoading } = useEmails({
-    classification: filterClassification !== "all" ? filterClassification : undefined,
     company: filterCompany !== "all" ? filterCompany : undefined,
-    needs_review: filterReview === "review" ? true : filterReview === "no_review" ? false : undefined,
   });
   const fetchEmails = useFetchEmails();
   const classifyAll = useClassifyAllEmails();
@@ -51,11 +262,15 @@ export default function AgentInbox() {
   const updateEmail = useUpdateEmail();
 
   const allEmails = emails || [];
-  const filteredEmails = allEmails.filter(e => {
-    if (!search) return true;
+  const filteredEmails = useMemo(() => {
+    if (!search) return allEmails;
     const s = search.toLowerCase();
-    return e.subject?.toLowerCase().includes(s) || e.sender?.toLowerCase().includes(s) || e.summary?.toLowerCase().includes(s);
-  });
+    return allEmails.filter(e =>
+      e.subject?.toLowerCase().includes(s) || e.sender?.toLowerCase().includes(s) || e.summary?.toLowerCase().includes(s)
+    );
+  }, [allEmails, search]);
+
+  const sectionMap = useMemo(() => assignToSections(filteredEmails), [filteredEmails]);
 
   const unprocessedCount = allEmails.filter(e => !e.processed).length;
   const reviewCount = allEmails.filter(e => e.needs_review).length;
@@ -68,6 +283,9 @@ export default function AgentInbox() {
     actionRequired: allEmails.filter(e => e.action_required).length,
   }), [allEmails, unprocessedCount, reviewCount]);
 
+  const toggleSection = (key: string) =>
+    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Hero */}
@@ -79,10 +297,10 @@ export default function AgentInbox() {
               <span className="text-xs font-semibold tracking-wider uppercase text-agent-purple">Email Decision Center</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-heading font-bold tracking-tight text-foreground">
-              Organized Inbox
+              Inbox Summary
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Pipeline: IMAP → Database → AI Classification
+              Emails organized by business category — what needs attention now
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -90,9 +308,6 @@ export default function AgentInbox() {
             <Button onClick={() => syncAndClassify.mutate(sinceDate || undefined)} disabled={isBusy} className="bg-agent-purple text-white hover:bg-agent-purple/90 rounded-xl gap-2">
               <RefreshCw className={`h-4 w-4 ${syncAndClassify.isPending ? "animate-spin" : ""}`} />
               {syncAndClassify.isPending ? "Syncing..." : "Sync Emails"}
-            </Button>
-            <Button onClick={() => fetchEmails.mutate(sinceDate || undefined)} disabled={isBusy} variant="outline" className="border-border/50 rounded-xl gap-2">
-              <RefreshCw className={`h-4 w-4 ${fetchEmails.isPending ? "animate-spin" : ""}`} /> Fetch Only
             </Button>
             <Button onClick={() => classifyAll.mutate()} disabled={isBusy || unprocessedCount === 0} variant="outline" className="border-border/50 rounded-xl gap-2">
               <Zap className={`h-4 w-4 ${classifyAll.isPending ? "animate-pulse" : ""}`} /> Classify ({unprocessedCount})
@@ -123,31 +338,9 @@ export default function AgentInbox() {
             <div className={`h-10 w-10 rounded-xl ${m.bg} flex items-center justify-center mb-3`}>
               <m.icon className={`h-5 w-5 ${m.color}`} />
             </div>
-            <div className={`text-3xl font-bold font-heading tracking-tight ${m.color}`}>{m.value}</div>
+            <div className={`text-2xl font-bold font-heading tracking-tight ${m.color}`}>{m.value}</div>
             <div className="text-xs text-muted-foreground mt-1">{m.label}</div>
           </motion.div>
-        ))}
-      </div>
-
-      {/* Classification chips */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { key: "all", label: "All", count: allEmails.length },
-          ...["invoice", "task", "waiting", "information", "irrelevant"].map(cls => ({
-            key: cls, label: cls.charAt(0).toUpperCase() + cls.slice(1),
-            count: allEmails.filter(e => e.classification === cls).length,
-          })),
-        ].map(chip => (
-          <button key={chip.key} onClick={() => setFilterClassification(chip.key)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
-              filterClassification === chip.key
-                ? "bg-agent-purple/10 text-agent-purple border border-agent-purple/20"
-                : "bg-card border border-border/40 text-muted-foreground hover:border-border/60"
-            }`}
-          >
-            {chip.key !== "all" && classificationIcons[chip.key] && <span className="inline-flex mr-1.5 align-middle">{classificationIcons[chip.key]}</span>}
-            {chip.label} <span className="ml-1.5 font-semibold">{chip.count}</span>
-          </button>
         ))}
       </div>
 
@@ -165,127 +358,264 @@ export default function AgentInbox() {
             <SelectItem value="Unknown">Unknown</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterReview} onValueChange={setFilterReview}>
-          <SelectTrigger className="w-40 bg-card border-border/40 rounded-xl"><AlertTriangle className="h-4 w-4 mr-2" /><SelectValue placeholder="Review" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="review">Needs Review ({reviewCount})</SelectItem>
-            <SelectItem value="no_review">Reviewed</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Email List + Detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-        <div className="lg:col-span-2 space-y-2 max-h-[600px] overflow-y-auto pr-1">
-          {isLoading ? (
-            <div className="text-center py-16 text-muted-foreground">Loading emails...</div>
-          ) : filteredEmails.length === 0 ? (
-            <div className="premium-card p-12 text-center">
-              <Mail className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-muted-foreground font-medium">No emails found</p>
-              <p className="text-xs text-muted-foreground mt-1">Use "Sync Emails" to fetch & classify</p>
-            </div>
-          ) : (
-            filteredEmails.map(email => (
-              <motion.button key={email.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                onClick={() => setSelectedEmail(email)}
-                className={`w-full text-left p-3.5 rounded-xl border transition-all ${
-                  selectedEmail?.id === email.id
-                    ? "border-agent-purple/25 bg-agent-purple/4 shadow-sm"
-                    : "border-border/30 bg-card hover:border-border/50 hover:shadow-sm"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">{email.subject || "(no subject)"}</p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">{email.sender}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    {email.classification ? (
-                      <Badge variant="outline" className={`text-[10px] ${classificationColors[email.classification] || ""}`}>{email.classification}</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[10px] border-border/50 text-muted-foreground">pending</Badge>
-                    )}
-                    {email.needs_review && <AlertTriangle className="h-3 w-3 text-warning" />}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  {email.company && <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary/80 text-secondary-foreground">{email.company}</span>}
-                  <span className="text-[10px] text-muted-foreground/50 ml-auto">{email.received_at ? new Date(email.received_at).toLocaleDateString() : ""}</span>
-                </div>
-              </motion.button>
-            ))
-          )}
+      {/* Sectioned Email View */}
+      {isLoading ? (
+        <div className="text-center py-16 text-muted-foreground">Loading emails...</div>
+      ) : allEmails.length === 0 ? (
+        <div className="premium-card p-12 text-center">
+          <Mail className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">No emails found</p>
+          <p className="text-xs text-muted-foreground mt-1">Use "Sync Emails" to fetch & classify</p>
         </div>
+      ) : (
+        <div className="space-y-4">
+          {SECTIONS.map(section => {
+            const sectionEmails = sectionMap.get(section.key) || [];
+            if (sectionEmails.length === 0) return null;
+            const isCollapsed = collapsedSections[section.key];
 
-        {/* Detail */}
-        <div className="lg:col-span-3">
-          <AnimatePresence mode="wait">
-            {selectedEmail ? (
-              <motion.div key={selectedEmail.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="premium-card p-6 space-y-5">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-lg font-heading font-semibold text-foreground">{selectedEmail.subject || "(no subject)"}</h2>
-                    <p className="text-sm text-muted-foreground mt-0.5">{selectedEmail.sender}</p>
-                    <p className="text-xs text-muted-foreground/60 mt-0.5">{selectedEmail.received_at ? new Date(selectedEmail.received_at).toLocaleString() : ""}</p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => reprocessEmail.mutate(selectedEmail.id)} disabled={reprocessEmail.isPending} className="rounded-xl border-border/40 gap-1">
-                    <RotateCcw className={`h-4 w-4 ${reprocessEmail.isPending ? "animate-spin" : ""}`} /> Reprocess
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedEmail.classification && (
-                    <Badge variant="outline" className={`rounded-lg ${classificationColors[selectedEmail.classification] || ""}`}>
-                      {classificationIcons[selectedEmail.classification]}<span className="ml-1 capitalize">{selectedEmail.classification}</span>
+            return (
+              <div key={section.key} className={`rounded-2xl border ${section.borderColor} ${section.color} overflow-hidden`}>
+                {/* Section header */}
+                <button
+                  onClick={() => toggleSection(section.key)}
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-secondary/20 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`${section.iconColor}`}>{section.icon}</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {section.emoji} {section.label}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px] px-2 py-0 border-0">
+                      {sectionEmails.length}
                     </Badge>
-                  )}
-                  {selectedEmail.company && (
-                    <Badge variant="outline" className="rounded-lg border-agent-green/20 text-agent-green bg-agent-green/6">
-                      <Building2 className="h-3 w-3 mr-1" />{selectedEmail.company}
-                    </Badge>
-                  )}
-                  {selectedEmail.confidence != null && (
-                    <Badge variant="outline" className="rounded-lg text-muted-foreground border-border/40">{Math.round((selectedEmail.confidence || 0) * 100)}% conf</Badge>
-                  )}
-                </div>
-                {selectedEmail.needs_review && (
-                  <div className="p-4 rounded-xl bg-warning/6 border border-warning/15">
-                    <div className="flex items-center gap-2 text-warning text-sm font-medium"><AlertTriangle className="h-4 w-4" /> Needs Manual Review</div>
-                    <p className="text-xs text-muted-foreground mt-1.5">{selectedEmail.review_reason || "Low confidence classification"}</p>
-                    <div className="flex gap-2 mt-3">
-                      <Select onValueChange={val => updateEmail.mutate({ id: selectedEmail.id, updates: { company: val, needs_review: false } })}>
-                        <SelectTrigger className="w-48 h-8 text-xs bg-card rounded-lg"><SelectValue placeholder="Reassign company" /></SelectTrigger>
-                        <SelectContent>
-                          {companies?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                          <SelectItem value="Unknown">Unknown</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select onValueChange={val => updateEmail.mutate({ id: selectedEmail.id, updates: { classification: val, needs_review: false } })}>
-                        <SelectTrigger className="w-36 h-8 text-xs bg-card rounded-lg"><SelectValue placeholder="Reclassify" /></SelectTrigger>
-                        <SelectContent>
-                          {["invoice", "task", "waiting", "information", "irrelevant"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <span className="text-xs text-muted-foreground hidden md:inline">
+                      {section.description}
+                    </span>
                   </div>
-                )}
-                {selectedEmail.summary && (
-                  <div>
-                    <h3 className="text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-2">AI Summary</h3>
-                    <p className="text-sm text-foreground/80 leading-relaxed bg-secondary/40 p-4 rounded-xl">{selectedEmail.summary}</p>
-                  </div>
-                )}
-              </motion.div>
-            ) : (
-              <div className="premium-card p-12 text-center">
-                <Mail className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                <p className="text-muted-foreground font-medium">Select an email to view details</p>
+                  <motion.div animate={{ rotate: isCollapsed ? 0 : 180 }} transition={{ duration: 0.2 }}>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </motion.div>
+                </button>
+
+                {/* Section content */}
+                <AnimatePresence initial={false}>
+                  {!isCollapsed && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      {section.renderStyle === "table" ? (
+                        <SectionTable
+                          emails={sectionEmails}
+                          section={section}
+                          selectedEmail={selectedEmail}
+                          onSelect={setSelectedEmail}
+                          companies={companies}
+                          updateEmail={updateEmail}
+                        />
+                      ) : section.renderStyle === "list" ? (
+                        <SectionList emails={sectionEmails} />
+                      ) : (
+                        <SectionCompact emails={sectionEmails} />
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
-          </AnimatePresence>
+            );
+          })}
         </div>
+      )}
+
+      {/* Email Detail Drawer */}
+      <AnimatePresence>
+        {selectedEmail && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-4 right-4 left-4 md:left-auto md:w-[500px] z-50"
+          >
+            <div className="premium-card p-6 space-y-4 shadow-xl border-agent-purple/20">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-base font-heading font-semibold text-foreground truncate">{selectedEmail.subject || "(no subject)"}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">{selectedEmail.sender}</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">{selectedEmail.received_at ? new Date(selectedEmail.received_at).toLocaleString() : ""}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button variant="outline" size="sm" onClick={() => reprocessEmail.mutate(selectedEmail.id)} disabled={reprocessEmail.isPending} className="rounded-lg border-border/40 gap-1 h-7 text-[11px]">
+                    <RotateCcw className={`h-3 w-3 ${reprocessEmail.isPending ? "animate-spin" : ""}`} /> Reprocess
+                  </Button>
+                  <button onClick={() => setSelectedEmail(null)} className="text-muted-foreground hover:text-foreground">
+                    <XCircle className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedEmail.classification && (
+                  <Badge variant="outline" className="rounded-lg text-[10px]">{selectedEmail.classification}</Badge>
+                )}
+                {selectedEmail.company && (
+                  <Badge variant="outline" className="rounded-lg border-agent-green/20 text-agent-green bg-agent-green/6 text-[10px]">
+                    <Building2 className="h-3 w-3 mr-1" />{selectedEmail.company}
+                  </Badge>
+                )}
+                {selectedEmail.confidence != null && (
+                  <Badge variant="outline" className="rounded-lg text-muted-foreground border-border/40 text-[10px]">{Math.round((selectedEmail.confidence || 0) * 100)}%</Badge>
+                )}
+              </div>
+
+              {selectedEmail.needs_review && (
+                <div className="p-3 rounded-xl bg-warning/6 border border-warning/15">
+                  <div className="flex items-center gap-2 text-warning text-xs font-medium"><AlertTriangle className="h-3.5 w-3.5" /> Needs Manual Review</div>
+                  <p className="text-[11px] text-muted-foreground mt-1">{selectedEmail.review_reason || "Low confidence"}</p>
+                  <div className="flex gap-2 mt-2">
+                    <Select onValueChange={val => { updateEmail.mutate({ id: selectedEmail.id, updates: { company: val, needs_review: false } }); setSelectedEmail(null); }}>
+                      <SelectTrigger className="w-40 h-7 text-[10px] bg-card rounded-lg"><SelectValue placeholder="Reassign company" /></SelectTrigger>
+                      <SelectContent>
+                        {companies?.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select onValueChange={val => { updateEmail.mutate({ id: selectedEmail.id, updates: { classification: val, needs_review: false } }); setSelectedEmail(null); }}>
+                      <SelectTrigger className="w-32 h-7 text-[10px] bg-card rounded-lg"><SelectValue placeholder="Reclassify" /></SelectTrigger>
+                      <SelectContent>
+                        {["invoice", "task", "waiting", "information", "irrelevant"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {selectedEmail.summary && (
+                <div>
+                  <h3 className="text-[10px] font-semibold tracking-wider uppercase text-muted-foreground mb-1.5">AI Summary</h3>
+                  <p className="text-xs text-foreground/80 leading-relaxed bg-secondary/40 p-3 rounded-xl">{selectedEmail.summary}</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── Table-style section (like the PDF invoice/task tables) ── */
+function SectionTable({
+  emails, section, selectedEmail, onSelect, companies, updateEmail,
+}: {
+  emails: Email[];
+  section: EmailSection;
+  selectedEmail: Email | null;
+  onSelect: (e: Email) => void;
+  companies: any;
+  updateEmail: any;
+}) {
+  return (
+    <div className="px-4 pb-4">
+      {/* Table header */}
+      <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/20 mb-2">
+        <div className="col-span-1 text-center">#</div>
+        <div className="col-span-3">Sender</div>
+        <div className="col-span-4">Subject</div>
+        <div className="col-span-2">Company</div>
+        <div className="col-span-2 text-right">Action</div>
       </div>
+
+      {/* Rows */}
+      {emails.map((email, idx) => {
+        const action = deriveAction(email);
+        const isUrgent = action === "PAY NOW" || section.key === "overdue";
+        return (
+          <motion.button
+            key={email.id}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.02 }}
+            onClick={() => onSelect(email)}
+            className={`w-full grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-4 py-3 rounded-xl text-left transition-all mb-1 ${
+              selectedEmail?.id === email.id
+                ? "bg-agent-purple/6 border border-agent-purple/20"
+                : "hover:bg-secondary/30 border border-transparent"
+            }`}
+          >
+            <div className="col-span-1 hidden md:flex items-center justify-center">
+              <span className="text-xs text-muted-foreground/50 font-mono">{idx + 1}</span>
+            </div>
+            <div className="col-span-3">
+              <p className="text-xs font-medium text-foreground truncate">{email.sender?.replace(/<.*>/, "").trim() || "Unknown"}</p>
+            </div>
+            <div className="col-span-4">
+              <p className="text-xs text-foreground/80 truncate">{email.subject || "(no subject)"}</p>
+              {email.needs_review && <AlertTriangle className="h-3 w-3 text-warning inline ml-1" />}
+            </div>
+            <div className="col-span-2">
+              {email.company && (
+                <span className="text-[10px] px-2 py-0.5 rounded-lg bg-secondary/80 text-secondary-foreground truncate inline-block max-w-full">
+                  {email.company}
+                </span>
+              )}
+            </div>
+            <div className="col-span-2 flex items-center justify-end gap-2">
+              <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg ${
+                isUrgent
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-agent-purple/8 text-agent-purple"
+              }`}>
+                {action}
+              </span>
+              <Eye className="h-3.5 w-3.5 text-muted-foreground/40 hidden md:block" />
+            </div>
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── List-style section (for FYI / confirmed) ── */
+function SectionList({ emails }: { emails: Email[] }) {
+  return (
+    <div className="px-5 pb-4">
+      <div className="space-y-1.5">
+        {emails.map(email => (
+          <div key={email.id} className="flex items-center gap-3 py-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-success shrink-0" />
+            <span className="text-xs text-foreground/70">
+              <span className="font-medium">{email.sender?.replace(/<.*>/, "").trim()}</span>
+              {" — "}
+              {email.subject || "(no subject)"}
+              {email.company && <span className="text-muted-foreground"> ({email.company})</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Compact section (for clutter/ignore) ── */
+function SectionCompact({ emails }: { emails: Email[] }) {
+  const senders = emails
+    .map(e => e.sender?.replace(/<.*>/, "").trim())
+    .filter(Boolean);
+  const unique = [...new Set(senders)];
+
+  return (
+    <div className="px-5 pb-4">
+      <p className="text-xs text-muted-foreground/70 leading-relaxed">
+        {unique.length > 0
+          ? `Newsletters, promotions, and irrelevant: ${unique.join(", ")}`
+          : `${emails.length} irrelevant emails filtered out.`}
+      </p>
     </div>
   );
 }
