@@ -126,8 +126,9 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
           <p className="text-sm font-medium text-foreground truncate">{att.filename || "Unnamed"}</p>
           <p className="text-xs text-muted-foreground">
             {att.mime_type} · {formatFileSize(att.size || 0)}
-            {att.parse_status === "stored" && <span className="text-green-500 ml-2">● Stored</span>}
-            {att.parse_status === "pending" && <span className="text-yellow-500 ml-2">● Not downloaded</span>}
+            {att.parse_status === "stored" && <span className="text-primary ml-2">● Ready</span>}
+            {att.parse_status === "pending" && <span className="text-muted-foreground ml-2">● Fetching...</span>}
+            {att.parse_status === "pending_upload" && <span className="text-muted-foreground ml-2">● Preparing...</span>}
             {att.parse_status === "failed" && <span className="text-destructive ml-2">● Failed</span>}
           </p>
           {att.extracted_summary && (
@@ -148,9 +149,9 @@ function AttachmentItem({ att, storageBaseUrl }: { att: EmailAttachment; storage
               </Button>
             </a>
           ) : (
-            <Button variant="outline" size="sm" onClick={handleFetch} disabled={isFetching}>
-              {isFetching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
-              <span className="ml-1 hidden sm:inline">Fetch</span>
+            <Button variant="outline" size="sm" onClick={handleFetch} disabled={isFetching || att.parse_status === "pending" || att.parse_status === "pending_upload"}>
+              {isFetching || att.parse_status === "pending" || att.parse_status === "pending_upload" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+              <span className="ml-1 hidden sm:inline">{att.parse_status === "pending" || att.parse_status === "pending_upload" ? "Auto-fetching" : "Fetch"}</span>
             </Button>
           )}
         </div>

@@ -115,6 +115,12 @@ export function useEmailAttachments(emailId: string | null) {
   return useQuery({
     queryKey: ["email_attachments", emailId],
     enabled: !!emailId,
+    refetchInterval: (query) => {
+      const rows = (query.state.data || []) as EmailAttachment[];
+      return rows.some((att) => att.parse_status && att.parse_status !== "stored" && att.parse_status !== "failed")
+        ? 3000
+        : false;
+    },
     queryFn: async () => {
       if (!emailId) return [];
       const { data, error } = await supabase
@@ -408,7 +414,6 @@ export function useReparseEmail() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (emailId: string) => {
-      // Reset parse status
       await supabase.from("emails").update({
         body_text: null,
         body_html: null,
@@ -418,19 +423,34 @@ export function useReparseEmail() {
         has_attachments: false,
       }).eq("id", emailId);
 
-      // Delete old attachments
       await supabase.from("email_attachments").delete().eq("email_id", emailId);
 
-      // Re-fetch body with force flag
       const { data, error } = await supabase.functions.invoke("fetch-email-body", {
         body: { email_id: emailId, force: true },
       });
       if (error) throw error;
+
+      const { data: attachments } = await supabase
+        .from("email_attachments")
+        .select("id, is_inline, parse_status")
+        .eq("email_id", emailId)
+        .eq("is_inline", false);
+
+      const pendingAttachments = (attachments || []).filter((att) => att.parse_status !== "stored");
+      await Promise.allSettled(
+        pendingAttachments.map((att) =>
+          supabase.functions.invoke("fetch-email-attachment", {
+            body: { attachment_id: att.id },
+          })
+        )
+      );
+
       return data;
     },
     onSuccess: (_data, emailId) => {
       queryClient.invalidateQueries({ queryKey: ["emails"] });
       queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      queryClient.invalidateQueries({ queryKey: ["email_attachments", emailId] });
       queryClient.invalidateQueries({ queryKey: ["email_body", emailId] });
       toast.success("Email re-parsed from server");
     },
@@ -486,7 +506,6 @@ export function useFetchEmailBody(emailId: string | null) {
       
       if (error) {
         console.error("fetch-email-body error:", error);
-        // Return a fallback instead of throwing, so the UI can handle gracefully
         return {
           body_text: null,
           body_html: null,
@@ -496,6 +515,25 @@ export function useFetchEmailBody(emailId: string | null) {
           attachment_count: 0,
           error: error.message || "Failed to fetch email body",
         };
+      }
+
+      const { data: attachments } = await supabase
+        .from("email_attachments")
+        .select("id, is_inline, parse_status")
+        .eq("email_id", emailId)
+        .eq("is_inline", false);
+
+      const pendingAttachments = (attachments || []).filter((att) => att.parse_status !== "stored");
+      if (pendingAttachments.length > 0) {
+        Promise.allSettled(
+          pendingAttachments.map((att) =>
+            supabase.functions.invoke("fetch-email-attachment", {
+              body: { attachment_id: att.id },
+            })
+          )
+        ).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["email_attachments", emailId] });
+        });
       }
 
       queryClient.invalidateQueries({ queryKey: ["emails"] });
