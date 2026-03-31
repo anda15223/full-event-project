@@ -120,10 +120,6 @@ function extractCharsetFromRawEmail(rawEmail: Uint8Array): string {
   return match?.[1] || "utf-8";
 }
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-}
-
 function bytesFromUnknown(input: unknown): Uint8Array {
   if (input instanceof Uint8Array) return input;
   if (input instanceof ArrayBuffer) return new Uint8Array(input);
@@ -256,7 +252,7 @@ serve(async (req) => {
     await readRaw(conn, (tail) => tail.includes("\r\n"), 4096);
 
     const loginRes = await imapCmd(conn, "A1", `LOGIN "${IMAP_EMAIL}" "${IMAP_PASSWORD}"`, 4096);
-    if (!u8Contains(loginRes, "A1 OK")) {
+    if (!latin1(loginRes).includes("A1 OK")) {
       return new Response(JSON.stringify({ error: "IMAP login failed" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
