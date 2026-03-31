@@ -53,6 +53,7 @@ export type Database = {
           mime_type: string | null
           parse_error: string | null
           parse_status: string | null
+          part_number: string | null
           size: number | null
           storage_path: string | null
         }
@@ -70,6 +71,7 @@ export type Database = {
           mime_type?: string | null
           parse_error?: string | null
           parse_status?: string | null
+          part_number?: string | null
           size?: number | null
           storage_path?: string | null
         }
@@ -87,6 +89,7 @@ export type Database = {
           mime_type?: string | null
           parse_error?: string | null
           parse_status?: string | null
+          part_number?: string | null
           size?: number | null
           storage_path?: string | null
         }

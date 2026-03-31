@@ -42,6 +42,7 @@ export type EmailAttachment = {
   document_type: string | null;
   parse_status: string | null;
   parse_error: string | null;
+  part_number: string | null;
   created_at: string;
 };
 
@@ -489,6 +490,27 @@ export function useFetchEmailBody(emailId: string | null) {
         has_attachments?: boolean;
         attachment_count?: number;
       };
+    },
+  });
+}
+
+// Fetch a single attachment on demand (downloads from IMAP → storage)
+export function useFetchAttachment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (attachmentId: string) => {
+      const { data, error } = await supabase.functions.invoke("fetch-email-attachment", {
+        body: { attachment_id: attachmentId },
+      });
+      if (error) throw error;
+      return data as { storage_path: string; url: string; parse_status: string };
+    },
+    onSuccess: (_data, attachmentId) => {
+      queryClient.invalidateQueries({ queryKey: ["email_attachments"] });
+      toast.success("Attachment downloaded");
+    },
+    onError: (err: Error) => {
+      toast.error("Attachment download failed: " + err.message);
     },
   });
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.email_attachments ADD COLUMN IF NOT EXISTS part_number text;

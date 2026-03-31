@@ -1,0 +1,1 @@
+UPDATE public.emails SET parse_status = 'pending', body_text = NULL, body_html = NULL, body_clean_text = NULL WHERE parse_status = 'parsed';
