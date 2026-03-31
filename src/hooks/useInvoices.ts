@@ -107,7 +107,7 @@ export function useLedger(filters?: { supplier?: string; company?: string; locat
   return useQuery({
     queryKey: ["ledger", filters],
     queryFn: async () => {
-      let q = supabase.from("ledger").select("*").order("paid_date", { ascending: false });
+      let q = (supabase as any).from("ledger").select("*").order("paid_date", { ascending: false });
       if (filters?.supplier) q = q.ilike("supplier_name", `%${filters.supplier}%`);
       if (filters?.company && filters.company !== "all") q = q.eq("company", filters.company);
       if (filters?.location && filters.location !== "all") q = q.eq("location", filters.location);
