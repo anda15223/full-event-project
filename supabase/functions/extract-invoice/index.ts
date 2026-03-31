@@ -71,6 +71,11 @@ COMPANY MAPPING RULES — never deviate:
 - Inco Danmark A/S → The Fish Project ApS, PBS payment, central storage
 - BC Catering Roskilde (shop@bccs.dk / info@bccr.dk) → web order, add 25% VAT, The Fish Project ApS or Blue Fish ApS based on location
 - BC Catering Skanderborg (omk.administration@bccr.dk) → PBS cashflow only, Aegean ApS
+- Sepio → ALWAYS The Fish Project ApS
+- Kavsman → ALWAYS The Fish Project ApS
+- Odin Seafood / Odin → ALWAYS The Fish Project ApS
+- Kollek ApS / Team Kollek → ALWAYS The Fish Project ApS, payment = PBS on due date
+  - Kollek location = read delivery address: Aarhus → "The Fish Project Aarhus", Helsingør → "The Fish Project Helsingør", Reffen → "The Fish Project Reffen", Søborg → "Søborg Storage", unclear → "Copenhagen Central Storage"
 
 EXTRACTION RULES:
 - Always prefer PDF text over email body for invoice data
