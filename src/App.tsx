@@ -14,6 +14,10 @@ import PriorityView from "./pages/PriorityView";
 import WhatsAppInbox from "./pages/WhatsAppInbox";
 import Employees from "./pages/Employees";
 import SettingsPage from "./pages/SettingsPage";
+import AgentInbox from "./pages/AgentInbox";
+import AgentTasks from "./pages/AgentTasks";
+import AgentInvoices from "./pages/AgentInvoices";
+import AgentReviewQueue from "./pages/AgentReviewQueue";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +37,10 @@ const App = () => (
           <Route path="/whatsapp" element={<DashboardLayout><WhatsAppInbox /></DashboardLayout>} />
           <Route path="/employees" element={<DashboardLayout><Employees /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><SettingsPage /></DashboardLayout>} />
+          <Route path="/agent/inbox" element={<DashboardLayout><AgentInbox /></DashboardLayout>} />
+          <Route path="/agent/tasks" element={<DashboardLayout><AgentTasks /></DashboardLayout>} />
+          <Route path="/agent/invoices" element={<DashboardLayout><AgentInvoices /></DashboardLayout>} />
+          <Route path="/agent/review" element={<DashboardLayout><AgentReviewQueue /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

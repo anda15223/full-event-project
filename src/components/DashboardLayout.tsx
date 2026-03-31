@@ -14,6 +14,7 @@ import {
 import {
   LayoutDashboard, Mail, CheckSquare, Settings,
   MessageCircle, Users, Flame, FileText, Cpu, PanelLeft, Home,
+  Bot, ListTodo, Receipt, AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
@@ -26,6 +27,13 @@ const menuItems = [
   { icon: FileText, label: "Invoices", path: "/invoices" },
   { icon: Flame, label: "Priority Matrix", path: "/priority" },
   { icon: Settings, label: "Settings", path: "/settings" },
+];
+
+const agentItems = [
+  { icon: Bot, label: "Agent Inbox", path: "/agent/inbox" },
+  { icon: ListTodo, label: "Agent Tasks", path: "/agent/tasks" },
+  { icon: Receipt, label: "Agent Invoices", path: "/agent/invoices" },
+  { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
 ];
 
 function SidebarNav() {
@@ -57,6 +65,34 @@ function SidebarNav() {
       <SidebarContent className="gap-0">
         <SidebarMenu className="px-2 py-1">
           {menuItems.map((item) => {
+            const isActive = location.pathname.startsWith(item.path);
+            return (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                  <NavLink
+                    to={item.path}
+                    className="h-10 transition-all font-normal"
+                    activeClassName="bg-sidebar-accent text-primary font-medium"
+                  >
+                    <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                    {!isCollapsed && <span>{item.label}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+
+        {/* Email Agent Section */}
+        <div className="px-3 mt-4 pt-4 border-t border-border">
+          {!isCollapsed && (
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 px-1">
+              Email Agent
+            </p>
+          )}
+        </div>
+        <SidebarMenu className="px-2">
+          {agentItems.map((item) => {
             const isActive = location.pathname.startsWith(item.path);
             return (
               <SidebarMenuItem key={item.path}>
