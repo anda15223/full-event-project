@@ -90,24 +90,28 @@ function ClaudeReprocessPanel() {
 
       let invoiceMap: Record<string, any> = {};
       if (extractedIds.length > 0) {
-        const { data: invoices } = await supabase
+        const { data: invoices, error: invError } = await supabase
           .from("invoices")
           .select("email_id, supplier_name, amount, currency, company, invoice_number")
           .in("email_id", extractedIds)
           .order("created_at", { ascending: false });
+        console.log("📦 Invoice enrichment query:", { extractedIds, invoices, invError });
         for (const inv of invoices || []) {
-          invoiceMap[inv.email_id] = inv;
+          if (inv.email_id && !invoiceMap[inv.email_id]) {
+            invoiceMap[inv.email_id] = inv;
+          }
         }
       }
 
       const enriched = (data.details || []).map((d: any) => ({
         ...d,
-        supplier: invoiceMap[d.email_id]?.supplier_name || null,
-        amount: invoiceMap[d.email_id]?.amount || null,
-        company: invoiceMap[d.email_id]?.company || null,
+        supplier: invoiceMap[d.email_id]?.supplier_name ?? null,
+        amount: invoiceMap[d.email_id]?.amount ?? null,
+        company: invoiceMap[d.email_id]?.company ?? null,
         currency: invoiceMap[d.email_id]?.currency || "DKK",
-        invoice_number: invoiceMap[d.email_id]?.invoice_number || null,
+        invoice_number: invoiceMap[d.email_id]?.invoice_number ?? null,
       }));
+      console.log("📦 Enriched details:", enriched);
 
       setTestDetails(enriched);
       toast.success(`Test complete: ${data.extracted ?? 0} invoices extracted from ${data.processed ?? 0} emails`);
