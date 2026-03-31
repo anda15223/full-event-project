@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FileText, Download } from "lucide-react";
+import { FileText, Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,16 +21,7 @@ export default function Ledger() {
   const companies = useMemo(() => [...new Set(all.map((e) => e.company).filter(Boolean))] as string[], [all]);
   const locations = useMemo(() => [...new Set(all.map((e) => e.location).filter(Boolean))] as string[], [all]);
 
-  // Group by supplier
-  const grouped = useMemo(() => {
-    const map = new Map<string, typeof all>();
-    all.forEach((e) => {
-      const key = e.supplier_name || "Unknown";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(e);
-    });
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [all]);
+  const totalAmount = all.reduce((s, e) => s + (e.total_with_vat || 0), 0);
 
   const exportCSV = () => {
     const headers = ["Date Paid", "Supplier", "Invoice #", "Location", "Company", "What Was Bought", "Amount", "VAT", "Total"];
@@ -57,7 +48,9 @@ export default function Ledger() {
               <span className="text-xs font-semibold tracking-wider uppercase text-agent-green">Financial Archive</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-heading font-bold tracking-tight text-foreground">Ledger</h1>
-            <p className="text-sm text-muted-foreground mt-1">All paid invoices, grouped by supplier</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {all.length} paid invoice{all.length !== 1 ? "s" : ""} · Total: {totalAmount.toLocaleString("da-DK")} DKK
+            </p>
           </div>
           <Button onClick={exportCSV} className="rounded-xl bg-agent-green hover:bg-agent-green/90 text-white gap-2">
             <Download className="h-4 w-4" /> Export CSV
@@ -95,7 +88,7 @@ export default function Ledger() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table — each invoice is its own row, never merged */}
       {isLoading ? (
         <div className="text-center py-16 text-muted-foreground">Loading ledger...</div>
       ) : all.length === 0 ? (
@@ -105,47 +98,47 @@ export default function Ledger() {
           <p className="text-sm text-muted-foreground">Paid invoices will appear here</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {grouped.map(([supplierName, items]) => (
-            <div key={supplierName} className="bg-card rounded-2xl border border-border/40 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 bg-secondary/30 border-b border-border/30 flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">{supplierName}</span>
-                <span className="text-xs text-muted-foreground">
-                  {items.length} invoice{items.length > 1 ? "s" : ""} · {items.reduce((s, i) => s + (i.total_with_vat || 0), 0).toLocaleString("da-DK")} DKK
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border/20 text-muted-foreground">
-                      <th className="text-left px-5 py-2 font-medium">Date Paid</th>
-                      <th className="text-left px-3 py-2 font-medium">Invoice #</th>
-                      <th className="text-left px-3 py-2 font-medium">Location</th>
-                      <th className="text-left px-3 py-2 font-medium">Company</th>
-                      <th className="text-left px-3 py-2 font-medium">Bought</th>
-                      <th className="text-right px-3 py-2 font-medium">Amount</th>
-                      <th className="text-right px-3 py-2 font-medium">VAT</th>
-                      <th className="text-right px-5 py-2 font-medium">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((e) => (
-                      <tr key={e.id} className="border-b border-border/10 hover:bg-secondary/20 transition-colors">
-                        <td className="px-5 py-2.5 text-foreground">{e.paid_date ? new Date(e.paid_date).toLocaleDateString("da-DK") : "—"}</td>
-                        <td className="px-3 py-2.5 font-mono text-muted-foreground">{e.invoice_number || "—"}</td>
-                        <td className="px-3 py-2.5">{e.location || "—"}</td>
-                        <td className="px-3 py-2.5">{e.company || "—"}</td>
-                        <td className="px-3 py-2.5 max-w-[200px] truncate">{e.what_was_bought || "—"}</td>
-                        <td className="px-3 py-2.5 text-right font-mono">{e.amount?.toLocaleString("da-DK") || "—"}</td>
-                        <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{e.vat_amount?.toLocaleString("da-DK") || "—"}</td>
-                        <td className="px-5 py-2.5 text-right font-mono font-semibold text-agent-green">{e.total_with_vat?.toLocaleString("da-DK") || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
+        <div className="bg-card rounded-2xl border border-border/40 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border/30 bg-secondary/30 text-muted-foreground">
+                  <th className="text-left px-5 py-3 font-medium">Date Paid</th>
+                  <th className="text-left px-3 py-3 font-medium">Supplier</th>
+                  <th className="text-left px-3 py-3 font-medium">Invoice #</th>
+                  <th className="text-left px-3 py-3 font-medium">Location</th>
+                  <th className="text-left px-3 py-3 font-medium">Company</th>
+                  <th className="text-left px-3 py-3 font-medium">Bought</th>
+                  <th className="text-right px-3 py-3 font-medium">Amount</th>
+                  <th className="text-right px-3 py-3 font-medium">VAT</th>
+                  <th className="text-right px-5 py-3 font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {all.map((e) => (
+                  <tr key={e.id} className="border-b border-border/10 hover:bg-secondary/20 transition-colors">
+                    <td className="px-5 py-3 text-foreground">{e.paid_date ? new Date(e.paid_date).toLocaleDateString("da-DK") : "—"}</td>
+                    <td className="px-3 py-3 font-medium text-foreground">{e.supplier_name || "—"}</td>
+                    <td className="px-3 py-3 font-mono text-muted-foreground">{e.invoice_number || "—"}</td>
+                    <td className="px-3 py-3">{e.location || "—"}</td>
+                    <td className="px-3 py-3">{e.company || "—"}</td>
+                    <td className="px-3 py-3 max-w-[200px] truncate">{e.what_was_bought || "—"}</td>
+                    <td className="px-3 py-3 text-right font-mono">{e.amount?.toLocaleString("da-DK") || "—"}</td>
+                    <td className="px-3 py-3 text-right font-mono text-muted-foreground">{e.vat_amount?.toLocaleString("da-DK") || "—"}</td>
+                    <td className="px-5 py-3 text-right font-mono font-semibold text-agent-green">{e.total_with_vat?.toLocaleString("da-DK") || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border/40 bg-secondary/20">
+                  <td colSpan={6} className="px-5 py-3 text-xs font-semibold text-foreground">Total ({all.length} invoices)</td>
+                  <td className="px-3 py-3 text-right font-mono font-semibold">{all.reduce((s, e) => s + (e.amount || 0), 0).toLocaleString("da-DK")}</td>
+                  <td className="px-3 py-3 text-right font-mono text-muted-foreground">{all.reduce((s, e) => s + (e.vat_amount || 0), 0).toLocaleString("da-DK")}</td>
+                  <td className="px-5 py-3 text-right font-mono font-bold text-agent-green">{totalAmount.toLocaleString("da-DK")}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       )}
     </div>
