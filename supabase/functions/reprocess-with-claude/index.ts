@@ -294,13 +294,26 @@ async function handleRetryErrors(supabase: any, supabaseUrl: string, supabaseKey
     const chunk = batch.slice(i, i + parallel);
 
     const results = await Promise.allSettled(
-      chunk.map(async (emailId) => {
+      chunk.map(async (emailId, idx) => {
+        // Stagger retry calls
+        if (idx > 0) await new Promise(r => setTimeout(r, idx * 1500));
         const email = invoiceEmails.find((e: any) => e.id === emailId);
-        const response = await fetch(extractUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
-          body: JSON.stringify({ email_id: emailId }),
-        });
+        
+        // Retry with exponential backoff for rate limits
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const response = await fetch(extractUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
+            body: JSON.stringify({ email_id: emailId }),
+          });
+
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("retry-after");
+            const wait = retryAfter ? parseInt(retryAfter) * 1000 : Math.pow(2, attempt) * 10000;
+            console.log(`⏳ Retry rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1}/5)`);
+            await new Promise(r => setTimeout(r, wait));
+            continue;
+          }
 
         const responseText = await response.text();
         let data: any;
