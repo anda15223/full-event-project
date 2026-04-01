@@ -135,7 +135,7 @@ serve(async (req) => {
             const responseText = await response.text();
             let data: any;
             try { data = JSON.parse(responseText); } catch {
-              return { email_id: emailId, status: "error", error: "Non-JSON response", error_category: "json_parse", subject };
+              return { email_id: emailId, status: "error", error: "Non-JSON response", error_category: "json_parse", subject, sender };
             }
 
             if (!response.ok) {
