@@ -10,6 +10,7 @@ import PaymentCopyPanel from "./PaymentCopyPanel";
 import InlineEdit from "./InlineEdit";
 import InvoiceReviewPanel from "./InvoiceReviewPanel";
 import PdfUploadButton from "./PdfUploadButton";
+import InvoiceChatPanel from "./InvoiceChatPanel";
 
 const LOCATION_COLORS: Record<string, string> = {
   "Fish Bistro": "bg-agent-blue/10 text-agent-blue border-agent-blue/20",
