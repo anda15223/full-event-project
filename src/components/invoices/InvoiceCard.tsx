@@ -198,7 +198,10 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
             {!localPdfUrl && (
               <PdfUploadButton invoiceId={invoice.id} onUploaded={(url) => setLocalPdfUrl(url)} />
             )}
-            {invoice.status !== "paid" && (
+            {/* Ask AI button */}
+            <InvoiceChatPanel invoiceId={invoice.id} />
+
+            {invoice.status !== "paid" && invoice.status !== "credit" && (
               <>
                 <Button
                   size="sm"
