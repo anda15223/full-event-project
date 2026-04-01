@@ -47,7 +47,9 @@ function statusStyle(label: string) {
 }
 
 function leftBorder(inv: Invoice) {
+  if (inv.category === "credit_note" || inv.status === "credit") return "border-l-4 border-l-emerald-500";
   if (inv.status === "overdue" || inv.overdue_flag) return "border-l-4 border-l-destructive";
+  if (inv.status === "due_soon") return "border-l-4 border-l-warning";
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const week = new Date(today); week.setDate(week.getDate() + 7);
   if (inv.due_date && new Date(inv.due_date) <= week && new Date(inv.due_date) >= today)
