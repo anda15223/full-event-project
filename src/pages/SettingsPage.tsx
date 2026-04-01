@@ -232,7 +232,7 @@ function ClaudeReprocessPanel() {
     setRetryResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
-        body: { retry_errors: true, parallel: 5 },
+        body: { retry_errors: true, parallel: 3 },
       });
       if (error) throw error;
       setRetryResult(data);
