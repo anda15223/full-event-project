@@ -24,8 +24,10 @@ serve(async (req) => {
     const batchSize = body.batch_size || 20;
     const testMode = body.test_mode || false;
     const offset = body.offset || 0;
-    const parallel = body.parallel || 5;
+    const parallel = body.parallel || 3; // Reduced from 5 to 3 to avoid rate limits
     const retryErrors = body.retry_errors || false;
+    const BATCH_DELAY = 5000; // 5 seconds between batches
+    const CALL_DELAY = 1000; // 1 second between individual calls
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
