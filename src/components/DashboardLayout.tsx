@@ -23,6 +23,7 @@ const navItems = [
   { icon: Globe, label: "Romania", path: "/agent/romania", color: "bg-agent-blue" },
   { icon: ClipboardList, label: "Non-Email Tasks", path: "/tasks", color: "bg-agent-gray" },
   { icon: BookOpen, label: "Ledger", path: "/ledger", color: "bg-agent-green" },
+  { icon: BarChart3, label: "KPI Ledger", path: "/kpi-ledger", color: "bg-violet-500" },
   { icon: TrendingDown, label: "Cashflow", path: "/cashflow", color: "bg-agent-orange" },
   { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
 ];

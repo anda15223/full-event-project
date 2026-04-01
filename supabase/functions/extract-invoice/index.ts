@@ -319,6 +319,22 @@ async function processEmail(
 ): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }>> {
   const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> = [];
 
+  // Check if this is a KPI platform email — route to kpi_ledger instead of invoices
+  const { data: email } = await supabase
+    .from("emails")
+    .select("subject, sender, company, body_clean_text, body_text, received_at")
+    .eq("id", emailId).single();
+
+  if (email) {
+    const kpiPlatform = detectKpiPlatform(email.sender, email.subject, null);
+    if (kpiPlatform) {
+      console.log(`📊 KPI platform detected: ${kpiPlatform} for email ${emailId}`);
+      const result = await processKpiEmail(supabase, emailId, email, kpiPlatform, claudeKey);
+      results.push(result);
+      return results;
+    }
+  }
+
   const { data: atts } = await supabase
     .from("email_attachments").select("*").eq("email_id", emailId).eq("is_inline", false);
 
@@ -338,7 +354,6 @@ async function processEmail(
         results.push(result);
         if (result.status === "extracted") extractedFromAttachment = true;
       } catch (attachError) {
-        // Error C — Don't fail entire email if attachment fails
         const errMsg = attachError instanceof Error ? attachError.message : "Attachment processing failed";
         console.warn(`⚠ Attachment ${att.id} failed, falling back to body: ${errMsg}`);
         results.push({ email_id: att.email_id, attachment_id: att.id, status: "error", error: errMsg, error_category: categorizeError(errMsg) });
