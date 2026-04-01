@@ -32,6 +32,8 @@ const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: st
   "inco": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco danmark": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "inco københavn": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
+  "inco cash": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
+  "finans@inco": { company: "The Fish Project ApS", location: "Central Storage — The Fish Project" },
   "sepio": { company: "The Fish Project ApS", location: null },
   "kavsman": { company: "The Fish Project ApS", location: null },
   "odin": { company: "The Fish Project ApS", location: null },
@@ -61,10 +63,8 @@ function detectKpiPlatform(sender: string | null, subject: string | null, suppli
 }
 
 function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
-  // KPI platforms are NOT ignored — they go to kpi_ledger
   const platform = detectKpiPlatform(null, subject, supplierName);
   if (platform) return false;
-
   const combined = `${subject || ""} ${bodyText || ""}`;
   return IGNORE_KEYWORDS.test(combined);
 }
@@ -74,6 +74,51 @@ const RYKKER_PATTERN = /rykker|rykke|betalingspåmindelse|påmindelse/i;
 
 function isRykker(subject: string | null, bodyText: string | null): boolean {
   return RYKKER_PATTERN.test(subject || "") || RYKKER_PATTERN.test((bodyText || "").substring(0, 2000));
+}
+
+/* ── Credit note (kreditnota) detection ── */
+const CREDIT_PATTERN = /kreditnota|kredit\s*nota|credit\s*note|kreditering|godskrivning|returnering/i;
+
+function isCreditNote(subject: string | null, bodyText: string | null, supplierName: string | null, whatWasBought: string | null): boolean {
+  return CREDIT_PATTERN.test(subject || "") ||
+    CREDIT_PATTERN.test((bodyText || "").substring(0, 3000)) ||
+    CREDIT_PATTERN.test(supplierName || "") ||
+    CREDIT_PATTERN.test(whatWasBought || "");
+}
+
+/* ── Inco Danmark detection ── */
+const INCO_VARIANTS = ["inco", "inco danmark", "inco københavn", "inco cash", "finans@inco.dk", "inco.dk"];
+
+function isIncoEmail(sender: string | null, subject: string | null, bodyText: string | null): boolean {
+  const combined = `${(sender || "").toLowerCase()} ${(subject || "").toLowerCase()} ${(bodyText || "").substring(0, 1000).toLowerCase()}`;
+  return INCO_VARIANTS.some(v => combined.includes(v));
+}
+
+/* ── Aegean / Athos separation ── */
+function fixAthosAegean(invoiceData: any, emailText: string): any {
+  const combined = `${emailText} ${invoiceData.supplier_name || ""} ${invoiceData.what_was_bought || ""}`.toLowerCase();
+  const athosSignals = ["athos", "athos aps"];
+  const aegeanSignals = ["aegean", "aegean aps", "fish bistro", "gaia"];
+
+  if (athosSignals.some(s => combined.includes(s))) {
+    invoiceData.company = "Athos ApS";
+  } else if (aegeanSignals.some(s => combined.includes(s))) {
+    invoiceData.company = "Aegean ApS";
+  }
+  return invoiceData;
+}
+
+/* ── Status calculation from due_date ── */
+function calculateInvoiceStatus(dueDate: string | null, currentStatus: string | null): string {
+  if (currentStatus === "paid") return "paid";
+  if (currentStatus === "credit") return "credit";
+  if (!dueDate) return "pending";
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate); due.setHours(0, 0, 0, 0);
+  const days = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return "overdue";
+  if (days <= 7) return "due_soon";
+  return "pending";
 }
 
 function resolveCompany(supplierName: string | null, location: string | null, emailCompany: string | null): { company: string | null; location: string | null } {
@@ -147,11 +192,18 @@ COMPANY RULES:
 - Aarhus → The Fish Project ApS
 - Søborg → The Fish Project ApS
 - Fish Bistro/Gaia/Gentofte → Aegean ApS
-- Inco Danmark → The Fish Project ApS
+- Athos/Athos ApS → Athos ApS (SEPARATE from Aegean!)
+- Inco Danmark/Inco København → The Fish Project ApS
 - BC Catering Roskilde (bccs.dk) → web order +25% VAT
 - BC Catering Skanderborg (bccr.dk) → PBS cashflow, Aegean ApS
 - Sepio/Kavsman/Odin/Kollek/HW Larsen → The Fish Project ApS
 - Livet på Øen/kontoudtog → is_invoice: false
+
+KREDITNOTA RULE:
+If the document is a kreditnota, credit note, or kreditering:
+- Set all amounts as NEGATIVE numbers
+- Set category = "credit_note"
+- Do NOT treat as a payment due
 
 Return:
 {"is_invoice":true,"supplier_name":"","invoice_number":"","invoice_date":"YYYY-MM-DD","due_date":"YYYY-MM-DD","amount":0,"vat_amount":0,"total_with_vat":0,"currency":"DKK","company":"","location":"","what_was_bought":"","payment_account":"","payment_reference":"","confidence":0.0,"extraction_notes":""}
@@ -268,11 +320,11 @@ serve(async (req) => {
         .order("received_at", { ascending: false }).limit(20);
 
       if (invoiceEmails && invoiceEmails.length > 0) {
-        const emailIds = invoiceEmails.map(e => e.id);
+        const emailIds = invoiceEmails.map((e: any) => e.id);
         const { data: existingInvoices } = await supabase
           .from("invoices").select("email_id").in("email_id", emailIds);
-        const existingIds = new Set((existingInvoices || []).map(i => i.email_id));
-        const toProcess = emailIds.filter(id => !existingIds.has(id)).slice(0, 5);
+        const existingIds = new Set((existingInvoices || []).map((i: any) => i.email_id));
+        const toProcess = emailIds.filter((id: string) => !existingIds.has(id)).slice(0, 5);
 
         for (const emailId of toProcess) {
           try {
@@ -292,7 +344,6 @@ serve(async (req) => {
       });
     }
 
-    // Add error_category to all error results
     for (const r of results) {
       if (r.status === "error" && r.error && !r.error_category) {
         r.error_category = categorizeError(r.error);
@@ -319,19 +370,24 @@ async function processEmail(
 ): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }>> {
   const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> = [];
 
-  // Check if this is a KPI platform email — route to kpi_ledger instead of invoices
   const { data: email } = await supabase
     .from("emails")
     .select("subject, sender, company, body_clean_text, body_text, received_at")
     .eq("id", emailId).single();
 
   if (email) {
+    // KPI platform detection
     const kpiPlatform = detectKpiPlatform(email.sender, email.subject, null);
     if (kpiPlatform) {
       console.log(`📊 KPI platform detected: ${kpiPlatform} for email ${emailId}`);
       const result = await processKpiEmail(supabase, emailId, email, kpiPlatform, claudeKey);
       results.push(result);
       return results;
+    }
+
+    // Inco Danmark force-routing
+    if (isIncoEmail(email.sender, email.subject, email.body_clean_text || email.body_text)) {
+      console.log(`📦 Inco Danmark detected for email ${emailId} — forcing invoice extraction`);
     }
   }
 
@@ -361,7 +417,6 @@ async function processEmail(
     }
   }
 
-  // Fall back to email body if no attachment extracted
   if (!extractedFromAttachment) {
     const result = await processEmailBody(supabase, emailId, claudeKey);
     results.push(result);
@@ -386,12 +441,16 @@ async function processEmailBody(
   }
 
   const bodyText = email.body_clean_text || email.body_text || "";
-  if (!bodyText || bodyText.trim().length < 20) {
+
+  // Inco emails should always be processed even with short body
+  const isInco = isIncoEmail(email.sender, email.subject, bodyText);
+
+  if (!isInco && (!bodyText || bodyText.trim().length < 20)) {
     return { email_id: emailId, status: "skipped", error: "No body text", error_category: "no_content" };
   }
 
   const fullText = `${email.subject || ""} ${bodyText}`;
-  if (!looksLikeInvoiceContent(fullText)) {
+  if (!isInco && !looksLikeInvoiceContent(fullText)) {
     return { email_id: emailId, status: "skipped", error: "No invoice-like content in body", error_category: "no_content" };
   }
 
@@ -400,9 +459,9 @@ async function processEmailBody(
     `From: ${email.sender || ""}`,
     `Company: ${email.company || "Unknown"}`,
     `Date: ${email.received_at || ""}`,
-  ].join("\n");
+    isInco ? "SUPPLIER HINT: Inco Danmark A/S — always The Fish Project ApS" : "",
+  ].filter(Boolean).join("\n");
 
-  // Error A — Truncate body text
   return await callClaudeExtraction(
     supabase, emailId, null, null,
     bodyText.substring(0, MAX_BODY_CHARS), emailContext,
@@ -418,7 +477,6 @@ async function processAttachment(
     return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path", error_category: "attachment_download" };
   }
 
-  // Check if PDF text was already extracted — use cached text
   if (att.extracted_text && att.extracted_text.length > 100) {
     console.log(`Using cached extracted text for ${att.id} (${att.extracted_text.length} chars)`);
     const pdfUrl = `${supabaseUrl}/storage/v1/object/public/email-attachments/${att.storage_path}`;
@@ -431,7 +489,6 @@ async function processAttachment(
     );
   }
 
-  // Error C — Graceful attachment download
   console.log(`Downloading attachment ${att.id} from ${att.storage_path}`);
   let fileData: any;
   try {
@@ -443,6 +500,18 @@ async function processAttachment(
   } catch (dlErr) {
     const errMsg = dlErr instanceof Error ? dlErr.message : "Download failed";
     console.warn(`⚠ PDF download failed for ${att.id}: ${errMsg}`);
+    // Fallback: try using email body text instead
+    const emailContext = await getEmailContext(supabase, att.email_id);
+    const { data: parentEmail } = await supabase.from("emails").select("company, body_clean_text, body_text").eq("id", att.email_id).single();
+    const fallbackText = parentEmail?.body_clean_text || parentEmail?.body_text || "";
+    if (fallbackText && fallbackText.length > 50) {
+      console.log(`Using email body as fallback for failed attachment ${att.id}`);
+      return await callClaudeExtraction(
+        supabase, att.email_id, att.id, null,
+        fallbackText.substring(0, MAX_BODY_CHARS), emailContext,
+        parentEmail?.company, claudeKey
+      );
+    }
     return { email_id: att.email_id, attachment_id: att.id, status: "error", error: errMsg, error_category: "attachment_download" };
   }
 
@@ -456,10 +525,8 @@ async function processAttachment(
     const bytes = new Uint8Array(arrayBuffer);
     console.log(`PDF attachment ${att.id}: ${bytes.length} bytes`);
 
-    // Error A — Check PDF size limit (5MB max for base64 to Claude)
     if (bytes.length > 5 * 1024 * 1024) {
       console.warn(`⚠ PDF too large for Claude: ${att.id} (${bytes.length} bytes)`);
-      // Try basic text extraction as fallback
       const basicText = tryExtractPdfText(bytes);
       if (basicText && basicText.trim().length > 100) {
         return await callClaudeExtraction(
@@ -471,11 +538,9 @@ async function processAttachment(
       return { email_id: att.email_id, attachment_id: att.id, status: "error", error: "PDF too large for Claude API", error_category: "pdf_too_large" };
     }
 
-    // Step 1: Try basic regex text extraction
     let basicText = tryExtractPdfText(bytes);
     console.log(`Basic PDF extraction for ${att.id}: ${basicText.length} chars`);
 
-    // Step 2: If basic extraction got decent text, use it
     if (basicText && basicText.trim().length > 100) {
       console.log(`Using basic extracted text for ${att.id}`);
       await supabase.from("email_attachments").update({
@@ -489,7 +554,6 @@ async function processAttachment(
       );
     }
 
-    // Step 3: Send PDF directly to Claude as a document
     console.log(`Basic extraction insufficient for ${att.id}, sending PDF to Claude document API`);
     try {
       let base64 = "";
@@ -522,13 +586,11 @@ async function processAttachment(
         document_type: "invoice", parse_status: "extracted", parse_error: null,
       }).eq("id", att.id);
 
-      // Error B — Robust JSON parsing
       let invoiceData: any = null;
       try {
         invoiceData = parseClaudeJson(responseText);
       } catch (parseErr) {
         console.error(`Failed to parse Claude PDF response for ${att.id}:`, parseErr instanceof Error ? parseErr.message : parseErr);
-        // Fallback: try extraction from the text Claude returned
         return await callClaudeExtraction(
           supabase, att.email_id, att.id, pdfUrl,
           responseText.substring(0, MAX_PDF_CHARS), emailContext,
@@ -541,17 +603,29 @@ async function processAttachment(
         return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: invoiceData?.extraction_notes || "Not an invoice" };
       }
 
-      // Apply company mapping and save
       const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, parentEmail?.company);
-      const category = assignCategory(invoiceData);
+      
+      // Apply Athos/Aegean fix
+      invoiceData = fixAthosAegean(invoiceData, emailContext);
+      if (invoiceData.company) mapped.company = invoiceData.company;
+
+      // Apply credit note detection
+      const creditDetected = isCreditNote(emailContext, responseText, invoiceData.supplier_name, invoiceData.what_was_bought);
+      if (creditDetected) {
+        invoiceData.amount = -Math.abs(invoiceData.amount || 0);
+        invoiceData.vat_amount = -Math.abs(invoiceData.vat_amount || 0);
+        invoiceData.total_with_vat = -Math.abs(invoiceData.total_with_vat || 0);
+      }
+
+      const category = creditDetected ? "credit_note" : assignCategory(invoiceData);
       const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.85 : 0.5);
-      const status = confidence >= 0.7 ? "pending" : "needs_review";
+      const baseStatus = creditDetected ? "credit" : (confidence >= 0.7 ? "pending" : "needs_review");
+      const status = calculateInvoiceStatus(invoiceData.due_date, baseStatus);
 
       await supabase.from("email_attachments").update({
         extracted_summary: invoiceData.what_was_bought || `Invoice from ${invoiceData.supplier_name || "unknown"}`,
       }).eq("id", att.id);
 
-      // Upsert email_invoices + invoices
       await upsertInvoice(supabase, att.email_id, att.id, invoiceData, mapped, category, status, confidence, pdfUrl);
 
       console.log(`✅ PDF extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}`);
@@ -606,7 +680,6 @@ async function callClaudeExtraction(
     const responseText = claudeData.content?.[0]?.text || "";
     console.log(`Claude response for ${emailId}:`, responseText.substring(0, 500));
 
-    // Error B — Robust JSON parsing
     let invoiceData: any = null;
     try {
       invoiceData = parseClaudeJson(responseText);
@@ -625,12 +698,32 @@ async function callClaudeExtraction(
     }
 
     const mapped = resolveCompany(invoiceData.supplier_name, invoiceData.location || invoiceData.company, emailCompany);
-    const category = assignCategory(invoiceData);
+
+    // Apply Athos/Aegean fix
+    invoiceData = fixAthosAegean(invoiceData, `${emailContext} ${text}`);
+    if (invoiceData.company && (invoiceData.company === "Athos ApS" || invoiceData.company === "Aegean ApS")) {
+      mapped.company = invoiceData.company;
+    }
+
+    // Apply credit note detection
+    const creditDetected = isCreditNote(emailContext, text, invoiceData.supplier_name, invoiceData.what_was_bought);
+    if (creditDetected) {
+      invoiceData.amount = -Math.abs(invoiceData.amount || 0);
+      invoiceData.vat_amount = -Math.abs(invoiceData.vat_amount || 0);
+      invoiceData.total_with_vat = -Math.abs(invoiceData.total_with_vat || 0);
+    }
+
+    const category = creditDetected ? "credit_note" : assignCategory(invoiceData);
     const confidence = invoiceData.confidence ?? (invoiceData.amount ? 0.8 : 0.5);
     const rykkerDetected = isRykker(emailContext, text);
     const finalCategory = rykkerDetected ? "rykker" : category;
-    const status = rykkerDetected ? "overdue" : (confidence >= 0.7 ? "pending" : "needs_review");
-    const notes = rykkerDetected ? "RYKKER — payment reminder received" : (invoiceData.extraction_notes || null);
+    const baseStatus = creditDetected ? "credit" : (rykkerDetected ? "overdue" : (confidence >= 0.7 ? "pending" : "needs_review"));
+    const status = calculateInvoiceStatus(invoiceData.due_date, baseStatus);
+    const notes = creditDetected
+      ? "KREDITNOTA — credit note, reduces outstanding"
+      : rykkerDetected
+        ? "RYKKER — payment reminder received"
+        : (invoiceData.extraction_notes || null);
 
     if (attachmentId) {
       await supabase.from("email_attachments").update({
@@ -659,7 +752,6 @@ async function upsertInvoice(
   category: string, status: string, confidence: number, pdfUrl: string | null,
   notes?: string | null, rykkerDetected?: boolean
 ) {
-  // Upsert email_invoices
   const { data: existing } = await supabase.from("email_invoices").select("id").eq("email_id", emailId).limit(1);
   const emailInvoiceRecord = {
     email_id: emailId,
@@ -679,7 +771,6 @@ async function upsertInvoice(
     await supabase.from("email_invoices").insert(emailInvoiceRecord);
   }
 
-  // Upsert invoices
   const { data: existingInvoice } = await supabase.from("invoices").select("id").eq("email_id", emailId).limit(1);
   const invoiceRecord = {
     email_id: emailId,
@@ -697,7 +788,7 @@ async function upsertInvoice(
     source_type: invoiceData.source_type || "email",
     status,
     confidence,
-    overdue_flag: rykkerDetected || false,
+    overdue_flag: rykkerDetected || status === "overdue",
     pdf_url: pdfUrl,
     payment_account: invoiceData.payment_account || null,
     payment_reference: invoiceData.payment_reference || null,
@@ -722,7 +813,8 @@ COMPANY RULES:
 - Helsingør → The Fish Project ApS
 - Aarhus → The Fish Project ApS
 - Søborg → The Fish Project ApS
-- Fish Bistro/Gaia/Gentofte → Aegean ApS`;
+- Fish Bistro/Gaia/Gentofte → Aegean ApS
+- Athos → Athos ApS`;
 
 async function processKpiEmail(
   supabase: any, emailId: string, email: any, platform: string, claudeKey: string
@@ -747,10 +839,8 @@ async function processKpiEmail(
       return { email_id: emailId, status: "error", error: "KPI JSON parse failed", error_category: "json_parse" as ErrorCategory };
     }
 
-    // Apply company mapping
     const mapped = resolveCompany(null, kpiData.location, email.company);
 
-    // Upsert kpi_ledger
     const { data: existing } = await supabase.from("kpi_ledger").select("id").eq("email_id", emailId).limit(1);
     const record = {
       email_id: emailId,
@@ -774,7 +864,6 @@ async function processKpiEmail(
       await supabase.from("kpi_ledger").insert(record);
     }
 
-    // Update email router_status
     await supabase.from("emails").update({
       router_status: "processed",
       assigned_agent: "kpi_agent",
