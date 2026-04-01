@@ -163,7 +163,7 @@ serve(async (req) => {
               results: data.results,
             };
           }
-          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", error_category: "rate_limit", subject };
+          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", error_category: "rate_limit", subject, sender };
         })
       );
 
