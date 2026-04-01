@@ -119,7 +119,7 @@ function ClaudeReprocessPanel() {
       errorBreakdown: {} as Record<string, number>,
     };
     const batchSize = 20;
-    const maxBatches = Math.ceil((stats?.totalEmails || 369) / batchSize);
+    const maxBatches = Math.ceil((stats?.totalEmails || 2069) / batchSize);
     totals.totalBatches = maxBatches;
     let offset = 0;
 
