@@ -107,6 +107,7 @@ serve(async (req) => {
         chunk.map(async (emailId) => {
           const email = emails.find((e: any) => e.id === emailId);
           const subject = email?.subject || "";
+          const sender = email?.sender || "";
 
           const ignoreReason = email ? shouldSkipEmail(email) : null;
           if (ignoreReason) {
