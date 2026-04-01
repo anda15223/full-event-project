@@ -10,6 +10,7 @@ import PaymentCopyPanel from "./PaymentCopyPanel";
 import InlineEdit from "./InlineEdit";
 import InvoiceReviewPanel from "./InvoiceReviewPanel";
 import PdfUploadButton from "./PdfUploadButton";
+import InvoiceChatPanel from "./InvoiceChatPanel";
 
 const LOCATION_COLORS: Record<string, string> = {
   "Fish Bistro": "bg-agent-blue/10 text-agent-blue border-agent-blue/20",
@@ -197,7 +198,10 @@ export default function InvoiceCard({ invoice }: { invoice: Invoice }) {
             {!localPdfUrl && (
               <PdfUploadButton invoiceId={invoice.id} onUploaded={(url) => setLocalPdfUrl(url)} />
             )}
-            {invoice.status !== "paid" && (
+            {/* Ask AI button */}
+            <InvoiceChatPanel invoiceId={invoice.id} />
+
+            {invoice.status !== "paid" && invoice.status !== "credit" && (
               <>
                 <Button
                   size="sm"
