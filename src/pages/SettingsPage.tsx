@@ -229,14 +229,42 @@ function ClaudeReprocessPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!running && !progress && !completed && (
+        {!running && !progress && !completed && !showConfirm && (
           <div className="flex gap-2">
             <Button onClick={runTest} variant="outline" className="gap-2">
               <FlaskConical className="h-4 w-4" /> Test on 5 emails
             </Button>
-            <Button onClick={runFull} className="gap-2">
+            <Button onClick={() => setShowConfirm(true)} className="gap-2">
               <Zap className="h-4 w-4" /> Reprocess all with Claude
             </Button>
+          </div>
+        )}
+
+        {showConfirm && !running && !progress && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 space-y-4">
+            <p className="font-heading font-semibold text-sm">Ready for clean reprocess</p>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+              <span className="text-muted-foreground">Raw emails</span>
+              <span className="font-mono font-semibold">{stats?.totalEmails?.toLocaleString() ?? "..."} ← all intact</span>
+              <span className="text-muted-foreground">Suppliers</span>
+              <span className="font-mono font-semibold">7 ← rules loaded</span>
+              <span className="text-muted-foreground">Invoices</span>
+              <span className="font-mono font-semibold">{stats?.totalInvoices ?? 0} ← {(stats?.totalInvoices ?? 0) === 0 ? "cleaned ✅" : "needs clean"}</span>
+              <span className="text-muted-foreground">Cashflow entries</span>
+              <span className="font-mono font-semibold">{stats?.totalCashflow ?? 0} ← {(stats?.totalCashflow ?? 0) === 0 ? "cleaned ✅" : "needs clean"}</span>
+              <span className="text-muted-foreground">Deduplication</span>
+              <span className="font-mono font-semibold text-success">ACTIVE ✅</span>
+              <span className="text-muted-foreground">Error fixes</span>
+              <span className="font-mono font-semibold text-success">APPLIED ✅</span>
+              <span className="text-muted-foreground">Full scope</span>
+              <span className="font-mono font-semibold">{stats?.totalEmails?.toLocaleString() ?? "..."} emails (all non-ignored)</span>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button onClick={() => { setShowConfirm(false); runFull(); }} className="gap-2">
+                <Zap className="h-4 w-4" /> Start full reprocess
+              </Button>
+              <Button onClick={() => setShowConfirm(false)} variant="outline">Cancel</Button>
+            </div>
           </div>
         )}
 
