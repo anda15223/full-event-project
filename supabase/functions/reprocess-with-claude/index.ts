@@ -105,8 +105,12 @@ serve(async (req) => {
       const chunk = toProcess.slice(i, i + parallel);
       console.log(`▶ Parallel batch ${Math.floor(i / parallel) + 1}: ${chunk.length} emails`);
 
+      // Process with staggered starts to avoid bursts
       const results = await Promise.allSettled(
-        chunk.map(async (emailId) => {
+        chunk.map(async (emailId, idx) => {
+          // Stagger calls within batch
+          if (idx > 0) await new Promise(r => setTimeout(r, idx * CALL_DELAY));
+
           const email = emails.find((e: any) => e.id === emailId);
           const subject = email?.subject || "";
           const sender = email?.sender || "";
@@ -119,8 +123,8 @@ serve(async (req) => {
             return { email_id: emailId, status: "ignored", reason: ignoreReason, subject, sender };
           }
 
-          // Call extract-invoice with retry for rate limits
-          for (let attempt = 0; attempt < 3; attempt++) {
+          // Call extract-invoice with retry and exponential backoff (5 attempts)
+          for (let attempt = 0; attempt < 5; attempt++) {
             const response = await fetch(extractUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
@@ -128,8 +132,11 @@ serve(async (req) => {
             });
 
             if (response.status === 429) {
-              const wait = Math.pow(2, attempt) * 5000;
-              console.log(`⏳ Rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1})`);
+              const retryAfter = response.headers.get("retry-after");
+              const wait = retryAfter
+                ? parseInt(retryAfter) * 1000
+                : Math.pow(2, attempt) * 10000; // 10s, 20s, 40s, 80s, 160s
+              console.log(`⏳ Rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1}/5)`);
               await new Promise(r => setTimeout(r, wait));
               continue;
             }
@@ -165,7 +172,9 @@ serve(async (req) => {
               results: data.results,
             };
           }
-          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", error_category: "rate_limit", subject, sender };
+          // Mark as rate_limited for later retry
+          await supabase.from("emails").update({ router_status: "rate_limited" }).eq("id", emailId);
+          return { email_id: emailId, status: "error", error: "Rate limited after 5 retries", error_category: "rate_limit", subject, sender };
         })
       );
 
@@ -192,7 +201,7 @@ serve(async (req) => {
       }
 
       if (i + parallel < toProcess.length) {
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, BATCH_DELAY));
       }
     }
 
