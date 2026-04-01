@@ -24,18 +24,22 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 function statusLabel(inv: Invoice) {
+  if (inv.category === "credit_note" || inv.status === "credit") return "KREDIT";
   if (inv.status === "overdue" || inv.overdue_flag) return "OVERDUE";
+  if (inv.status === "due_soon") return "DUE SOON";
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const week = new Date(today); week.setDate(week.getDate() + 7);
   if (inv.due_date) {
     const d = new Date(inv.due_date);
-    if (d <= week && d >= today) return "DUE SOON";
+    if (d < today) return "OVERDUE";
+    if (d <= week) return "DUE SOON";
   }
   if (inv.status === "paid") return "PAID";
   return "PENDING";
 }
 
 function statusStyle(label: string) {
+  if (label === "KREDIT") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
   if (label === "OVERDUE") return STATUS_STYLES.overdue;
   if (label === "DUE SOON") return "bg-warning/10 text-warning border-warning/20";
   if (label === "PAID") return STATUS_STYLES.paid;
