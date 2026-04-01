@@ -38,13 +38,13 @@ serve(async (req) => {
       return await handleRetryErrors(supabase, supabaseUrl, supabaseKey, parallel);
     }
 
+    // Process ALL non-ignored emails, not just classification=invoice
     let query;
     if (testMode) {
       query = supabase
         .from("emails")
         .select("id, subject, sender, classification, router_status, has_attachments, received_at")
         .not("router_status", "eq", "ignored")
-        .or("classification.eq.invoice,has_attachments.eq.true")
         .gte("received_at", "2026-01-01T00:00:00.000Z")
         .order("received_at", { ascending: false })
         .limit(5);
@@ -52,7 +52,6 @@ serve(async (req) => {
       query = supabase
         .from("emails")
         .select("id, subject, sender, classification, router_status, has_attachments, received_at")
-        .eq("classification", "invoice")
         .not("router_status", "eq", "ignored")
         .gte("received_at", "2026-01-01T00:00:00.000Z")
         .order("received_at", { ascending: false })
