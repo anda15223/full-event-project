@@ -7,14 +7,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const IGNORE_SENDERS = ["livet på øen", "livet paa øen", "livet paa oen"];
+// Livet på Øen is NO LONGER ignored — it goes to kpi_ledger via extract-invoice
 const IGNORE_SUBJECTS = /kontoudtog|kontoopgørelse|account\s*statement/i;
 
 function shouldSkipEmail(email: any): string | null {
-  const sender = (email.sender || "").toLowerCase();
-  for (const ign of IGNORE_SENDERS) {
-    if (sender.includes(ign)) return "ignore:livet_paa_oen";
-  }
   const subject = (email.subject || "").toLowerCase();
   if (IGNORE_SUBJECTS.test(subject)) return "ignore:kontoudtog";
   return null;
