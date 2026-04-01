@@ -149,7 +149,7 @@ serve(async (req) => {
             return {
               email_id: emailId,
               status: ex > 0 ? "extracted" : (er > 0 ? "error" : "skipped"),
-              subject,
+              subject, sender,
               extracted: ex,
               supplier_name: firstResult?.supplier_name || null,
               amount: firstResult?.amount || null,
