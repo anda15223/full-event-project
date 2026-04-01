@@ -353,7 +353,7 @@ async function handleRetryErrors(supabase: any, supabaseUrl: string, supabaseKey
     }
 
     if (i + parallel < batch.length) {
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 5000));
     }
   }
 
