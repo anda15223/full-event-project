@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      brain_entries: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean | null
+          key_name: string
+          source: string | null
+          structured_data: Json | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_name: string
+          source?: string | null
+          structured_data?: Json | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_name?: string
+          source?: string | null
+          structured_data?: Json | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cashflow_entries: {
         Row: {
           amount: number | null
