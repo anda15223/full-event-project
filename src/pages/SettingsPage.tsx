@@ -456,6 +456,88 @@ function ClaudeReprocessPanel() {
                 <p>Processed: {retryResult.processed} · Recovered: <span className="text-success font-semibold">{retryResult.extracted}</span> · Still errored: <span className="text-destructive">{retryResult.errors}</span></p>
                 {retryResult.remaining > 0 && <p className="text-xs text-muted-foreground">{retryResult.remaining} more to retry</p>}
               </div>
+             )}
+
+            {/* Error Report */}
+            {errorDetails.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowErrorReport(!showErrorReport)}
+                    className="flex items-center gap-2 text-sm font-semibold text-destructive hover:underline"
+                  >
+                    <FileWarning className="h-4 w-4" />
+                    {showErrorReport ? "Hide" : "Show"} Error Report ({errorDetails.length} emails)
+                  </button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      const csv = [
+                        "email_id,subject,sender,error_category,error",
+                        ...errorDetails.map(d =>
+                          `"${d.email_id}","${(d.subject || "").replace(/"/g, '""')}","${(d.sender || "").replace(/"/g, '""')}","${d.error_category || ""}","${(d.error || "").replace(/"/g, '""')}"`
+                        ),
+                      ].join("\n");
+                      const blob = new Blob([csv], { type: "text/csv" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reprocess-errors-${new Date().toISOString().slice(0, 10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    <Download className="h-3 w-3" /> Export CSV
+                  </Button>
+                </div>
+                {showErrorReport && (
+                  <ScrollArea className="h-[400px] rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[300px]">Subject</TableHead>
+                          <TableHead className="w-[200px]">Sender</TableHead>
+                          <TableHead className="w-[120px]">Category</TableHead>
+                          <TableHead>Error</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {errorDetails.map((d, i) => {
+                          const catLabels: Record<string, string> = {
+                            pdf_too_large: "PDF too large",
+                            json_parse: "JSON parse",
+                            attachment_download: "Attachment",
+                            claude_timeout: "Timeout",
+                            rate_limit: "Rate limit",
+                            no_content: "No content",
+                            other: "Other",
+                          };
+                          return (
+                            <TableRow key={i}>
+                              <TableCell className="font-medium text-xs max-w-[300px] truncate" title={d.subject}>
+                                {d.subject || d.email_id}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={d.sender}>
+                                {d.sender || "—"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="destructive" className="text-[10px]">
+                                  {catLabels[d.error_category || ""] || d.error_category || "other"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs text-destructive/80 max-w-[300px] truncate" title={d.error}>
+                                {d.error || "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                )}
+              </div>
             )}
           </div>
         )}
