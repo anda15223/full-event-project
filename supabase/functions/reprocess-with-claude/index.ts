@@ -107,13 +107,14 @@ serve(async (req) => {
         chunk.map(async (emailId) => {
           const email = emails.find((e: any) => e.id === emailId);
           const subject = email?.subject || "";
+          const sender = email?.sender || "";
 
           const ignoreReason = email ? shouldSkipEmail(email) : null;
           if (ignoreReason) {
             await supabase.from("emails").update({
               router_status: "ignored", assigned_agent: "ignore_agent",
             }).eq("id", emailId);
-            return { email_id: emailId, status: "ignored", reason: ignoreReason, subject };
+            return { email_id: emailId, status: "ignored", reason: ignoreReason, subject, sender };
           }
 
           // Call extract-invoice with retry for rate limits
@@ -134,11 +135,11 @@ serve(async (req) => {
             const responseText = await response.text();
             let data: any;
             try { data = JSON.parse(responseText); } catch {
-              return { email_id: emailId, status: "error", error: "Non-JSON response", error_category: "json_parse", subject };
+              return { email_id: emailId, status: "error", error: "Non-JSON response", error_category: "json_parse", subject, sender };
             }
 
             if (!response.ok) {
-              return { email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, error_category: data.error_category || "other", subject };
+              return { email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, error_category: data.error_category || "other", subject, sender };
             }
 
             const ex = data?.extracted || 0;
@@ -148,7 +149,7 @@ serve(async (req) => {
             return {
               email_id: emailId,
               status: ex > 0 ? "extracted" : (er > 0 ? "error" : "skipped"),
-              subject,
+              subject, sender,
               extracted: ex,
               supplier_name: firstResult?.supplier_name || null,
               amount: firstResult?.amount || null,
@@ -162,7 +163,7 @@ serve(async (req) => {
               results: data.results,
             };
           }
-          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", error_category: "rate_limit", subject };
+          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", error_category: "rate_limit", subject, sender };
         })
       );
 
