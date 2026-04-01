@@ -200,7 +200,7 @@ serve(async (req) => {
       { count: totalCashflow },
     ] = await Promise.all([
       supabase.from("emails").select("id", { count: "exact", head: true })
-        .eq("classification", "invoice").gte("received_at", "2026-01-01T00:00:00.000Z"),
+        .not("router_status", "eq", "ignored").gte("received_at", "2026-01-01T00:00:00.000Z"),
       supabase.from("invoices").select("id", { count: "exact", head: true }),
       supabase.from("cashflow_entries").select("id", { count: "exact", head: true }),
     ]);
