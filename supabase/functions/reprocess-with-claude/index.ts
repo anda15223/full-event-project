@@ -114,7 +114,7 @@ serve(async (req) => {
             await supabase.from("emails").update({
               router_status: "ignored", assigned_agent: "ignore_agent",
             }).eq("id", emailId);
-            return { email_id: emailId, status: "ignored", reason: ignoreReason, subject };
+            return { email_id: emailId, status: "ignored", reason: ignoreReason, subject, sender };
           }
 
           // Call extract-invoice with retry for rate limits
