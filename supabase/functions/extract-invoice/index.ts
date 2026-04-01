@@ -44,14 +44,27 @@ const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: st
 };
 
 /* ── Suppliers/content to ALWAYS ignore (never create invoices) ── */
-const IGNORE_SUPPLIERS = ["livet på øen", "livet paa øen", "livet paa oen"];
 const IGNORE_KEYWORDS = /kontoudtog|kontoopgørelse|account\s*statement/i;
 
-function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
-  const sn = (supplierName || "").toLowerCase();
-  for (const ign of IGNORE_SUPPLIERS) {
-    if (sn.includes(ign)) return true;
+/* ── KPI Platform detection — route to kpi_ledger, NOT invoices ── */
+const KPI_PLATFORMS = [
+  { keywords: ["wolt"], platform: "wolt" },
+  { keywords: ["livet på øen", "livet paa øen", "livet paa oen", "livetpaoen"], platform: "livet_paa_oen" },
+];
+
+function detectKpiPlatform(sender: string | null, subject: string | null, supplierName: string | null): string | null {
+  const combined = `${(sender || "").toLowerCase()} ${(subject || "").toLowerCase()} ${(supplierName || "").toLowerCase()}`;
+  for (const p of KPI_PLATFORMS) {
+    if (p.keywords.some(k => combined.includes(k))) return p.platform;
   }
+  return null;
+}
+
+function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
+  // KPI platforms are NOT ignored — they go to kpi_ledger
+  const platform = detectKpiPlatform(null, subject, supplierName);
+  if (platform) return false;
+
   const combined = `${subject || ""} ${bodyText || ""}`;
   return IGNORE_KEYWORDS.test(combined);
 }
@@ -306,6 +319,22 @@ async function processEmail(
 ): Promise<Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }>> {
   const results: Array<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> = [];
 
+  // Check if this is a KPI platform email — route to kpi_ledger instead of invoices
+  const { data: email } = await supabase
+    .from("emails")
+    .select("subject, sender, company, body_clean_text, body_text, received_at")
+    .eq("id", emailId).single();
+
+  if (email) {
+    const kpiPlatform = detectKpiPlatform(email.sender, email.subject, null);
+    if (kpiPlatform) {
+      console.log(`📊 KPI platform detected: ${kpiPlatform} for email ${emailId}`);
+      const result = await processKpiEmail(supabase, emailId, email, kpiPlatform, claudeKey);
+      results.push(result);
+      return results;
+    }
+  }
+
   const { data: atts } = await supabase
     .from("email_attachments").select("*").eq("email_id", emailId).eq("is_inline", false);
 
@@ -325,7 +354,6 @@ async function processEmail(
         results.push(result);
         if (result.status === "extracted") extractedFromAttachment = true;
       } catch (attachError) {
-        // Error C — Don't fail entire email if attachment fails
         const errMsg = attachError instanceof Error ? attachError.message : "Attachment processing failed";
         console.warn(`⚠ Attachment ${att.id} failed, falling back to body: ${errMsg}`);
         results.push({ email_id: att.email_id, attachment_id: att.id, status: "error", error: errMsg, error_category: categorizeError(errMsg) });
@@ -680,6 +708,93 @@ async function upsertInvoice(
     await supabase.from("invoices").update(invoiceRecord).eq("id", existingInvoice[0].id);
   } else {
     await supabase.from("invoices").insert(invoiceRecord);
+  }
+}
+
+/* ── KPI Platform extraction (Wolt, Livet på Øen) ── */
+const KPI_EXTRACTION_PROMPT = `Extract KPI cost data from this platform invoice. Return ONLY valid JSON, no markdown.
+
+Return:
+{"date":"YYYY-MM-DD","total_amount":0.00,"currency":"DKK","location":"","company":"","invoice_number":"","invoice_date":"YYYY-MM-DD","period_from":"YYYY-MM-DD","period_to":"YYYY-MM-DD","confidence":0.0}
+
+COMPANY RULES:
+- Reffen → Blue Fish ApS
+- Helsingør → The Fish Project ApS
+- Aarhus → The Fish Project ApS
+- Søborg → The Fish Project ApS
+- Fish Bistro/Gaia/Gentofte → Aegean ApS`;
+
+async function processKpiEmail(
+  supabase: any, emailId: string, email: any, platform: string, claudeKey: string
+): Promise<{ email_id: string; status: string; error?: string; [key: string]: any }> {
+  const bodyText = email.body_clean_text || email.body_text || "";
+  if (!bodyText || bodyText.trim().length < 10) {
+    return { email_id: emailId, status: "skipped", error: "No body text for KPI extraction" };
+  }
+
+  try {
+    const claudeData = await callClaude(claudeKey, [{
+      role: "user",
+      content: `${KPI_EXTRACTION_PROMPT}\n\nPlatform: ${platform}\nSender: ${email.sender || ""}\nSubject: ${email.subject || ""}\nDate: ${email.received_at || ""}\n\n--- DOCUMENT TEXT ---\n${bodyText.substring(0, MAX_BODY_CHARS)}`,
+    }]);
+
+    const responseText = claudeData.content?.[0]?.text || "";
+    let kpiData: any;
+    try {
+      kpiData = parseClaudeJson(responseText);
+    } catch {
+      console.error(`KPI JSON parse failed for ${emailId}:`, responseText.substring(0, 200));
+      return { email_id: emailId, status: "error", error: "KPI JSON parse failed", error_category: "json_parse" as ErrorCategory };
+    }
+
+    // Apply company mapping
+    const mapped = resolveCompany(null, kpiData.location, email.company);
+
+    // Upsert kpi_ledger
+    const { data: existing } = await supabase.from("kpi_ledger").select("id").eq("email_id", emailId).limit(1);
+    const record = {
+      email_id: emailId,
+      platform,
+      date: kpiData.date || kpiData.invoice_date || null,
+      total_amount: kpiData.total_amount || null,
+      currency: kpiData.currency || "DKK",
+      location: kpiData.location || null,
+      company: mapped.company || kpiData.company || null,
+      invoice_number: kpiData.invoice_number || null,
+      invoice_date: kpiData.invoice_date || null,
+      period_from: kpiData.period_from || null,
+      period_to: kpiData.period_to || null,
+      confidence: kpiData.confidence || 0.8,
+      source_type: "platform_invoice",
+    };
+
+    if (existing && existing.length > 0) {
+      await supabase.from("kpi_ledger").update(record).eq("id", existing[0].id);
+    } else {
+      await supabase.from("kpi_ledger").insert(record);
+    }
+
+    // Update email router_status
+    await supabase.from("emails").update({
+      router_status: "processed",
+      assigned_agent: "kpi_agent",
+    }).eq("id", emailId);
+
+    console.log(`📊 KPI extracted: ${platform}, ${kpiData.total_amount} ${kpiData.currency}, ${kpiData.location}`);
+    return {
+      email_id: emailId,
+      status: "extracted",
+      supplier_name: platform === "wolt" ? "Wolt" : "Livet på Øen A/S",
+      amount: kpiData.total_amount,
+      currency: kpiData.currency || "DKK",
+      company: mapped.company || kpiData.company,
+      location: kpiData.location,
+      confidence: kpiData.confidence,
+      kpi_platform: platform,
+    };
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : "KPI extraction error";
+    return { email_id: emailId, status: "error", error: errMsg, error_category: categorizeError(errMsg) };
   }
 }
 

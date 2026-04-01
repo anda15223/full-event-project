@@ -23,6 +23,7 @@ import AgentOperations from "./pages/AgentOperations";
 import AgentRomania from "./pages/AgentRomania";
 import Ledger from "./pages/Ledger";
 import CashflowPage from "./pages/CashflowPage";
+import KpiLedger from "./pages/KpiLedger";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/agent/operations" element={<DashboardLayout><AgentOperations /></DashboardLayout>} />
           <Route path="/agent/romania" element={<DashboardLayout><AgentRomania /></DashboardLayout>} />
           <Route path="/ledger" element={<DashboardLayout><Ledger /></DashboardLayout>} />
+          <Route path="/kpi-ledger" element={<DashboardLayout><KpiLedger /></DashboardLayout>} />
           <Route path="/cashflow" element={<DashboardLayout><CashflowPage /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
