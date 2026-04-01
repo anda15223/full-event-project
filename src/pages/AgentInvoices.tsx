@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, ChevronDown, Sparkles, Package, Wrench, Receipt, CreditCard, AlertTriangle } from "lucide-react";
+import { FileText, ChevronDown, Sparkles, Package, Wrench, Receipt, CreditCard, AlertTriangle, ArrowDownLeft } from "lucide-react";
 import { useInvoices } from "@/hooks/useInvoices";
 import InvoiceMetrics from "@/components/invoices/InvoiceMetrics";
 import InvoiceFilters from "@/components/invoices/InvoiceFilters";
@@ -16,11 +16,17 @@ const CATEGORY_SECTIONS = [
     filter: (i: Invoice) => i.status === "overdue" || !!i.overdue_flag,
   },
   {
+    key: "due_soon",
+    label: "🟠 Due Soon",
+    icon: CreditCard,
+    filter: (i: Invoice) => i.status === "due_soon" && !i.overdue_flag,
+  },
+  {
     key: "due_week",
     label: "🟡 Due This Week",
     icon: CreditCard,
     filter: (i: Invoice) => {
-      if (!i.due_date || i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      if (!i.due_date || i.status === "paid" || i.status === "credit" || i.status === "overdue" || i.status === "due_soon" || i.overdue_flag) return false;
       const d = new Date(i.due_date);
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const week = new Date(today); week.setDate(week.getDate() + 7);
@@ -32,7 +38,7 @@ const CATEGORY_SECTIONS = [
     label: "📦 Supplier Invoices",
     icon: Package,
     filter: (i: Invoice) => {
-      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      if (i.status === "paid" || i.status === "credit" || i.status === "overdue" || i.status === "due_soon" || i.overdue_flag) return false;
       const d = i.due_date ? new Date(i.due_date) : null;
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const week = new Date(today); week.setDate(week.getDate() + 7);
@@ -45,7 +51,7 @@ const CATEGORY_SECTIONS = [
     label: "🔧 Equipment",
     icon: Wrench,
     filter: (i: Invoice) => {
-      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      if (i.status === "paid" || i.status === "credit" || i.status === "overdue" || i.status === "due_soon" || i.overdue_flag) return false;
       return i.category === "equipment";
     },
   },
@@ -54,7 +60,7 @@ const CATEGORY_SECTIONS = [
     label: "📱 Bills & Operating Expenses",
     icon: Receipt,
     filter: (i: Invoice) => {
-      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      if (i.status === "paid" || i.status === "credit" || i.status === "overdue" || i.status === "due_soon" || i.overdue_flag) return false;
       return i.category === "operating_expense";
     },
   },
@@ -63,7 +69,7 @@ const CATEGORY_SECTIONS = [
     label: "🏦 PBS / Direct Debits",
     icon: CreditCard,
     filter: (i: Invoice) => {
-      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      if (i.status === "paid" || i.status === "credit" || i.status === "overdue" || i.status === "due_soon" || i.overdue_flag) return false;
       return i.category === "cashflow_pbs";
     },
   },
@@ -72,9 +78,15 @@ const CATEGORY_SECTIONS = [
     label: "⚠ Payment Reminders (Rykker)",
     icon: AlertTriangle,
     filter: (i: Invoice) => {
-      if (i.status === "paid" || i.status === "overdue" || i.overdue_flag) return false;
+      if (i.status === "paid" || i.status === "credit" || i.status === "overdue" || i.status === "due_soon" || i.overdue_flag) return false;
       return i.category === "rykker";
     },
+  },
+  {
+    key: "credit_note",
+    label: "💚 Credit Notes",
+    icon: ArrowDownLeft,
+    filter: (i: Invoice) => i.category === "credit_note" || i.status === "credit",
   },
   {
     key: "paid",
@@ -90,6 +102,9 @@ export default function AgentInvoices() {
   const [location, setLocation] = useState("all");
   const [supplier, setSupplier] = useState("");
   const [sort, setSort] = useState("due_date");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [dueRange, setDueRange] = useState("all");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ paid: true });
 
   const { data: invoices, isLoading } = useInvoices({
@@ -100,10 +115,32 @@ export default function AgentInvoices() {
     sort,
   });
 
-  const allInvoices = invoices || [];
+  const allInvoices = useMemo(() => {
+    let list = invoices || [];
+    // Client-side date range filter
+    if (dateFrom) list = list.filter(i => i.invoice_date && i.invoice_date >= dateFrom);
+    if (dateTo) list = list.filter(i => i.invoice_date && i.invoice_date <= dateTo);
+    // Client-side due date range filter
+    if (dueRange && dueRange !== "all") {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      list = list.filter(i => {
+        if (!i.due_date) return false;
+        const due = new Date(i.due_date); due.setHours(0, 0, 0, 0);
+        const days = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (dueRange === "overdue") return days < 0;
+        if (dueRange === "due_today") return days === 0;
+        if (dueRange === "due_week") return days >= 0 && days <= 7;
+        if (dueRange === "due_month") return days >= 0 && days <= 30;
+        if (dueRange === "future") return days > 30;
+        return true;
+      });
+    }
+    return list;
+  }, [invoices, dateFrom, dateTo, dueRange]);
 
   const companies = useMemo(() => [...new Set(allInvoices.map((i) => i.company).filter(Boolean))] as string[], [allInvoices]);
   const locations = useMemo(() => [...new Set(allInvoices.map((i) => i.location).filter(Boolean))] as string[], [allInvoices]);
+  const supplierList = useMemo(() => [...new Set(allInvoices.map((i) => i.supplier_name).filter(Boolean))].sort() as string[], [allInvoices]);
 
   const { data: allData } = useInvoices({});
   const metricsData = allData || [];
@@ -140,6 +177,10 @@ export default function AgentInvoices() {
         sort={sort} setSort={setSort}
         companies={companies}
         locations={locations}
+        suppliers={supplierList}
+        dateFrom={dateFrom} setDateFrom={setDateFrom}
+        dateTo={dateTo} setDateTo={setDateTo}
+        dueRange={dueRange} setDueRange={setDueRange}
       />
 
       {isLoading ? (
@@ -155,6 +196,7 @@ export default function AgentInvoices() {
           {sections.map((section) => {
             const isCollapsed = collapsed[section.key];
             const total = section.invoices.reduce((s, i) => s + (i.total_with_vat || i.amount || 0), 0);
+            const isCreditSection = section.key === "credit_note";
             return (
               <div key={section.key}>
                 <button
@@ -166,8 +208,9 @@ export default function AgentInvoices() {
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-secondary text-muted-foreground">
                       {section.invoices.length}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {total.toLocaleString("da-DK")} DKK
+                    <span className={`text-xs ${isCreditSection ? "text-emerald-400" : "text-muted-foreground"}`}>
+                      {isCreditSection && total < 0 ? "" : ""}{Math.abs(total).toLocaleString("da-DK")} DKK
+                      {isCreditSection && " (refund)"}
                     </span>
                   </div>
                   <motion.div animate={{ rotate: isCollapsed ? 0 : 180 }} transition={{ duration: 0.2 }}>
