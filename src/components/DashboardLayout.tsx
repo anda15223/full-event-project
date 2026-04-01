@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Brain, FolderOpen, FileText,
   ListTodo, ClipboardList, AlertTriangle, Settings,
   PanelLeft, Zap, Globe, Wrench, BookOpen, TrendingDown,
+  BarChart3,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ChatPanel from "@/components/ChatPanel";
