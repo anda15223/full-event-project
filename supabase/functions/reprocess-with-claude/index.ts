@@ -315,22 +315,24 @@ async function handleRetryErrors(supabase: any, supabaseUrl: string, supabaseKey
             continue;
           }
 
-        const responseText = await response.text();
-        let data: any;
-        try { data = JSON.parse(responseText); } catch {
-          return { email_id: emailId, status: "error", error: "Non-JSON", error_category: "json_parse", subject: email?.subject };
-        }
+          const responseText = await response.text();
+          let data: any;
+          try { data = JSON.parse(responseText); } catch {
+            return { email_id: emailId, status: "error", error: "Non-JSON", error_category: "json_parse", subject: email?.subject };
+          }
 
-        const ex = data?.extracted || 0;
-        const firstError = (data.results || []).find((r: any) => r.status === "error");
-        return {
-          email_id: emailId,
-          status: ex > 0 ? "extracted" : "error",
-          subject: email?.subject,
-          extracted: ex,
-          error: ex === 0 ? (firstError?.error || data.results?.[0]?.error || "retry failed") : undefined,
-          error_category: firstError?.error_category || undefined,
-        };
+          const ex = data?.extracted || 0;
+          const firstError = (data.results || []).find((r: any) => r.status === "error");
+          return {
+            email_id: emailId,
+            status: ex > 0 ? "extracted" : "error",
+            subject: email?.subject,
+            extracted: ex,
+            error: ex === 0 ? (firstError?.error || data.results?.[0]?.error || "retry failed") : undefined,
+            error_category: firstError?.error_category || undefined,
+          };
+        }
+        return { email_id: emailId, status: "error", error: "Rate limited after 5 retries", error_category: "rate_limit", subject: email?.subject };
       })
     );
 
