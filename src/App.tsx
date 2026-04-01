@@ -23,6 +23,7 @@ import AgentOperations from "./pages/AgentOperations";
 import AgentRomania from "./pages/AgentRomania";
 import Ledger from "./pages/Ledger";
 import CashflowPage from "./pages/CashflowPage";
+import KpiLedger from "./pages/KpiLedger";
 
 const queryClient = new QueryClient();
 
