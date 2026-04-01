@@ -125,6 +125,9 @@ function ClaudeReprocessPanel() {
     setPaused(false);
     pauseRef.current = false;
     setTestDetails(null);
+    setErrorDetails([]);
+    setShowErrorReport(false);
+    const allErrors: ErrorDetail[] = [];
     const totals = {
       batch: 0, totalBatches: 0, processed: 0, extracted: 0, skipped: 0, ignored: 0, errors: 0,
       totalEmails: stats?.totalEmails || 0, totalInvoices: stats?.totalInvoices || 0,
