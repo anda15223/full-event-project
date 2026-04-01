@@ -44,14 +44,27 @@ const SUPPLIER_COMPANY_OVERRIDES: Record<string, { company: string; location: st
 };
 
 /* ── Suppliers/content to ALWAYS ignore (never create invoices) ── */
-const IGNORE_SUPPLIERS = ["livet på øen", "livet paa øen", "livet paa oen"];
 const IGNORE_KEYWORDS = /kontoudtog|kontoopgørelse|account\s*statement/i;
 
-function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
-  const sn = (supplierName || "").toLowerCase();
-  for (const ign of IGNORE_SUPPLIERS) {
-    if (sn.includes(ign)) return true;
+/* ── KPI Platform detection — route to kpi_ledger, NOT invoices ── */
+const KPI_PLATFORMS = [
+  { keywords: ["wolt"], platform: "wolt" },
+  { keywords: ["livet på øen", "livet paa øen", "livet paa oen", "livetpaoen"], platform: "livet_paa_oen" },
+];
+
+function detectKpiPlatform(sender: string | null, subject: string | null, supplierName: string | null): string | null {
+  const combined = `${(sender || "").toLowerCase()} ${(subject || "").toLowerCase()} ${(supplierName || "").toLowerCase()}`;
+  for (const p of KPI_PLATFORMS) {
+    if (p.keywords.some(k => combined.includes(k))) return p.platform;
   }
+  return null;
+}
+
+function shouldIgnore(supplierName: string | null, subject: string | null, bodyText: string | null): boolean {
+  // KPI platforms are NOT ignored — they go to kpi_ledger
+  const platform = detectKpiPlatform(null, subject, supplierName);
+  if (platform) return false;
+
   const combined = `${subject || ""} ${bodyText || ""}`;
   return IGNORE_KEYWORDS.test(combined);
 }
