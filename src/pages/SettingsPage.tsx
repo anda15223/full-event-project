@@ -14,6 +14,15 @@ import { Progress } from "@/components/ui/progress";
 
 const STORAGE_KEY = "claude-reprocess-progress";
 
+type ErrorDetail = {
+  email_id: string;
+  subject?: string;
+  sender?: string;
+  status: string;
+  error?: string;
+  error_category?: string;
+};
+
 type ReprocessProgress = {
   batch: number;
   totalBatches: number;
