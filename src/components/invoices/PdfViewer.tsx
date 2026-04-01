@@ -191,8 +191,8 @@ export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) 
         </div>
       )}
 
-      <div ref={containerRef} className="min-h-0 flex-1 overflow-auto overscroll-contain bg-secondary/10 p-4">
-        <div className="flex justify-center">
+      <div ref={containerRef} className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-contain bg-secondary/10 p-4">
+        <div className="w-max min-w-full flex justify-center items-start">
           <canvas ref={canvasRef} className="shadow-md rounded bg-white block shrink-0" style={{ maxWidth: 'none' }} />
         </div>
       </div>
