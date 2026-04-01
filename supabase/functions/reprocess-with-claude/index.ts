@@ -139,7 +139,7 @@ serve(async (req) => {
             }
 
             if (!response.ok) {
-              return { email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, error_category: data.error_category || "other", subject };
+              return { email_id: emailId, status: "error", error: data.error || `HTTP ${response.status}`, error_category: data.error_category || "other", subject, sender };
             }
 
             const ex = data?.extracted || 0;
