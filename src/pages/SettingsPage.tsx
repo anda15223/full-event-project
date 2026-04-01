@@ -67,6 +67,8 @@ function ClaudeReprocessPanel() {
   const [completed, setCompleted] = useState(false);
   const [retryResult, setRetryResult] = useState<any>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<ErrorDetail[]>([]);
+  const [showErrorReport, setShowErrorReport] = useState(false);
 
   const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ["claude-reprocess-stats"],
