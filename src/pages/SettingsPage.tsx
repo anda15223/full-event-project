@@ -171,6 +171,19 @@ function ClaudeReprocessPanel() {
             totals.errorBreakdown[cat] = (totals.errorBreakdown[cat] || 0) + (count as number);
           }
         }
+        // Collect per-email error details
+        if (data.details) {
+          const batchErrors = (data.details as any[]).filter((d: any) => d.status === "error");
+          allErrors.push(...batchErrors.map((d: any) => ({
+            email_id: d.email_id,
+            subject: d.subject,
+            sender: d.sender,
+            status: d.status,
+            error: d.error,
+            error_category: d.error_category,
+          })));
+          setErrorDetails([...allErrors]);
+        }
 
         // Move to next offset
         offset = data.next_offset || (offset + batchSize);
