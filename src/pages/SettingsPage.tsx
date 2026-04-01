@@ -152,7 +152,7 @@ function ClaudeReprocessPanel() {
         saveProgress(snap, true);
 
         const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
-          body: { test_mode: false, batch_size: batchSize, offset, parallel: 5 },
+          body: { test_mode: false, batch_size: 20, offset, parallel: 3 },
         });
         if (error) throw error;
 
@@ -232,7 +232,7 @@ function ClaudeReprocessPanel() {
     setRetryResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("reprocess-with-claude", {
-        body: { retry_errors: true, parallel: 5 },
+        body: { retry_errors: true, parallel: 3 },
       });
       if (error) throw error;
       setRetryResult(data);

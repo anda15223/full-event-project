@@ -24,8 +24,10 @@ serve(async (req) => {
     const batchSize = body.batch_size || 20;
     const testMode = body.test_mode || false;
     const offset = body.offset || 0;
-    const parallel = body.parallel || 5;
+    const parallel = body.parallel || 3; // Reduced from 5 to 3 to avoid rate limits
     const retryErrors = body.retry_errors || false;
+    const BATCH_DELAY = 5000; // 5 seconds between batches
+    const CALL_DELAY = 1000; // 1 second between individual calls
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -103,8 +105,12 @@ serve(async (req) => {
       const chunk = toProcess.slice(i, i + parallel);
       console.log(`▶ Parallel batch ${Math.floor(i / parallel) + 1}: ${chunk.length} emails`);
 
+      // Process with staggered starts to avoid bursts
       const results = await Promise.allSettled(
-        chunk.map(async (emailId) => {
+        chunk.map(async (emailId, idx) => {
+          // Stagger calls within batch
+          if (idx > 0) await new Promise(r => setTimeout(r, idx * CALL_DELAY));
+
           const email = emails.find((e: any) => e.id === emailId);
           const subject = email?.subject || "";
           const sender = email?.sender || "";
@@ -117,8 +123,8 @@ serve(async (req) => {
             return { email_id: emailId, status: "ignored", reason: ignoreReason, subject, sender };
           }
 
-          // Call extract-invoice with retry for rate limits
-          for (let attempt = 0; attempt < 3; attempt++) {
+          // Call extract-invoice with retry and exponential backoff (5 attempts)
+          for (let attempt = 0; attempt < 5; attempt++) {
             const response = await fetch(extractUrl, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
@@ -126,8 +132,11 @@ serve(async (req) => {
             });
 
             if (response.status === 429) {
-              const wait = Math.pow(2, attempt) * 5000;
-              console.log(`⏳ Rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1})`);
+              const retryAfter = response.headers.get("retry-after");
+              const wait = retryAfter
+                ? parseInt(retryAfter) * 1000
+                : Math.pow(2, attempt) * 10000; // 10s, 20s, 40s, 80s, 160s
+              console.log(`⏳ Rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1}/5)`);
               await new Promise(r => setTimeout(r, wait));
               continue;
             }
@@ -163,7 +172,9 @@ serve(async (req) => {
               results: data.results,
             };
           }
-          return { email_id: emailId, status: "error", error: "Rate limited after 3 retries", error_category: "rate_limit", subject, sender };
+          // Mark as rate_limited for later retry
+          await supabase.from("emails").update({ router_status: "rate_limited" }).eq("id", emailId);
+          return { email_id: emailId, status: "error", error: "Rate limited after 5 retries", error_category: "rate_limit", subject, sender };
         })
       );
 
@@ -190,7 +201,7 @@ serve(async (req) => {
       }
 
       if (i + parallel < toProcess.length) {
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, BATCH_DELAY));
       }
     }
 
@@ -283,30 +294,45 @@ async function handleRetryErrors(supabase: any, supabaseUrl: string, supabaseKey
     const chunk = batch.slice(i, i + parallel);
 
     const results = await Promise.allSettled(
-      chunk.map(async (emailId) => {
+      chunk.map(async (emailId, idx) => {
+        // Stagger retry calls
+        if (idx > 0) await new Promise(r => setTimeout(r, idx * 1500));
         const email = invoiceEmails.find((e: any) => e.id === emailId);
-        const response = await fetch(extractUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
-          body: JSON.stringify({ email_id: emailId }),
-        });
+        
+        // Retry with exponential backoff for rate limits
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const response = await fetch(extractUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${supabaseKey}` },
+            body: JSON.stringify({ email_id: emailId }),
+          });
 
-        const responseText = await response.text();
-        let data: any;
-        try { data = JSON.parse(responseText); } catch {
-          return { email_id: emailId, status: "error", error: "Non-JSON", error_category: "json_parse", subject: email?.subject };
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("retry-after");
+            const wait = retryAfter ? parseInt(retryAfter) * 1000 : Math.pow(2, attempt) * 10000;
+            console.log(`⏳ Retry rate limited on ${emailId}, waiting ${wait}ms (attempt ${attempt + 1}/5)`);
+            await new Promise(r => setTimeout(r, wait));
+            continue;
+          }
+
+          const responseText = await response.text();
+          let data: any;
+          try { data = JSON.parse(responseText); } catch {
+            return { email_id: emailId, status: "error", error: "Non-JSON", error_category: "json_parse", subject: email?.subject };
+          }
+
+          const ex = data?.extracted || 0;
+          const firstError = (data.results || []).find((r: any) => r.status === "error");
+          return {
+            email_id: emailId,
+            status: ex > 0 ? "extracted" : "error",
+            subject: email?.subject,
+            extracted: ex,
+            error: ex === 0 ? (firstError?.error || data.results?.[0]?.error || "retry failed") : undefined,
+            error_category: firstError?.error_category || undefined,
+          };
         }
-
-        const ex = data?.extracted || 0;
-        const firstError = (data.results || []).find((r: any) => r.status === "error");
-        return {
-          email_id: emailId,
-          status: ex > 0 ? "extracted" : "error",
-          subject: email?.subject,
-          extracted: ex,
-          error: ex === 0 ? (firstError?.error || data.results?.[0]?.error || "retry failed") : undefined,
-          error_category: firstError?.error_category || undefined,
-        };
+        return { email_id: emailId, status: "error", error: "Rate limited after 5 retries", error_category: "rate_limit", subject: email?.subject };
       })
     );
 
@@ -327,7 +353,7 @@ async function handleRetryErrors(supabase: any, supabaseUrl: string, supabaseKey
     }
 
     if (i + parallel < batch.length) {
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 5000));
     }
   }
 
