@@ -49,9 +49,37 @@ async function downloadFile(url: string, filename: string) {
 function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
+  const photos: Photo[] = Array.isArray(c.photos) ? c.photos : [];
 
   return (
     <Card className="p-5 space-y-3">
+      {photos.length > 0 && (
+        <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
+          {photos.slice(0, 6).map((p, i) => (
+            <div key={i} className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted">
+              <img
+                src={p.url}
+                alt={p.caption || p.name || "Setup photo"}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `setup-${i + 1}.jpg`); }}
+                className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
+                title="Download"
+              >
+                <Download className="h-3 w-3" />
+              </button>
+              {p.caption && (
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-1.5 py-0.5 truncate">
+                  {p.caption}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-lg leading-tight truncate">{c.name || "Untitled"}</h3>
