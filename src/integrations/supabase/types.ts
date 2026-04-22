@@ -452,6 +452,615 @@ export type Database = {
         }
         Relationships: []
       }
+      festival_accommodation: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          festival_id: string
+          id: string
+          label: string
+          notes: string | null
+          people_count: number | null
+          room_config: string | null
+          status: string
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          festival_id: string
+          id?: string
+          label: string
+          notes?: string | null
+          people_count?: number | null
+          room_config?: string | null
+          status: string
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          festival_id?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          people_count?: number | null
+          room_config?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_accommodation_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_action_items: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          festival_id: string
+          id: string
+          notes: string | null
+          owner: string | null
+          priority: string
+          section_key: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          festival_id: string
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          priority?: string
+          section_key?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          owner?: string | null
+          priority?: string
+          section_key?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_action_items_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_answers: {
+        Row: {
+          festival_id: string
+          id: string
+          question_id: string
+          updated_at: string
+          value: Json
+          value_type: string
+        }
+        Insert: {
+          festival_id: string
+          id?: string
+          question_id: string
+          updated_at?: string
+          value: Json
+          value_type: string
+        }
+        Update: {
+          festival_id?: string
+          id?: string
+          question_id?: string
+          updated_at?: string
+          value?: Json
+          value_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_answers_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "festival_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_bc_trolley_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          item_name: string
+          order_index: number
+          quantity: string | null
+          trolley_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          item_name: string
+          order_index: number
+          quantity?: string | null
+          trolley_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          order_index?: number
+          quantity?: string | null
+          trolley_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_bc_trolley_items_trolley_id_fkey"
+            columns: ["trolley_id"]
+            isOneToOne: false
+            referencedRelation: "festival_bc_trolleys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_bc_trolleys: {
+        Row: {
+          concept_id: string
+          created_at: string
+          id: string
+          label: string
+          trolley_number: number
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          id?: string
+          label: string
+          trolley_number: number
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          trolley_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_bc_trolleys_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "festival_concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_concepts: {
+        Row: {
+          created_at: string
+          festival_id: string
+          gas_required: boolean
+          gas_supplier: string | null
+          id: string
+          name: string
+          order_index: number
+          power_baseline: string | null
+          power_extras: Json | null
+          products_sold: string | null
+          sales_hours_fri: string | null
+          sales_hours_sat: string | null
+          sales_hours_sun: string | null
+          sales_hours_thu: string | null
+          tent_size: string | null
+          updated_at: string
+          wristband_black_partout: number | null
+          wristband_max: number | null
+          wristband_normal_partout: number | null
+          zone: string
+        }
+        Insert: {
+          created_at?: string
+          festival_id: string
+          gas_required?: boolean
+          gas_supplier?: string | null
+          id?: string
+          name: string
+          order_index: number
+          power_baseline?: string | null
+          power_extras?: Json | null
+          products_sold?: string | null
+          sales_hours_fri?: string | null
+          sales_hours_sat?: string | null
+          sales_hours_sun?: string | null
+          sales_hours_thu?: string | null
+          tent_size?: string | null
+          updated_at?: string
+          wristband_black_partout?: number | null
+          wristband_max?: number | null
+          wristband_normal_partout?: number | null
+          zone: string
+        }
+        Update: {
+          created_at?: string
+          festival_id?: string
+          gas_required?: boolean
+          gas_supplier?: string | null
+          id?: string
+          name?: string
+          order_index?: number
+          power_baseline?: string | null
+          power_extras?: Json | null
+          products_sold?: string | null
+          sales_hours_fri?: string | null
+          sales_hours_sat?: string | null
+          sales_hours_sun?: string | null
+          sales_hours_thu?: string | null
+          tent_size?: string | null
+          updated_at?: string
+          wristband_black_partout?: number | null
+          wristband_max?: number | null
+          wristband_normal_partout?: number | null
+          zone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_concepts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_questions: {
+        Row: {
+          created_at: string
+          default_value: Json | null
+          help_text: string | null
+          id: string
+          key: string
+          kind: string
+          options: Json | null
+          order_index: number
+          prompt: string
+          required: boolean
+          section_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_value?: Json | null
+          help_text?: string | null
+          id?: string
+          key: string
+          kind: string
+          options?: Json | null
+          order_index: number
+          prompt: string
+          required?: boolean
+          section_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_value?: Json | null
+          help_text?: string | null
+          id?: string
+          key?: string
+          kind?: string
+          options?: Json | null
+          order_index?: number
+          prompt?: string
+          required?: boolean
+          section_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_questions_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "festival_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_reports: {
+        Row: {
+          festival_id: string
+          generated_at: string
+          id: string
+          schema_snapshot: Json
+          storage_key: string | null
+          version: number
+        }
+        Insert: {
+          festival_id: string
+          generated_at?: string
+          id?: string
+          schema_snapshot: Json
+          storage_key?: string | null
+          version: number
+        }
+        Update: {
+          festival_id?: string
+          generated_at?: string
+          id?: string
+          schema_snapshot?: Json
+          storage_key?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_reports_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_sections: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          order_index: number
+          sub_editor_route: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          order_index: number
+          sub_editor_route?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          order_index?: number
+          sub_editor_route?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      festival_staff: {
+        Row: {
+          concept_id: string | null
+          created_at: string
+          external_key: string | null
+          festival_id: string
+          id: string
+          is_manager: boolean
+          is_setup_crew: boolean
+          name: string | null
+          role: string | null
+          source: string
+          wristband_type: string | null
+        }
+        Insert: {
+          concept_id?: string | null
+          created_at?: string
+          external_key?: string | null
+          festival_id: string
+          id?: string
+          is_manager?: boolean
+          is_setup_crew?: boolean
+          name?: string | null
+          role?: string | null
+          source: string
+          wristband_type?: string | null
+        }
+        Update: {
+          concept_id?: string | null
+          created_at?: string
+          external_key?: string | null
+          festival_id?: string
+          id?: string
+          is_manager?: boolean
+          is_setup_crew?: boolean
+          name?: string | null
+          role?: string | null
+          source?: string
+          wristband_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_staff_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "festival_concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_vagtplan_shifts: {
+        Row: {
+          concept_id: string
+          created_at: string
+          day: string
+          end_time: string
+          id: string
+          notes: string | null
+          order_index: number
+          people_count: number
+          shift_name: string
+          start_time: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          day: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          order_index: number
+          people_count: number
+          shift_name: string
+          start_time: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          day?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          order_index?: number
+          people_count?: number
+          shift_name?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_vagtplan_shifts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "festival_concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_vehicles: {
+        Row: {
+          created_at: string
+          driver: string | null
+          festival_id: string
+          id: string
+          label: string
+          purpose: string | null
+          seats: number | null
+          status: string
+          travel_date: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          created_at?: string
+          driver?: string | null
+          festival_id: string
+          id?: string
+          label: string
+          purpose?: string | null
+          seats?: number | null
+          status: string
+          travel_date?: string | null
+          vehicle_type: string
+        }
+        Update: {
+          created_at?: string
+          driver?: string | null
+          festival_id?: string
+          id?: string
+          label?: string
+          purpose?: string | null
+          seats?: number | null
+          status?: string
+          travel_date?: string | null
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_vehicles_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festivals: {
+        Row: {
+          created_at: string
+          drive_folder_id: string | null
+          end_date: string
+          id: string
+          location: string | null
+          name: string
+          organiser_email: string | null
+          organiser_name: string | null
+          organiser_phone: string | null
+          slug: string
+          start_date: string
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          drive_folder_id?: string | null
+          end_date: string
+          id?: string
+          location?: string | null
+          name: string
+          organiser_email?: string | null
+          organiser_name?: string | null
+          organiser_phone?: string | null
+          slug: string
+          start_date: string
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          drive_folder_id?: string | null
+          end_date?: string
+          id?: string
+          location?: string | null
+          name?: string
+          organiser_email?: string | null
+          organiser_name?: string | null
+          organiser_phone?: string | null
+          slug?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number | null
