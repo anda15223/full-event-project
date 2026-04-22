@@ -700,33 +700,26 @@ function EditSheet({
                 <div className="grid grid-cols-2 gap-2">
                   {photos.map((p, i) => (
                     <div key={i} className="space-y-1.5 bg-muted/40 rounded-lg p-2 border border-border/40">
-                      <div className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background">
+                      <button
+                        type="button"
+                        onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+                        className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background w-full text-left"
+                        title="Preview"
+                      >
                         {isImage(p) ? (
                           <img src={p.url} alt={p.caption || p.name} className="w-full h-full object-cover" />
                         ) : isPdf(p) ? (
-                          <object data={p.url} type="application/pdf" className="w-full h-full">
-                            <a
-                              href={p.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300"
-                            >
-                              <FileText className="h-7 w-7" />
-                              <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
-                            </a>
-                          </object>
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300">
+                            <FileText className="h-7 w-7" />
+                            <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
+                          </div>
                         ) : (
-                          <a
-                            href={p.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground hover:bg-muted/70 transition"
-                          >
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground">
                             <FileIcon className="h-7 w-7" />
                             <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
-                          </a>
+                          </div>
                         )}
-                      </div>
+                      </button>
                       <Input
                         value={p.caption ?? ""}
                         onChange={(e) => updPhoto(i, { caption: e.target.value })}
