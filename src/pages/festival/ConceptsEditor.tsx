@@ -25,7 +25,7 @@ function ConceptCard({ concept, onChanged }: { concept: any; onChanged: () => vo
 
   const save = async (patch: Record<string, any>) => {
     setLocal((p: any) => ({ ...p, ...patch }));
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("festival_concepts")
       .update(patch)
       .eq("id", concept.id);
