@@ -229,7 +229,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
                 <Download className="h-3 w-3" />
               </span>
               {(p.caption || p.description) && (
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-1.5 py-0.5 truncate">
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-xs px-1.5 py-0.5 truncate">
                   {p.caption || p.description}
                 </div>
               )}
