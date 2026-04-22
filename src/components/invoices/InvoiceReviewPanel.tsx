@@ -226,7 +226,7 @@ export default function InvoiceReviewPanel({ invoice, open, onOpenChange }: Prop
       return;
     }
 
-    const { error } = await supabase.from("invoices").update(updates).eq("id", inv.id);
+    const { error } = await supabase.from("invoices").update(updates as never).eq("id", inv.id);
     if (error) { toast.error("Failed to save"); return; }
 
     // Write corrections
