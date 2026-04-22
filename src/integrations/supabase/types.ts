@@ -668,6 +668,7 @@ export type Database = {
           id: string
           name: string
           order_index: number
+          photos: Json
           power_baseline: string | null
           power_extras: Json | null
           products_sold: string | null
@@ -692,6 +693,7 @@ export type Database = {
           id?: string
           name: string
           order_index: number
+          photos?: Json
           power_baseline?: string | null
           power_extras?: Json | null
           products_sold?: string | null
@@ -716,6 +718,7 @@ export type Database = {
           id?: string
           name?: string
           order_index?: number
+          photos?: Json
           power_baseline?: string | null
           power_extras?: Json | null
           products_sold?: string | null
