@@ -17,7 +17,7 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
@@ -25,7 +25,22 @@ import { useFestival, useConcepts } from "@/hooks/useFestival";
 type PowerExtra = { amperage?: string; count?: number; phase?: string; notes?: string };
 type SubLine = { label?: string; value?: string };
 type Subsection = { title?: string; lines?: SubLine[] };
-type Photo = { url: string; path: string; name?: string; caption?: string };
+type Photo = {
+  url: string;
+  path: string;
+  name?: string;
+  caption?: string;
+  description?: string;
+  mime_type?: string;
+  size?: number;
+};
+
+const isImage = (p: Photo) =>
+  (p.mime_type?.startsWith("image/")) ||
+  /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(p.name || p.path || "");
+
+const isPdf = (p: Photo) =>
+  p.mime_type === "application/pdf" || /\.pdf$/i.test(p.name || p.path || "");
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -34,7 +49,7 @@ async function downloadFile(url: string, filename: string) {
     const a = document.createElement("a");
     const objectUrl = URL.createObjectURL(blob);
     a.href = objectUrl;
-    a.download = filename || "photo";
+    a.download = filename || "file";
     document.body.appendChild(a);
     a.click();
     a.remove();
