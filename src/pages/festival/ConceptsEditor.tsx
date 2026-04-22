@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -171,9 +171,12 @@ function EditSheet({
   onChanged: () => void;
 }) {
   const [local, setLocal] = useState<any>(concept);
-  useEffect(() => setLocal(concept), [concept.id, open]);
+  // Only reset local state when switching to a different concept or reopening the sheet.
+  // Do NOT depend on `concept` itself — parent refetches replace the object reference
+  // on every save and would clobber in-flight keystrokes.
+  useEffect(() => setLocal(concept), [concept.id, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = async (patch: Record<string, any>) => {
+  const save = useCallback(async (patch: Record<string, any>) => {
     setLocal((p: any) => ({ ...p, ...patch }));
     const { error } = await (supabase as any)
       .from("festival_concepts")
@@ -181,16 +184,21 @@ function EditSheet({
       .eq("id", concept.id);
     if (error) { toast.error("Save failed"); return; }
     onChanged();
-  };
+  }, [concept.id, onChanged]);
 
-  const debounced = (() => {
-    let timers: Record<string, ReturnType<typeof setTimeout>> = {};
-    return (field: string, value: any) => {
-      setLocal((p: any) => ({ ...p, [field]: value }));
-      if (timers[field]) clearTimeout(timers[field]);
-      timers[field] = setTimeout(() => save({ [field]: value }), 500);
-    };
-  })();
+  // Persist debounce timers across renders so fast typing doesn't spawn
+  // multiple stale save() calls that overwrite newer keystrokes.
+  const timersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const debounced = useCallback((field: string, value: any) => {
+    setLocal((p: any) => ({ ...p, [field]: value }));
+    if (timersRef.current[field]) clearTimeout(timersRef.current[field]);
+    timersRef.current[field] = setTimeout(() => save({ [field]: value }), 500);
+  }, [save]);
+
+  // Clear pending timers on unmount
+  useEffect(() => () => {
+    Object.values(timersRef.current).forEach(clearTimeout);
+  }, []);
 
   /* power extras */
   const extras: PowerExtra[] = Array.isArray(local.power_extras) ? local.power_extras : [];
