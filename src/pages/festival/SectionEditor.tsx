@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QuestionInput } from "@/components/festival/QuestionInput";
+import { ContactsManager } from "@/components/festival/ContactsManager";
 import {
   useFestival, useSection, useQuestions, useAnswers
 } from "@/hooks/useFestival";
@@ -68,6 +69,10 @@ export default function SectionEditor() {
             Changes autosave (500ms debounce on text/number/date, instant on selects).
           </p>
         </Card>
+      )}
+
+      {sectionKey === "intro" && festival && (
+        <ContactsManager festivalId={festival.id} />
       )}
     </div>
   );
