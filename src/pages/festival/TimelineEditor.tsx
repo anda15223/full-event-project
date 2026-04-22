@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SmartCard } from "@/components/festival/SmartCard";
 import { useFestival, useActionItems } from "@/hooks/useFestival";
 
 const STATUS_OPTS = [
@@ -57,6 +58,17 @@ export default function TimelineEditor() {
         <h1 className="text-2xl font-bold tracking-tight">Setup Timeline & Action items</h1>
         <p className="text-sm text-muted-foreground mt-1">{items.length} action items grouped by deadline</p>
       </div>
+
+      <SmartCard
+        cardKey="setup_timeline"
+        festivalId={festival.id}
+        title="Setup timeline documents"
+        subtitle="Upload setup schedules, build/strike timelines, supplier delivery plans. AI groups them into phases."
+        emptyStateWarning={{
+          label: "No setup timeline yet",
+          description: "Upload a build schedule or grab the standard phases from Brain.",
+        }}
+      />
 
       <div className="space-y-4">
         {dates.map(d => (
