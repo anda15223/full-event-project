@@ -25,6 +25,24 @@ import { useFestival, useConcepts } from "@/hooks/useFestival";
 type PowerExtra = { amperage?: string; count?: number; phase?: string; notes?: string };
 type SubLine = { label?: string; value?: string };
 type Subsection = { title?: string; lines?: SubLine[] };
+type Photo = { url: string; path: string; name?: string; caption?: string };
+
+async function downloadFile(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+    a.href = objectUrl;
+    a.download = filename || "photo";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    window.open(url, "_blank");
+  }
+}
 
 /* -------------------- Read-only summary card -------------------- */
 
