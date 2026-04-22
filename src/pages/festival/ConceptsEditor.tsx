@@ -220,6 +220,43 @@ function EditSheet({
     updSub(i, { lines });
   };
 
+  /* photos */
+  const photos: Photo[] = Array.isArray(local.photos) ? local.photos : [];
+  const setPhotos = (n: Photo[]) => save({ photos: n });
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const next: Photo[] = [...photos];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${concept.festival_id}/${concept.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("festival-photos").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (error) { toast.error(`Upload failed: ${file.name}`); continue; }
+      const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(path);
+      next.push({ url: pub.publicUrl, path, name: file.name, caption: "" });
+    }
+    await setPhotos(next);
+    setUploading(false);
+    toast.success("Photos uploaded");
+  };
+
+  const updPhoto = (i: number, patch: Partial<Photo>) =>
+    setPhotos(photos.map((p, idx) => idx === i ? { ...p, ...patch } : p));
+
+  const rmPhoto = async (i: number) => {
+    const p = photos[i];
+    if (p.path) {
+      await supabase.storage.from("festival-photos").remove([p.path]);
+    }
+    setPhotos(photos.filter((_, idx) => idx !== i));
+  };
+
   const remove = async () => {
     if (!confirm(`Delete concept "${concept.name}"?`)) return;
     const { error } = await supabase.from("festival_concepts").delete().eq("id", concept.id);
