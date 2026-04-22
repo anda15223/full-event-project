@@ -64,7 +64,9 @@ async function downloadFile(url: string, filename: string) {
 function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
-  const photos: Photo[] = Array.isArray(c.photos) ? c.photos : [];
+  const allFiles: Photo[] = Array.isArray(c.photos) ? c.photos : [];
+  const photos = allFiles.filter((p) => isImage(p));
+  const files = allFiles.filter((p) => !isImage(p));
 
   return (
     <Card className="p-5 space-y-3">
@@ -72,39 +74,15 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
             <div key={i} className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted">
-              {isImage(p) ? (
-                <img
-                  src={p.url}
-                  alt={p.caption || p.name || "Setup file"}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : isPdf(p) ? (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 transition"
-                  title={p.name || "PDF"}
-                >
-                  <FileText className="h-6 w-6" />
-                  <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
-                </a>
-              ) : (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground hover:bg-muted/70 transition"
-                  title={p.name || "File"}
-                >
-                  <FileIcon className="h-6 w-6" />
-                  <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
-                </a>
-              )}
+              <img
+                src={p.url}
+                alt={p.caption || p.name || "Setup photo"}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `file-${i + 1}`); }}
+                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `photo-${i + 1}.jpg`); }}
                 className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
                 title="Download"
               >
@@ -195,6 +173,42 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
           ))}
         </div>
       ))}
+
+      {files.length > 0 && (
+        <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1.5">
+          <p className="font-medium text-muted-foreground flex items-center gap-1">
+            <FileIcon className="h-3.5 w-3.5" /> Files
+          </p>
+          <div className="space-y-1">
+            {files.map((f, i) => (
+              <div key={i} className="flex items-center gap-2 group">
+                {isPdf(f) ? (
+                  <FileText className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+                ) : (
+                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+                <a
+                  href={f.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0"
+                  title={f.description || f.caption || f.name}
+                >
+                  {f.caption || f.name || "File"}
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name || `file-${i + 1}`); }}
+                  className="h-6 w-6 rounded hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shrink-0"
+                  title="Download"
+                >
+                  <Download className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -272,12 +286,37 @@ function EditSheet({
   const setPhotos = (n: Photo[]) => save({ photos: n });
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async (files: FileList | null) => {
+  /* staged files awaiting confirmation */
+  type StagedFile = { file: File; description: string; previewUrl: string };
+  const [staged, setStaged] = useState<StagedFile[]>([]);
+
+  const stageFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const adds: StagedFile[] = Array.from(files).map((file) => ({
+      file,
+      description: "",
+      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+    }));
+    setStaged((s) => [...s, ...adds]);
+  };
+
+  const updStaged = (i: number, patch: Partial<StagedFile>) =>
+    setStaged((s) => s.map((x, idx) => idx === i ? { ...x, ...patch } : x));
+
+  const rmStaged = (i: number) => {
+    setStaged((s) => {
+      const item = s[i];
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return s.filter((_, idx) => idx !== i);
+    });
+  };
+
+  const confirmUpload = async () => {
+    if (staged.length === 0) return;
     setUploading(true);
     const next: Photo[] = [...photos];
-    for (const file of Array.from(files)) {
-      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    for (const item of staged) {
+      const file = item.file;
       const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
       const path = `${concept.festival_id}/${concept.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}`;
       const { error } = await supabase.storage.from("festival-photos").upload(path, file, {
@@ -293,10 +332,13 @@ function EditSheet({
         mime_type: file.type || `application/octet-stream`,
         size: file.size,
         caption: "",
-        description: "",
+        description: item.description,
       });
     }
     await setPhotos(next);
+    // cleanup previews
+    staged.forEach((s) => s.previewUrl && URL.revokeObjectURL(s.previewUrl));
+    setStaged([]);
     setUploading(false);
     toast.success("Files uploaded");
   };
@@ -457,13 +499,60 @@ function EditSheet({
                   multiple
                   className="hidden"
                   disabled={uploading}
-                  onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }}
+                  onChange={(e) => { stageFiles(e.target.files); e.target.value = ""; }}
                 />
                 <div className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition text-[12px] text-muted-foreground">
                   <Upload className="h-4 w-4" />
-                  {uploading ? "Uploading…" : "Click to upload any file (photos, PDFs, docs…)"}
+                  Click to select files (photos, PDFs, docs…)
                 </div>
               </label>
+
+              {staged.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                  <p className="text-[11px] font-medium text-primary">
+                    {staged.length} file{staged.length > 1 ? "s" : ""} ready to upload
+                  </p>
+                  {staged.map((s, i) => (
+                    <div key={i} className="flex gap-2 bg-background rounded p-2 border border-border/40">
+                      <div className="w-14 h-14 rounded overflow-hidden border border-border/40 bg-muted shrink-0 flex items-center justify-center">
+                        {s.previewUrl ? (
+                          <img src={s.previewUrl} alt="" className="w-full h-full object-cover" />
+                        ) : s.file.type === "application/pdf" || /\.pdf$/i.test(s.file.name) ? (
+                          <FileText className="h-6 w-6 text-red-600 dark:text-red-400" />
+                        ) : (
+                          <FileIcon className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-[11px] font-medium truncate" title={s.file.name}>{s.file.name}</p>
+                        <Textarea
+                          value={s.description}
+                          onChange={(e) => updStaged(i, { description: e.target.value })}
+                          className="text-[11px] min-h-[44px]"
+                          placeholder="Description (optional)"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => rmStaged(i)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-[12px]"
+                    disabled={uploading}
+                    onClick={confirmUpload}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    {uploading ? "Uploading…" : `Upload ${staged.length} file${staged.length > 1 ? "s" : ""}`}
+                  </Button>
+                </div>
+              )}
 
               {photos.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground italic">No files yet.</p>
