@@ -64,7 +64,9 @@ async function downloadFile(url: string, filename: string) {
 function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
-  const photos: Photo[] = Array.isArray(c.photos) ? c.photos : [];
+  const allFiles: Photo[] = Array.isArray(c.photos) ? c.photos : [];
+  const photos = allFiles.filter((p) => isImage(p));
+  const files = allFiles.filter((p) => !isImage(p));
 
   return (
     <Card className="p-5 space-y-3">
