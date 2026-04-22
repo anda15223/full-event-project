@@ -239,14 +239,14 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-lg leading-tight truncate">{c.name || "Untitled"}</h3>
-          {c.tent_size && <p className="text-sm text-muted-foreground">{c.tent_size}</p>}
+          <h3 className="font-semibold text-xl leading-tight truncate">{c.name || "Untitled"}</h3>
+          {c.tent_size && <p className="text-base text-muted-foreground">{c.tent_size}</p>}
         </div>
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
             className={
-              "text-sm font-medium " +
+              "text-base font-medium " +
               (c.zone === "INSIDE"
                 ? "border-primary/40 text-primary bg-primary/5"
                 : c.zone === "OUTSIDE"
@@ -262,7 +262,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
           >
             {c.zone || "—"}
           </Badge>
-          <Button size="sm" variant="outline" className="h-8 px-2.5 text-sm" onClick={onEdit}>
+          <Button size="sm" variant="outline" className="h-8 px-2.5 text-base" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
           </Button>
         </div>
