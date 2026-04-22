@@ -267,12 +267,12 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
           </Button>
         </div>
       </div>
-
+ 
       {c.products_sold && (
-        <p className="text-sm text-muted-foreground line-clamp-3">{c.products_sold}</p>
+        <p className="text-base text-muted-foreground line-clamp-3">{c.products_sold}</p>
       )}
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid grid-cols-2 gap-2 text-base">
         <div><span className="text-muted-foreground">Thu:</span> {c.sales_hours_thu || "—"}</div>
         <div><span className="text-muted-foreground">Fri:</span> {c.sales_hours_fri || "—"}</div>
         <div><span className="text-muted-foreground">Sat:</span> {c.sales_hours_sat || "—"}</div>
