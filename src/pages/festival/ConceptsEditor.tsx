@@ -385,6 +385,69 @@ function EditSheet({
             </AccordionContent>
           </AccordionItem>
 
+          {/* PHOTOS */}
+          <AccordionItem value="photos">
+            <AccordionTrigger className="text-[13px]">
+              <span className="flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5" /> Photos {photos.length > 0 && <span className="text-muted-foreground">({photos.length})</span>}
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-3 pt-2">
+              <label className="block">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }}
+                />
+                <div className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition text-[12px] text-muted-foreground">
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "Uploading…" : "Click to upload setup photos"}
+                </div>
+              </label>
+
+              {photos.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground italic">No photos yet.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {photos.map((p, i) => (
+                    <div key={i} className="space-y-1.5 bg-muted/40 rounded-lg p-2 border border-border/40">
+                      <div className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background">
+                        <img src={p.url} alt={p.caption || p.name} className="w-full h-full object-cover" />
+                      </div>
+                      <Input
+                        value={p.caption ?? ""}
+                        onChange={(e) => updPhoto(i, { caption: e.target.value })}
+                        className="h-7 text-[11px]"
+                        placeholder="Caption (optional)"
+                      />
+                      <div className="flex items-center justify-between gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] flex-1"
+                          onClick={() => downloadFile(p.url, p.name || `setup-${i + 1}.jpg`)}
+                        >
+                          <Download className="h-3 w-3 mr-1" /> Download
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => rmPhoto(i)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
           {/* CUSTOM SUBSECTIONS */}
           <AccordionItem value="custom">
             <AccordionTrigger className="text-[13px]">Custom subsections</AccordionTrigger>
