@@ -374,7 +374,9 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
               SUBSECTION_DRAG_TYPE,
               JSON.stringify({ sourceId: c.id, subsection: s }),
             );
+            setDraggingFromId(c.id);
           }}
+          onDragEnd={() => setDraggingFromId(null)}
         >
           <div className="flex items-center gap-1.5">
             <GripVertical
@@ -390,6 +392,26 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
           ))}
         </div>
       ))}
+
+      {showDropZone && (
+        <div
+          onDragOver={onZoneDragOver}
+          onDragLeave={onZoneDragLeave}
+          onDrop={onZoneDrop}
+          className={
+            "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 px-3 py-5 text-center transition-all " +
+            (dropHover
+              ? "border-primary bg-primary/10 scale-[1.02] shadow-md"
+              : "border-primary/40 bg-primary/5")
+          }
+        >
+          <Plus className={"h-5 w-5 " + (dropHover ? "text-primary" : "text-primary/70")} />
+          <p className={"text-sm font-medium " + (dropHover ? "text-primary" : "text-primary/80")}>
+            {dropHover ? `Release to copy into "${c.name || "this concept"}"` : "Drop section here to copy"}
+          </p>
+          <p className="text-xs text-muted-foreground">Adds a new custom subsection you can edit</p>
+        </div>
+      )}
 
       {files.length > 0 && (
         <div className="bg-muted/40 rounded-lg p-3 text-base space-y-1.5">
