@@ -7,9 +7,36 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { QuestionInput } from "@/components/festival/QuestionInput";
 import { ContactsManager } from "@/components/festival/ContactsManager";
+import { SmartCard } from "@/components/festival/SmartCard";
 import {
   useFestival, useSection, useQuestions, useAnswers
 } from "@/hooks/useFestival";
+
+/** Per-section SmartCard configuration. If a section key is in this map,
+ *  a SmartCard (uploads + AI extract + brain-grab + editable sections/lines)
+ *  is rendered below the question form. */
+const SMART_CARDS: Record<string, { title: string; subtitle?: string; warning?: { label: string; description?: string } }> = {
+  equipment_list: {
+    title: "Equipment list",
+    subtitle: "Upload supplier offers, packing lists or photos. AI will turn them into editable sections.",
+    warning: { label: "No equipment registered yet", description: "Upload a list, grab from Brain, or add a section manually." },
+  },
+  cooling_storage: {
+    title: "Cooling & storage",
+    subtitle: "Upload Godik booking confirmations, container photos or cooling layouts.",
+    warning: { label: "No cooling/storage info yet", description: "Add at least the container booking and capacity." },
+  },
+  cooking_equipment: {
+    title: "Cooking equipment",
+    subtitle: "Upload kitchen equipment lists, gas hookup info, supplier offers.",
+    warning: { label: "No cooking equipment yet", description: "Add stoves, fryers, ovens, gas, water hookups." },
+  },
+  safety_compliance: {
+    title: "Safety & compliance",
+    subtitle: "Upload fire safety PDFs, food handling certs, insurance docs. AI will read them.",
+    warning: { label: "No safety documents uploaded", description: "Compliance docs, fire plan and certificates are required before opening." },
+  },
+};
 
 export default function SectionEditor() {
   const { slug, sectionKey } = useParams<{ slug: string; sectionKey: string }>();
