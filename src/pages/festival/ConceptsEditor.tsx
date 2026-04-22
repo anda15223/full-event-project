@@ -327,15 +327,14 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
                 ) : (
                   <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
-                <a
-                  href={f.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0"
+                <button
+                  type="button"
+                  onClick={() => openPreview({ url: f.url, name: f.name, mime_type: f.mime_type })}
+                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0 text-left"
                   title={f.description || f.caption || f.name}
                 >
                   {f.caption || f.name || "File"}
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name || `file-${i + 1}`); }}
