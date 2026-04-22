@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Truck, BedDouble } from "lucide-react";
+import { SmartCard } from "@/components/festival/SmartCard";
 import { useFestival, useVehicles, useAccommodation } from "@/hooks/useFestival";
 
 const STATUS_COLOR: Record<string, string> = {
