@@ -205,6 +205,7 @@ function EditSheet({
                     <SelectContent className="bg-popover">
                       <SelectItem value="INSIDE">INSIDE</SelectItem>
                       <SelectItem value="OUTSIDE">OUTSIDE</SelectItem>
+                      <SelectItem value="CAMPING">CAMPING</SelectItem>
                       <SelectItem value="VIP">VIP</SelectItem>
                       <SelectItem value="BACKSTAGE">BACKSTAGE</SelectItem>
                     </SelectContent>
