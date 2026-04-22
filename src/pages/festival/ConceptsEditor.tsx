@@ -200,6 +200,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
   const allFiles: Photo[] = Array.isArray(c.photos) ? c.photos : [];
   const photos = allFiles.filter((p) => isImage(p));
   const files = allFiles.filter((p) => !isImage(p));
+  const openPreview = useFilePreview();
 
   return (
     <Card className="p-5 space-y-3">
