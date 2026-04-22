@@ -661,6 +661,7 @@ export type Database = {
       festival_concepts: {
         Row: {
           created_at: string
+          details: Json
           festival_id: string
           gas_required: boolean
           gas_supplier: string | null
@@ -683,6 +684,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          details?: Json
           festival_id: string
           gas_required?: boolean
           gas_supplier?: string | null
@@ -705,6 +707,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          details?: Json
           festival_id?: string
           gas_required?: boolean
           gas_supplier?: string | null
@@ -771,6 +774,39 @@ export type Database = {
           phone?: string | null
           role?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      festival_extra_details: {
+        Row: {
+          created_at: string
+          festival_id: string
+          id: string
+          label: string
+          notes: string | null
+          order_index: number
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          festival_id: string
+          id?: string
+          label?: string
+          notes?: string | null
+          order_index?: number
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          festival_id?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          order_index?: number
+          updated_at?: string
+          value?: string | null
         }
         Relationships: []
       }
