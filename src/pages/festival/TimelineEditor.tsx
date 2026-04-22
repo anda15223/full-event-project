@@ -59,6 +59,17 @@ export default function TimelineEditor() {
         <p className="text-sm text-muted-foreground mt-1">{items.length} action items grouped by deadline</p>
       </div>
 
+      <SmartCard
+        cardKey="setup_timeline"
+        festivalId={festival.id}
+        title="Setup timeline documents"
+        subtitle="Upload setup schedules, build/strike timelines, supplier delivery plans. AI groups them into phases."
+        emptyStateWarning={{
+          label: "No setup timeline yet",
+          description: "Upload a build schedule or grab the standard phases from Brain.",
+        }}
+      />
+
       <div className="space-y-4">
         {dates.map(d => (
           <Card key={d} className="p-4">
