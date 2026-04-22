@@ -17,7 +17,7 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
@@ -25,7 +25,22 @@ import { useFestival, useConcepts } from "@/hooks/useFestival";
 type PowerExtra = { amperage?: string; count?: number; phase?: string; notes?: string };
 type SubLine = { label?: string; value?: string };
 type Subsection = { title?: string; lines?: SubLine[] };
-type Photo = { url: string; path: string; name?: string; caption?: string };
+type Photo = {
+  url: string;
+  path: string;
+  name?: string;
+  caption?: string;
+  description?: string;
+  mime_type?: string;
+  size?: number;
+};
+
+const isImage = (p: Photo) =>
+  (p.mime_type?.startsWith("image/")) ||
+  /\.(png|jpe?g|gif|webp|bmp|svg|heic|avif)$/i.test(p.name || p.path || "");
+
+const isPdf = (p: Photo) =>
+  p.mime_type === "application/pdf" || /\.pdf$/i.test(p.name || p.path || "");
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -34,7 +49,7 @@ async function downloadFile(url: string, filename: string) {
     const a = document.createElement("a");
     const objectUrl = URL.createObjectURL(blob);
     a.href = objectUrl;
-    a.download = filename || "photo";
+    a.download = filename || "file";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -57,23 +72,47 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
             <div key={i} className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted">
-              <img
-                src={p.url}
-                alt={p.caption || p.name || "Setup photo"}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              {isImage(p) ? (
+                <img
+                  src={p.url}
+                  alt={p.caption || p.name || "Setup file"}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : isPdf(p) ? (
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 transition"
+                  title={p.name || "PDF"}
+                >
+                  <FileText className="h-6 w-6" />
+                  <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
+                </a>
+              ) : (
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground hover:bg-muted/70 transition"
+                  title={p.name || "File"}
+                >
+                  <FileIcon className="h-6 w-6" />
+                  <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
+                </a>
+              )}
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `setup-${i + 1}.jpg`); }}
+                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `file-${i + 1}`); }}
                 className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
                 title="Download"
               >
                 <Download className="h-3 w-3" />
               </button>
-              {p.caption && (
+              {(p.caption || p.description) && (
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-1.5 py-0.5 truncate">
-                  {p.caption}
+                  {p.caption || p.description}
                 </div>
               )}
             </div>
@@ -238,31 +277,42 @@ function EditSheet({
     setUploading(true);
     const next: Photo[] = [...photos];
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) continue;
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${concept.festival_id}/${concept.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+      const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
+      const path = `${concept.festival_id}/${concept.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}`;
       const { error } = await supabase.storage.from("festival-photos").upload(path, file, {
-        contentType: file.type,
+        contentType: file.type || `application/octet-stream`,
         upsert: false,
       });
       if (error) { toast.error(`Upload failed: ${file.name}`); continue; }
       const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(path);
-      next.push({ url: pub.publicUrl, path, name: file.name, caption: "" });
+      next.push({
+        url: pub.publicUrl,
+        path,
+        name: file.name,
+        mime_type: file.type || `application/octet-stream`,
+        size: file.size,
+        caption: "",
+        description: "",
+      });
     }
     await setPhotos(next);
     setUploading(false);
-    toast.success("Photos uploaded");
+    toast.success("Files uploaded");
   };
 
-  const updPhoto = (i: number, patch: Partial<Photo>) =>
-    setPhotos(photos.map((p, idx) => idx === i ? { ...p, ...patch } : p));
+  const updPhoto = (i: number, patch: Partial<Photo>) => {
+    const current: Photo[] = Array.isArray(local.photos) ? local.photos : [];
+    setPhotos(current.map((p, idx) => idx === i ? { ...p, ...patch } : p));
+  };
 
   const rmPhoto = async (i: number) => {
-    const p = photos[i];
-    if (p.path) {
+    const current: Photo[] = Array.isArray(local.photos) ? local.photos : [];
+    const p = current[i];
+    if (p?.path) {
       await supabase.storage.from("festival-photos").remove([p.path]);
     }
-    setPhotos(photos.filter((_, idx) => idx !== i));
+    setPhotos(current.filter((_, idx) => idx !== i));
   };
 
   const remove = async () => {
@@ -397,14 +447,13 @@ function EditSheet({
           <AccordionItem value="photos">
             <AccordionTrigger className="text-[13px]">
               <span className="flex items-center gap-1.5">
-                <ImageIcon className="h-3.5 w-3.5" /> Photos {photos.length > 0 && <span className="text-muted-foreground">({photos.length})</span>}
+                <ImageIcon className="h-3.5 w-3.5" /> Files {photos.length > 0 && <span className="text-muted-foreground">({photos.length})</span>}
               </span>
             </AccordionTrigger>
             <AccordionContent className="space-y-3 pt-2">
               <label className="block">
                 <input
                   type="file"
-                  accept="image/*"
                   multiple
                   className="hidden"
                   disabled={uploading}
@@ -412,31 +461,70 @@ function EditSheet({
                 />
                 <div className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition text-[12px] text-muted-foreground">
                   <Upload className="h-4 w-4" />
-                  {uploading ? "Uploading…" : "Click to upload setup photos"}
+                  {uploading ? "Uploading…" : "Click to upload any file (photos, PDFs, docs…)"}
                 </div>
               </label>
 
               {photos.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground italic">No photos yet.</p>
+                <p className="text-[11px] text-muted-foreground italic">No files yet.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {photos.map((p, i) => (
                     <div key={i} className="space-y-1.5 bg-muted/40 rounded-lg p-2 border border-border/40">
                       <div className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background">
-                        <img src={p.url} alt={p.caption || p.name} className="w-full h-full object-cover" />
+                        {isImage(p) ? (
+                          <img src={p.url} alt={p.caption || p.name} className="w-full h-full object-cover" />
+                        ) : isPdf(p) ? (
+                          <object data={p.url} type="application/pdf" className="w-full h-full">
+                            <a
+                              href={p.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300"
+                            >
+                              <FileText className="h-7 w-7" />
+                              <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
+                            </a>
+                          </object>
+                        ) : (
+                          <a
+                            href={p.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground hover:bg-muted/70 transition"
+                          >
+                            <FileIcon className="h-7 w-7" />
+                            <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
+                          </a>
+                        )}
                       </div>
                       <Input
                         value={p.caption ?? ""}
                         onChange={(e) => updPhoto(i, { caption: e.target.value })}
                         className="h-7 text-[11px]"
-                        placeholder="Caption (optional)"
+                        placeholder="Caption (short)"
+                      />
+                      <Textarea
+                        value={p.description ?? ""}
+                        onChange={(e) => updPhoto(i, { description: e.target.value })}
+                        className="text-[11px] min-h-[52px]"
+                        placeholder="Description (notes about this file)"
                       />
                       <div className="flex items-center justify-between gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-[11px] flex-1"
-                          onClick={() => downloadFile(p.url, p.name || `setup-${i + 1}.jpg`)}
+                          onClick={() => window.open(p.url, "_blank")}
+                          title="Open / preview"
+                        >
+                          <Eye className="h-3 w-3 mr-1" /> Open
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] flex-1"
+                          onClick={() => downloadFile(p.url, p.name || `file-${i + 1}`)}
                         >
                           <Download className="h-3 w-3 mr-1" /> Download
                         </Button>
