@@ -954,6 +954,7 @@ export default function ConceptsEditor() {
 
   return (
     <FilePreviewProvider>
+      <SubsectionDragProvider>
       <div className="space-y-6 max-w-5xl">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
@@ -973,6 +974,7 @@ export default function ConceptsEditor() {
           ))}
         </div>
       </div>
+      </SubsectionDragProvider>
     </FilePreviewProvider>
   );
 }
