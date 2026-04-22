@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,143 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+/* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
+
+type PreviewTarget = { url: string; name?: string; mime_type?: string } | null;
+
+function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose: () => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvedType, setResolvedType] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    setBlobUrl(null);
+    setError(null);
+    setResolvedType(null);
+    if (!target) return;
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(target.url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        const type = target.mime_type || blob.type || "application/octet-stream";
+        const typed = type === "application/octet-stream" && /\.pdf$/i.test(target.name || "")
+          ? new Blob([blob], { type: "application/pdf" })
+          : blob;
+        createdUrl = URL.createObjectURL(typed);
+        setResolvedType(typed.type || type);
+        setBlobUrl(createdUrl);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || "Failed to load file");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [target]);
+
+  const open = !!target;
+  const name = target?.name || "File";
+  const isImg = (resolvedType || "").startsWith("image/");
+  const isPdfType = (resolvedType || "") === "application/pdf";
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
+          <p className="text-sm font-medium truncate">{name}</p>
+          <div className="flex items-center gap-1">
+            {blobUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = name;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                }}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Download
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 bg-muted/20 flex items-center justify-center overflow-auto">
+          {loading && (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
+            </div>
+          )}
+          {error && !loading && (
+            <div className="text-sm text-destructive p-4 text-center">
+              Could not load file: {error}
+            </div>
+          )}
+          {!loading && !error && blobUrl && isImg && (
+            <img src={blobUrl} alt={name} className="max-w-full max-h-full object-contain" />
+          )}
+          {!loading && !error && blobUrl && isPdfType && (
+            <iframe src={blobUrl} title={name} className="w-full h-full border-0" />
+          )}
+          {!loading && !error && blobUrl && !isImg && !isPdfType && (
+            <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
+              <FileIcon className="h-10 w-10" />
+              <p>No inline preview available for this file type.</p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = name;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                }}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Download {name}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const FilePreviewContext = createContext<(t: { url: string; name?: string; mime_type?: string }) => void>(() => {});
+const useFilePreview = () => useContext(FilePreviewContext);
+
+function FilePreviewProvider({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<PreviewTarget>(null);
+  const open = useCallback((t: { url: string; name?: string; mime_type?: string }) => setTarget(t), []);
+  return (
+    <FilePreviewContext.Provider value={open}>
+      {children}
+      <FilePreviewModal target={target} onClose={() => setTarget(null)} />
+    </FilePreviewContext.Provider>
+  );
+}
 
 type PowerExtra = { amperage?: string; count?: number; phase?: string; notes?: string };
 type SubLine = { label?: string; value?: string };
@@ -67,33 +200,40 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
   const allFiles: Photo[] = Array.isArray(c.photos) ? c.photos : [];
   const photos = allFiles.filter((p) => isImage(p));
   const files = allFiles.filter((p) => !isImage(p));
+  const openPreview = useFilePreview();
 
   return (
     <Card className="p-5 space-y-3">
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
-            <div key={i} className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted">
+            <button
+              key={i}
+              type="button"
+              onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+              className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted text-left"
+              title="Preview"
+            >
               <img
                 src={p.url}
                 alt={p.caption || p.name || "Setup photo"}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `photo-${i + 1}.jpg`); }}
-                className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
+              <span
+                role="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadFile(p.url, p.name || `photo-${i + 1}.jpg`); }}
+                className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm cursor-pointer"
                 title="Download"
               >
                 <Download className="h-3 w-3" />
-              </button>
+              </span>
               {(p.caption || p.description) && (
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-1.5 py-0.5 truncate">
                   {p.caption || p.description}
                 </div>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -187,15 +327,14 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
                 ) : (
                   <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
-                <a
-                  href={f.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0"
+                <button
+                  type="button"
+                  onClick={() => openPreview({ url: f.url, name: f.name, mime_type: f.mime_type })}
+                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0 text-left"
                   title={f.description || f.caption || f.name}
                 >
                   {f.caption || f.name || "File"}
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name || `file-${i + 1}`); }}
@@ -224,6 +363,7 @@ function EditSheet({
   onChanged: () => void;
 }) {
   const [local, setLocal] = useState<any>(concept);
+  const openPreview = useFilePreview();
   // Only reset local state when switching to a different concept or reopening the sheet.
   // Do NOT depend on `concept` itself — parent refetches replace the object reference
   // on every save and would clobber in-flight keystrokes.
@@ -560,33 +700,26 @@ function EditSheet({
                 <div className="grid grid-cols-2 gap-2">
                   {photos.map((p, i) => (
                     <div key={i} className="space-y-1.5 bg-muted/40 rounded-lg p-2 border border-border/40">
-                      <div className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background">
+                      <button
+                        type="button"
+                        onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+                        className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background w-full text-left"
+                        title="Preview"
+                      >
                         {isImage(p) ? (
                           <img src={p.url} alt={p.caption || p.name} className="w-full h-full object-cover" />
                         ) : isPdf(p) ? (
-                          <object data={p.url} type="application/pdf" className="w-full h-full">
-                            <a
-                              href={p.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300"
-                            >
-                              <FileText className="h-7 w-7" />
-                              <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
-                            </a>
-                          </object>
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300">
+                            <FileText className="h-7 w-7" />
+                            <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
+                          </div>
                         ) : (
-                          <a
-                            href={p.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground hover:bg-muted/70 transition"
-                          >
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground">
                             <FileIcon className="h-7 w-7" />
                             <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
-                          </a>
+                          </div>
                         )}
-                      </div>
+                      </button>
                       <Input
                         value={p.caption ?? ""}
                         onChange={(e) => updPhoto(i, { caption: e.target.value })}
@@ -604,7 +737,7 @@ function EditSheet({
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-[11px] flex-1"
-                          onClick={() => window.open(p.url, "_blank")}
+                          onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
                           title="Open / preview"
                         >
                           <Eye className="h-3 w-3 mr-1" /> Open
@@ -721,24 +854,26 @@ export default function ConceptsEditor() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
-      </Button>
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Concepts</h1>
-          <p className="text-sm text-muted-foreground mt-1">{concepts.length} concepts at {festival.name}</p>
-        </div>
-        <Button onClick={addConcept} size="sm" className="h-8">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
+    <FilePreviewProvider>
+      <div className="space-y-6 max-w-5xl">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
         </Button>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Concepts</h1>
+            <p className="text-sm text-muted-foreground mt-1">{concepts.length} concepts at {festival.name}</p>
+          </div>
+          <Button onClick={addConcept} size="sm" className="h-8">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {concepts.map((c: any) => (
+            <ConceptItem key={c.id} concept={c} onChanged={invalidate} />
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {concepts.map((c: any) => (
-          <ConceptItem key={c.id} concept={c} onChanged={invalidate} />
-        ))}
-      </div>
-    </div>
+    </FilePreviewProvider>
   );
 }
