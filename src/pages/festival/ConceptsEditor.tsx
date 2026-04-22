@@ -36,38 +36,38 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
     <Card className="p-5 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-[15px] leading-tight truncate">{c.name || "Untitled"}</h3>
-          {c.tent_size && <p className="text-[12px] text-muted-foreground">{c.tent_size}</p>}
+          <h3 className="font-semibold text-lg leading-tight truncate">{c.name || "Untitled"}</h3>
+          {c.tent_size && <p className="text-sm text-muted-foreground">{c.tent_size}</p>}
         </div>
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
             className={
               c.zone === "INSIDE"
-                ? "border-primary/40 text-primary"
-                : "border-accent/40 text-accent-foreground"
+                ? "border-primary/40 text-primary text-sm"
+                : "border-accent/40 text-accent-foreground text-sm"
             }
           >
             {c.zone}
           </Badge>
-          <Button size="sm" variant="outline" className="h-7 px-2" onClick={onEdit}>
-            <Pencil className="h-3 w-3 mr-1" /> Edit
+          <Button size="sm" variant="outline" className="h-8 px-2.5 text-sm" onClick={onEdit}>
+            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
           </Button>
         </div>
       </div>
 
       {c.products_sold && (
-        <p className="text-[12px] text-muted-foreground line-clamp-3">{c.products_sold}</p>
+        <p className="text-sm text-muted-foreground line-clamp-3">{c.products_sold}</p>
       )}
 
-      <div className="grid grid-cols-2 gap-2 text-[11px]">
+      <div className="grid grid-cols-2 gap-2 text-sm">
         <div><span className="text-muted-foreground">Thu:</span> {c.sales_hours_thu || "—"}</div>
         <div><span className="text-muted-foreground">Fri:</span> {c.sales_hours_fri || "—"}</div>
         <div><span className="text-muted-foreground">Sat:</span> {c.sales_hours_sat || "—"}</div>
         <div><span className="text-muted-foreground">Sun:</span> {c.sales_hours_sun || "—"}</div>
       </div>
 
-      <div className="border-t border-border/50 pt-3 grid grid-cols-2 gap-2 text-[11px]">
+      <div className="border-t border-border/50 pt-3 grid grid-cols-2 gap-2 text-sm">
         <div><span className="text-muted-foreground">Power:</span> {c.power_baseline || "—"}</div>
         <div><span className="text-muted-foreground">Gas:</span> {c.gas_required ? (c.gas_supplier || "Yes") : "No"}</div>
         {c.wristband_max != null && (
@@ -81,9 +81,9 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       </div>
 
       {extras.length > 0 && (
-        <div className="bg-secondary/40 rounded-lg p-2.5 text-[11px] space-y-0.5">
+        <div className="bg-secondary/40 rounded-lg p-3 text-sm space-y-1">
           <p className="font-medium text-muted-foreground flex items-center gap-1">
-            <Zap className="h-3 w-3" /> Power extras
+            <Zap className="h-3.5 w-3.5" /> Power extras
           </p>
           {extras.map((p, i) => (
             <p key={i}>• {p.amperage} ×{p.count}{p.phase ? ` ${p.phase}` : ""}{p.notes ? ` — ${p.notes}` : ""}</p>
@@ -92,7 +92,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       )}
 
       {subsections.map((s, i) => (
-        <div key={i} className="bg-muted/40 rounded-lg p-2.5 text-[11px] space-y-0.5">
+        <div key={i} className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
           <p className="font-medium text-muted-foreground">{s.title || "Untitled"}</p>
           {(s.lines || []).map((l, j) => (
             <p key={j}>
