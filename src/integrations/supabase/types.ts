@@ -675,6 +675,7 @@ export type Database = {
           sales_hours_sat: string | null
           sales_hours_sun: string | null
           sales_hours_thu: string | null
+          subsections: Json
           tent_size: string | null
           updated_at: string
           wristband_black_partout: number | null
@@ -698,6 +699,7 @@ export type Database = {
           sales_hours_sat?: string | null
           sales_hours_sun?: string | null
           sales_hours_thu?: string | null
+          subsections?: Json
           tent_size?: string | null
           updated_at?: string
           wristband_black_partout?: number | null
@@ -721,6 +723,7 @@ export type Database = {
           sales_hours_sat?: string | null
           sales_hours_sun?: string | null
           sales_hours_thu?: string | null
+          subsections?: Json
           tent_size?: string | null
           updated_at?: string
           wristband_black_partout?: number | null
