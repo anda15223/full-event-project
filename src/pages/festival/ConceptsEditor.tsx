@@ -43,12 +43,21 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
           <Badge
             variant="outline"
             className={
-              c.zone === "INSIDE"
-                ? "border-primary/40 text-primary text-sm"
-                : "border-accent/40 text-accent-foreground text-sm"
+              "text-sm font-medium " +
+              (c.zone === "INSIDE"
+                ? "border-primary/40 text-primary bg-primary/5"
+                : c.zone === "OUTSIDE"
+                ? "border-emerald-500/40 text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-950/40"
+                : c.zone === "CAMPING"
+                ? "border-amber-500/40 text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40"
+                : c.zone === "VIP"
+                ? "border-purple-500/40 text-purple-700 bg-purple-50 dark:text-purple-300 dark:bg-purple-950/40"
+                : c.zone === "BACKSTAGE"
+                ? "border-slate-500/40 text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800/40"
+                : "border-border text-foreground")
             }
           >
-            {c.zone}
+            {c.zone || "—"}
           </Badge>
           <Button size="sm" variant="outline" className="h-8 px-2.5 text-sm" onClick={onEdit}>
             <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
