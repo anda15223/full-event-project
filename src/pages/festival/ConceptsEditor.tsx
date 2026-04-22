@@ -194,13 +194,52 @@ async function downloadFile(url: string, filename: string) {
 
 /* -------------------- Read-only summary card -------------------- */
 
-function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
+const SUBSECTION_DRAG_TYPE = "application/x-concept-subsection";
+
+function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; onChanged: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
   const allFiles: Photo[] = Array.isArray(c.photos) ? c.photos : [];
   const photos = allFiles.filter((p) => isImage(p));
   const files = allFiles.filter((p) => !isImage(p));
   const openPreview = useFilePreview();
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(SUBSECTION_DRAG_TYPE)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      if (!dragOver) setDragOver(true);
+    }
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    // only clear when leaving the card itself (not crossing children)
+    if (e.currentTarget === e.target) setDragOver(false);
+  };
+  const handleDrop = async (e: React.DragEvent) => {
+    const raw = e.dataTransfer.getData(SUBSECTION_DRAG_TYPE);
+    setDragOver(false);
+    if (!raw) return;
+    e.preventDefault();
+    let payload: { sourceId?: string; subsection?: Subsection } | null = null;
+    try { payload = JSON.parse(raw); } catch { return; }
+    if (!payload?.subsection) return;
+    if (payload.sourceId === c.id) return; // ignore self-drops
+    const copy: Subsection = {
+      title: payload.subsection.title || "Untitled",
+      lines: Array.isArray(payload.subsection.lines)
+        ? payload.subsection.lines.map((l) => ({ label: l.label, value: l.value }))
+        : [],
+    };
+    const next = [...subsections, copy];
+    const { error } = await (supabase as any)
+      .from("festival_concepts")
+      .update({ subsections: next })
+      .eq("id", c.id);
+    if (error) { toast.error("Could not paste section"); return; }
+    toast.success(`Section "${copy.title}" copied to ${c.name || "concept"}`);
+    onChanged();
+  };
 
   return (
     <Card className="p-5 space-y-3">
