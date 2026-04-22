@@ -17,10 +17,129 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+/* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
+
+type PreviewTarget = { url: string; name?: string; mime_type?: string } | null;
+
+function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose: () => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvedType, setResolvedType] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    setBlobUrl(null);
+    setError(null);
+    setResolvedType(null);
+    if (!target) return;
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(target.url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        const type = target.mime_type || blob.type || "application/octet-stream";
+        const typed = type === "application/octet-stream" && /\.pdf$/i.test(target.name || "")
+          ? new Blob([blob], { type: "application/pdf" })
+          : blob;
+        createdUrl = URL.createObjectURL(typed);
+        setResolvedType(typed.type || type);
+        setBlobUrl(createdUrl);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || "Failed to load file");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [target]);
+
+  const open = !!target;
+  const name = target?.name || "File";
+  const isImg = (resolvedType || "").startsWith("image/");
+  const isPdfType = (resolvedType || "") === "application/pdf";
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
+          <p className="text-sm font-medium truncate">{name}</p>
+          <div className="flex items-center gap-1">
+            {blobUrl && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = name;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                }}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Download
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 bg-muted/20 flex items-center justify-center overflow-auto">
+          {loading && (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
+            </div>
+          )}
+          {error && !loading && (
+            <div className="text-sm text-destructive p-4 text-center">
+              Could not load file: {error}
+            </div>
+          )}
+          {!loading && !error && blobUrl && isImg && (
+            <img src={blobUrl} alt={name} className="max-w-full max-h-full object-contain" />
+          )}
+          {!loading && !error && blobUrl && isPdfType && (
+            <iframe src={blobUrl} title={name} className="w-full h-full border-0" />
+          )}
+          {!loading && !error && blobUrl && !isImg && !isPdfType && (
+            <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
+              <FileIcon className="h-10 w-10" />
+              <p>No inline preview available for this file type.</p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = blobUrl;
+                  a.download = name;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                }}
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Download {name}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 type PowerExtra = { amperage?: string; count?: number; phase?: string; notes?: string };
 type SubLine = { label?: string; value?: string };
