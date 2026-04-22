@@ -207,27 +207,33 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
-            <div key={i} className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted">
+            <button
+              key={i}
+              type="button"
+              onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+              className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted text-left"
+              title="Preview"
+            >
               <img
                 src={p.url}
                 alt={p.caption || p.name || "Setup photo"}
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `photo-${i + 1}.jpg`); }}
-                className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
+              <span
+                role="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadFile(p.url, p.name || `photo-${i + 1}.jpg`); }}
+                className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm cursor-pointer"
                 title="Download"
               >
                 <Download className="h-3 w-3" />
-              </button>
+              </span>
               {(p.caption || p.description) && (
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent text-white text-[10px] px-1.5 py-0.5 truncate">
                   {p.caption || p.description}
                 </div>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}
