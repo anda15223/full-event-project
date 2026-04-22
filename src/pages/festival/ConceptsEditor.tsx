@@ -854,24 +854,26 @@ export default function ConceptsEditor() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <Button asChild variant="ghost" size="sm" className="-ml-2">
-        <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
-      </Button>
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Concepts</h1>
-          <p className="text-sm text-muted-foreground mt-1">{concepts.length} concepts at {festival.name}</p>
-        </div>
-        <Button onClick={addConcept} size="sm" className="h-8">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
+    <FilePreviewProvider>
+      <div className="space-y-6 max-w-5xl">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
         </Button>
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Concepts</h1>
+            <p className="text-sm text-muted-foreground mt-1">{concepts.length} concepts at {festival.name}</p>
+          </div>
+          <Button onClick={addConcept} size="sm" className="h-8">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {concepts.map((c: any) => (
+            <ConceptItem key={c.id} concept={c} onChanged={invalidate} />
+          ))}
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {concepts.map((c: any) => (
-          <ConceptItem key={c.id} concept={c} onChanged={invalidate} />
-        ))}
-      </div>
-    </div>
+    </FilePreviewProvider>
   );
 }
