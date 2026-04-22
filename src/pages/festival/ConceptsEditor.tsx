@@ -17,7 +17,7 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload, FileText, File as FileIcon, Eye, X, Loader2, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
@@ -194,16 +194,63 @@ async function downloadFile(url: string, filename: string) {
 
 /* -------------------- Read-only summary card -------------------- */
 
-function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
+const SUBSECTION_DRAG_TYPE = "application/x-concept-subsection";
+
+function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; onChanged: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
   const allFiles: Photo[] = Array.isArray(c.photos) ? c.photos : [];
   const photos = allFiles.filter((p) => isImage(p));
   const files = allFiles.filter((p) => !isImage(p));
   const openPreview = useFilePreview();
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(SUBSECTION_DRAG_TYPE)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      if (!dragOver) setDragOver(true);
+    }
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    // only clear when leaving the card itself (not crossing children)
+    if (e.currentTarget === e.target) setDragOver(false);
+  };
+  const handleDrop = async (e: React.DragEvent) => {
+    const raw = e.dataTransfer.getData(SUBSECTION_DRAG_TYPE);
+    setDragOver(false);
+    if (!raw) return;
+    e.preventDefault();
+    let payload: { sourceId?: string; subsection?: Subsection } | null = null;
+    try { payload = JSON.parse(raw); } catch { return; }
+    if (!payload?.subsection) return;
+    if (payload.sourceId === c.id) return; // ignore self-drops
+    const copy: Subsection = {
+      title: payload.subsection.title || "Untitled",
+      lines: Array.isArray(payload.subsection.lines)
+        ? payload.subsection.lines.map((l) => ({ label: l.label, value: l.value }))
+        : [],
+    };
+    const next = [...subsections, copy];
+    const { error } = await (supabase as any)
+      .from("festival_concepts")
+      .update({ subsections: next })
+      .eq("id", c.id);
+    if (error) { toast.error("Could not paste section"); return; }
+    toast.success(`Section "${copy.title}" copied to ${c.name || "concept"}`);
+    onChanged();
+  };
 
   return (
-    <Card className="p-5 space-y-3">
+    <Card
+      className={
+        "p-5 space-y-3 transition-all " +
+        (dragOver ? "ring-2 ring-primary ring-offset-2 bg-primary/5" : "")
+      }
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
@@ -304,10 +351,27 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       )}
 
       {subsections.map((s, i) => (
-        <div key={i} className="bg-muted/40 rounded-lg p-3 text-base space-y-1">
-          <p className="font-medium text-muted-foreground">{s.title || "Untitled"}</p>
+        <div
+          key={i}
+          className="bg-muted/40 rounded-lg p-3 text-base space-y-1 group/sub relative"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = "copy";
+            e.dataTransfer.setData(
+              SUBSECTION_DRAG_TYPE,
+              JSON.stringify({ sourceId: c.id, subsection: s }),
+            );
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <GripVertical
+              className="h-4 w-4 text-muted-foreground/60 cursor-grab active:cursor-grabbing shrink-0"
+              aria-label="Drag to copy to another card"
+            />
+            <p className="font-medium text-muted-foreground flex-1">{s.title || "Untitled"}</p>
+          </div>
           {(s.lines || []).map((l, j) => (
-            <p key={j}>
+            <p key={j} className="pl-5">
               {l.label && <span className="text-muted-foreground">{l.label}:</span>} {l.value}
             </p>
           ))}
@@ -823,7 +887,7 @@ function ConceptItem({ concept, onChanged }: { concept: any; onChanged: () => vo
   const [open, setOpen] = useState(false);
   return (
     <>
-      <ReadOnlyCard c={concept} onEdit={() => setOpen(true)} />
+      <ReadOnlyCard c={concept} onEdit={() => setOpen(true)} onChanged={onChanged} />
       <EditSheet concept={concept} open={open} onOpenChange={setOpen} onChanged={onChanged} />
     </>
   );
