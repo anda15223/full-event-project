@@ -196,6 +196,20 @@ async function downloadFile(url: string, filename: string) {
 
 const SUBSECTION_DRAG_TYPE = "application/x-concept-subsection";
 
+const SubsectionDragContext = createContext<{
+  draggingFromId: string | null;
+  setDraggingFromId: (id: string | null) => void;
+}>({ draggingFromId: null, setDraggingFromId: () => {} });
+
+function SubsectionDragProvider({ children }: { children: React.ReactNode }) {
+  const [draggingFromId, setDraggingFromId] = useState<string | null>(null);
+  return (
+    <SubsectionDragContext.Provider value={{ draggingFromId, setDraggingFromId }}>
+      {children}
+    </SubsectionDragContext.Provider>
+  );
+}
+
 function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; onChanged: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
@@ -203,28 +217,30 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
   const photos = allFiles.filter((p) => isImage(p));
   const files = allFiles.filter((p) => !isImage(p));
   const openPreview = useFilePreview();
-  const [dragOver, setDragOver] = useState(false);
+  const { draggingFromId, setDraggingFromId } = useContext(SubsectionDragContext);
+  const [dropHover, setDropHover] = useState(false);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes(SUBSECTION_DRAG_TYPE)) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      if (!dragOver) setDragOver(true);
-    }
+  const showDropZone = !!draggingFromId && draggingFromId !== c.id;
+
+  const onZoneDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(SUBSECTION_DRAG_TYPE)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dropHover) setDropHover(true);
   };
-  const handleDragLeave = (e: React.DragEvent) => {
-    // only clear when leaving the card itself (not crossing children)
-    if (e.currentTarget === e.target) setDragOver(false);
+  const onZoneDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget === e.target) setDropHover(false);
   };
-  const handleDrop = async (e: React.DragEvent) => {
+  const onZoneDrop = async (e: React.DragEvent) => {
     const raw = e.dataTransfer.getData(SUBSECTION_DRAG_TYPE);
-    setDragOver(false);
+    setDropHover(false);
+    setDraggingFromId(null);
     if (!raw) return;
     e.preventDefault();
     let payload: { sourceId?: string; subsection?: Subsection } | null = null;
     try { payload = JSON.parse(raw); } catch { return; }
     if (!payload?.subsection) return;
-    if (payload.sourceId === c.id) return; // ignore self-drops
+    if (payload.sourceId === c.id) return;
     const copy: Subsection = {
       title: payload.subsection.title || "Untitled",
       lines: Array.isArray(payload.subsection.lines)
@@ -245,11 +261,8 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
     <Card
       className={
         "p-5 space-y-3 transition-all " +
-        (dragOver ? "ring-2 ring-primary ring-offset-2 bg-primary/5" : "")
+        (showDropZone ? "ring-1 ring-primary/30 " : "")
       }
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
