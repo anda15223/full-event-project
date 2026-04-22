@@ -141,6 +141,20 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
   );
 }
 
+const FilePreviewContext = createContext<(t: { url: string; name?: string; mime_type?: string }) => void>(() => {});
+const useFilePreview = () => useContext(FilePreviewContext);
+
+function FilePreviewProvider({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<PreviewTarget>(null);
+  const open = useCallback((t: { url: string; name?: string; mime_type?: string }) => setTarget(t), []);
+  return (
+    <FilePreviewContext.Provider value={open}>
+      {children}
+      <FilePreviewModal target={target} onClose={() => setTarget(null)} />
+    </FilePreviewContext.Provider>
+  );
+}
+
 type PowerExtra = { amperage?: string; count?: number; phase?: string; notes?: string };
 type SubLine = { label?: string; value?: string };
 type Subsection = { title?: string; lines?: SubLine[] };
