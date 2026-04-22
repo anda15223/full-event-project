@@ -735,6 +735,45 @@ export type Database = {
           },
         ]
       }
+      festival_contacts: {
+        Row: {
+          created_at: string
+          email: string | null
+          festival_id: string
+          id: string
+          name: string
+          notes: string | null
+          order_index: number
+          phone: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          festival_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          order_index?: number
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          festival_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          order_index?: number
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       festival_questions: {
         Row: {
           created_at: string
