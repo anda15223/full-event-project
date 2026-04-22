@@ -242,7 +242,15 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
   };
 
   return (
-    <Card className="p-5 space-y-3">
+    <Card
+      className={
+        "p-5 space-y-3 transition-all " +
+        (dragOver ? "ring-2 ring-primary ring-offset-2 bg-primary/5" : "")
+      }
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
