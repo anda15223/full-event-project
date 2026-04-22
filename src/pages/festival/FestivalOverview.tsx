@@ -12,6 +12,7 @@ import {
   useConcepts, useStaff, useShifts, useActionItems, useVehicles,
   useAccommodation, useTrolleys
 } from "@/hooks/useFestival";
+import { ExtraDetailsCard } from "@/components/festival/ExtraDetailsCard";
 
 // Map section keys → icon
 const sectionIcon: Record<string, any> = {
@@ -333,6 +334,8 @@ export default function FestivalOverview() {
           );
         })}
       </div>
+
+      <ExtraDetailsCard festivalId={festival.id} />
     </div>
   );
 }
