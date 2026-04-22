@@ -196,6 +196,20 @@ async function downloadFile(url: string, filename: string) {
 
 const SUBSECTION_DRAG_TYPE = "application/x-concept-subsection";
 
+const SubsectionDragContext = createContext<{
+  draggingFromId: string | null;
+  setDraggingFromId: (id: string | null) => void;
+}>({ draggingFromId: null, setDraggingFromId: () => {} });
+
+function SubsectionDragProvider({ children }: { children: React.ReactNode }) {
+  const [draggingFromId, setDraggingFromId] = useState<string | null>(null);
+  return (
+    <SubsectionDragContext.Provider value={{ draggingFromId, setDraggingFromId }}>
+      {children}
+    </SubsectionDragContext.Provider>
+  );
+}
+
 function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; onChanged: () => void }) {
   const subsections: Subsection[] = Array.isArray(c.subsections) ? c.subsections : [];
   const extras: PowerExtra[] = Array.isArray(c.power_extras) ? c.power_extras : [];
@@ -203,28 +217,30 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
   const photos = allFiles.filter((p) => isImage(p));
   const files = allFiles.filter((p) => !isImage(p));
   const openPreview = useFilePreview();
-  const [dragOver, setDragOver] = useState(false);
+  const { draggingFromId, setDraggingFromId } = useContext(SubsectionDragContext);
+  const [dropHover, setDropHover] = useState(false);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes(SUBSECTION_DRAG_TYPE)) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      if (!dragOver) setDragOver(true);
-    }
+  const showDropZone = !!draggingFromId && draggingFromId !== c.id;
+
+  const onZoneDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes(SUBSECTION_DRAG_TYPE)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dropHover) setDropHover(true);
   };
-  const handleDragLeave = (e: React.DragEvent) => {
-    // only clear when leaving the card itself (not crossing children)
-    if (e.currentTarget === e.target) setDragOver(false);
+  const onZoneDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget === e.target) setDropHover(false);
   };
-  const handleDrop = async (e: React.DragEvent) => {
+  const onZoneDrop = async (e: React.DragEvent) => {
     const raw = e.dataTransfer.getData(SUBSECTION_DRAG_TYPE);
-    setDragOver(false);
+    setDropHover(false);
+    setDraggingFromId(null);
     if (!raw) return;
     e.preventDefault();
     let payload: { sourceId?: string; subsection?: Subsection } | null = null;
     try { payload = JSON.parse(raw); } catch { return; }
     if (!payload?.subsection) return;
-    if (payload.sourceId === c.id) return; // ignore self-drops
+    if (payload.sourceId === c.id) return;
     const copy: Subsection = {
       title: payload.subsection.title || "Untitled",
       lines: Array.isArray(payload.subsection.lines)
@@ -245,11 +261,8 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
     <Card
       className={
         "p-5 space-y-3 transition-all " +
-        (dragOver ? "ring-2 ring-primary ring-offset-2 bg-primary/5" : "")
+        (showDropZone ? "ring-1 ring-primary/30 " : "")
       }
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
     >
       {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
@@ -361,7 +374,9 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
               SUBSECTION_DRAG_TYPE,
               JSON.stringify({ sourceId: c.id, subsection: s }),
             );
+            setDraggingFromId(c.id);
           }}
+          onDragEnd={() => setDraggingFromId(null)}
         >
           <div className="flex items-center gap-1.5">
             <GripVertical
@@ -377,6 +392,26 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
           ))}
         </div>
       ))}
+
+      {showDropZone && (
+        <div
+          onDragOver={onZoneDragOver}
+          onDragLeave={onZoneDragLeave}
+          onDrop={onZoneDrop}
+          className={
+            "rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 px-3 py-5 text-center transition-all " +
+            (dropHover
+              ? "border-primary bg-primary/10 scale-[1.02] shadow-md"
+              : "border-primary/40 bg-primary/5")
+          }
+        >
+          <Plus className={"h-5 w-5 " + (dropHover ? "text-primary" : "text-primary/70")} />
+          <p className={"text-sm font-medium " + (dropHover ? "text-primary" : "text-primary/80")}>
+            {dropHover ? `Release to copy into "${c.name || "this concept"}"` : "Drop section here to copy"}
+          </p>
+          <p className="text-xs text-muted-foreground">Adds a new custom subsection you can edit</p>
+        </div>
+      )}
 
       {files.length > 0 && (
         <div className="bg-muted/40 rounded-lg p-3 text-base space-y-1.5">
@@ -919,6 +954,7 @@ export default function ConceptsEditor() {
 
   return (
     <FilePreviewProvider>
+      <SubsectionDragProvider>
       <div className="space-y-6 max-w-5xl">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
@@ -938,6 +974,7 @@ export default function ConceptsEditor() {
           ))}
         </div>
       </div>
+      </SubsectionDragProvider>
     </FilePreviewProvider>
   );
 }
