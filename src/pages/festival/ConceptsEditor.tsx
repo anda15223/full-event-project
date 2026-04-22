@@ -887,7 +887,7 @@ function ConceptItem({ concept, onChanged }: { concept: any; onChanged: () => vo
   const [open, setOpen] = useState(false);
   return (
     <>
-      <ReadOnlyCard c={concept} onEdit={() => setOpen(true)} />
+      <ReadOnlyCard c={concept} onEdit={() => setOpen(true)} onChanged={onChanged} />
       <EditSheet concept={concept} open={open} onOpenChange={setOpen} onChanged={onChanged} />
     </>
   );
