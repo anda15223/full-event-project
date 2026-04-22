@@ -737,7 +737,7 @@ function EditSheet({
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-[11px] flex-1"
-                          onClick={() => window.open(p.url, "_blank")}
+                          onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
                           title="Open / preview"
                         >
                           <Eye className="h-3 w-3 mr-1" /> Open
