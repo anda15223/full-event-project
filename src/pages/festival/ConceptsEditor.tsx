@@ -499,13 +499,60 @@ function EditSheet({
                   multiple
                   className="hidden"
                   disabled={uploading}
-                  onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }}
+                  onChange={(e) => { stageFiles(e.target.files); e.target.value = ""; }}
                 />
                 <div className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition text-[12px] text-muted-foreground">
                   <Upload className="h-4 w-4" />
-                  {uploading ? "Uploading…" : "Click to upload any file (photos, PDFs, docs…)"}
+                  Click to select files (photos, PDFs, docs…)
                 </div>
               </label>
+
+              {staged.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                  <p className="text-[11px] font-medium text-primary">
+                    {staged.length} file{staged.length > 1 ? "s" : ""} ready to upload
+                  </p>
+                  {staged.map((s, i) => (
+                    <div key={i} className="flex gap-2 bg-background rounded p-2 border border-border/40">
+                      <div className="w-14 h-14 rounded overflow-hidden border border-border/40 bg-muted shrink-0 flex items-center justify-center">
+                        {s.previewUrl ? (
+                          <img src={s.previewUrl} alt="" className="w-full h-full object-cover" />
+                        ) : s.file.type === "application/pdf" || /\.pdf$/i.test(s.file.name) ? (
+                          <FileText className="h-6 w-6 text-red-600 dark:text-red-400" />
+                        ) : (
+                          <FileIcon className="h-6 w-6 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <p className="text-[11px] font-medium truncate" title={s.file.name}>{s.file.name}</p>
+                        <Textarea
+                          value={s.description}
+                          onChange={(e) => updStaged(i, { description: e.target.value })}
+                          className="text-[11px] min-h-[44px]"
+                          placeholder="Description (optional)"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => rmStaged(i)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    size="sm"
+                    className="w-full h-8 text-[12px]"
+                    disabled={uploading}
+                    onClick={confirmUpload}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    {uploading ? "Uploading…" : `Upload ${staged.length} file${staged.length > 1 ? "s" : ""}`}
+                  </Button>
+                </div>
+              )}
 
               {photos.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground italic">No files yet.</p>
