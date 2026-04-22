@@ -17,40 +17,64 @@ export type Database = {
       brain_entries: {
         Row: {
           category: string | null
+          confidence: number
           content: string
           created_at: string
           display_name: string | null
+          festival_id: string | null
+          frequency: number
           id: string
           is_active: boolean | null
           key_name: string
+          last_seen_at: string
+          last_seen_festival_id: string | null
+          scope: string
           source: string | null
           structured_data: Json | null
+          subject_id: string | null
+          subject_type: string | null
           tags: string[] | null
           updated_at: string
         }
         Insert: {
           category?: string | null
+          confidence?: number
           content: string
           created_at?: string
           display_name?: string | null
+          festival_id?: string | null
+          frequency?: number
           id?: string
           is_active?: boolean | null
           key_name: string
+          last_seen_at?: string
+          last_seen_festival_id?: string | null
+          scope?: string
           source?: string | null
           structured_data?: Json | null
+          subject_id?: string | null
+          subject_type?: string | null
           tags?: string[] | null
           updated_at?: string
         }
         Update: {
           category?: string | null
+          confidence?: number
           content?: string
           created_at?: string
           display_name?: string | null
+          festival_id?: string | null
+          frequency?: number
           id?: string
           is_active?: boolean | null
           key_name?: string
+          last_seen_at?: string
+          last_seen_festival_id?: string | null
+          scope?: string
           source?: string | null
           structured_data?: Json | null
+          subject_id?: string | null
+          subject_type?: string | null
           tags?: string[] | null
           updated_at?: string
         }
@@ -1332,6 +1356,204 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_cards: {
+        Row: {
+          card_key: string
+          concept_id: string | null
+          created_at: string
+          festival_id: string
+          id: string
+          meta: Json
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          card_key: string
+          concept_id?: string | null
+          created_at?: string
+          festival_id: string
+          id?: string
+          meta?: Json
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          card_key?: string
+          concept_id?: string | null
+          created_at?: string
+          festival_id?: string
+          id?: string
+          meta?: Json
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      smart_files: {
+        Row: {
+          ai_summary: string | null
+          card_id: string
+          extracted_text: string | null
+          filename: string | null
+          id: string
+          mime_type: string | null
+          parse_error: string | null
+          parse_status: string
+          size: number | null
+          storage_path: string
+          uploaded_at: string
+          url: string | null
+        }
+        Insert: {
+          ai_summary?: string | null
+          card_id: string
+          extracted_text?: string | null
+          filename?: string | null
+          id?: string
+          mime_type?: string | null
+          parse_error?: string | null
+          parse_status?: string
+          size?: number | null
+          storage_path: string
+          uploaded_at?: string
+          url?: string | null
+        }
+        Update: {
+          ai_summary?: string | null
+          card_id?: string
+          extracted_text?: string | null
+          filename?: string | null
+          id?: string
+          mime_type?: string | null
+          parse_error?: string | null
+          parse_status?: string
+          size?: number | null
+          storage_path?: string
+          uploaded_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_files_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "smart_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_lines: {
+        Row: {
+          ai_confidence: number | null
+          created_at: string
+          due_date: string | null
+          id: string
+          label: string | null
+          meta: Json
+          notes: string | null
+          order_index: number
+          owner: string | null
+          quantity: string | null
+          section_id: string
+          source: string
+          source_file_id: string | null
+          status: string | null
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          ai_confidence?: number | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          label?: string | null
+          meta?: Json
+          notes?: string | null
+          order_index?: number
+          owner?: string | null
+          quantity?: string | null
+          section_id: string
+          source?: string
+          source_file_id?: string | null
+          status?: string | null
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          ai_confidence?: number | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          label?: string | null
+          meta?: Json
+          notes?: string | null
+          order_index?: number
+          owner?: string | null
+          quantity?: string | null
+          section_id?: string
+          source?: string
+          source_file_id?: string | null
+          status?: string | null
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_lines_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "smart_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_sections: {
+        Row: {
+          card_id: string
+          created_at: string
+          description: string | null
+          id: string
+          meta: Json
+          order_index: number
+          source: string
+          source_file_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          meta?: Json
+          order_index?: number
+          source?: string
+          source_file_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          meta?: Json
+          order_index?: number
+          source?: string
+          source_file_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_sections_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "smart_cards"
             referencedColumns: ["id"]
           },
         ]

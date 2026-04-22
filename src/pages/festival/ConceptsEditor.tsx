@@ -501,6 +501,8 @@ function EditSheet({
   const rmExtra = (i: number) => setExtras(extras.filter((_, idx) => idx !== i));
 
   /* subsections */
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedSubs, setSelectedSubs] = useState<Set<number>>(new Set());
   const subs: Subsection[] = Array.isArray(local.subsections) ? local.subsections : [];
   const setSubs = (n: Subsection[]) => save({ subsections: n });
   const addSub = () => setSubs([...subs, { title: "New section", lines: [] }]);
@@ -872,9 +874,47 @@ function EditSheet({
               {subs.length === 0 && (
                 <p className="text-sm text-muted-foreground italic">No custom subsections yet.</p>
               )}
+          {subs.length > 0 && (
+                <div className="flex items-center justify-between gap-2 pb-1">
+                  <p className="text-xs text-muted-foreground">{subs.length} subsection{subs.length === 1 ? "" : "s"}</p>
+                  <div className="flex items-center gap-1">
+                    {selectedSubs.size > 0 && (
+                      <Button
+                        variant="ghost" size="sm"
+                        className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          if (!confirm(`Delete ${selectedSubs.size} selected subsection${selectedSubs.size === 1 ? "" : "s"}?`)) return;
+                          setSubs(subs.filter((_, idx) => !selectedSubs.has(idx)));
+                          setSelectedSubs(new Set());
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete {selectedSubs.size}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                      onClick={() => setSelectMode(m => { if (m) setSelectedSubs(new Set()); return !m; })}
+                    >
+                      {selectMode ? "Done" : "Select"}
+                    </Button>
+                  </div>
+                </div>
+              )}
               {subs.map((s, i) => (
                 <div key={i} className="bg-muted/40 rounded-lg p-3 space-y-2 border border-border/40">
                   <div className="flex items-center gap-2">
+                    {selectMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedSubs.has(i)}
+                        onChange={(e) => {
+                          const n = new Set(selectedSubs);
+                          if (e.target.checked) n.add(i); else n.delete(i);
+                          setSelectedSubs(n);
+                        }}
+                        className="h-4 w-4 cursor-pointer"
+                      />
+                    )}
                     <Input
                       value={s.title ?? ""}
                       onChange={(e) => updSub(i, { title: e.target.value })}

@@ -1,0 +1,416 @@
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus, Trash2, Upload, FileText, File as FileIcon, Loader2, Sparkles, Brain,
+  ChevronDown, ChevronRight, GripVertical, Download,
+} from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+export type SmartCardProps = {
+  /** Stable key for this card type, e.g. 'equipment_list','cooling_storage','safety' */
+  cardKey: string;
+  /** The festival this card belongs to */
+  festivalId: string;
+  /** Optional concept this card belongs to (per-concept cards) */
+  conceptId?: string;
+  /** Heading shown at the top of the card */
+  title: string;
+  /** Subtitle/explanation */
+  subtitle?: string;
+  /** Show a red "to be ordered / missing" warning when card has zero sections */
+  emptyStateWarning?: { label: string; description?: string };
+  /** Allowed file extensions for upload */
+  acceptedFileTypes?: string;
+  /** Hide the brain "Grab info" button (default false) */
+  hideBrainButton?: boolean;
+};
+
+type SCard = { id: string; title: string | null; meta: any };
+type SSection = { id: string; title: string; description: string | null; order_index: number; source: string; source_file_id: string | null };
+type SLine = {
+  id: string; section_id: string; label: string | null; value: string | null;
+  quantity: string | null; notes: string | null; status: string | null;
+  owner: string | null; due_date: string | null; order_index: number;
+  source: string; source_file_id: string | null;
+};
+type SFile = {
+  id: string; storage_path: string; url: string | null; filename: string | null;
+  mime_type: string | null; size: number | null; ai_summary: string | null;
+  parse_status: string; parse_error: string | null; uploaded_at: string;
+};
+
+const sourceColor = (s: string) => {
+  switch (s) {
+    case "ai": return "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300/40";
+    case "brain": return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-300/40";
+    case "upload": return "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-300/40";
+    default: return "bg-muted text-muted-foreground border-border";
+  }
+};
+
+const sourceLabel = (s: string) => {
+  switch (s) {
+    case "ai": return "AI";
+    case "brain": return "Brain";
+    case "upload": return "Upload";
+    default: return "Manual";
+  }
+};
+
+export function SmartCard({
+  cardKey, festivalId, conceptId, title, subtitle,
+  emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
+  hideBrainButton,
+}: SmartCardProps) {
+  const [card, setCard] = useState<SCard | null>(null);
+  const [sections, setSections] = useState<SSection[]>([]);
+  const [lines, setLines] = useState<SLine[]>([]);
+  const [files, setFiles] = useState<SFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [grabbing, setGrabbing] = useState(false);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // ---- Initial load: get-or-create the card, then sections+lines+files ----
+  const reload = useCallback(async () => {
+    if (!festivalId) return;
+    setLoading(true);
+    try {
+      // Find or create the SmartCard row
+      const filter: any = { card_key: cardKey, festival_id: festivalId };
+      if (conceptId) filter.concept_id = conceptId;
+      let { data: cards } = await (supabase as any)
+        .from("smart_cards")
+        .select("*")
+        .match(filter)
+        .limit(1);
+      let c = cards?.[0];
+      if (!c) {
+        const insert: any = { card_key: cardKey, festival_id: festivalId, title };
+        if (conceptId) insert.concept_id = conceptId;
+        const { data: created, error } = await (supabase as any)
+          .from("smart_cards").insert(insert).select().single();
+        if (error) throw error;
+        c = created;
+      }
+      setCard(c);
+
+      const [{ data: secs }, { data: fls }] = await Promise.all([
+        (supabase as any).from("smart_sections").select("*").eq("card_id", c.id).order("order_index"),
+        (supabase as any).from("smart_files").select("*").eq("card_id", c.id).order("uploaded_at", { ascending: false }),
+      ]);
+      setSections(secs || []);
+      setFiles(fls || []);
+
+      if (secs && secs.length) {
+        const { data: lns } = await (supabase as any)
+          .from("smart_lines")
+          .select("*")
+          .in("section_id", secs.map((s: any) => s.id))
+          .order("order_index");
+        setLines(lns || []);
+      } else {
+        setLines([]);
+      }
+    } catch (e: any) {
+      toast.error(`Could not load card: ${e.message || e}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [cardKey, festivalId, conceptId, title]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  // ---- Section + line CRUD ----
+  const addSection = async () => {
+    if (!card) return;
+    const order = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
+    const { error } = await (supabase as any).from("smart_sections").insert({
+      card_id: card.id, title: "New section", order_index: order, source: "manual",
+    });
+    if (error) toast.error("Add failed"); else reload();
+  };
+
+  const updateSection = async (id: string, patch: Partial<SSection>) => {
+    setSections(prev => prev.map(s => s.id === id ? { ...s, ...patch } as SSection : s));
+    const { error } = await (supabase as any).from("smart_sections").update(patch).eq("id", id);
+    if (error) toast.error("Save failed");
+  };
+
+  const deleteSection = async (id: string) => {
+    if (!confirm("Delete this section and all its lines?")) return;
+    const { error } = await (supabase as any).from("smart_sections").delete().eq("id", id);
+    if (error) { toast.error("Delete failed"); return; }
+    reload();
+  };
+
+  const addLine = async (sectionId: string) => {
+    const sectionLines = lines.filter(l => l.section_id === sectionId);
+    const order = sectionLines.length ? Math.max(...sectionLines.map(l => l.order_index)) + 1 : 0;
+    const { error } = await (supabase as any).from("smart_lines").insert({
+      section_id: sectionId, label: "", order_index: order, source: "manual",
+    });
+    if (error) toast.error("Add failed"); else reload();
+  };
+
+  const updateLine = async (id: string, patch: Partial<SLine>) => {
+    setLines(prev => prev.map(l => l.id === id ? { ...l, ...patch } as SLine : l));
+    const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
+    if (error) toast.error("Save failed");
+  };
+
+  const deleteLine = async (id: string) => {
+    setLines(prev => prev.filter(l => l.id !== id));
+    const { error } = await (supabase as any).from("smart_lines").delete().eq("id", id);
+    if (error) { toast.error("Delete failed"); reload(); }
+  };
+
+  // ---- File upload + AI extract ----
+  const handleUpload = async (fileList: FileList | null) => {
+    if (!fileList || !card) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(fileList)) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
+        const path = `${festivalId}/${cardKey}/${conceptId || "festival"}/${Date.now()}-${safe}`;
+        const { error: upErr } = await supabase.storage
+          .from("festival-photos")
+          .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+        if (upErr) { toast.error(`Upload failed: ${file.name}`); continue; }
+        const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(path);
+        const { data: fileRow, error: fErr } = await (supabase as any).from("smart_files").insert({
+          card_id: card.id, storage_path: path, url: pub.publicUrl,
+          filename: file.name, mime_type: file.type, size: file.size,
+          parse_status: "pending",
+        }).select().single();
+        if (fErr || !fileRow) { toast.error("Could not save file"); continue; }
+
+        // Trigger AI extraction
+        setExtracting(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+            body: {
+              action: "extract",
+              file_id: fileRow.id,
+              card_id: card.id,
+              card_key: cardKey,
+              festival_id: festivalId,
+              concept_id: conceptId || null,
+              file_url: pub.publicUrl,
+              file_name: file.name,
+              mime_type: file.type,
+            },
+          });
+          if (error) throw error;
+          toast.success(`AI extracted ${data?.sections_created || 0} sections from ${file.name}`);
+        } catch (e: any) {
+          toast.error(`AI extract failed: ${e.message || e}`);
+        } finally {
+          setExtracting(false);
+        }
+      }
+      await reload();
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const grabFromBrain = async () => {
+    if (!card) return;
+    setGrabbing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "grab_brain",
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+        },
+      });
+      if (error) throw error;
+      const suggestions: Array<{ title: string; lines: any[] }> = data?.suggestions || [];
+      if (!suggestions.length) {
+        toast.info("Brain has nothing for this card yet — fill it in and it'll learn.");
+        return;
+      }
+      // Insert each suggestion as a section with brain source
+      const baseOrder = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
+      let order = baseOrder;
+      for (const s of suggestions) {
+        const { data: sec, error: sErr } = await (supabase as any).from("smart_sections").insert({
+          card_id: card.id, title: s.title, order_index: order++, source: "brain",
+        }).select().single();
+        if (sErr || !sec) continue;
+        if (Array.isArray(s.lines) && s.lines.length) {
+          await (supabase as any).from("smart_lines").insert(s.lines.map((l: any, i: number) => ({
+            section_id: sec.id, label: l.label, value: l.value, quantity: l.quantity, notes: l.notes,
+            order_index: i, source: "brain",
+          })));
+        }
+      }
+      toast.success(`Grabbed ${suggestions.length} sections from Brain`);
+      reload();
+    } catch (e: any) {
+      toast.error(`Brain grab failed: ${e.message || e}`);
+    } finally {
+      setGrabbing(false);
+    }
+  };
+
+  const deleteFile = async (f: SFile) => {
+    if (!confirm(`Delete file ${f.filename}?`)) return;
+    if (f.storage_path) await supabase.storage.from("festival-photos").remove([f.storage_path]);
+    await (supabase as any).from("smart_files").delete().eq("id", f.id);
+    reload();
+  };
+
+  if (loading) {
+    return (
+      <Card className="p-5 flex items-center justify-center text-muted-foreground gap-2">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      </Card>
+    );
+  }
+
+  const showWarning = !!emptyStateWarning && sections.length === 0 && files.length === 0;
+
+  return (
+    <Card className="overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-border bg-muted/20 flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold leading-tight">{title}</h3>
+          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {!hideBrainButton && (
+            <Button size="sm" variant="outline" className="h-8" onClick={grabFromBrain} disabled={grabbing}>
+              {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Brain className="h-3.5 w-3.5 mr-1" />}
+              Grab info
+            </Button>
+          )}
+          <label className="inline-flex">
+            <input
+              type="file"
+              multiple
+              accept={acceptedFileTypes}
+              className="hidden"
+              disabled={uploading || extracting}
+              onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }}
+            />
+            <Button size="sm" variant="outline" className="h-8 cursor-pointer" asChild>
+              <span>
+                {uploading || extracting
+                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  : <Upload className="h-3.5 w-3.5 mr-1" />}
+                {extracting ? "AI reading…" : uploading ? "Uploading…" : "Upload"}
+              </span>
+            </Button>
+          </label>
+          <Button size="sm" onClick={addSection} className="h-8">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Section
+          </Button>
+        </div>
+      </div>
+
+      {/* Empty-state red warning */}
+      {showWarning && (
+        <div className="m-4 rounded-lg border-2 border-destructive/50 bg-destructive/5 p-4 text-center">
+          <p className="text-sm font-semibold text-destructive">⚠️ {emptyStateWarning!.label}</p>
+          {emptyStateWarning!.description && (
+            <p className="text-xs text-destructive/80 mt-1">{emptyStateWarning!.description}</p>
+          )}
+        </div>
+      )}
+
+      {/* Files */}
+      {files.length > 0 && (
+        <div className="px-5 py-3 border-b border-border/50 bg-muted/10 space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Source files</p>
+          {files.map(f => (
+            <div key={f.id} className="flex items-center gap-2 text-sm group">
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate flex-1">{f.filename}</span>
+              {f.parse_status === "processing" && <Loader2 className="h-3 w-3 animate-spin text-violet-500" />}
+              {f.parse_status === "done" && <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px]", sourceColor("ai"))}>AI parsed</Badge>}
+              {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
+              {f.url && (
+                <a href={f.url} target="_blank" rel="noreferrer" className="opacity-0 group-hover:opacity-100">
+                  <Download className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </a>
+              )}
+              <button onClick={() => deleteFile(f)} className="opacity-0 group-hover:opacity-100 text-destructive">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Sections */}
+      <div className="divide-y divide-border/60">
+        {sections.map(section => {
+          const sectionLines = lines.filter(l => l.section_id === section.id);
+          const isCollapsed = collapsed[section.id];
+          return (
+            <div key={section.id} className="p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <button onClick={() => setCollapsed(p => ({ ...p, [section.id]: !p[section.id] }))} className="text-muted-foreground hover:text-foreground">
+                  {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                <Input
+                  value={section.title}
+                  onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                  className="h-8 text-base font-semibold border-transparent bg-transparent focus-visible:bg-background flex-1"
+                />
+                <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] shrink-0", sourceColor(section.source))}>
+                  {sourceLabel(section.source)}
+                </Badge>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteSection(section.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {!isCollapsed && (
+                <div className="pl-6 space-y-1.5">
+                  {sectionLines.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">No lines yet.</p>
+                  )}
+                  {sectionLines.map(line => (
+                    <div key={line.id} className="grid grid-cols-[1fr_1.4fr_70px_1fr_60px_24px] gap-1.5 items-center group">
+                      <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
+                      <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
+                      <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
+                      <Input value={line.notes ?? ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} placeholder="Notes" className="h-7 text-xs" />
+                      <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
+                        {sourceLabel(line.source)}
+                      </Badge>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => addLine(section.id)}>
+                    <Plus className="h-3 w-3 mr-1" /> Add line
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {sections.length === 0 && !showWarning && (
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            <Sparkles className="h-5 w-5 mx-auto mb-2 opacity-50" />
+            <p>No sections yet. Upload a document, grab from Brain, or add a section manually.</p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}

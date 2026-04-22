@@ -1,1 +1,4 @@
 project_id = "llnmwiyvsmbnzqqhokjo"
+
+[functions.smart-card-extract]
+verify_jwt = false
