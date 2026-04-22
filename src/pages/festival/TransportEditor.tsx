@@ -37,6 +37,17 @@ export default function TransportEditor() {
         <p className="text-sm text-muted-foreground mt-1">{vehicles.length} vehicles · {totalSeats} seats · {accom.length} bookings · {bedNights} bed-nights</p>
       </div>
 
+      <SmartCard
+        cardKey="transportation"
+        festivalId={festival.id}
+        title="Transportation documents & plan"
+        subtitle="Upload vehicle bookings, driving plans, hotel confirmations, ferry tickets. AI groups them into sections (Vehicles, Drivers, Accommodation, Travel days)."
+        emptyStateWarning={{
+          label: "No transport plan uploaded yet",
+          description: "Upload booking confirmations or grab the standard transport setup from Brain.",
+        }}
+      />
+
       <Card className="p-5">
         <h2 className="font-semibold text-[14px] mb-3 flex items-center gap-2"><Truck className="h-4 w-4" />Vehicles</h2>
         <div className="space-y-2">
