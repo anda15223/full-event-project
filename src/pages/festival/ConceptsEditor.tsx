@@ -286,12 +286,37 @@ function EditSheet({
   const setPhotos = (n: Photo[]) => save({ photos: n });
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async (files: FileList | null) => {
+  /* staged files awaiting confirmation */
+  type StagedFile = { file: File; description: string; previewUrl: string };
+  const [staged, setStaged] = useState<StagedFile[]>([]);
+
+  const stageFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    const adds: StagedFile[] = Array.from(files).map((file) => ({
+      file,
+      description: "",
+      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+    }));
+    setStaged((s) => [...s, ...adds]);
+  };
+
+  const updStaged = (i: number, patch: Partial<StagedFile>) =>
+    setStaged((s) => s.map((x, idx) => idx === i ? { ...x, ...patch } : x));
+
+  const rmStaged = (i: number) => {
+    setStaged((s) => {
+      const item = s[i];
+      if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      return s.filter((_, idx) => idx !== i);
+    });
+  };
+
+  const confirmUpload = async () => {
+    if (staged.length === 0) return;
     setUploading(true);
     const next: Photo[] = [...photos];
-    for (const file of Array.from(files)) {
-      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    for (const item of staged) {
+      const file = item.file;
       const safeBase = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
       const path = `${concept.festival_id}/${concept.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}`;
       const { error } = await supabase.storage.from("festival-photos").upload(path, file, {
@@ -307,10 +332,13 @@ function EditSheet({
         mime_type: file.type || `application/octet-stream`,
         size: file.size,
         caption: "",
-        description: "",
+        description: item.description,
       });
     }
     await setPhotos(next);
+    // cleanup previews
+    staged.forEach((s) => s.previewUrl && URL.revokeObjectURL(s.previewUrl));
+    setStaged([]);
     setUploading(false);
     toast.success("Files uploaded");
   };
