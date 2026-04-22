@@ -114,16 +114,8 @@ export default function SectionEditor() {
       {sectionKey === "intro" && festival && (
         <ContactsManager festivalId={festival.id} />
       )}
-
-      {sectionKey && SMART_CARDS[sectionKey] && festival && (
-        <SmartCard
-          cardKey={sectionKey}
-          festivalId={festival.id}
-          title={SMART_CARDS[sectionKey].title}
-          subtitle={SMART_CARDS[sectionKey].subtitle}
-          emptyStateWarning={SMART_CARDS[sectionKey].warning}
-        />
-      )}
     </div>
+  );
+}
   );
 }
