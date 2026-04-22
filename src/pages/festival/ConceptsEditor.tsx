@@ -17,7 +17,7 @@ import {
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ArrowLeft, Plus, Trash2, Pencil, Zap } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
