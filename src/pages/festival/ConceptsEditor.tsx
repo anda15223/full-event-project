@@ -835,7 +835,7 @@ export default function ConceptsEditor() {
   const { data: festival } = useFestival(slug);
   const { data: concepts = [] } = useConcepts(festival?.id);
 
-  if (!festival) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!festival) return <div className="text-base text-muted-foreground">Loading…</div>;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["festival_concepts", festival.id] });
 
