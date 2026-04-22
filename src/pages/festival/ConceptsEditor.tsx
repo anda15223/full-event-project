@@ -501,6 +501,8 @@ function EditSheet({
   const rmExtra = (i: number) => setExtras(extras.filter((_, idx) => idx !== i));
 
   /* subsections */
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedSubs, setSelectedSubs] = useState<Set<number>>(new Set());
   const subs: Subsection[] = Array.isArray(local.subsections) ? local.subsections : [];
   const setSubs = (n: Subsection[]) => save({ subsections: n });
   const addSub = () => setSubs([...subs, { title: "New section", lines: [] }]);
