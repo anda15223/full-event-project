@@ -74,39 +74,15 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
         <div className="grid grid-cols-3 gap-1.5 -m-1 mb-1">
           {photos.slice(0, 6).map((p, i) => (
             <div key={i} className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted">
-              {isImage(p) ? (
-                <img
-                  src={p.url}
-                  alt={p.caption || p.name || "Setup file"}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : isPdf(p) ? (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-950/50 transition"
-                  title={p.name || "PDF"}
-                >
-                  <FileText className="h-6 w-6" />
-                  <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
-                </a>
-              ) : (
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground hover:bg-muted/70 transition"
-                  title={p.name || "File"}
-                >
-                  <FileIcon className="h-6 w-6" />
-                  <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
-                </a>
-              )}
+              <img
+                src={p.url}
+                alt={p.caption || p.name || "Setup photo"}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
               <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `file-${i + 1}`); }}
+                onClick={(e) => { e.preventDefault(); downloadFile(p.url, p.name || `photo-${i + 1}.jpg`); }}
                 className="absolute top-1 right-1 h-6 w-6 rounded bg-background/80 hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow-sm"
                 title="Download"
               >
