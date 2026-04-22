@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SmartCard } from "@/components/festival/SmartCard";
 import { useFestival, useActionItems } from "@/hooks/useFestival";
 
 const STATUS_OPTS = [
