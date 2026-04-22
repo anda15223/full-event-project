@@ -351,10 +351,27 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
       )}
 
       {subsections.map((s, i) => (
-        <div key={i} className="bg-muted/40 rounded-lg p-3 text-base space-y-1">
-          <p className="font-medium text-muted-foreground">{s.title || "Untitled"}</p>
+        <div
+          key={i}
+          className="bg-muted/40 rounded-lg p-3 text-base space-y-1 group/sub relative"
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.effectAllowed = "copy";
+            e.dataTransfer.setData(
+              SUBSECTION_DRAG_TYPE,
+              JSON.stringify({ sourceId: c.id, subsection: s }),
+            );
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <GripVertical
+              className="h-4 w-4 text-muted-foreground/60 cursor-grab active:cursor-grabbing shrink-0"
+              aria-label="Drag to copy to another card"
+            />
+            <p className="font-medium text-muted-foreground flex-1">{s.title || "Untitled"}</p>
+          </div>
           {(s.lines || []).map((l, j) => (
-            <p key={j}>
+            <p key={j} className="pl-5">
               {l.label && <span className="text-muted-foreground">{l.label}:</span>} {l.value}
             </p>
           ))}
