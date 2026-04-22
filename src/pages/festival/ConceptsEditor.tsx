@@ -279,7 +279,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
         <div><span className="text-muted-foreground">Sun:</span> {c.sales_hours_sun || "—"}</div>
       </div>
 
-      <div className="border-t border-border/50 pt-3 grid grid-cols-2 gap-2 text-sm">
+      <div className="border-t border-border/50 pt-3 grid grid-cols-2 gap-2 text-base">
         <div><span className="text-muted-foreground">Power:</span> {c.power_baseline || "—"}</div>
         <div><span className="text-muted-foreground">Gas:</span> {c.gas_required ? (c.gas_supplier || "Yes") : "No"}</div>
         {c.wristband_max != null && (
@@ -293,7 +293,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       </div>
 
       {extras.length > 0 && (
-        <div className="bg-secondary/40 rounded-lg p-3 text-sm space-y-1">
+        <div className="bg-secondary/40 rounded-lg p-3 text-base space-y-1">
           <p className="font-medium text-muted-foreground flex items-center gap-1">
             <Zap className="h-3.5 w-3.5" /> Power extras
           </p>
@@ -304,7 +304,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       )}
 
       {subsections.map((s, i) => (
-        <div key={i} className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
+        <div key={i} className="bg-muted/40 rounded-lg p-3 text-base space-y-1">
           <p className="font-medium text-muted-foreground">{s.title || "Untitled"}</p>
           {(s.lines || []).map((l, j) => (
             <p key={j}>
@@ -315,7 +315,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
       ))}
 
       {files.length > 0 && (
-        <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1.5">
+        <div className="bg-muted/40 rounded-lg p-3 text-base space-y-1.5">
           <p className="font-medium text-muted-foreground flex items-center gap-1">
             <FileIcon className="h-3.5 w-3.5" /> Files
           </p>
@@ -330,7 +330,7 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
                 <button
                   type="button"
                   onClick={() => openPreview({ url: f.url, name: f.name, mime_type: f.mime_type })}
-                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0 text-left"
+                  className="text-base text-foreground hover:text-primary truncate flex-1 min-w-0 text-left"
                   title={f.description || f.caption || f.name}
                 >
                   {f.caption || f.name || "File"}
@@ -510,8 +510,8 @@ function EditSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto bg-background">
         <SheetHeader className="space-y-1">
-          <SheetTitle className="text-lg">Edit concept</SheetTitle>
-          <SheetDescription className="text-[12px]">
+          <SheetTitle className="text-xl">Edit concept</SheetTitle>
+          <SheetDescription className="text-sm">
             Changes autosave. Add custom subsections at the bottom.
           </SheetDescription>
         </SheetHeader>
@@ -519,21 +519,21 @@ function EditSheet({
         <Accordion type="multiple" defaultValue={["basics", "power"]} className="mt-4">
           {/* BASICS */}
           <AccordionItem value="basics">
-            <AccordionTrigger className="text-[13px]">Basics</AccordionTrigger>
+            <AccordionTrigger className="text-base">Basics</AccordionTrigger>
             <AccordionContent className="space-y-3 pt-2">
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Name</Label>
-                <Input value={local.name ?? ""} onChange={(e) => debounced("name", e.target.value)} className="h-9 text-[13px]" />
+                <Label className="text-xs text-muted-foreground">Name</Label>
+                <Input value={local.name ?? ""} onChange={(e) => debounced("name", e.target.value)} className="h-9 text-base" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Tent size</Label>
-                  <Input value={local.tent_size ?? ""} onChange={(e) => debounced("tent_size", e.target.value)} className="h-9 text-[13px]" />
+                  <Label className="text-xs text-muted-foreground">Tent size</Label>
+                  <Input value={local.tent_size ?? ""} onChange={(e) => debounced("tent_size", e.target.value)} className="h-9 text-base" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Zone</Label>
+                  <Label className="text-xs text-muted-foreground">Zone</Label>
                   <Select value={local.zone ?? "INSIDE"} onValueChange={(v) => save({ zone: v })}>
-                    <SelectTrigger className="h-9 text-[13px]"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 text-base"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover">
                       <SelectItem value="INSIDE">INSIDE</SelectItem>
                       <SelectItem value="OUTSIDE">OUTSIDE</SelectItem>
@@ -545,20 +545,20 @@ function EditSheet({
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Products sold</Label>
-                <Textarea value={local.products_sold ?? ""} onChange={(e) => debounced("products_sold", e.target.value)} rows={3} className="text-[13px]" />
+                <Label className="text-xs text-muted-foreground">Products sold</Label>
+                <Textarea value={local.products_sold ?? ""} onChange={(e) => debounced("products_sold", e.target.value)} rows={3} className="text-base" />
               </div>
             </AccordionContent>
           </AccordionItem>
 
           {/* SALES HOURS */}
           <AccordionItem value="hours">
-            <AccordionTrigger className="text-[13px]">Sales hours</AccordionTrigger>
+            <AccordionTrigger className="text-base">Sales hours</AccordionTrigger>
             <AccordionContent className="grid grid-cols-2 gap-2 pt-2">
               {(["thu", "fri", "sat", "sun"] as const).map(d => (
                 <div key={d} className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground uppercase">{d}</Label>
-                  <Input value={local[`sales_hours_${d}`] ?? ""} onChange={(e) => debounced(`sales_hours_${d}`, e.target.value)} className="h-9 text-[13px]" />
+                  <Label className="text-xs text-muted-foreground uppercase">{d}</Label>
+                  <Input value={local[`sales_hours_${d}`] ?? ""} onChange={(e) => debounced(`sales_hours_${d}`, e.target.value)} className="h-9 text-base" />
                 </div>
               ))}
             </AccordionContent>
@@ -566,37 +566,37 @@ function EditSheet({
 
           {/* POWER & GAS */}
           <AccordionItem value="power">
-            <AccordionTrigger className="text-[13px]">Power & gas</AccordionTrigger>
+            <AccordionTrigger className="text-base">Power & gas</AccordionTrigger>
             <AccordionContent className="space-y-3 pt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Baseline</Label>
-                  <Input value={local.power_baseline ?? ""} onChange={(e) => debounced("power_baseline", e.target.value)} className="h-9 text-[13px]" />
+                  <Label className="text-xs text-muted-foreground">Baseline</Label>
+                  <Input value={local.power_baseline ?? ""} onChange={(e) => debounced("power_baseline", e.target.value)} className="h-9 text-base" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Gas</Label>
+                  <Label className="text-xs text-muted-foreground">Gas</Label>
                   <div className="flex items-center gap-2 h-9">
                     <Switch checked={!!local.gas_required} onCheckedChange={(v) => save({ gas_required: v })} />
-                    <Input value={local.gas_supplier ?? ""} onChange={(e) => debounced("gas_supplier", e.target.value)} className="h-8 text-[12px] flex-1" placeholder="Supplier" disabled={!local.gas_required} />
+                    <Input value={local.gas_supplier ?? ""} onChange={(e) => debounced("gas_supplier", e.target.value)} className="h-8 text-sm flex-1" placeholder="Supplier" disabled={!local.gas_required} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[11px] text-muted-foreground">Power extras</Label>
-                  <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={addExtra}>
+                  <Label className="text-xs text-muted-foreground">Power extras</Label>
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={addExtra}>
                     <Plus className="h-3 w-3 mr-0.5" /> Add line
                   </Button>
                 </div>
                 {extras.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground italic">None</p>
+                  <p className="text-xs text-muted-foreground italic">None</p>
                 ) : extras.map((p, i) => (
                   <div key={i} className="grid grid-cols-[80px_60px_70px_1fr_28px] gap-1.5 items-center">
-                    <Input value={p.amperage ?? ""} onChange={(e) => updExtra(i, { amperage: e.target.value })} className="h-7 text-[11px]" placeholder="16A" />
-                    <Input type="number" value={p.count ?? ""} onChange={(e) => updExtra(i, { count: e.target.value === "" ? undefined : Number(e.target.value) })} className="h-7 text-[11px]" placeholder="×" />
-                    <Input value={p.phase ?? ""} onChange={(e) => updExtra(i, { phase: e.target.value })} className="h-7 text-[11px]" placeholder="1P/3P" />
-                    <Input value={p.notes ?? ""} onChange={(e) => updExtra(i, { notes: e.target.value })} className="h-7 text-[11px]" placeholder="Notes" />
+                    <Input value={p.amperage ?? ""} onChange={(e) => updExtra(i, { amperage: e.target.value })} className="h-7 text-xs" placeholder="16A" />
+                    <Input type="number" value={p.count ?? ""} onChange={(e) => updExtra(i, { count: e.target.value === "" ? undefined : Number(e.target.value) })} className="h-7 text-xs" placeholder="×" />
+                    <Input value={p.phase ?? ""} onChange={(e) => updExtra(i, { phase: e.target.value })} className="h-7 text-xs" placeholder="1P/3P" />
+                    <Input value={p.notes ?? ""} onChange={(e) => updExtra(i, { notes: e.target.value })} className="h-7 text-xs" placeholder="Notes" />
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => rmExtra(i)}>
                       <Trash2 className="h-3 w-3" />
                     </Button>
@@ -608,26 +608,26 @@ function EditSheet({
 
           {/* WRISTBANDS */}
           <AccordionItem value="wristbands">
-            <AccordionTrigger className="text-[13px]">Wristbands</AccordionTrigger>
+            <AccordionTrigger className="text-base">Wristbands</AccordionTrigger>
             <AccordionContent className="grid grid-cols-3 gap-2 pt-2">
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Max</Label>
-                <Input type="number" value={local.wristband_max ?? ""} onChange={(e) => debounced("wristband_max", e.target.value === "" ? null : Number(e.target.value))} className="h-9 text-[13px]" />
+                <Label className="text-xs text-muted-foreground">Max</Label>
+                <Input type="number" value={local.wristband_max ?? ""} onChange={(e) => debounced("wristband_max", e.target.value === "" ? null : Number(e.target.value))} className="h-9 text-base" />
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Black partout</Label>
-                <Input type="number" value={local.wristband_black_partout ?? ""} onChange={(e) => debounced("wristband_black_partout", e.target.value === "" ? null : Number(e.target.value))} className="h-9 text-[13px]" />
+                <Label className="text-xs text-muted-foreground">Black partout</Label>
+                <Input type="number" value={local.wristband_black_partout ?? ""} onChange={(e) => debounced("wristband_black_partout", e.target.value === "" ? null : Number(e.target.value))} className="h-9 text-base" />
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Normal partout</Label>
-                <Input type="number" value={local.wristband_normal_partout ?? ""} onChange={(e) => debounced("wristband_normal_partout", e.target.value === "" ? null : Number(e.target.value))} className="h-9 text-[13px]" />
+                <Label className="text-xs text-muted-foreground">Normal partout</Label>
+                <Input type="number" value={local.wristband_normal_partout ?? ""} onChange={(e) => debounced("wristband_normal_partout", e.target.value === "" ? null : Number(e.target.value))} className="h-9 text-base" />
               </div>
             </AccordionContent>
           </AccordionItem>
 
           {/* PHOTOS */}
           <AccordionItem value="photos">
-            <AccordionTrigger className="text-[13px]">
+            <AccordionTrigger className="text-base">
               <span className="flex items-center gap-1.5">
                 <ImageIcon className="h-3.5 w-3.5" /> Files {photos.length > 0 && <span className="text-muted-foreground">({photos.length})</span>}
               </span>
@@ -641,7 +641,7 @@ function EditSheet({
                   disabled={uploading}
                   onChange={(e) => { stageFiles(e.target.files); e.target.value = ""; }}
                 />
-                <div className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition text-[12px] text-muted-foreground">
+                <div className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-border/60 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition text-sm text-muted-foreground">
                   <Upload className="h-4 w-4" />
                   Click to select files (photos, PDFs, docs…)
                 </div>
@@ -649,7 +649,7 @@ function EditSheet({
 
               {staged.length > 0 && (
                 <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
-                  <p className="text-[11px] font-medium text-primary">
+                  <p className="text-sm font-medium text-primary">
                     {staged.length} file{staged.length > 1 ? "s" : ""} ready to upload
                   </p>
                   {staged.map((s, i) => (
@@ -664,11 +664,11 @@ function EditSheet({
                         )}
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
-                        <p className="text-[11px] font-medium truncate" title={s.file.name}>{s.file.name}</p>
+                        <p className="text-sm font-medium truncate" title={s.file.name}>{s.file.name}</p>
                         <Textarea
                           value={s.description}
                           onChange={(e) => updStaged(i, { description: e.target.value })}
-                          className="text-[11px] min-h-[44px]"
+                          className="text-sm min-h-[44px]"
                           placeholder="Description (optional)"
                         />
                       </div>
@@ -684,7 +684,7 @@ function EditSheet({
                   ))}
                   <Button
                     size="sm"
-                    className="w-full h-8 text-[12px]"
+                    className="w-full h-8 text-sm"
                     disabled={uploading}
                     onClick={confirmUpload}
                   >
@@ -695,7 +695,7 @@ function EditSheet({
               )}
 
               {photos.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground italic">No files yet.</p>
+                <p className="text-sm text-muted-foreground italic">No files yet.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {photos.map((p, i) => (
@@ -711,32 +711,32 @@ function EditSheet({
                         ) : isPdf(p) ? (
                           <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300">
                             <FileText className="h-7 w-7" />
-                            <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
+                            <span className="text-xs font-medium px-2 truncate max-w-full">{p.name || "PDF"}</span>
                           </div>
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-muted text-muted-foreground">
                             <FileIcon className="h-7 w-7" />
-                            <span className="text-[10px] font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
+                            <span className="text-xs font-medium px-2 truncate max-w-full">{p.name || "File"}</span>
                           </div>
                         )}
                       </button>
                       <Input
                         value={p.caption ?? ""}
                         onChange={(e) => updPhoto(i, { caption: e.target.value })}
-                        className="h-7 text-[11px]"
+                        className="h-7 text-sm"
                         placeholder="Caption (short)"
                       />
                       <Textarea
                         value={p.description ?? ""}
                         onChange={(e) => updPhoto(i, { description: e.target.value })}
-                        className="text-[11px] min-h-[52px]"
+                        className="text-sm min-h-[52px]"
                         placeholder="Description (notes about this file)"
                       />
                       <div className="flex items-center justify-between gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-[11px] flex-1"
+                          className="h-7 px-2 text-sm flex-1"
                           onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
                           title="Open / preview"
                         >
@@ -745,7 +745,7 @@ function EditSheet({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-[11px] flex-1"
+                          className="h-7 px-2 text-sm flex-1"
                           onClick={() => downloadFile(p.url, p.name || `file-${i + 1}`)}
                         >
                           <Download className="h-3 w-3 mr-1" /> Download
@@ -768,10 +768,10 @@ function EditSheet({
 
           {/* CUSTOM SUBSECTIONS */}
           <AccordionItem value="custom">
-            <AccordionTrigger className="text-[13px]">Custom subsections</AccordionTrigger>
+            <AccordionTrigger className="text-base">Custom subsections</AccordionTrigger>
             <AccordionContent className="space-y-3 pt-2">
               {subs.length === 0 && (
-                <p className="text-[11px] text-muted-foreground italic">No custom subsections yet.</p>
+                <p className="text-sm text-muted-foreground italic">No custom subsections yet.</p>
               )}
               {subs.map((s, i) => (
                 <div key={i} className="bg-muted/40 rounded-lg p-3 space-y-2 border border-border/40">
@@ -779,7 +779,7 @@ function EditSheet({
                     <Input
                       value={s.title ?? ""}
                       onChange={(e) => updSub(i, { title: e.target.value })}
-                      className="h-8 text-[13px] font-medium flex-1"
+                      className="h-8 text-base font-medium flex-1"
                       placeholder="Subsection title (e.g. Cooling needs)"
                     />
                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => rmSub(i)}>
@@ -788,14 +788,14 @@ function EditSheet({
                   </div>
                   {(s.lines || []).map((l, j) => (
                     <div key={j} className="grid grid-cols-[1fr_1.4fr_28px] gap-1.5 items-center">
-                      <Input value={l.label ?? ""} onChange={(e) => updSubLine(i, j, { label: e.target.value })} className="h-7 text-[11px]" placeholder="Label" />
-                      <Input value={l.value ?? ""} onChange={(e) => updSubLine(i, j, { value: e.target.value })} className="h-7 text-[11px]" placeholder="Value" />
+                      <Input value={l.label ?? ""} onChange={(e) => updSubLine(i, j, { label: e.target.value })} className="h-7 text-xs" placeholder="Label" />
+                      <Input value={l.value ?? ""} onChange={(e) => updSubLine(i, j, { value: e.target.value })} className="h-7 text-xs" placeholder="Value" />
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => rmSubLine(i, j)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   ))}
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px] w-full justify-start" onClick={() => addSubLine(i)}>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs w-full justify-start" onClick={() => addSubLine(i)}>
                     <Plus className="h-3 w-3 mr-1" /> Add line
                   </Button>
                 </div>
@@ -862,7 +862,7 @@ export default function ConceptsEditor() {
         <div className="flex items-end justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Concepts</h1>
-            <p className="text-sm text-muted-foreground mt-1">{concepts.length} concepts at {festival.name}</p>
+            <p className="text-base text-muted-foreground mt-1">{concepts.length} concepts at {festival.name}</p>
           </div>
           <Button onClick={addConcept} size="sm" className="h-8">
             <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
