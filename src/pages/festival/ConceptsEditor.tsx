@@ -173,6 +173,42 @@ function ReadOnlyCard({ c, onEdit }: { c: any; onEdit: () => void }) {
           ))}
         </div>
       ))}
+
+      {files.length > 0 && (
+        <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1.5">
+          <p className="font-medium text-muted-foreground flex items-center gap-1">
+            <FileIcon className="h-3.5 w-3.5" /> Files
+          </p>
+          <div className="space-y-1">
+            {files.map((f, i) => (
+              <div key={i} className="flex items-center gap-2 group">
+                {isPdf(f) ? (
+                  <FileText className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+                ) : (
+                  <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+                <a
+                  href={f.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-foreground hover:text-primary truncate flex-1 min-w-0"
+                  title={f.description || f.caption || f.name}
+                >
+                  {f.caption || f.name || "File"}
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name || `file-${i + 1}`); }}
+                  className="h-6 w-6 rounded hover:bg-background flex items-center justify-center opacity-0 group-hover:opacity-100 transition shrink-0"
+                  title="Download"
+                >
+                  <Download className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
