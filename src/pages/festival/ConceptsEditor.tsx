@@ -363,6 +363,7 @@ function EditSheet({
   onChanged: () => void;
 }) {
   const [local, setLocal] = useState<any>(concept);
+  const openPreview = useFilePreview();
   // Only reset local state when switching to a different concept or reopening the sheet.
   // Do NOT depend on `concept` itself — parent refetches replace the object reference
   // on every save and would clobber in-flight keystrokes.
