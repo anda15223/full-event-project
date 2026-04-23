@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, Upload, FileText, File as FileIcon, Loader2, Sparkles, Brain,
-  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye,
+  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -87,6 +87,39 @@ export function SmartCard({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
   const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Snapshot taken when entering edit mode, used to revert on cancel
+  const [snapshot, setSnapshot] = useState<{ sections: SSection[]; lines: SLine[]; todos: STodo[] } | null>(null);
+  // Track pending DB operations made during edit mode
+  const [pending, setPending] = useState<{
+    sectionInserts: SSection[];
+    sectionUpdates: Record<string, Partial<SSection>>;
+    sectionDeletes: string[];
+    lineInserts: SLine[];
+    lineUpdates: Record<string, Partial<SLine>>;
+    lineDeletes: string[];
+    todoUpdates: Record<string, Partial<STodo>>;
+    todoDeletes: string[];
+  }>({
+    sectionInserts: [], sectionUpdates: {}, sectionDeletes: [],
+    lineInserts: [], lineUpdates: {}, lineDeletes: [],
+    todoUpdates: {}, todoDeletes: [],
+  });
+  const resetPending = () => setPending({
+    sectionInserts: [], sectionUpdates: {}, sectionDeletes: [],
+    lineInserts: [], lineUpdates: {}, lineDeletes: [],
+    todoUpdates: {}, todoDeletes: [],
+  });
+  const isDraftId = (id: string) => id.startsWith("draft-");
+  const hasUnsavedChanges = () =>
+    pending.sectionInserts.length > 0 ||
+    Object.keys(pending.sectionUpdates).length > 0 ||
+    pending.sectionDeletes.length > 0 ||
+    pending.lineInserts.length > 0 ||
+    Object.keys(pending.lineUpdates).length > 0 ||
+    pending.lineDeletes.length > 0 ||
+    Object.keys(pending.todoUpdates).length > 0 ||
+    pending.todoDeletes.length > 0;
 
   // ---- Initial load: get-or-create the card, then sections+lines+files ----
   const reload = useCallback(async () => {
@@ -140,62 +173,206 @@ export function SmartCard({
 
   useEffect(() => { reload(); }, [reload]);
 
-  // ---- Section + line CRUD ----
-  const addSection = async () => {
+  // ---- Section + line CRUD (deferred — only commit on Save) ----
+  const addSection = () => {
     if (!card) return;
     const order = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
-    const { error } = await (supabase as any).from("smart_sections").insert({
-      card_id: card.id, title: "New section", order_index: order, source: "manual",
-    });
-    if (error) toast.error("Add failed"); else reload();
+    const draft: SSection = {
+      id: `draft-${crypto.randomUUID()}`,
+      title: "New section",
+      description: null,
+      order_index: order,
+      source: "manual",
+      source_file_id: null,
+    };
+    setSections(prev => [...prev, draft]);
+    setPending(p => ({ ...p, sectionInserts: [...p.sectionInserts, draft] }));
   };
 
-  const updateSection = async (id: string, patch: Partial<SSection>) => {
+  const updateSection = (id: string, patch: Partial<SSection>) => {
     setSections(prev => prev.map(s => s.id === id ? { ...s, ...patch } as SSection : s));
-    const { error } = await (supabase as any).from("smart_sections").update(patch).eq("id", id);
-    if (error) toast.error("Save failed");
+    if (isDraftId(id)) {
+      setPending(p => ({
+        ...p,
+        sectionInserts: p.sectionInserts.map(s => s.id === id ? { ...s, ...patch } as SSection : s),
+      }));
+    } else {
+      setPending(p => ({
+        ...p,
+        sectionUpdates: { ...p.sectionUpdates, [id]: { ...(p.sectionUpdates[id] || {}), ...patch } },
+      }));
+    }
   };
 
-  const deleteSection = async (id: string) => {
-    if (!confirm("Delete this section and all its lines?")) return;
-    const { error } = await (supabase as any).from("smart_sections").delete().eq("id", id);
-    if (error) { toast.error("Delete failed"); return; }
-    reload();
+  const deleteSection = (id: string) => {
+    if (!confirm("Delete this section and all its lines? (will apply when you Save)")) return;
+    setSections(prev => prev.filter(s => s.id !== id));
+    setLines(prev => prev.filter(l => l.section_id !== id));
+    if (isDraftId(id)) {
+      setPending(p => ({
+        ...p,
+        sectionInserts: p.sectionInserts.filter(s => s.id !== id),
+        lineInserts: p.lineInserts.filter(l => l.section_id !== id),
+      }));
+    } else {
+      setPending(p => ({ ...p, sectionDeletes: [...p.sectionDeletes, id] }));
+    }
   };
 
-  const addLine = async (sectionId: string) => {
+  const addLine = (sectionId: string) => {
     const sectionLines = lines.filter(l => l.section_id === sectionId);
     const order = sectionLines.length ? Math.max(...sectionLines.map(l => l.order_index)) + 1 : 0;
-    const { error } = await (supabase as any).from("smart_lines").insert({
-      section_id: sectionId, label: "", order_index: order, source: "manual",
-    });
-    if (error) toast.error("Add failed"); else reload();
+    const draft: SLine = {
+      id: `draft-${crypto.randomUUID()}`,
+      section_id: sectionId,
+      label: "", value: null, quantity: null, notes: null,
+      status: null, owner: null, due_date: null,
+      order_index: order, source: "manual", source_file_id: null,
+    };
+    setLines(prev => [...prev, draft]);
+    setPending(p => ({ ...p, lineInserts: [...p.lineInserts, draft] }));
   };
 
-  const updateLine = async (id: string, patch: Partial<SLine>) => {
+  const updateLine = (id: string, patch: Partial<SLine>) => {
     setLines(prev => prev.map(l => l.id === id ? { ...l, ...patch } as SLine : l));
-    const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
-    if (error) toast.error("Save failed");
+    if (isDraftId(id)) {
+      setPending(p => ({
+        ...p,
+        lineInserts: p.lineInserts.map(l => l.id === id ? { ...l, ...patch } as SLine : l),
+      }));
+    } else {
+      setPending(p => ({
+        ...p,
+        lineUpdates: { ...p.lineUpdates, [id]: { ...(p.lineUpdates[id] || {}), ...patch } },
+      }));
+    }
   };
 
-  const deleteLine = async (id: string) => {
+  const deleteLine = (id: string) => {
     setLines(prev => prev.filter(l => l.id !== id));
-    const { error } = await (supabase as any).from("smart_lines").delete().eq("id", id);
-    if (error) { toast.error("Delete failed"); reload(); }
+    if (isDraftId(id)) {
+      setPending(p => ({ ...p, lineInserts: p.lineInserts.filter(l => l.id !== id) }));
+    } else {
+      setPending(p => ({ ...p, lineDeletes: [...p.lineDeletes, id] }));
+    }
   };
 
-  // ---- Todo CRUD ----
-  const toggleTodo = async (id: string, current: string) => {
+  // ---- Todo CRUD (deferred when in edit mode) ----
+  const toggleTodo = (id: string, current: string) => {
     const next = current === "done" ? "open" : "done";
     setTodos(prev => prev.map(t => t.id === id ? { ...t, status: next } : t));
-    const { error } = await (supabase as any).from("smart_todos").update({ status: next }).eq("id", id);
-    if (error) { toast.error("Save failed"); reload(); }
+    if (editMode) {
+      setPending(p => ({ ...p, todoUpdates: { ...p.todoUpdates, [id]: { ...(p.todoUpdates[id] || {}), status: next } } }));
+    } else {
+      // Outside edit mode, persist immediately (checkbox toggle is a quick action)
+      (supabase as any).from("smart_todos").update({ status: next }).eq("id", id).then(({ error }: any) => {
+        if (error) { toast.error("Save failed"); reload(); }
+      });
+    }
   };
-  const deleteTodo = async (id: string) => {
+  const deleteTodo = (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
-    const { error } = await (supabase as any).from("smart_todos").delete().eq("id", id);
-    if (error) { toast.error("Delete failed"); reload(); }
+    if (editMode) {
+      setPending(p => ({ ...p, todoDeletes: [...p.todoDeletes, id] }));
+    } else {
+      (supabase as any).from("smart_todos").delete().eq("id", id).then(({ error }: any) => {
+        if (error) { toast.error("Delete failed"); reload(); }
+      });
+    }
   };
+
+  // ---- Save / Cancel ----
+  const enterEditMode = () => {
+    setSnapshot({ sections: [...sections], lines: [...lines], todos: [...todos] });
+    resetPending();
+    setEditMode(true);
+  };
+
+  const cancelEdit = () => {
+    if (hasUnsavedChanges() && !confirm("Discard unsaved changes?")) return;
+    if (snapshot) {
+      setSections(snapshot.sections);
+      setLines(snapshot.lines);
+      setTodos(snapshot.todos);
+    }
+    resetPending();
+    setSnapshot(null);
+    setEditMode(false);
+  };
+
+  const saveChanges = async () => {
+    if (!card) return;
+    if (!hasUnsavedChanges()) {
+      setEditMode(false);
+      setSnapshot(null);
+      return;
+    }
+    setSaving(true);
+    try {
+      // 1. Insert new sections (draft id -> real id mapping)
+      const sectionIdMap: Record<string, string> = {};
+      if (pending.sectionInserts.length) {
+        const rows = pending.sectionInserts.map(s => ({
+          card_id: card.id, title: s.title, description: s.description,
+          order_index: s.order_index, source: s.source,
+        }));
+        const { data, error } = await (supabase as any).from("smart_sections").insert(rows).select();
+        if (error) throw error;
+        pending.sectionInserts.forEach((draft, i) => { sectionIdMap[draft.id] = data[i].id; });
+      }
+      // 2. Update existing sections
+      for (const [id, patch] of Object.entries(pending.sectionUpdates)) {
+        const { error } = await (supabase as any).from("smart_sections").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      // 3. Delete sections
+      if (pending.sectionDeletes.length) {
+        const { error } = await (supabase as any).from("smart_sections").delete().in("id", pending.sectionDeletes);
+        if (error) throw error;
+      }
+      // 4. Insert new lines (resolve draft section ids)
+      if (pending.lineInserts.length) {
+        const rows = pending.lineInserts.map(l => ({
+          section_id: sectionIdMap[l.section_id] || l.section_id,
+          label: l.label, value: l.value, quantity: l.quantity, notes: l.notes,
+          status: l.status, owner: l.owner, due_date: l.due_date,
+          order_index: l.order_index, source: l.source,
+        }));
+        const { error } = await (supabase as any).from("smart_lines").insert(rows);
+        if (error) throw error;
+      }
+      // 5. Update existing lines
+      for (const [id, patch] of Object.entries(pending.lineUpdates)) {
+        const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      // 6. Delete lines
+      if (pending.lineDeletes.length) {
+        const { error } = await (supabase as any).from("smart_lines").delete().in("id", pending.lineDeletes);
+        if (error) throw error;
+      }
+      // 7. Update todos
+      for (const [id, patch] of Object.entries(pending.todoUpdates)) {
+        const { error } = await (supabase as any).from("smart_todos").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      // 8. Delete todos
+      if (pending.todoDeletes.length) {
+        const { error } = await (supabase as any).from("smart_todos").delete().in("id", pending.todoDeletes);
+        if (error) throw error;
+      }
+      toast.success("Saved");
+      resetPending();
+      setSnapshot(null);
+      setEditMode(false);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Save failed: ${e.message || e}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleUpload = async (fileList: FileList | null) => {
     if (!fileList || !card) return;
     setUploading(true);
@@ -390,14 +567,32 @@ export function SmartCard({
               <Plus className="h-3.5 w-3.5 mr-1" /> Section
             </Button>
           )}
-          <Button
-            size="sm"
-            variant={editMode ? "default" : "outline"}
-            className="h-8"
-            onClick={() => setEditMode(v => !v)}
-          >
-            {editMode ? <><Check className="h-3.5 w-3.5 mr-1" /> Done</> : <><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</>}
-          </Button>
+          {editMode ? (
+            <>
+              <Button size="sm" variant="ghost" className="h-8" onClick={cancelEdit} disabled={saving}>
+                <X className="h-3.5 w-3.5 mr-1" /> Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8"
+                onClick={saveChanges}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                {hasUnsavedChanges() ? `Save${(pending.sectionInserts.length + Object.keys(pending.sectionUpdates).length + pending.sectionDeletes.length + pending.lineInserts.length + Object.keys(pending.lineUpdates).length + pending.lineDeletes.length) > 0 ? ` (${pending.sectionInserts.length + Object.keys(pending.sectionUpdates).length + pending.sectionDeletes.length + pending.lineInserts.length + Object.keys(pending.lineUpdates).length + pending.lineDeletes.length})` : ""}` : "Done"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={enterEditMode}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+            </Button>
+          )}
         </div>
       </div>
 
