@@ -567,14 +567,32 @@ export function SmartCard({
               <Plus className="h-3.5 w-3.5 mr-1" /> Section
             </Button>
           )}
-          <Button
-            size="sm"
-            variant={editMode ? "default" : "outline"}
-            className="h-8"
-            onClick={() => setEditMode(v => !v)}
-          >
-            {editMode ? <><Check className="h-3.5 w-3.5 mr-1" /> Done</> : <><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</>}
-          </Button>
+          {editMode ? (
+            <>
+              <Button size="sm" variant="ghost" className="h-8" onClick={cancelEdit} disabled={saving}>
+                <X className="h-3.5 w-3.5 mr-1" /> Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                className="h-8"
+                onClick={saveChanges}
+                disabled={saving}
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                {hasUnsavedChanges() ? `Save${(pending.sectionInserts.length + Object.keys(pending.sectionUpdates).length + pending.sectionDeletes.length + pending.lineInserts.length + Object.keys(pending.lineUpdates).length + pending.lineDeletes.length) > 0 ? ` (${pending.sectionInserts.length + Object.keys(pending.sectionUpdates).length + pending.sectionDeletes.length + pending.lineInserts.length + Object.keys(pending.lineUpdates).length + pending.lineDeletes.length})` : ""}` : "Done"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={enterEditMode}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+            </Button>
+          )}
         </div>
       </div>
 
