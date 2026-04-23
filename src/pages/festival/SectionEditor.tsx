@@ -87,12 +87,10 @@ export default function SectionEditor() {
         />
       )}
 
-      {questions.length === 0 ? (
-        sectionKey && SMART_CARDS[sectionKey] ? null : (
-          <Card className="p-8 text-center text-sm text-muted-foreground">
-            No scalar questions in this section. {section.sub_editor_route ? "Use the sub-editor instead." : ""}
-          </Card>
-        )
+      {sectionKey && SMART_CARDS[sectionKey] ? null : questions.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          No scalar questions in this section. {section.sub_editor_route ? "Use the sub-editor instead." : ""}
+        </Card>
       ) : (
         <Card className="p-6 space-y-5">
           {questions.map(q => {
