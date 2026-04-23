@@ -91,6 +91,8 @@ export function SmartCard({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
   const [editMode, setEditMode] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
+  const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
   const [saving, setSaving] = useState(false);
   // Snapshot taken when entering edit mode, used to revert on cancel
   const [snapshot, setSnapshot] = useState<{ sections: SSection[]; lines: SLine[]; todos: STodo[] } | null>(null);
