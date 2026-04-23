@@ -305,7 +305,116 @@ async function extractFromFile({
     console.error("brain feed failed:", e);
   }
 
-  return { ok: true, sections_created: created.length, summary: extracted.summary };
+  return { ok: true, sections_created: created.length, summary: extracted.summary, warnings };
+}
+
+/* ---------------- Validators per card_key ---------------- */
+type ValidationWarning = { field: string; message: string; severity: "error" | "warn" };
+
+function validateExtraction(card_key: string, sections: any[]): ValidationWarning[] {
+  const warnings: ValidationWarning[] = [];
+  const allLines = sections.flatMap((s: any) =>
+    (s.lines || []).map((l: any) => ({ ...l, _section: (s.title || "").toLowerCase() })),
+  );
+  const findLine = (re: RegExp) =>
+    allLines.find((l: any) =>
+      re.test(`${l.label || ""} ${l._section}`.toLowerCase()),
+    );
+  const hasNonEmpty = (v: any) => v != null && String(v).trim() !== "";
+
+  if (card_key === "cooling_storage") {
+    // 1. At least one fridge/freezer/container UNIT line
+    const unitLines = allLines.filter((l: any) =>
+      /(fridge|freezer|container|cold|køl|frys|kühl|gefrier)/i.test(
+        `${l.label || ""} ${l._section || ""}`,
+      ),
+    );
+    if (!unitLines.length) {
+      warnings.push({
+        field: "unit_type",
+        message: "No fridge / freezer / container units detected. Add the unit type(s).",
+        severity: "error",
+      });
+    } else {
+      // For each unit, check size + quantity
+      const missingSize = unitLines.filter((l: any) => !hasNonEmpty(l.value));
+      const missingQty = unitLines.filter((l: any) => !hasNonEmpty(l.quantity));
+      if (missingSize.length) {
+        warnings.push({
+          field: "unit_size",
+          message: `${missingSize.length} cooling unit(s) missing size/capacity.`,
+          severity: "error",
+        });
+      }
+      if (missingQty.length) {
+        warnings.push({
+          field: "unit_quantity",
+          message: `${missingQty.length} cooling unit(s) missing quantity.`,
+          severity: "error",
+        });
+      }
+    }
+
+    // 2. Invoice deadline
+    const invoiceDeadline = findLine(/invoice|payment|betaling|faktura|pay.*by|due/);
+    if (!invoiceDeadline || (!hasNonEmpty(invoiceDeadline.value) && !hasNonEmpty(invoiceDeadline.due_date))) {
+      warnings.push({
+        field: "invoice_deadline",
+        message: "No invoice/payment deadline found.",
+        severity: "warn",
+      });
+    }
+
+    // 3. Delivery deadline
+    const deliveryDeadline = findLine(/deliver|drop.?off|on.?site|levering|leverings/);
+    if (!deliveryDeadline || (!hasNonEmpty(deliveryDeadline.value) && !hasNonEmpty(deliveryDeadline.due_date))) {
+      warnings.push({
+        field: "delivery_deadline",
+        message: "No on-site delivery deadline found.",
+        severity: "error",
+      });
+    }
+
+    // 4. Supplier name
+    const supplier = allLines.find((l: any) =>
+      /supplier|vendor|firma|company|leverandør/i.test(`${l.label || ""} ${l._section || ""}`),
+    );
+    if (!supplier || !hasNonEmpty(supplier.value)) {
+      warnings.push({
+        field: "supplier",
+        message: "Supplier name missing.",
+        severity: "warn",
+      });
+    }
+
+    // 5. Pricing
+    const pricing = allLines.find((l: any) =>
+      /(price|cost|kr|dkk|eur|usd|amount|total|pris)/i.test(
+        `${l.label || ""} ${l.value || ""} ${l._section || ""}`,
+      ),
+    );
+    if (!pricing) {
+      warnings.push({
+        field: "pricing",
+        message: "No pricing detected.",
+        severity: "warn",
+      });
+    }
+
+    // 6. Delivery plan section presence
+    const deliveryPlan = sections.find((s: any) =>
+      /delivery.*plan|delivery|drop|leverings/i.test(s.title || ""),
+    );
+    if (!deliveryPlan || !(deliveryPlan.lines || []).length) {
+      warnings.push({
+        field: "delivery_plan",
+        message: "Delivery plan (address, time window, on-site contact) is missing.",
+        severity: "warn",
+      });
+    }
+  }
+
+  return warnings;
 }
 
 async function grabBrain({ card_key, festival_id, concept_id }: any) {
