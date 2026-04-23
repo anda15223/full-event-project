@@ -751,6 +751,12 @@ Deno.serve(async (req) => {
       case "extract":
         result = await extractFromFile(body);
         break;
+      case "apply_proposal":
+        result = await applyProposal(body);
+        break;
+      case "discard_proposal":
+        result = await discardProposal(body);
+        break;
       case "grab_brain":
         result = await grabBrain(body);
         break;
