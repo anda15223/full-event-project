@@ -425,40 +425,70 @@ export function SmartCard({
                 <button onClick={() => setCollapsed(p => ({ ...p, [section.id]: !p[section.id] }))} className="text-muted-foreground hover:text-foreground">
                   {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
-                <Input
-                  value={section.title}
-                  onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                  className="h-8 text-base font-semibold border-transparent bg-transparent focus-visible:bg-background flex-1"
-                />
+                {editMode ? (
+                  <Input
+                    value={section.title}
+                    onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                    className="h-8 text-base font-semibold border-transparent bg-transparent focus-visible:bg-background flex-1"
+                  />
+                ) : (
+                  <h4 className="text-base font-semibold flex-1 truncate">{section.title}</h4>
+                )}
                 <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] shrink-0", sourceColor(section.source))}>
                   {sourceLabel(section.source)}
                 </Badge>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteSection(section.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                {editMode && (
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteSection(section.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
               {!isCollapsed && (
                 <div className="pl-6 space-y-1.5">
                   {sectionLines.length === 0 && (
                     <p className="text-xs text-muted-foreground italic">No lines yet.</p>
                   )}
-                  {sectionLines.map(line => (
-                    <div key={line.id} className="grid grid-cols-[1fr_1.4fr_70px_1fr_60px_24px] gap-1.5 items-center group">
-                      <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
-                      <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
-                      <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
-                      <Input value={line.notes ?? ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} placeholder="Notes" className="h-7 text-xs" />
-                      <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
-                        {sourceLabel(line.source)}
-                      </Badge>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => addLine(section.id)}>
-                    <Plus className="h-3 w-3 mr-1" /> Add line
-                  </Button>
+                  {editMode ? (
+                    sectionLines.map(line => (
+                      <div key={line.id} className="grid grid-cols-[1fr_1.4fr_70px_1fr_60px_24px] gap-1.5 items-center group">
+                        <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
+                        <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
+                        <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
+                        <Input value={line.notes ?? ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} placeholder="Notes" className="h-7 text-xs" />
+                        <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
+                          {sourceLabel(line.source)}
+                        </Badge>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    sectionLines.length > 0 && (
+                      <ul className="space-y-1">
+                        {sectionLines.map(line => {
+                          const hasLabel = !!line.label?.trim();
+                          const hasValue = !!line.value?.trim();
+                          const hasQty = !!line.quantity?.trim();
+                          const hasNotes = !!line.notes?.trim();
+                          if (!hasLabel && !hasValue && !hasQty && !hasNotes) return null;
+                          return (
+                            <li key={line.id} className="text-sm flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-snug">
+                              {hasLabel && <span className="font-medium text-foreground">{line.label}{hasValue ? ":" : ""}</span>}
+                              {hasValue && <span className="text-foreground/90">{line.value}</span>}
+                              {hasQty && <span className="text-xs text-muted-foreground">× {line.quantity}</span>}
+                              {hasNotes && <span className="text-xs text-muted-foreground italic">— {line.notes}</span>}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )
+                  )}
+                  {editMode && (
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => addLine(section.id)}>
+                      <Plus className="h-3 w-3 mr-1" /> Add line
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
