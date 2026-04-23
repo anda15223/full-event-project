@@ -110,12 +110,14 @@ export function SmartCard({
       }
       setCard(c);
 
-      const [{ data: secs }, { data: fls }] = await Promise.all([
+      const [{ data: secs }, { data: fls }, { data: tds }] = await Promise.all([
         (supabase as any).from("smart_sections").select("*").eq("card_id", c.id).order("order_index"),
         (supabase as any).from("smart_files").select("*").eq("card_id", c.id).order("uploaded_at", { ascending: false }),
+        (supabase as any).from("smart_todos").select("*").eq("card_id", c.id).order("order_index"),
       ]);
       setSections(secs || []);
       setFiles(fls || []);
+      setTodos(tds || []);
 
       if (secs && secs.length) {
         const { data: lns } = await (supabase as any)
