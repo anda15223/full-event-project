@@ -39,10 +39,12 @@ type SLine = {
   owner: string | null; due_date: string | null; order_index: number;
   source: string; source_file_id: string | null;
 };
+type SValidationWarning = { field: string; message: string; severity: "error" | "warn" };
 type SFile = {
   id: string; storage_path: string; url: string | null; filename: string | null;
   mime_type: string | null; size: number | null; ai_summary: string | null;
   parse_status: string; parse_error: string | null; uploaded_at: string;
+  warnings: SValidationWarning[] | null;
 };
 
 const sourceColor = (s: string) => {
