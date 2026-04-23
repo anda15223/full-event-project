@@ -742,6 +742,56 @@ async function remember(payload: any) {
   return { ok: true };
 }
 
+// Lightweight summarize-only action: read the file, generate a short AI summary,
+// save it on smart_files. Does NOT create sections/lines and does NOT post in chat.
+// Used by the Brain "store silently" upload flow. The user must click
+// "Propose changes" later to run the full extract.
+async function summarizeFile({ file_id, file_url, file_name, mime_type }: any) {
+  await sb("PATCH", `smart_files?id=eq.${file_id}`, { parse_status: "processing" });
+  let userContent: any;
+  const text = await downloadFileText(file_url, mime_type || "", file_name || "");
+  const instr = `Read this document and write a concise plain-text summary (5-12 lines) capturing supplier, items, prices, dates, addresses, contacts and anything else useful. No JSON, no markdown headings — just the summary text.`;
+  if (text) {
+    userContent = `${instr}\n\nFile: ${file_name}\n\n${text.slice(0, 180000)}`;
+  } else {
+    try {
+      const { b64, mime: detectedMime } = await downloadFileBase64(file_url);
+      const effectiveMime = mime_type || detectedMime;
+      const isImage = /^image\//i.test(effectiveMime);
+      const isPdf = /pdf/i.test(effectiveMime) || /\.pdf$/i.test(file_name || "");
+      if (isImage || isPdf) {
+        userContent = [
+          { type: "text", text: `${instr}\n\nFile name: ${file_name}` },
+          { type: "image_url", image_url: { url: `data:${isPdf ? "application/pdf" : effectiveMime};base64,${b64}` } },
+        ];
+      } else {
+        userContent = `${instr}\n\nFile: ${file_name} (${effectiveMime}) — binary file, summarise from the filename.`;
+      }
+    } catch (e) {
+      userContent = `${instr}\n\nFile: ${file_name} (could not download contents).`;
+    }
+  }
+  let summary = "";
+  try {
+    summary = await callAI([
+      { role: "system", content: "You read messy real-world festival documents and produce short, accurate plain-text summaries. Always perform OCR on images/PDFs." },
+      { role: "user", content: userContent },
+    ]);
+  } catch (e) {
+    await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+      parse_status: "error",
+      parse_error: String((e as Error).message || e),
+    });
+    throw e;
+  }
+  await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+    parse_status: "stored",
+    ai_summary: (summary || "").trim() || null,
+    meta: {},
+  });
+  return { ok: true, stored: true, summary };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -750,6 +800,9 @@ Deno.serve(async (req) => {
     switch (body.action) {
       case "extract":
         result = await extractFromFile(body);
+        break;
+      case "summarize":
+        result = await summarizeFile(body);
         break;
       case "apply_proposal":
         result = await applyProposal(body);

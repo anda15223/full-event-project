@@ -399,33 +399,26 @@ export function SmartCard({
         }).select().single();
         if (fErr || !fileRow) { toast.error("Could not save file"); continue; }
 
-        // Trigger AI extraction (DRY RUN — produces a proposal the user must Apply)
+        // Brain mode: silently summarize. Do NOT create sections yet.
+        // The user must click "Propose changes" on the file to release the info.
         setExtracting(true);
         try {
-          const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+          const { error } = await supabase.functions.invoke("smart-card-extract", {
             body: {
-              action: "extract",
-              dry_run: true,
+              action: "summarize",
               file_id: fileRow.id,
-              card_id: card.id,
-              card_key: cardKey,
-              festival_id: festivalId,
-              concept_id: conceptId || null,
               file_url: pub.publicUrl,
               file_name: file.name,
               mime_type: file.type,
             },
           });
           if (error) throw error;
-          const proposed = data?.sections_proposed || 0;
           toast.success(
-            `AI read ${file.name} — ${proposed} section(s) proposed. Review and click Apply.`,
-            { description: "The summary is also posted in the chat below." },
+            `${file.name} stored in Brain`,
+            { description: "Click ✨ Propose changes on the file to let AI suggest sections." },
           );
-          // Bump the chat refresh key so the new assistant message shows up
-          setChatRefreshKey(k => k + 1);
         } catch (e: any) {
-          toast.error(`AI extract failed: ${e.message || e}`);
+          toast.error(`Brain summarize failed: ${e.message || e}`);
         } finally {
           setExtracting(false);
         }
@@ -433,6 +426,37 @@ export function SmartCard({
       await reload();
     } finally {
       setUploading(false);
+    }
+  };
+
+  // On-demand: run structured extraction for a stored file → proposal.
+  const proposeFromFile = async (f: SFile) => {
+    if (!card) return;
+    setExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "extract",
+          dry_run: true,
+          file_id: f.id,
+          card_id: card.id,
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+          file_url: f.url,
+          file_name: f.filename,
+          mime_type: f.mime_type,
+        },
+      });
+      if (error) throw error;
+      const proposed = (data as any)?.sections_proposed || 0;
+      toast.success(`AI proposed ${proposed} section(s) — review and Apply.`);
+      setChatRefreshKey(k => k + 1);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Propose failed: ${e.message || e}`);
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -705,6 +729,11 @@ export function SmartCard({
                     </Badge>
                   )}
                   {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
+                  {f.parse_status === "stored" && (
+                    <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-300/40">
+                      <Brain className="h-2.5 w-2.5 mr-0.5" /> In Brain
+                    </Badge>
+                  )}
                   {f.parse_status === "preview" && (
                     <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300/40">
                       Pending review
@@ -714,6 +743,21 @@ export function SmartCard({
                     <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-muted text-muted-foreground border-border">
                       Discarded
                     </Badge>
+                  )}
+                  {(f.parse_status === "stored" || f.parse_status === "discarded") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => proposeFromFile(f)}
+                      disabled={extracting}
+                      title="Run AI extraction and preview proposed sections"
+                    >
+                      {extracting
+                        ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        : <Sparkles className="h-3 w-3 mr-1" />}
+                      Propose changes
+                    </Button>
                   )}
                   {f.ai_summary && (
                     <button
