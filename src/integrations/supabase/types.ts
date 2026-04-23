@@ -1407,6 +1407,7 @@ export type Database = {
           storage_path: string
           uploaded_at: string
           url: string | null
+          warnings: Json
         }
         Insert: {
           ai_summary?: string | null
@@ -1421,6 +1422,7 @@ export type Database = {
           storage_path: string
           uploaded_at?: string
           url?: string | null
+          warnings?: Json
         }
         Update: {
           ai_summary?: string | null
@@ -1435,6 +1437,7 @@ export type Database = {
           storage_path?: string
           uploaded_at?: string
           url?: string | null
+          warnings?: Json
         }
         Relationships: [
           {
