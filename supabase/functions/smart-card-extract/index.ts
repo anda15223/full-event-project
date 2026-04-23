@@ -54,10 +54,21 @@ async function downloadFileText(url: string, mime: string): Promise<string> {
   ) {
     return await r.text();
   }
-
-  // For PDFs / Office docs / images, send the bytes to Gemini directly via Lovable AI.
-  // We return an empty string here; the caller will pass the file URL as-is using a vision-capable prompt.
   return "";
+}
+
+async function downloadFileBase64(url: string): Promise<{ b64: string; mime: string }> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`download failed ${r.status}`);
+  const mime = r.headers.get("content-type") || "application/octet-stream";
+  const buf = new Uint8Array(await r.arrayBuffer());
+  // Encode in chunks to avoid call-stack overflow on large files
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buf.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, buf.subarray(i, i + chunk) as any);
+  }
+  return { b64: btoa(bin), mime };
 }
 
 async function callAI(messages: any[], schema?: any) {
