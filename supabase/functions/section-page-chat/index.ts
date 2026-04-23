@@ -59,7 +59,7 @@ const tools = [
     function: {
       name: "add_card_line",
       description:
-        "Add a line to the SmartCard of this section (only if a SmartCard exists). If section_title is unknown an existing or new section is created.",
+        "Add a NEW line to the SmartCard of this section. Only use when the user explicitly asks to add something new.",
       parameters: {
         type: "object",
         properties: {
@@ -71,6 +71,43 @@ const tools = [
           due_date: { type: "string" },
         },
         required: ["section_title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_card_line",
+      description:
+        "Update an EXISTING SmartCard line by its id (see smart_card.lines in CONTEXT). Only set the fields the user asked to change; omit the rest.",
+      parameters: {
+        type: "object",
+        properties: {
+          line_id: { type: "string" },
+          label: { type: "string" },
+          value: { type: "string" },
+          quantity: { type: "string" },
+          notes: { type: "string" },
+          due_date: { type: "string" },
+        },
+        required: ["line_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dismiss_file_warning",
+      description:
+        "Mark a validation warning on an uploaded source file as resolved/intentional, with the user's reason. Use when the user EXPLAINS why a 'missing' flag is actually correct (e.g. 'this PDF covers all containers, quantity is intentional'). Identify the warning by file_id + the warning's field name from CONTEXT.smart_card.files[].warnings[].field.",
+      parameters: {
+        type: "object",
+        properties: {
+          file_id: { type: "string" },
+          field: { type: "string", description: "Warning field key, e.g. 'unit_quantity'." },
+          reason: { type: "string", description: "User's explanation in their own words." },
+        },
+        required: ["file_id", "field", "reason"],
       },
     },
   },
