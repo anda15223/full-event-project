@@ -448,6 +448,15 @@ export function SmartCard({
                     </Badge>
                   )}
                   {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
+                  {f.ai_summary && (
+                    <button
+                      onClick={() => setOpenSummary(p => ({ ...p, [f.id]: !p[f.id] }))}
+                      className="opacity-60 hover:opacity-100 text-muted-foreground hover:text-foreground"
+                      title={openSummary[f.id] ? "Hide AI read" : "Show AI read"}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                   {f.url && (
                     <a href={f.url} target="_blank" rel="noreferrer" className="opacity-0 group-hover:opacity-100">
                       <Download className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -457,6 +466,16 @@ export function SmartCard({
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
+                {openSummary[f.id] && f.ai_summary && (
+                  <div className="ml-6 mt-1 rounded-md border border-violet-200 dark:border-violet-900/50 bg-violet-50/60 dark:bg-violet-950/30 p-3">
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                      <Sparkles className="h-3 w-3" /> AI read this from the file
+                    </div>
+                    <p className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                      {f.ai_summary}
+                    </p>
+                  </div>
+                )}
                 {wlist.length > 0 && (
                   <ul className="ml-6 space-y-0.5">
                     {wlist.map((w: any, i: number) => (
