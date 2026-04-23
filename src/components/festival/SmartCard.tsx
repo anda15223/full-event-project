@@ -301,6 +301,44 @@ export function SmartCard({
     reload();
   };
 
+  // Mark a validation warning as intentional / not-applicable, with the user's reason.
+  const dismissWarning = async (f: SFile, field: string, currentReason?: string | null) => {
+    const reason = window.prompt(
+      `Why is "${field}" not actually missing? (a short note, e.g. "this PDF covers all containers")`,
+      currentReason || "",
+    );
+    if (reason === null) return; // cancelled
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      toast.error("Reason required to dismiss a warning");
+      return;
+    }
+    const meta = (f.meta || {}) as Record<string, any>;
+    const dismissed = { ...(meta.dismissed_warnings || {}), [field]: trimmed };
+    const { error } = await (supabase as any)
+      .from("smart_files")
+      .update({ meta: { ...meta, dismissed_warnings: dismissed } })
+      .eq("id", f.id);
+    if (error) toast.error("Save failed");
+    else {
+      toast.success("Warning marked as resolved");
+      reload();
+    }
+  };
+
+  // Restore (un-dismiss) a previously-dismissed warning.
+  const restoreWarning = async (f: SFile, field: string) => {
+    const meta = (f.meta || {}) as Record<string, any>;
+    const dismissed = { ...(meta.dismissed_warnings || {}) };
+    delete dismissed[field];
+    const { error } = await (supabase as any)
+      .from("smart_files")
+      .update({ meta: { ...meta, dismissed_warnings: dismissed } })
+      .eq("id", f.id);
+    if (error) toast.error("Save failed");
+    else reload();
+  };
+
   if (loading) {
     return (
       <Card className="p-5 flex items-center justify-center text-muted-foreground gap-2">
