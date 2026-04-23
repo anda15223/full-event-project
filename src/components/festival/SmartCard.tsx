@@ -94,6 +94,7 @@ export function SmartCard({
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [chatRefreshKey, setChatRefreshKey] = useState(0);
   // Snapshot taken when entering edit mode, used to revert on cancel
   const [snapshot, setSnapshot] = useState<{ sections: SSection[]; lines: SLine[]; todos: STodo[] } | null>(null);
   // Track pending DB operations made during edit mode
@@ -398,12 +399,13 @@ export function SmartCard({
         }).select().single();
         if (fErr || !fileRow) { toast.error("Could not save file"); continue; }
 
-        // Trigger AI extraction
+        // Trigger AI extraction (DRY RUN — produces a proposal the user must Apply)
         setExtracting(true);
         try {
           const { data, error } = await supabase.functions.invoke("smart-card-extract", {
             body: {
               action: "extract",
+              dry_run: true,
               file_id: fileRow.id,
               card_id: card.id,
               card_key: cardKey,
@@ -415,15 +417,13 @@ export function SmartCard({
             },
           });
           if (error) throw error;
-          const wcount = Array.isArray(data?.warnings) ? data.warnings.length : 0;
-          if (wcount > 0) {
-            toast.warning(
-              `AI extracted ${data?.sections_created || 0} sections — ${wcount} issue${wcount === 1 ? "" : "s"} need attention`,
-              { description: data.warnings.slice(0, 3).map((w: any) => `• ${w.message}`).join("\n") },
-            );
-          } else {
-            toast.success(`AI extracted ${data?.sections_created || 0} sections from ${file.name}`);
-          }
+          const proposed = data?.sections_proposed || 0;
+          toast.success(
+            `AI read ${file.name} — ${proposed} section(s) proposed. Review and click Apply.`,
+            { description: "The summary is also posted in the chat below." },
+          );
+          // Bump the chat refresh key so the new assistant message shows up
+          setChatRefreshKey(k => k + 1);
         } catch (e: any) {
           toast.error(`AI extract failed: ${e.message || e}`);
         } finally {
@@ -433,6 +433,48 @@ export function SmartCard({
       await reload();
     } finally {
       setUploading(false);
+    }
+  };
+
+  const applyProposal = async (f: SFile) => {
+    if (!card) return;
+    try {
+      const { error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "apply_proposal",
+          file_id: f.id,
+          card_id: card.id,
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+        },
+      });
+      if (error) throw error;
+      toast.success("Proposal applied — sections added to the card");
+      setChatRefreshKey(k => k + 1);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Apply failed: ${e.message || e}`);
+    }
+  };
+
+  const discardProposal = async (f: SFile) => {
+    if (!card) return;
+    if (!confirm("Discard this AI proposal? The file will stay attached but no sections will be created.")) return;
+    try {
+      const { error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "discard_proposal",
+          file_id: f.id,
+          card_id: card.id,
+        },
+      });
+      if (error) throw error;
+      toast.success("Proposal discarded");
+      setChatRefreshKey(k => k + 1);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Discard failed: ${e.message || e}`);
     }
   };
 
@@ -663,6 +705,16 @@ export function SmartCard({
                     </Badge>
                   )}
                   {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
+                  {f.parse_status === "preview" && (
+                    <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300/40">
+                      Pending review
+                    </Badge>
+                  )}
+                  {f.parse_status === "discarded" && (
+                    <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-muted text-muted-foreground border-border">
+                      Discarded
+                    </Badge>
+                  )}
                   {f.ai_summary && (
                     <button
                       onClick={() => setOpenSummary(p => ({ ...p, [f.id]: !p[f.id] }))}
@@ -752,6 +804,62 @@ export function SmartCard({
                       </li>
                     ))}
                   </ul>
+                )}
+                {/* Pending AI proposal — preview + Apply / Discard */}
+                {f.parse_status === "preview" && f.meta?.proposal && (
+                  <div className="ml-6 mt-2 rounded-md border-2 border-violet-300 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-950/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                        <Sparkles className="h-3 w-3" /> AI proposal — review before applying
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => discardProposal(f)}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Discard
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => applyProposal(f)}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Apply
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {(f.meta.proposal.sections || []).map((s: any, si: number) => (
+                        <div key={si} className="rounded border border-violet-200/70 dark:border-violet-900/50 bg-background/60 p-2">
+                          <div className="text-xs font-semibold text-foreground mb-1">
+                            {s.title}{" "}
+                            <span className="text-muted-foreground font-normal">
+                              · {(s.lines || []).length} line{(s.lines || []).length === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                          {(s.lines || []).length > 0 && (
+                            <ul className="space-y-0.5">
+                              {(s.lines || []).slice(0, 8).map((l: any, li: number) => (
+                                <li key={li} className="text-[11px] text-foreground/80 leading-snug">
+                                  <span className="font-medium">{l.label}</span>
+                                  {l.value && <span>: {l.value}</span>}
+                                  {l.quantity && <span className="text-muted-foreground"> × {l.quantity}</span>}
+                                  {l.notes && <span className="text-muted-foreground italic"> — {l.notes}</span>}
+                                </li>
+                              ))}
+                              {(s.lines || []).length > 8 && (
+                                <li className="text-[10px] text-muted-foreground italic">
+                                  …and {(s.lines || []).length - 8} more
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -892,7 +1000,7 @@ export function SmartCard({
 
       {/* AI chat */}
       {card && (
-        <SmartCardChat cardId={card.id} cardTitle={title} onMutated={reload} />
+        <SmartCardChat cardId={card.id} cardTitle={title} onMutated={reload} refreshKey={chatRefreshKey} />
       )}
 
       {/* Delete file confirmation */}
