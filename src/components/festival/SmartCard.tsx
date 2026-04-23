@@ -705,6 +705,16 @@ export function SmartCard({
                     </Badge>
                   )}
                   {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
+                  {f.parse_status === "preview" && (
+                    <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300/40">
+                      Pending review
+                    </Badge>
+                  )}
+                  {f.parse_status === "discarded" && (
+                    <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-muted text-muted-foreground border-border">
+                      Discarded
+                    </Badge>
+                  )}
                   {f.ai_summary && (
                     <button
                       onClick={() => setOpenSummary(p => ({ ...p, [f.id]: !p[f.id] }))}
@@ -794,6 +804,62 @@ export function SmartCard({
                       </li>
                     ))}
                   </ul>
+                )}
+                {/* Pending AI proposal — preview + Apply / Discard */}
+                {f.parse_status === "preview" && f.meta?.proposal && (
+                  <div className="ml-6 mt-2 rounded-md border-2 border-violet-300 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-950/30 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                        <Sparkles className="h-3 w-3" /> AI proposal — review before applying
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => discardProposal(f)}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Discard
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => applyProposal(f)}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Apply
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {(f.meta.proposal.sections || []).map((s: any, si: number) => (
+                        <div key={si} className="rounded border border-violet-200/70 dark:border-violet-900/50 bg-background/60 p-2">
+                          <div className="text-xs font-semibold text-foreground mb-1">
+                            {s.title}{" "}
+                            <span className="text-muted-foreground font-normal">
+                              · {(s.lines || []).length} line{(s.lines || []).length === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                          {(s.lines || []).length > 0 && (
+                            <ul className="space-y-0.5">
+                              {(s.lines || []).slice(0, 8).map((l: any, li: number) => (
+                                <li key={li} className="text-[11px] text-foreground/80 leading-snug">
+                                  <span className="font-medium">{l.label}</span>
+                                  {l.value && <span>: {l.value}</span>}
+                                  {l.quantity && <span className="text-muted-foreground"> × {l.quantity}</span>}
+                                  {l.notes && <span className="text-muted-foreground italic"> — {l.notes}</span>}
+                                </li>
+                              ))}
+                              {(s.lines || []).length > 8 && (
+                                <li className="text-[10px] text-muted-foreground italic">
+                                  …and {(s.lines || []).length - 8} more
+                                </li>
+                              )}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             );
