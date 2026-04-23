@@ -317,7 +317,46 @@ async function extractFromFile({
   for (const s of extracted.sections || []) sectionsToCreate.push(s);
   extracted.sections = sectionsToCreate;
 
-  // Insert sections + lines
+  // ---- Per-card validation: flag missing required info ----
+  const warnings = validateExtraction(card_key, extracted.sections || []);
+
+  // === DRY RUN: store the proposal but DO NOT create sections/lines yet ===
+  if (dry_run) {
+    await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+      parse_status: "preview",
+      ai_summary: extracted.summary || null,
+      warnings,
+      meta: { proposal: extracted, proposed_at: new Date().toISOString() },
+    });
+
+    // Post the AI summary into the card's chat thread so it shows up in the chat box
+    try {
+      const summaryMsg =
+        `📄 **${file_name || "Uploaded file"}** — AI read complete\n\n` +
+        `${(extracted.summary || "(no summary)")}\n\n` +
+        `**Proposed structure:** ${(extracted.sections || []).length} section(s), ` +
+        `${(extracted.sections || []).reduce((n: number, s: any) => n + (s.lines?.length || 0), 0)} line(s).\n\n` +
+        `Review the preview on the card and click **Apply** to add it, or **Discard** to throw it away.`;
+      await sb("POST", "smart_chat_messages", {
+        card_id,
+        role: "assistant",
+        content: summaryMsg,
+      });
+    } catch (e) {
+      console.error("chat post failed:", e);
+    }
+
+    return {
+      ok: true,
+      preview: true,
+      sections_proposed: (extracted.sections || []).length,
+      summary: extracted.summary,
+      proposal: extracted,
+      warnings,
+    };
+  }
+
+  // === REAL WRITE: insert sections + lines ===
   // Find current max order_index in card
   const existing = (await sb(
     "GET",
@@ -353,13 +392,11 @@ async function extractFromFile({
     created.push(section);
   }
 
-  // ---- Per-card validation: flag missing required info ----
-  const warnings = validateExtraction(card_key, extracted.sections || []);
-
   await sb("PATCH", `smart_files?id=eq.${file_id}`, {
     parse_status: "done",
     ai_summary: extracted.summary || null,
     warnings,
+    meta: {},
   });
 
   // Feed Brain — remember every line as a soft pattern for next festival
@@ -401,6 +438,132 @@ async function extractFromFile({
   }
 
   return { ok: true, sections_created: created.length, summary: extracted.summary, warnings };
+}
+
+// Apply a previously-stored proposal (from dry_run) to the card.
+async function applyProposal({ file_id, card_id, card_key, festival_id, concept_id }: any) {
+  const fileRows = (await sb("GET", `smart_files?id=eq.${file_id}&select=*`)) as any[];
+  const file = fileRows?.[0];
+  if (!file) throw new Error("file not found");
+  const proposal = file?.meta?.proposal;
+  if (!proposal || !Array.isArray(proposal.sections)) {
+    throw new Error("No pending proposal to apply for this file");
+  }
+
+  const existing = (await sb(
+    "GET",
+    `smart_sections?card_id=eq.${card_id}&select=order_index&order=order_index.desc&limit=1`,
+  )) as Array<{ order_index: number }>;
+  let order = (existing?.[0]?.order_index ?? -1) + 1;
+
+  const created: any[] = [];
+  for (const s of proposal.sections) {
+    const [section] = await sb("POST", "smart_sections", {
+      card_id,
+      title: s.title,
+      description: s.description ?? null,
+      order_index: order++,
+      source: "ai",
+      source_file_id: file_id,
+    });
+    let lineOrder = 0;
+    if (Array.isArray(s.lines) && s.lines.length) {
+      const lines = s.lines.map((l: any) => ({
+        section_id: section.id,
+        label: l.label ?? null,
+        value: l.value ?? null,
+        quantity: l.quantity ?? null,
+        notes: l.notes ?? null,
+        status: l.status ?? null,
+        order_index: lineOrder++,
+        source: "ai",
+        source_file_id: file_id,
+      }));
+      await sb("POST", "smart_lines", lines);
+    }
+    created.push(section);
+  }
+
+  // Clear the proposal, mark file as done
+  const meta = { ...(file.meta || {}) };
+  delete meta.proposal;
+  delete meta.proposed_at;
+  await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+    parse_status: "done",
+    meta,
+  });
+
+  // Post a confirmation message to the chat
+  try {
+    await sb("POST", "smart_chat_messages", {
+      card_id,
+      role: "assistant",
+      content: `✅ Applied ${created.length} section(s) from **${file.filename || "the uploaded file"}** to the card.`,
+    });
+  } catch (e) {
+    console.error("chat post failed:", e);
+  }
+
+  // Feed Brain
+  try {
+    const brainRows: any[] = [];
+    for (const s of proposal.sections) {
+      for (const l of s.lines || []) {
+        if (!l.label) continue;
+        brainRows.push({
+          key_name: `${card_key}:${(s.title || "").toLowerCase()}:${l.label.toLowerCase()}`,
+          display_name: `${s.title} → ${l.label}`,
+          category: card_key,
+          source: "ai_extraction",
+          scope: concept_id ? "concept" : "festival",
+          festival_id,
+          last_seen_festival_id: festival_id,
+          subject_type: card_key,
+          subject_id: concept_id || festival_id,
+          content: [l.value, l.quantity, l.notes].filter(Boolean).join(" — "),
+          structured_data: {
+            section: s.title,
+            label: l.label,
+            value: l.value,
+            quantity: l.quantity,
+            notes: l.notes,
+          },
+          tags: [card_key, s.title].filter(Boolean),
+          frequency: 1,
+          confidence: 0.6,
+        });
+      }
+    }
+    if (brainRows.length) await sb("POST", "brain_entries", brainRows);
+  } catch (e) {
+    console.error("brain feed failed:", e);
+  }
+
+  return { ok: true, sections_created: created.length };
+}
+
+// Discard a pending proposal without writing anything.
+async function discardProposal({ file_id, card_id }: any) {
+  const fileRows = (await sb("GET", `smart_files?id=eq.${file_id}&select=*`)) as any[];
+  const file = fileRows?.[0];
+  if (!file) throw new Error("file not found");
+  const meta = { ...(file.meta || {}) };
+  delete meta.proposal;
+  delete meta.proposed_at;
+  await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+    parse_status: "discarded",
+    meta,
+  });
+  try {
+    await sb("POST", "smart_chat_messages", {
+      card_id,
+      role: "assistant",
+      content: `🗑️ Discarded the AI proposal from **${file.filename || "the uploaded file"}**. The file is still attached.`,
+    });
+  } catch (e) {
+    console.error("chat post failed:", e);
+  }
+  return { ok: true };
 }
 
 /* ---------------- Validators per card_key ---------------- */
