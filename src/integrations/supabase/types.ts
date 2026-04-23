@@ -1393,6 +1393,41 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_chat_messages: {
+        Row: {
+          card_id: string
+          content: string
+          created_at: string
+          id: string
+          role: string
+          tool_calls: Json | null
+        }
+        Insert: {
+          card_id: string
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          tool_calls?: Json | null
+        }
+        Update: {
+          card_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          tool_calls?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_chat_messages_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "smart_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       smart_files: {
         Row: {
           ai_summary: string | null
@@ -1557,6 +1592,79 @@ export type Database = {
             columns: ["card_id"]
             isOneToOne: false
             referencedRelation: "smart_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_todos: {
+        Row: {
+          card_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          meta: Json
+          order_index: number
+          owner: string | null
+          related_line_id: string | null
+          related_section_id: string | null
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meta?: Json
+          order_index?: number
+          owner?: string | null
+          related_line_id?: string | null
+          related_section_id?: string | null
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meta?: Json
+          order_index?: number
+          owner?: string | null
+          related_line_id?: string | null
+          related_section_id?: string | null
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_todos_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "smart_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_todos_related_line_id_fkey"
+            columns: ["related_line_id"]
+            isOneToOne: false
+            referencedRelation: "smart_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_todos_related_section_id_fkey"
+            columns: ["related_section_id"]
+            isOneToOne: false
+            referencedRelation: "smart_sections"
             referencedColumns: ["id"]
           },
         ]
