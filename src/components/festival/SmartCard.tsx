@@ -519,6 +519,54 @@ export function SmartCard({
           </div>
         )}
       </div>
+
+      {/* Todos */}
+      {todos.length > 0 && (
+        <div className="px-5 py-3 border-t border-border/60 bg-amber-50/40 dark:bg-amber-950/10">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+            ✓ Todos
+          </p>
+          <ul className="space-y-1.5">
+            {todos.map(t => {
+              const overdue = t.due_date && t.status !== "done" && new Date(t.due_date) < new Date(new Date().toDateString());
+              return (
+                <li key={t.id} className="flex items-start gap-2 text-sm group">
+                  <input
+                    type="checkbox"
+                    checked={t.status === "done"}
+                    onChange={() => toggleTodo(t.id, t.status)}
+                    className="mt-1 shrink-0 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className={cn("leading-snug", t.status === "done" && "line-through text-muted-foreground")}>
+                      {t.title}
+                    </div>
+                    {(t.due_date || t.owner) && (
+                      <div className={cn("text-[11px] mt-0.5", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                        {t.due_date && <span>📅 {t.due_date}</span>}
+                        {t.due_date && t.owner && <span> · </span>}
+                        {t.owner && <span>👤 {t.owner}</span>}
+                        {overdue && <span className="ml-1">· overdue</span>}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => deleteTodo(t.id)}
+                    className="opacity-0 group-hover:opacity-100 text-destructive shrink-0"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* AI chat */}
+      {card && (
+        <SmartCardChat cardId={card.id} cardTitle={title} onMutated={reload} />
+      )}
     </Card>
   );
 }
