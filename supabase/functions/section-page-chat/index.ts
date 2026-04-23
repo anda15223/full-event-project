@@ -161,15 +161,53 @@ async function buildContext(
 
   let cardSummary: any = null;
   if (card) {
-    const { data: secs } = await supabase
-      .from("smart_sections")
-      .select("id,title")
-      .eq("card_id", card.id)
-      .order("order_index");
+    const [{ data: secs }, { data: files }] = await Promise.all([
+      supabase
+        .from("smart_sections")
+        .select("id,title")
+        .eq("card_id", card.id)
+        .order("order_index"),
+      supabase
+        .from("smart_files")
+        .select("id, filename, warnings, meta")
+        .eq("card_id", card.id)
+        .order("uploaded_at", { ascending: false }),
+    ]);
+    const sectionIds = (secs || []).map((s: any) => s.id);
+    let lines: any[] = [];
+    if (sectionIds.length) {
+      const { data: ls } = await supabase
+        .from("smart_lines")
+        .select("id, section_id, label, value, quantity, notes, due_date, meta")
+        .in("section_id", sectionIds)
+        .order("order_index");
+      lines = ls || [];
+    }
     cardSummary = {
       id: card.id,
       title: card.title,
       sections: (secs || []).map((s: any) => ({ id: s.id, title: s.title })),
+      lines: lines.map((l: any) => ({
+        id: l.id,
+        section_id: l.section_id,
+        section_title: (secs || []).find((s: any) => s.id === l.section_id)?.title,
+        label: l.label,
+        value: l.value,
+        quantity: l.quantity,
+        notes: l.notes,
+        due_date: l.due_date,
+      })),
+      files: (files || []).map((f: any) => {
+        const dismissed = (f.meta?.dismissed_warnings || {}) as Record<string, string>;
+        const warnings = (Array.isArray(f.warnings) ? f.warnings : []).map((w: any) => ({
+          field: w.field,
+          message: w.message,
+          severity: w.severity,
+          dismissed: !!dismissed[w.field],
+          dismiss_reason: dismissed[w.field] || null,
+        }));
+        return { id: f.id, filename: f.filename, warnings };
+      }),
     };
   }
 
