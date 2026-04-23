@@ -152,7 +152,29 @@ const STRUCTURE_SCHEMA = {
 };
 
 const CARD_PROMPTS: Record<string, string> = {
-  equipment_list: "This is an equipment list. Extract every equipment item, group by logical category (e.g. cooking, prep, serving, small wares).",
+  equipment_list: `This is an EQUIPMENT LIST (supplier offer, packing list, photo of a handwritten list, kitchen inventory, or rental quote).
+Perform careful OCR — read EVERY single item, even if the document is a phone photo or scan.
+
+Organise into these sections (omit only if truly nothing applies):
+
+1. "Supplier / source" — lines: supplier or shop name, contact person, phone, email, document date, quote/order number.
+2. "Cooking equipment" — stoves, ovens, fryers, grills, induction plates, gas burners, microwaves, salamanders, etc.
+3. "Prep equipment" — tables, cutting boards, mixers, slicers, blenders, scales, peelers.
+4. "Cold equipment" — fridges, freezers, ice machines, cold tables (only if mixed in this list — otherwise skip; cooling has its own card).
+5. "Serving & front-of-house" — counters, heat lamps, display units, trays, baskets.
+6. "Small wares & tools" — knives, pots, pans, ladles, tongs, containers, GN trays, gloves, aprons.
+7. "Consumables" — packaging, cups, napkins, gas bottles, cleaning supplies.
+8. "Pricing" — one line per cost item: label = item, value = unit price (with currency), quantity = qty, notes = total / VAT.
+9. "Deadlines & delivery" — order deadline, delivery date, pickup/return date — with due_date in ISO format if parseable.
+
+For EVERY line, fill these fields when present in the document:
+  • label   = item name (e.g. "Gas burner 2-ring")
+  • value   = size/spec/model (e.g. "70x70 cm", "10 kW", "model XYZ")
+  • quantity = how many (e.g. "4", "2 stk", "1 set")
+  • notes   = condition (new/used), brand, owner ("ours" / "rented" / "to buy"), or any extra detail
+  • status  = "ordered" / "delivered" / "to_buy" / "have" if discoverable
+
+Be exhaustive. Do not summarise — list every distinct item on its own line so the user can edit/check off each one.`,
   cooling_storage: `This is a cooling / cold storage / freezer / container offer or booking document.
 Extract EVERY relevant piece of data, organised into these sections (omit a section only if truly nothing applies):
 
