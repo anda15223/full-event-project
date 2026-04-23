@@ -12,6 +12,10 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SmartCardChat } from "./SmartCardChat";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type SmartCardProps = {
   /** Stable key for this card type, e.g. 'equipment_list','cooling_storage','safety' */
