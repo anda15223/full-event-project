@@ -894,6 +894,50 @@ export function SmartCard({
       {card && (
         <SmartCardChat cardId={card.id} cardTitle={title} onMutated={reload} />
       )}
+
+      {/* Delete file confirmation */}
+      <AlertDialog open={!!fileToDelete} onOpenChange={(o) => !o && setFileToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this file?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  <span className="font-medium text-foreground">{fileToDelete?.filename}</span> will be permanently removed.
+                </p>
+                <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer p-3 rounded-md border border-border bg-muted/30">
+                  <input
+                    type="checkbox"
+                    checked={cascadeDeleteData}
+                    onChange={(e) => setCascadeDeleteData(e.target.checked)}
+                    className="mt-0.5 cursor-pointer"
+                  />
+                  <span>
+                    <span className="font-medium">Also delete all data extracted from this file</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Removes every section and line that was created from this upload. Manual entries are kept.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (fileToDelete) {
+                  performDeleteFile(fileToDelete, cascadeDeleteData);
+                  setFileToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
