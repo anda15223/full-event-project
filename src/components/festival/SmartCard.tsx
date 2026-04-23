@@ -257,18 +257,122 @@ export function SmartCard({
     }
   };
 
-  // ---- Todo CRUD ----
-  const toggleTodo = async (id: string, current: string) => {
+  // ---- Todo CRUD (deferred when in edit mode) ----
+  const toggleTodo = (id: string, current: string) => {
     const next = current === "done" ? "open" : "done";
     setTodos(prev => prev.map(t => t.id === id ? { ...t, status: next } : t));
-    const { error } = await (supabase as any).from("smart_todos").update({ status: next }).eq("id", id);
-    if (error) { toast.error("Save failed"); reload(); }
+    if (editMode) {
+      setPending(p => ({ ...p, todoUpdates: { ...p.todoUpdates, [id]: { ...(p.todoUpdates[id] || {}), status: next } } }));
+    } else {
+      // Outside edit mode, persist immediately (checkbox toggle is a quick action)
+      (supabase as any).from("smart_todos").update({ status: next }).eq("id", id).then(({ error }: any) => {
+        if (error) { toast.error("Save failed"); reload(); }
+      });
+    }
   };
-  const deleteTodo = async (id: string) => {
+  const deleteTodo = (id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
-    const { error } = await (supabase as any).from("smart_todos").delete().eq("id", id);
-    if (error) { toast.error("Delete failed"); reload(); }
+    if (editMode) {
+      setPending(p => ({ ...p, todoDeletes: [...p.todoDeletes, id] }));
+    } else {
+      (supabase as any).from("smart_todos").delete().eq("id", id).then(({ error }: any) => {
+        if (error) { toast.error("Delete failed"); reload(); }
+      });
+    }
   };
+
+  // ---- Save / Cancel ----
+  const enterEditMode = () => {
+    setSnapshot({ sections: [...sections], lines: [...lines], todos: [...todos] });
+    resetPending();
+    setEditMode(true);
+  };
+
+  const cancelEdit = () => {
+    if (hasUnsavedChanges() && !confirm("Discard unsaved changes?")) return;
+    if (snapshot) {
+      setSections(snapshot.sections);
+      setLines(snapshot.lines);
+      setTodos(snapshot.todos);
+    }
+    resetPending();
+    setSnapshot(null);
+    setEditMode(false);
+  };
+
+  const saveChanges = async () => {
+    if (!card) return;
+    if (!hasUnsavedChanges()) {
+      setEditMode(false);
+      setSnapshot(null);
+      return;
+    }
+    setSaving(true);
+    try {
+      // 1. Insert new sections (draft id -> real id mapping)
+      const sectionIdMap: Record<string, string> = {};
+      if (pending.sectionInserts.length) {
+        const rows = pending.sectionInserts.map(s => ({
+          card_id: card.id, title: s.title, description: s.description,
+          order_index: s.order_index, source: s.source,
+        }));
+        const { data, error } = await (supabase as any).from("smart_sections").insert(rows).select();
+        if (error) throw error;
+        pending.sectionInserts.forEach((draft, i) => { sectionIdMap[draft.id] = data[i].id; });
+      }
+      // 2. Update existing sections
+      for (const [id, patch] of Object.entries(pending.sectionUpdates)) {
+        const { error } = await (supabase as any).from("smart_sections").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      // 3. Delete sections
+      if (pending.sectionDeletes.length) {
+        const { error } = await (supabase as any).from("smart_sections").delete().in("id", pending.sectionDeletes);
+        if (error) throw error;
+      }
+      // 4. Insert new lines (resolve draft section ids)
+      if (pending.lineInserts.length) {
+        const rows = pending.lineInserts.map(l => ({
+          section_id: sectionIdMap[l.section_id] || l.section_id,
+          label: l.label, value: l.value, quantity: l.quantity, notes: l.notes,
+          status: l.status, owner: l.owner, due_date: l.due_date,
+          order_index: l.order_index, source: l.source,
+        }));
+        const { error } = await (supabase as any).from("smart_lines").insert(rows);
+        if (error) throw error;
+      }
+      // 5. Update existing lines
+      for (const [id, patch] of Object.entries(pending.lineUpdates)) {
+        const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      // 6. Delete lines
+      if (pending.lineDeletes.length) {
+        const { error } = await (supabase as any).from("smart_lines").delete().in("id", pending.lineDeletes);
+        if (error) throw error;
+      }
+      // 7. Update todos
+      for (const [id, patch] of Object.entries(pending.todoUpdates)) {
+        const { error } = await (supabase as any).from("smart_todos").update(patch).eq("id", id);
+        if (error) throw error;
+      }
+      // 8. Delete todos
+      if (pending.todoDeletes.length) {
+        const { error } = await (supabase as any).from("smart_todos").delete().in("id", pending.todoDeletes);
+        if (error) throw error;
+      }
+      toast.success("Saved");
+      resetPending();
+      setSnapshot(null);
+      setEditMode(false);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Save failed: ${e.message || e}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleUpload = async (fileList: FileList | null) => {
     if (!fileList || !card) return;
     setUploading(true);
