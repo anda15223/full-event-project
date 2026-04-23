@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SmartCardChat } from "./SmartCardChat";
 
 export type SmartCardProps = {
   /** Stable key for this card type, e.g. 'equipment_list','cooling_storage','safety' */
@@ -46,7 +47,10 @@ type SFile = {
   parse_status: string; parse_error: string | null; uploaded_at: string;
   warnings: SValidationWarning[] | null;
 };
-
+type STodo = {
+  id: string; title: string; description: string | null; due_date: string | null;
+  owner: string | null; status: string; source: string; order_index: number;
+};
 const sourceColor = (s: string) => {
   switch (s) {
     case "ai": return "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300/40";
@@ -74,6 +78,7 @@ export function SmartCard({
   const [sections, setSections] = useState<SSection[]>([]);
   const [lines, setLines] = useState<SLine[]>([]);
   const [files, setFiles] = useState<SFile[]>([]);
+  const [todos, setTodos] = useState<STodo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
@@ -105,12 +110,14 @@ export function SmartCard({
       }
       setCard(c);
 
-      const [{ data: secs }, { data: fls }] = await Promise.all([
+      const [{ data: secs }, { data: fls }, { data: tds }] = await Promise.all([
         (supabase as any).from("smart_sections").select("*").eq("card_id", c.id).order("order_index"),
         (supabase as any).from("smart_files").select("*").eq("card_id", c.id).order("uploaded_at", { ascending: false }),
+        (supabase as any).from("smart_todos").select("*").eq("card_id", c.id).order("order_index"),
       ]);
       setSections(secs || []);
       setFiles(fls || []);
+      setTodos(tds || []);
 
       if (secs && secs.length) {
         const { data: lns } = await (supabase as any)
@@ -175,7 +182,18 @@ export function SmartCard({
     if (error) { toast.error("Delete failed"); reload(); }
   };
 
-  // ---- File upload + AI extract ----
+  // ---- Todo CRUD ----
+  const toggleTodo = async (id: string, current: string) => {
+    const next = current === "done" ? "open" : "done";
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, status: next } : t));
+    const { error } = await (supabase as any).from("smart_todos").update({ status: next }).eq("id", id);
+    if (error) { toast.error("Save failed"); reload(); }
+  };
+  const deleteTodo = async (id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+    const { error } = await (supabase as any).from("smart_todos").delete().eq("id", id);
+    if (error) { toast.error("Delete failed"); reload(); }
+  };
   const handleUpload = async (fileList: FileList | null) => {
     if (!fileList || !card) return;
     setUploading(true);
@@ -501,6 +519,54 @@ export function SmartCard({
           </div>
         )}
       </div>
+
+      {/* Todos */}
+      {todos.length > 0 && (
+        <div className="px-5 py-3 border-t border-border/60 bg-amber-50/40 dark:bg-amber-950/10">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+            ✓ Todos
+          </p>
+          <ul className="space-y-1.5">
+            {todos.map(t => {
+              const overdue = t.due_date && t.status !== "done" && new Date(t.due_date) < new Date(new Date().toDateString());
+              return (
+                <li key={t.id} className="flex items-start gap-2 text-sm group">
+                  <input
+                    type="checkbox"
+                    checked={t.status === "done"}
+                    onChange={() => toggleTodo(t.id, t.status)}
+                    className="mt-1 shrink-0 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className={cn("leading-snug", t.status === "done" && "line-through text-muted-foreground")}>
+                      {t.title}
+                    </div>
+                    {(t.due_date || t.owner) && (
+                      <div className={cn("text-[11px] mt-0.5", overdue ? "text-destructive font-medium" : "text-muted-foreground")}>
+                        {t.due_date && <span>📅 {t.due_date}</span>}
+                        {t.due_date && t.owner && <span> · </span>}
+                        {t.owner && <span>👤 {t.owner}</span>}
+                        {overdue && <span className="ml-1">· overdue</span>}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => deleteTodo(t.id)}
+                    className="opacity-0 group-hover:opacity-100 text-destructive shrink-0"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {/* AI chat */}
+      {card && (
+        <SmartCardChat cardId={card.id} cardTitle={title} onMutated={reload} />
+      )}
     </Card>
   );
 }
