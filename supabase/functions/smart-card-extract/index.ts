@@ -142,7 +142,23 @@ const STRUCTURE_SCHEMA = {
 
 const CARD_PROMPTS: Record<string, string> = {
   equipment_list: "This is an equipment list. Extract every equipment item, group by logical category (e.g. cooking, prep, serving, small wares).",
-  cooling_storage: "This relates to cold/freezer storage and container booking. Extract: container booking (supplier, size, dates, ref, price), cooling modes & temperatures, delivery details.",
+  cooling_storage: `This is a cooling / cold storage / freezer / container offer or booking document.
+Extract EVERY relevant piece of data, organised into these sections (omit a section only if truly nothing applies):
+
+1. "Supplier" — lines: supplier name, contact person, phone, email, address.
+2. "Units ordered" — ONE LINE PER UNIT (fridge, freezer, cold container, ice machine etc.). For each line set:
+     label = unit type (e.g. "Cold container", "Upright freezer", "Display fridge"),
+     value = size / capacity / dimensions (e.g. "20 ft", "600 L", "1200x600x2000mm"),
+     quantity = how many,
+     notes = temperature range and any model info.
+3. "Pricing" — one line per cost item: label = item, value = price (with currency), notes = unit price / VAT info.
+4. "Deadlines" — TWO lines minimum:
+     • label "Invoice deadline", value = payment due date, due_date = ISO date if you can parse it.
+     • label "Delivery deadline", value = on-site delivery date, due_date = ISO date if you can parse it.
+     Add extra deadline lines if more dates appear (pickup, return, setup-by).
+5. "Delivery plan" — lines describing: delivery address, drop-off time window, contact on-site, vehicle/access notes, return/pickup plan.
+
+Be exhaustive. Prices, quantities and dates are MANDATORY when present in the document — never skip them.`,
   cooking_equipment: "Extract cooking equipment per concept. Group into categories: cooking appliances, prep tools, serving equipment, small wares, spare parts.",
   safety: "This is a safety / compliance document. Extract sections like Fire safety, Gas safety, Food hygiene, Allergens, Certificates & permits, Risk assessment, Emergency contacts, Inspection checklist, Expiry dates.",
   setup_timeline: "This is a setup timeline / schedule. Extract steps and group by phase (Pre-festival, Build days D-3/D-2/D-1, Festival days, Teardown). Include owners and times when present.",
