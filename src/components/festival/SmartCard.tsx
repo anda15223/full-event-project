@@ -211,7 +211,15 @@ export function SmartCard({
             },
           });
           if (error) throw error;
-          toast.success(`AI extracted ${data?.sections_created || 0} sections from ${file.name}`);
+          const wcount = Array.isArray(data?.warnings) ? data.warnings.length : 0;
+          if (wcount > 0) {
+            toast.warning(
+              `AI extracted ${data?.sections_created || 0} sections — ${wcount} issue${wcount === 1 ? "" : "s"} need attention`,
+              { description: data.warnings.slice(0, 3).map((w: any) => `• ${w.message}`).join("\n") },
+            );
+          } else {
+            toast.success(`AI extracted ${data?.sections_created || 0} sections from ${file.name}`);
+          }
         } catch (e: any) {
           toast.error(`AI extract failed: ${e.message || e}`);
         } finally {
