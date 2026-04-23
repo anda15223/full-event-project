@@ -47,7 +47,10 @@ type SFile = {
   parse_status: string; parse_error: string | null; uploaded_at: string;
   warnings: SValidationWarning[] | null;
 };
-
+type STodo = {
+  id: string; title: string; description: string | null; due_date: string | null;
+  owner: string | null; status: string; source: string; order_index: number;
+};
 const sourceColor = (s: string) => {
   switch (s) {
     case "ai": return "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300/40";
