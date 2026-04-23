@@ -182,7 +182,18 @@ export function SmartCard({
     if (error) { toast.error("Delete failed"); reload(); }
   };
 
-  // ---- File upload + AI extract ----
+  // ---- Todo CRUD ----
+  const toggleTodo = async (id: string, current: string) => {
+    const next = current === "done" ? "open" : "done";
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, status: next } : t));
+    const { error } = await (supabase as any).from("smart_todos").update({ status: next }).eq("id", id);
+    if (error) { toast.error("Save failed"); reload(); }
+  };
+  const deleteTodo = async (id: string) => {
+    setTodos(prev => prev.filter(t => t.id !== id));
+    const { error } = await (supabase as any).from("smart_todos").delete().eq("id", id);
+    if (error) { toast.error("Delete failed"); reload(); }
+  };
   const handleUpload = async (fileList: FileList | null) => {
     if (!fileList || !card) return;
     setUploading(true);
