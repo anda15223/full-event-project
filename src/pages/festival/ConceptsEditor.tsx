@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { SmartCard } from "@/components/festival/SmartCard";
 
 /* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
 
