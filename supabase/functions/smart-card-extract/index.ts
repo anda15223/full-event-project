@@ -250,9 +250,9 @@ async function extractFromFile({
 - If the document is a scan / image / unclear, do your best OCR and still write the summary with whatever you can read.`;
 
   let userContent: any;
-  const text = await downloadFileText(file_url, mime_type || "");
+  const text = await downloadFileText(file_url, mime_type || "", file_name || "");
   if (text) {
-    userContent = `${cardPrompt}${summaryInstruction}\n\nDocument content:\n${text.slice(0, 60000)}`;
+    userContent = `${cardPrompt}${summaryInstruction}\n\nDocument content (parsed from ${file_name}):\n${text.slice(0, 180000)}`;
   } else {
     // Binary file: send bytes as base64 to Gemini vision (works for PDF + images).
     try {
