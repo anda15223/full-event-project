@@ -1009,6 +1009,15 @@ export default function ConceptsEditor() {
             <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
           </Button>
         </div>
+
+        <SmartCard
+          cardKey="concepts_brain"
+          festivalId={festival.id}
+          title="Concepts AI Brain"
+          subtitle="Upload supplier offers, layouts or photos that cover multiple concepts. AI will summarize and propose sections you can apply."
+          emptyStateWarning={{ label: "No shared concept docs yet", description: "Upload a PDF or image to extract structured info across concepts." }}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {concepts.map((c: any) => (
             <ConceptItem key={c.id} concept={c} onChanged={invalidate} />
