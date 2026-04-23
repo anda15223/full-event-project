@@ -46,6 +46,7 @@ type SFile = {
   mime_type: string | null; size: number | null; ai_summary: string | null;
   parse_status: string; parse_error: string | null; uploaded_at: string;
   warnings: SValidationWarning[] | null;
+  meta?: Record<string, any> | null;
 };
 type STodo = {
   id: string; title: string; description: string | null; due_date: string | null;
@@ -376,18 +377,25 @@ export function SmartCard({
         <div className="px-5 py-3 border-b border-border/50 bg-muted/10 space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Source files</p>
           {files.map(f => {
-            const wlist = Array.isArray(f.warnings) ? f.warnings : [];
-            const errCount = wlist.filter(w => w.severity === "error").length;
+            const rawWarnings = Array.isArray(f.warnings) ? f.warnings : [];
+            const dismissedMap = (f.meta?.dismissed_warnings || {}) as Record<string, string>;
+            const wlist = rawWarnings.map((w: any) => ({
+              ...w,
+              dismissed: !!dismissedMap[w.field],
+              dismiss_reason: dismissedMap[w.field] || null,
+            }));
+            const activeWarnings = wlist.filter((w: any) => !w.dismissed);
+            const errCount = activeWarnings.filter((w: any) => w.severity === "error").length;
             return (
               <div key={f.id} className="space-y-1">
                 <div className="flex items-center gap-2 text-sm group">
                   <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="truncate flex-1">{f.filename}</span>
                   {f.parse_status === "processing" && <Loader2 className="h-3 w-3 animate-spin text-violet-500" />}
-                  {f.parse_status === "done" && wlist.length === 0 && (
+                  {f.parse_status === "done" && activeWarnings.length === 0 && (
                     <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px]", sourceColor("ai"))}>AI parsed ✓</Badge>
                   )}
-                  {f.parse_status === "done" && wlist.length > 0 && (
+                  {f.parse_status === "done" && activeWarnings.length > 0 && (
                     <Badge
                       variant="outline"
                       className={cn(
@@ -397,7 +405,7 @@ export function SmartCard({
                           : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-amber-300/40",
                       )}
                     >
-                      {errCount > 0 ? `${errCount} missing` : `${wlist.length} warning${wlist.length === 1 ? "" : "s"}`}
+                      {errCount > 0 ? `${errCount} missing` : `${activeWarnings.length} warning${activeWarnings.length === 1 ? "" : "s"}`}
                     </Badge>
                   )}
                   {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
@@ -412,16 +420,29 @@ export function SmartCard({
                 </div>
                 {wlist.length > 0 && (
                   <ul className="ml-6 space-y-0.5">
-                    {wlist.map((w, i) => (
+                    {wlist.map((w: any, i: number) => (
                       <li
                         key={i}
                         className={cn(
                           "text-[11px] flex items-start gap-1.5",
-                          w.severity === "error" ? "text-destructive" : "text-amber-700 dark:text-amber-300",
+                          w.dismissed
+                            ? "text-muted-foreground line-through opacity-70"
+                            : w.severity === "error"
+                              ? "text-destructive"
+                              : "text-amber-700 dark:text-amber-300",
                         )}
                       >
-                        <span className="shrink-0 mt-0.5">{w.severity === "error" ? "⛔" : "⚠️"}</span>
-                        <span>{w.message}</span>
+                        <span className="shrink-0 mt-0.5 no-underline">
+                          {w.dismissed ? "✅" : w.severity === "error" ? "⛔" : "⚠️"}
+                        </span>
+                        <span>
+                          {w.message}
+                          {w.dismissed && w.dismiss_reason && (
+                            <span className="ml-1 italic no-underline text-muted-foreground">
+                              — {w.dismiss_reason}
+                            </span>
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ul>

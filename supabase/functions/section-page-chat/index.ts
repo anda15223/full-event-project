@@ -59,7 +59,7 @@ const tools = [
     function: {
       name: "add_card_line",
       description:
-        "Add a line to the SmartCard of this section (only if a SmartCard exists). If section_title is unknown an existing or new section is created.",
+        "Add a NEW line to the SmartCard of this section. Only use when the user explicitly asks to add something new.",
       parameters: {
         type: "object",
         properties: {
@@ -71,6 +71,43 @@ const tools = [
           due_date: { type: "string" },
         },
         required: ["section_title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_card_line",
+      description:
+        "Update an EXISTING SmartCard line by its id (see smart_card.lines in CONTEXT). Only set the fields the user asked to change; omit the rest.",
+      parameters: {
+        type: "object",
+        properties: {
+          line_id: { type: "string" },
+          label: { type: "string" },
+          value: { type: "string" },
+          quantity: { type: "string" },
+          notes: { type: "string" },
+          due_date: { type: "string" },
+        },
+        required: ["line_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "dismiss_file_warning",
+      description:
+        "Mark a validation warning on an uploaded source file as resolved/intentional, with the user's reason. Use when the user EXPLAINS why a 'missing' flag is actually correct (e.g. 'this PDF covers all containers, quantity is intentional'). Identify the warning by file_id + the warning's field name from CONTEXT.smart_card.files[].warnings[].field.",
+      parameters: {
+        type: "object",
+        properties: {
+          file_id: { type: "string" },
+          field: { type: "string", description: "Warning field key, e.g. 'unit_quantity'." },
+          reason: { type: "string", description: "User's explanation in their own words." },
+        },
+        required: ["file_id", "field", "reason"],
       },
     },
   },
@@ -124,15 +161,53 @@ async function buildContext(
 
   let cardSummary: any = null;
   if (card) {
-    const { data: secs } = await supabase
-      .from("smart_sections")
-      .select("id,title")
-      .eq("card_id", card.id)
-      .order("order_index");
+    const [{ data: secs }, { data: files }] = await Promise.all([
+      supabase
+        .from("smart_sections")
+        .select("id,title")
+        .eq("card_id", card.id)
+        .order("order_index"),
+      supabase
+        .from("smart_files")
+        .select("id, filename, warnings, meta")
+        .eq("card_id", card.id)
+        .order("uploaded_at", { ascending: false }),
+    ]);
+    const sectionIds = (secs || []).map((s: any) => s.id);
+    let lines: any[] = [];
+    if (sectionIds.length) {
+      const { data: ls } = await supabase
+        .from("smart_lines")
+        .select("id, section_id, label, value, quantity, notes, due_date, meta")
+        .in("section_id", sectionIds)
+        .order("order_index");
+      lines = ls || [];
+    }
     cardSummary = {
       id: card.id,
       title: card.title,
       sections: (secs || []).map((s: any) => ({ id: s.id, title: s.title })),
+      lines: lines.map((l: any) => ({
+        id: l.id,
+        section_id: l.section_id,
+        section_title: (secs || []).find((s: any) => s.id === l.section_id)?.title,
+        label: l.label,
+        value: l.value,
+        quantity: l.quantity,
+        notes: l.notes,
+        due_date: l.due_date,
+      })),
+      files: (files || []).map((f: any) => {
+        const dismissed = (f.meta?.dismissed_warnings || {}) as Record<string, string>;
+        const warnings = (Array.isArray(f.warnings) ? f.warnings : []).map((w: any) => ({
+          field: w.field,
+          message: w.message,
+          severity: w.severity,
+          dismissed: !!dismissed[w.field],
+          dismiss_reason: dismissed[w.field] || null,
+        }));
+        return { id: f.id, filename: f.filename, warnings };
+      }),
     };
   }
 
@@ -240,6 +315,37 @@ async function executeTool(
       if (error) throw error;
       return { ok: true, line_id: data.id };
     }
+    case "update_card_line": {
+      const lineId = args.line_id;
+      if (!lineId) return { ok: false, error: "line_id required" };
+      const patch: any = {};
+      for (const k of ["label", "value", "quantity", "notes", "due_date"]) {
+        if (args[k] !== undefined) patch[k] = args[k];
+      }
+      if (!Object.keys(patch).length) return { ok: false, error: "Nothing to update." };
+      const { error } = await supabase.from("smart_lines").update(patch).eq("id", lineId);
+      if (error) throw error;
+      return { ok: true, line_id: lineId, updated_fields: Object.keys(patch) };
+    }
+    case "dismiss_file_warning": {
+      const { file_id, field, reason } = args;
+      if (!file_id || !field || !reason)
+        return { ok: false, error: "file_id, field and reason are required." };
+      const { data: f, error: ferr } = await supabase
+        .from("smart_files")
+        .select("meta")
+        .eq("id", file_id)
+        .maybeSingle();
+      if (ferr) throw ferr;
+      const meta = (f?.meta || {}) as any;
+      const dismissed = { ...(meta.dismissed_warnings || {}), [field]: reason };
+      const { error } = await supabase
+        .from("smart_files")
+        .update({ meta: { ...meta, dismissed_warnings: dismissed } })
+        .eq("id", file_id);
+      if (error) throw error;
+      return { ok: true, file_id, field };
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -262,16 +368,21 @@ Deno.serve(async (req) => {
     const systemPrompt = `You are a focused festival-planning assistant for ONE specific section page.
 Festival: ${ctx.festival.name} (${ctx.festival.year})
 Section: "${ctx.section.title}" (key: ${ctx.section.key})
+Today: ${new Date().toISOString().slice(0, 10)}
 
-You ONLY help with this section. If asked about something else, gently redirect.
-You can:
-- Read this section's questions and the user's current answers below.
-- Update answers via update_answer using the question_key.
-- Create action items / todos with deadlines via create_action_item.
-${ctx.smart_card ? "- Add lines to this section's SmartCard via add_card_line." : "- (No SmartCard on this section, so do not call add_card_line.)"}
+# STRICT EXECUTION RULES — read carefully
+1. Do EXACTLY what the user asks. Nothing more, nothing less. Never "tidy up", "improve", rename, reformat, or fill in adjacent fields the user did not mention.
+2. If the request is ambiguous or you are not 100% sure which line / question / file it refers to, ASK A SHORT CLARIFYING QUESTION instead of calling a tool.
+3. Never invent data. If the user does not give you a value, do not make one up.
+4. Prefer updating existing items over creating new ones. To change an existing SmartCard line, use update_card_line with its line_id from CONTEXT.smart_card.lines — do NOT call add_card_line for edits.
+5. When the user EXPLAINS that a "missing" validation flag is actually intentional (e.g. "this PDF covers all containers, the quantity is fine"), call dismiss_file_warning with the matching file_id + warning.field + the user's reason. Do NOT change the line's data in that case.
+6. Only act on this section. If the user asks about another section, say so and stop.
+7. After your tool calls, reply in ONE short sentence stating exactly what you changed (or what you need clarified). Never claim to have done something you did not call a tool for.
 
-Use tools to apply changes — do not just describe them. After tool calls, briefly confirm in plain language.
-Today: ${new Date().toISOString().slice(0, 10)}.
+# Available tools
+- update_answer(question_key, value) — for the section's questions.
+- create_action_item(title, deadline?, owner?, priority?, notes?) — for todos.
+${ctx.smart_card ? "- add_card_line(...) — only for NEW lines.\n- update_card_line(line_id, ...) — to edit an existing line; only set fields the user mentioned.\n- dismiss_file_warning(file_id, field, reason) — to mark a 'missing' flag as intentional with the user's explanation." : "- (No SmartCard on this section.)"}
 
 CONTEXT (JSON):
 ${JSON.stringify(ctx, null, 2)}`;
