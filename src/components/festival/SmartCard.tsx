@@ -12,6 +12,10 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { SmartCardChat } from "./SmartCardChat";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export type SmartCardProps = {
   /** Stable key for this card type, e.g. 'equipment_list','cooling_storage','safety' */
@@ -87,6 +91,8 @@ export function SmartCard({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
   const [editMode, setEditMode] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
+  const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
   const [saving, setSaving] = useState(false);
   // Snapshot taken when entering edit mode, used to revert on cancel
   const [snapshot, setSnapshot] = useState<{ sections: SSection[]; lines: SLine[]; todos: STodo[] } | null>(null);
@@ -472,12 +478,26 @@ export function SmartCard({
     }
   };
 
-  const deleteFile = async (f: SFile) => {
-    if (!confirm(`Delete file ${f.filename}?`)) return;
-    if (f.storage_path) await supabase.storage.from("festival-photos").remove([f.storage_path]);
-    await (supabase as any).from("smart_files").delete().eq("id", f.id);
-    reload();
+  // File deletion is staged via the AlertDialog (see fileToDelete state).
+  const performDeleteFile = async (f: SFile, alsoDeleteData: boolean) => {
+    try {
+      if (alsoDeleteData) {
+        // Cascade: remove sections (and their lines via FK) and any standalone lines created by this file
+        const linkedSections = sections.filter(s => s.source_file_id === f.id).map(s => s.id);
+        if (linkedSections.length) {
+          await (supabase as any).from("smart_sections").delete().in("id", linkedSections);
+        }
+        await (supabase as any).from("smart_lines").delete().eq("source_file_id", f.id);
+      }
+      if (f.storage_path) await supabase.storage.from("festival-photos").remove([f.storage_path]);
+      await (supabase as any).from("smart_files").delete().eq("id", f.id);
+      toast.success(alsoDeleteData ? "File and extracted data deleted" : "File deleted");
+      reload();
+    } catch (e: any) {
+      toast.error(`Delete failed: ${e.message || e}`);
+    }
   };
+
 
   // Mark a validation warning as intentional / not-applicable, with the user's reason.
   const dismissWarning = async (f: SFile, field: string, currentReason?: string | null) => {
@@ -657,7 +677,11 @@ export function SmartCard({
                       <Download className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </a>
                   )}
-                  <button onClick={() => deleteFile(f)} className="opacity-0 group-hover:opacity-100 text-destructive">
+                  <button
+                    onClick={() => { setCascadeDeleteData(true); setFileToDelete(f); }}
+                    className="opacity-0 group-hover:opacity-100 text-destructive"
+                    title="Delete file"
+                  >
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
@@ -870,6 +894,50 @@ export function SmartCard({
       {card && (
         <SmartCardChat cardId={card.id} cardTitle={title} onMutated={reload} />
       )}
+
+      {/* Delete file confirmation */}
+      <AlertDialog open={!!fileToDelete} onOpenChange={(o) => !o && setFileToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this file?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  <span className="font-medium text-foreground">{fileToDelete?.filename}</span> will be permanently removed.
+                </p>
+                <label className="flex items-start gap-2 text-sm text-foreground cursor-pointer p-3 rounded-md border border-border bg-muted/30">
+                  <input
+                    type="checkbox"
+                    checked={cascadeDeleteData}
+                    onChange={(e) => setCascadeDeleteData(e.target.checked)}
+                    className="mt-0.5 cursor-pointer"
+                  />
+                  <span>
+                    <span className="font-medium">Also delete all data extracted from this file</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Removes every section and line that was created from this upload. Manual entries are kept.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (fileToDelete) {
+                  performDeleteFile(fileToDelete, cascadeDeleteData);
+                  setFileToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
