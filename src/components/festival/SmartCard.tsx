@@ -173,48 +173,88 @@ export function SmartCard({
 
   useEffect(() => { reload(); }, [reload]);
 
-  // ---- Section + line CRUD ----
-  const addSection = async () => {
+  // ---- Section + line CRUD (deferred — only commit on Save) ----
+  const addSection = () => {
     if (!card) return;
     const order = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
-    const { error } = await (supabase as any).from("smart_sections").insert({
-      card_id: card.id, title: "New section", order_index: order, source: "manual",
-    });
-    if (error) toast.error("Add failed"); else reload();
+    const draft: SSection = {
+      id: `draft-${crypto.randomUUID()}`,
+      title: "New section",
+      description: null,
+      order_index: order,
+      source: "manual",
+      source_file_id: null,
+    };
+    setSections(prev => [...prev, draft]);
+    setPending(p => ({ ...p, sectionInserts: [...p.sectionInserts, draft] }));
   };
 
-  const updateSection = async (id: string, patch: Partial<SSection>) => {
+  const updateSection = (id: string, patch: Partial<SSection>) => {
     setSections(prev => prev.map(s => s.id === id ? { ...s, ...patch } as SSection : s));
-    const { error } = await (supabase as any).from("smart_sections").update(patch).eq("id", id);
-    if (error) toast.error("Save failed");
+    if (isDraftId(id)) {
+      setPending(p => ({
+        ...p,
+        sectionInserts: p.sectionInserts.map(s => s.id === id ? { ...s, ...patch } as SSection : s),
+      }));
+    } else {
+      setPending(p => ({
+        ...p,
+        sectionUpdates: { ...p.sectionUpdates, [id]: { ...(p.sectionUpdates[id] || {}), ...patch } },
+      }));
+    }
   };
 
-  const deleteSection = async (id: string) => {
-    if (!confirm("Delete this section and all its lines?")) return;
-    const { error } = await (supabase as any).from("smart_sections").delete().eq("id", id);
-    if (error) { toast.error("Delete failed"); return; }
-    reload();
+  const deleteSection = (id: string) => {
+    if (!confirm("Delete this section and all its lines? (will apply when you Save)")) return;
+    setSections(prev => prev.filter(s => s.id !== id));
+    setLines(prev => prev.filter(l => l.section_id !== id));
+    if (isDraftId(id)) {
+      setPending(p => ({
+        ...p,
+        sectionInserts: p.sectionInserts.filter(s => s.id !== id),
+        lineInserts: p.lineInserts.filter(l => l.section_id !== id),
+      }));
+    } else {
+      setPending(p => ({ ...p, sectionDeletes: [...p.sectionDeletes, id] }));
+    }
   };
 
-  const addLine = async (sectionId: string) => {
+  const addLine = (sectionId: string) => {
     const sectionLines = lines.filter(l => l.section_id === sectionId);
     const order = sectionLines.length ? Math.max(...sectionLines.map(l => l.order_index)) + 1 : 0;
-    const { error } = await (supabase as any).from("smart_lines").insert({
-      section_id: sectionId, label: "", order_index: order, source: "manual",
-    });
-    if (error) toast.error("Add failed"); else reload();
+    const draft: SLine = {
+      id: `draft-${crypto.randomUUID()}`,
+      section_id: sectionId,
+      label: "", value: null, quantity: null, notes: null,
+      status: null, owner: null, due_date: null,
+      order_index: order, source: "manual", source_file_id: null,
+    };
+    setLines(prev => [...prev, draft]);
+    setPending(p => ({ ...p, lineInserts: [...p.lineInserts, draft] }));
   };
 
-  const updateLine = async (id: string, patch: Partial<SLine>) => {
+  const updateLine = (id: string, patch: Partial<SLine>) => {
     setLines(prev => prev.map(l => l.id === id ? { ...l, ...patch } as SLine : l));
-    const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
-    if (error) toast.error("Save failed");
+    if (isDraftId(id)) {
+      setPending(p => ({
+        ...p,
+        lineInserts: p.lineInserts.map(l => l.id === id ? { ...l, ...patch } as SLine : l),
+      }));
+    } else {
+      setPending(p => ({
+        ...p,
+        lineUpdates: { ...p.lineUpdates, [id]: { ...(p.lineUpdates[id] || {}), ...patch } },
+      }));
+    }
   };
 
-  const deleteLine = async (id: string) => {
+  const deleteLine = (id: string) => {
     setLines(prev => prev.filter(l => l.id !== id));
-    const { error } = await (supabase as any).from("smart_lines").delete().eq("id", id);
-    if (error) { toast.error("Delete failed"); reload(); }
+    if (isDraftId(id)) {
+      setPending(p => ({ ...p, lineInserts: p.lineInserts.filter(l => l.id !== id) }));
+    } else {
+      setPending(p => ({ ...p, lineDeletes: [...p.lineDeletes, id] }));
+    }
   };
 
   // ---- Todo CRUD ----
