@@ -87,6 +87,39 @@ export function SmartCard({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
   const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Snapshot taken when entering edit mode, used to revert on cancel
+  const [snapshot, setSnapshot] = useState<{ sections: SSection[]; lines: SLine[]; todos: STodo[] } | null>(null);
+  // Track pending DB operations made during edit mode
+  const [pending, setPending] = useState<{
+    sectionInserts: SSection[];
+    sectionUpdates: Record<string, Partial<SSection>>;
+    sectionDeletes: string[];
+    lineInserts: SLine[];
+    lineUpdates: Record<string, Partial<SLine>>;
+    lineDeletes: string[];
+    todoUpdates: Record<string, Partial<STodo>>;
+    todoDeletes: string[];
+  }>({
+    sectionInserts: [], sectionUpdates: {}, sectionDeletes: [],
+    lineInserts: [], lineUpdates: {}, lineDeletes: [],
+    todoUpdates: {}, todoDeletes: [],
+  });
+  const resetPending = () => setPending({
+    sectionInserts: [], sectionUpdates: {}, sectionDeletes: [],
+    lineInserts: [], lineUpdates: {}, lineDeletes: [],
+    todoUpdates: {}, todoDeletes: [],
+  });
+  const isDraftId = (id: string) => id.startsWith("draft-");
+  const hasUnsavedChanges = () =>
+    pending.sectionInserts.length > 0 ||
+    Object.keys(pending.sectionUpdates).length > 0 ||
+    pending.sectionDeletes.length > 0 ||
+    pending.lineInserts.length > 0 ||
+    Object.keys(pending.lineUpdates).length > 0 ||
+    pending.lineDeletes.length > 0 ||
+    Object.keys(pending.todoUpdates).length > 0 ||
+    pending.todoDeletes.length > 0;
 
   // ---- Initial load: get-or-create the card, then sections+lines+files ----
   const reload = useCallback(async () => {
