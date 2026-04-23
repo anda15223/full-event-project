@@ -78,6 +78,7 @@ export function SmartCard({
   const [sections, setSections] = useState<SSection[]>([]);
   const [lines, setLines] = useState<SLine[]>([]);
   const [files, setFiles] = useState<SFile[]>([]);
+  const [todos, setTodos] = useState<STodo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
