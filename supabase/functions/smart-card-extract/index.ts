@@ -258,9 +258,13 @@ async function extractFromFile({
     created.push(section);
   }
 
+  // ---- Per-card validation: flag missing required info ----
+  const warnings = validateExtraction(card_key, extracted.sections || []);
+
   await sb("PATCH", `smart_files?id=eq.${file_id}`, {
     parse_status: "done",
     ai_summary: extracted.summary || null,
+    warnings,
   });
 
   // Feed Brain — remember every line as a soft pattern for next festival
