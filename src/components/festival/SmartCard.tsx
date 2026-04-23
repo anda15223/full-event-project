@@ -46,6 +46,7 @@ type SFile = {
   mime_type: string | null; size: number | null; ai_summary: string | null;
   parse_status: string; parse_error: string | null; uploaded_at: string;
   warnings: SValidationWarning[] | null;
+  meta?: Record<string, any> | null;
 };
 type STodo = {
   id: string; title: string; description: string | null; due_date: string | null;
