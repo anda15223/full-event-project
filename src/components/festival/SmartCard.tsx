@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, Upload, FileText, File as FileIcon, Loader2, Sparkles, Brain,
-  ChevronDown, ChevronRight, GripVertical, Download,
+  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
