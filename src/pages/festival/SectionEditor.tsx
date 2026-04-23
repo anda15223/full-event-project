@@ -75,10 +75,23 @@ export default function SectionEditor() {
         )}
       </div>
 
+      {/* SmartCard FIRST so it's the primary surface for these sections */}
+      {sectionKey && SMART_CARDS[sectionKey] && festival && (
+        <SmartCard
+          cardKey={sectionKey}
+          festivalId={festival.id}
+          title={SMART_CARDS[sectionKey].title}
+          subtitle={SMART_CARDS[sectionKey].subtitle}
+          emptyStateWarning={SMART_CARDS[sectionKey].warning}
+        />
+      )}
+
       {questions.length === 0 ? (
-        <Card className="p-8 text-center text-sm text-muted-foreground">
-          No scalar questions in this section. {section.sub_editor_route ? "Use the sub-editor instead." : ""}
-        </Card>
+        sectionKey && SMART_CARDS[sectionKey] ? null : (
+          <Card className="p-8 text-center text-sm text-muted-foreground">
+            No scalar questions in this section. {section.sub_editor_route ? "Use the sub-editor instead." : ""}
+          </Card>
+        )
       ) : (
         <Card className="p-6 space-y-5">
           {questions.map(q => {
@@ -101,16 +114,7 @@ export default function SectionEditor() {
       {sectionKey === "intro" && festival && (
         <ContactsManager festivalId={festival.id} />
       )}
-
-      {sectionKey && SMART_CARDS[sectionKey] && festival && (
-        <SmartCard
-          cardKey={sectionKey}
-          festivalId={festival.id}
-          title={SMART_CARDS[sectionKey].title}
-          subtitle={SMART_CARDS[sectionKey].subtitle}
-          emptyStateWarning={SMART_CARDS[sectionKey].warning}
-        />
-      )}
     </div>
   );
 }
+
