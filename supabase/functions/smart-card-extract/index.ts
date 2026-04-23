@@ -42,15 +42,45 @@ async function sb(method: string, path: string, body?: unknown, extra: Record<st
   return text ? JSON.parse(text) : null;
 }
 
-async function downloadFileText(url: string, mime: string): Promise<string> {
+// SheetJS for XLSX/XLS parsing in Deno
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+
+async function downloadFileText(url: string, mime: string, fileName = ""): Promise<string> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed ${r.status}`);
+
+  const isXlsx =
+    /spreadsheetml|excel|ms-excel/i.test(mime) ||
+    /\.(xlsx|xls|xlsm|xlsb|ods)$/i.test(url) ||
+    /\.(xlsx|xls|xlsm|xlsb|ods)$/i.test(fileName);
+
+  if (isXlsx) {
+    try {
+      const buf = new Uint8Array(await r.arrayBuffer());
+      const wb = XLSX.read(buf, { type: "array" });
+      const parts: string[] = [];
+      for (const sheetName of wb.SheetNames) {
+        const ws = wb.Sheets[sheetName];
+        if (!ws) continue;
+        // Render as CSV — preserves rows/columns the AI can read
+        const csv = XLSX.utils.sheet_to_csv(ws, { blankrows: false });
+        if (csv && csv.trim()) {
+          parts.push(`===== Sheet: ${sheetName} =====\n${csv}`);
+        }
+      }
+      return parts.join("\n\n");
+    } catch (e) {
+      console.error("xlsx parse failed:", e);
+      return "";
+    }
+  }
 
   // Plain text / CSV / json
   if (
     /^text\//i.test(mime) ||
     /\b(csv|json|xml|html)\b/i.test(mime) ||
-    /\.(txt|csv|json|xml|html|md)$/i.test(url)
+    /\.(txt|csv|json|xml|html|md)$/i.test(url) ||
+    /\.(txt|csv|json|xml|html|md)$/i.test(fileName)
   ) {
     return await r.text();
   }
