@@ -192,23 +192,37 @@ async function extractFromFile({
 
   const cardPrompt = CARD_PROMPTS[card_key] || "Extract logical sections and lines from this document.";
 
+  const summaryInstruction = `\n\nIMPORTANT:
+- Always populate the "summary" field with a thorough plain-text summary (5-15 lines) of EVERYTHING you can read in the document — supplier, items, prices, dates, addresses, contacts, notes. This is the user's safety net if structured extraction misses something.
+- Then, in addition, organise the same information into the requested sections + lines.
+- If the document is a scan / image / unclear, do your best OCR and still write the summary with whatever you can read.`;
+
   let userContent: any;
   const text = await downloadFileText(file_url, mime_type || "");
   if (text) {
-    userContent = `${cardPrompt}\n\nDocument content:\n${text.slice(0, 60000)}`;
+    userContent = `${cardPrompt}${summaryInstruction}\n\nDocument content:\n${text.slice(0, 60000)}`;
   } else {
-    // For binary files (PDF, images, docx), pass the URL — Gemini can fetch images/PDFs as parts.
-    // We embed the URL in the prompt and let the model rely on the filename + extension.
-    // Lovable AI Gateway does support image_url parts for vision models.
-    if (/^image\//i.test(mime_type || "")) {
-      userContent = [
-        { type: "text", text: cardPrompt + `\n\nFile name: ${file_name}` },
-        { type: "image_url", image_url: { url: file_url } },
-      ];
-    } else {
-      // PDF / docx / xlsx — fall back to text-only prompt with file metadata
-      // (Real PDF/Excel parsing would require additional libs; we'll request the user to also provide notes.)
-      userContent = `${cardPrompt}\n\nFile name: ${file_name}\nMIME: ${mime_type}\n(Binary file: please infer logical structure from the filename and produce sensible default sections that the user can edit.)`;
+    // Binary file: send bytes as base64 to Gemini vision (works for PDF + images).
+    try {
+      const { b64, mime: detectedMime } = await downloadFileBase64(file_url);
+      const effectiveMime = mime_type || detectedMime;
+      const isImage = /^image\//i.test(effectiveMime);
+      const isPdf = /pdf/i.test(effectiveMime) || /\.pdf$/i.test(file_name || "");
+
+      if (isImage || isPdf) {
+        userContent = [
+          { type: "text", text: cardPrompt + summaryInstruction + `\n\nFile name: ${file_name}` },
+          {
+            type: "image_url",
+            image_url: { url: `data:${isPdf ? "application/pdf" : effectiveMime};base64,${b64}` },
+          },
+        ];
+      } else {
+        userContent = `${cardPrompt}${summaryInstruction}\n\nFile name: ${file_name}\nMIME: ${effectiveMime}\n(Binary file the AI cannot read directly — produce sensible default sections from the filename so the user can edit.)`;
+      }
+    } catch (e) {
+      console.error("base64 fetch failed:", e);
+      userContent = `${cardPrompt}${summaryInstruction}\n\nFile name: ${file_name}\n(Could not fetch binary contents.)`;
     }
   }
 
@@ -219,7 +233,7 @@ async function extractFromFile({
         {
           role: "system",
           content:
-            "You structure messy documents into clean, editable sections + lines for a festival operations app. Be concise. Use clear short titles.",
+            "You read messy real-world documents (including scanned PDFs and photos) and structure them into clean editable sections + lines for a festival operations app. Always perform OCR on images/PDFs. Always fill the summary field, even when structure is unclear.",
         },
         { role: "user", content: userContent },
       ],
@@ -232,6 +246,22 @@ async function extractFromFile({
     });
     throw e;
   }
+
+  // Always prepend a "Document summary" section so the user has the raw AI read
+  // and can manually split it into other sections/lines.
+  const summaryText = (extracted.summary || "").trim();
+  const sectionsToCreate: any[] = [];
+  if (summaryText) {
+    sectionsToCreate.push({
+      title: `📄 Document summary — ${file_name || "uploaded file"}`,
+      description: "Raw AI read of the document. Move/split any line into the right section manually.",
+      lines: [
+        { label: "Summary", value: summaryText, notes: "Source: AI OCR/read of the uploaded document." },
+      ],
+    });
+  }
+  for (const s of extracted.sections || []) sectionsToCreate.push(s);
+  extracted.sections = sectionsToCreate;
 
   // Insert sections + lines
   // Find current max order_index in card
