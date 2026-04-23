@@ -399,33 +399,26 @@ export function SmartCard({
         }).select().single();
         if (fErr || !fileRow) { toast.error("Could not save file"); continue; }
 
-        // Trigger AI extraction (DRY RUN — produces a proposal the user must Apply)
+        // Brain mode: silently summarize. Do NOT create sections yet.
+        // The user must click "Propose changes" on the file to release the info.
         setExtracting(true);
         try {
-          const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+          const { error } = await supabase.functions.invoke("smart-card-extract", {
             body: {
-              action: "extract",
-              dry_run: true,
+              action: "summarize",
               file_id: fileRow.id,
-              card_id: card.id,
-              card_key: cardKey,
-              festival_id: festivalId,
-              concept_id: conceptId || null,
               file_url: pub.publicUrl,
               file_name: file.name,
               mime_type: file.type,
             },
           });
           if (error) throw error;
-          const proposed = data?.sections_proposed || 0;
           toast.success(
-            `AI read ${file.name} — ${proposed} section(s) proposed. Review and click Apply.`,
-            { description: "The summary is also posted in the chat below." },
+            `${file.name} stored in Brain`,
+            { description: "Click ✨ Propose changes on the file to let AI suggest sections." },
           );
-          // Bump the chat refresh key so the new assistant message shows up
-          setChatRefreshKey(k => k + 1);
         } catch (e: any) {
-          toast.error(`AI extract failed: ${e.message || e}`);
+          toast.error(`Brain summarize failed: ${e.message || e}`);
         } finally {
           setExtracting(false);
         }
@@ -433,6 +426,37 @@ export function SmartCard({
       await reload();
     } finally {
       setUploading(false);
+    }
+  };
+
+  // On-demand: run structured extraction for a stored file → proposal.
+  const proposeFromFile = async (f: SFile) => {
+    if (!card) return;
+    setExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "extract",
+          dry_run: true,
+          file_id: f.id,
+          card_id: card.id,
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+          file_url: f.url,
+          file_name: f.filename,
+          mime_type: f.mime_type,
+        },
+      });
+      if (error) throw error;
+      const proposed = (data as any)?.sections_proposed || 0;
+      toast.success(`AI proposed ${proposed} section(s) — review and Apply.`);
+      setChatRefreshKey(k => k + 1);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Propose failed: ${e.message || e}`);
+    } finally {
+      setExtracting(false);
     }
   };
 
