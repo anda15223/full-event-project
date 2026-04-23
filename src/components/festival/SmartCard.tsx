@@ -677,7 +677,11 @@ export function SmartCard({
                       <Download className="h-3 w-3 text-muted-foreground hover:text-foreground" />
                     </a>
                   )}
-                  <button onClick={() => deleteFile(f)} className="opacity-0 group-hover:opacity-100 text-destructive">
+                  <button
+                    onClick={() => { setCascadeDeleteData(true); setFileToDelete(f); }}
+                    className="opacity-0 group-hover:opacity-100 text-destructive"
+                    title="Delete file"
+                  >
                     <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
