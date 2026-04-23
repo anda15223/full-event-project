@@ -1435,6 +1435,7 @@ export type Database = {
           extracted_text: string | null
           filename: string | null
           id: string
+          meta: Json
           mime_type: string | null
           parse_error: string | null
           parse_status: string
@@ -1450,6 +1451,7 @@ export type Database = {
           extracted_text?: string | null
           filename?: string | null
           id?: string
+          meta?: Json
           mime_type?: string | null
           parse_error?: string | null
           parse_status?: string
@@ -1465,6 +1467,7 @@ export type Database = {
           extracted_text?: string | null
           filename?: string | null
           id?: string
+          meta?: Json
           mime_type?: string | null
           parse_error?: string | null
           parse_status?: string
