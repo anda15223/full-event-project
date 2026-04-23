@@ -1,0 +1,1 @@
+ALTER TABLE public.smart_files ADD COLUMN IF NOT EXISTS meta jsonb NOT NULL DEFAULT '{}'::jsonb;
