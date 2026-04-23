@@ -79,6 +79,7 @@ export function SmartCard({
   const [extracting, setExtracting] = useState(false);
   const [grabbing, setGrabbing] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [editMode, setEditMode] = useState(false);
 
   // ---- Initial load: get-or-create the card, then sections+lines+files ----
   const reload = useCallback(async () => {
