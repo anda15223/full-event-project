@@ -12,10 +12,12 @@ export function SmartCardChat({
   cardId,
   cardTitle,
   onMutated,
+  refreshKey = 0,
 }: {
   cardId: string;
   cardTitle: string;
   onMutated: () => void;
+  refreshKey?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -38,6 +40,22 @@ export function SmartCardChat({
       setLoadedHistory(true);
     })();
   }, [open, loadedHistory, cardId]);
+
+  // Auto-open + reload messages when refreshKey changes (e.g. after AI extraction)
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    setOpen(true);
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("smart_chat_messages")
+        .select("role,content")
+        .eq("card_id", cardId)
+        .order("created_at")
+        .limit(40);
+      setMessages((data || []) as ChatMsg[]);
+      setLoadedHistory(true);
+    })();
+  }, [refreshKey, cardId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
