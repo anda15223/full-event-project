@@ -315,6 +315,37 @@ async function executeTool(
       if (error) throw error;
       return { ok: true, line_id: data.id };
     }
+    case "update_card_line": {
+      const lineId = args.line_id;
+      if (!lineId) return { ok: false, error: "line_id required" };
+      const patch: any = {};
+      for (const k of ["label", "value", "quantity", "notes", "due_date"]) {
+        if (args[k] !== undefined) patch[k] = args[k];
+      }
+      if (!Object.keys(patch).length) return { ok: false, error: "Nothing to update." };
+      const { error } = await supabase.from("smart_lines").update(patch).eq("id", lineId);
+      if (error) throw error;
+      return { ok: true, line_id: lineId, updated_fields: Object.keys(patch) };
+    }
+    case "dismiss_file_warning": {
+      const { file_id, field, reason } = args;
+      if (!file_id || !field || !reason)
+        return { ok: false, error: "file_id, field and reason are required." };
+      const { data: f, error: ferr } = await supabase
+        .from("smart_files")
+        .select("meta")
+        .eq("id", file_id)
+        .maybeSingle();
+      if (ferr) throw ferr;
+      const meta = (f?.meta || {}) as any;
+      const dismissed = { ...(meta.dismissed_warnings || {}), [field]: reason };
+      const { error } = await supabase
+        .from("smart_files")
+        .update({ meta: { ...meta, dismissed_warnings: dismissed } })
+        .eq("id", file_id);
+      if (error) throw error;
+      return { ok: true, file_id, field };
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
