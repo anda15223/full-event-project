@@ -472,12 +472,26 @@ export function SmartCard({
     }
   };
 
-  const deleteFile = async (f: SFile) => {
-    if (!confirm(`Delete file ${f.filename}?`)) return;
-    if (f.storage_path) await supabase.storage.from("festival-photos").remove([f.storage_path]);
-    await (supabase as any).from("smart_files").delete().eq("id", f.id);
-    reload();
+  // File deletion is staged via the AlertDialog (see fileToDelete state).
+  const performDeleteFile = async (f: SFile, alsoDeleteData: boolean) => {
+    try {
+      if (alsoDeleteData) {
+        // Cascade: remove sections (and their lines via FK) and any standalone lines created by this file
+        const linkedSections = sections.filter(s => s.source_file_id === f.id).map(s => s.id);
+        if (linkedSections.length) {
+          await (supabase as any).from("smart_sections").delete().in("id", linkedSections);
+        }
+        await (supabase as any).from("smart_lines").delete().eq("source_file_id", f.id);
+      }
+      if (f.storage_path) await supabase.storage.from("festival-photos").remove([f.storage_path]);
+      await (supabase as any).from("smart_files").delete().eq("id", f.id);
+      toast.success(alsoDeleteData ? "File and extracted data deleted" : "File deleted");
+      reload();
+    } catch (e: any) {
+      toast.error(`Delete failed: ${e.message || e}`);
+    }
   };
+
 
   // Mark a validation warning as intentional / not-applicable, with the user's reason.
   const dismissWarning = async (f: SFile, field: string, currentReason?: string | null) => {
