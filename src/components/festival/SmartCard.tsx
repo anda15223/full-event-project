@@ -342,25 +342,62 @@ export function SmartCard({
 
       {/* Files */}
       {files.length > 0 && (
-        <div className="px-5 py-3 border-b border-border/50 bg-muted/10 space-y-1.5">
+        <div className="px-5 py-3 border-b border-border/50 bg-muted/10 space-y-2">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Source files</p>
-          {files.map(f => (
-            <div key={f.id} className="flex items-center gap-2 text-sm group">
-              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate flex-1">{f.filename}</span>
-              {f.parse_status === "processing" && <Loader2 className="h-3 w-3 animate-spin text-violet-500" />}
-              {f.parse_status === "done" && <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px]", sourceColor("ai"))}>AI parsed</Badge>}
-              {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
-              {f.url && (
-                <a href={f.url} target="_blank" rel="noreferrer" className="opacity-0 group-hover:opacity-100">
-                  <Download className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                </a>
-              )}
-              <button onClick={() => deleteFile(f)} className="opacity-0 group-hover:opacity-100 text-destructive">
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
+          {files.map(f => {
+            const wlist = Array.isArray(f.warnings) ? f.warnings : [];
+            const errCount = wlist.filter(w => w.severity === "error").length;
+            return (
+              <div key={f.id} className="space-y-1">
+                <div className="flex items-center gap-2 text-sm group">
+                  <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate flex-1">{f.filename}</span>
+                  {f.parse_status === "processing" && <Loader2 className="h-3 w-3 animate-spin text-violet-500" />}
+                  {f.parse_status === "done" && wlist.length === 0 && (
+                    <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px]", sourceColor("ai"))}>AI parsed ✓</Badge>
+                  )}
+                  {f.parse_status === "done" && wlist.length > 0 && (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "h-5 px-1.5 text-[10px]",
+                        errCount > 0
+                          ? "bg-destructive/10 text-destructive border-destructive/30"
+                          : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border-amber-300/40",
+                      )}
+                    >
+                      {errCount > 0 ? `${errCount} missing` : `${wlist.length} warning${wlist.length === 1 ? "" : "s"}`}
+                    </Badge>
+                  )}
+                  {f.parse_status === "error" && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">parse error</Badge>}
+                  {f.url && (
+                    <a href={f.url} target="_blank" rel="noreferrer" className="opacity-0 group-hover:opacity-100">
+                      <Download className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                    </a>
+                  )}
+                  <button onClick={() => deleteFile(f)} className="opacity-0 group-hover:opacity-100 text-destructive">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+                {wlist.length > 0 && (
+                  <ul className="ml-6 space-y-0.5">
+                    {wlist.map((w, i) => (
+                      <li
+                        key={i}
+                        className={cn(
+                          "text-[11px] flex items-start gap-1.5",
+                          w.severity === "error" ? "text-destructive" : "text-amber-700 dark:text-amber-300",
+                        )}
+                      >
+                        <span className="shrink-0 mt-0.5">{w.severity === "error" ? "⛔" : "⚠️"}</span>
+                        <span>{w.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
