@@ -182,8 +182,9 @@ const STRUCTURE_SCHEMA = {
 };
 
 const CARD_PROMPTS: Record<string, string> = {
-  equipment_list: `This is an EQUIPMENT LIST (supplier offer, packing list, photo of a handwritten list, kitchen inventory, or rental quote).
+  equipment_list: `This is an EQUIPMENT LIST (supplier offer, packing list, photo of a handwritten list, kitchen inventory, rental quote, or a multi-sheet Excel/CSV).
 Perform careful OCR — read EVERY single item, even if the document is a phone photo or scan.
+If the document contains MULTIPLE sheets (marked "===== Sheet: <name> ====="), treat EACH sheet as its own section (use the sheet name as the section title) AND ALSO map items into the canonical sections below when possible. Read EVERY row of EVERY sheet — never skip rows.
 
 Organise into these sections (omit only if truly nothing applies):
 
