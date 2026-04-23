@@ -301,32 +301,44 @@ export function SmartCard({
           {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
-          {!hideBrainButton && (
+          {editMode && !hideBrainButton && (
             <Button size="sm" variant="outline" className="h-8" onClick={grabFromBrain} disabled={grabbing}>
               {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Brain className="h-3.5 w-3.5 mr-1" />}
               Grab info
             </Button>
           )}
-          <label className="inline-flex">
-            <input
-              type="file"
-              multiple
-              accept={acceptedFileTypes}
-              className="hidden"
-              disabled={uploading || extracting}
-              onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }}
-            />
-            <Button size="sm" variant="outline" className="h-8 cursor-pointer" asChild>
-              <span>
-                {uploading || extracting
-                  ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                  : <Upload className="h-3.5 w-3.5 mr-1" />}
-                {extracting ? "AI reading…" : uploading ? "Uploading…" : "Upload"}
-              </span>
+          {editMode && (
+            <label className="inline-flex">
+              <input
+                type="file"
+                multiple
+                accept={acceptedFileTypes}
+                className="hidden"
+                disabled={uploading || extracting}
+                onChange={(e) => { handleUpload(e.target.files); e.target.value = ""; }}
+              />
+              <Button size="sm" variant="outline" className="h-8 cursor-pointer" asChild>
+                <span>
+                  {uploading || extracting
+                    ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    : <Upload className="h-3.5 w-3.5 mr-1" />}
+                  {extracting ? "AI reading…" : uploading ? "Uploading…" : "Upload"}
+                </span>
+              </Button>
+            </label>
+          )}
+          {editMode && (
+            <Button size="sm" onClick={addSection} className="h-8">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Section
             </Button>
-          </label>
-          <Button size="sm" onClick={addSection} className="h-8">
-            <Plus className="h-3.5 w-3.5 mr-1" /> Section
+          )}
+          <Button
+            size="sm"
+            variant={editMode ? "default" : "outline"}
+            className="h-8"
+            onClick={() => setEditMode(v => !v)}
+          >
+            {editMode ? <><Check className="h-3.5 w-3.5 mr-1" /> Done</> : <><Pencil className="h-3.5 w-3.5 mr-1" /> Edit</>}
           </Button>
         </div>
       </div>
