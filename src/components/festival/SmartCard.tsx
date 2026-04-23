@@ -301,6 +301,44 @@ export function SmartCard({
     reload();
   };
 
+  // Mark a validation warning as intentional / not-applicable, with the user's reason.
+  const dismissWarning = async (f: SFile, field: string, currentReason?: string | null) => {
+    const reason = window.prompt(
+      `Why is "${field}" not actually missing? (a short note, e.g. "this PDF covers all containers")`,
+      currentReason || "",
+    );
+    if (reason === null) return; // cancelled
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      toast.error("Reason required to dismiss a warning");
+      return;
+    }
+    const meta = (f.meta || {}) as Record<string, any>;
+    const dismissed = { ...(meta.dismissed_warnings || {}), [field]: trimmed };
+    const { error } = await (supabase as any)
+      .from("smart_files")
+      .update({ meta: { ...meta, dismissed_warnings: dismissed } })
+      .eq("id", f.id);
+    if (error) toast.error("Save failed");
+    else {
+      toast.success("Warning marked as resolved");
+      reload();
+    }
+  };
+
+  // Restore (un-dismiss) a previously-dismissed warning.
+  const restoreWarning = async (f: SFile, field: string) => {
+    const meta = (f.meta || {}) as Record<string, any>;
+    const dismissed = { ...(meta.dismissed_warnings || {}) };
+    delete dismissed[field];
+    const { error } = await (supabase as any)
+      .from("smart_files")
+      .update({ meta: { ...meta, dismissed_warnings: dismissed } })
+      .eq("id", f.id);
+    if (error) toast.error("Save failed");
+    else reload();
+  };
+
   if (loading) {
     return (
       <Card className="p-5 flex items-center justify-center text-muted-foreground gap-2">
@@ -424,25 +462,54 @@ export function SmartCard({
                       <li
                         key={i}
                         className={cn(
-                          "text-[11px] flex items-start gap-1.5",
+                          "text-[11px] flex items-start gap-1.5 group/w",
                           w.dismissed
-                            ? "text-muted-foreground line-through opacity-70"
+                            ? "text-muted-foreground opacity-80"
                             : w.severity === "error"
                               ? "text-destructive"
                               : "text-amber-700 dark:text-amber-300",
                         )}
                       >
-                        <span className="shrink-0 mt-0.5 no-underline">
+                        <span className="shrink-0 mt-0.5">
                           {w.dismissed ? "✅" : w.severity === "error" ? "⛔" : "⚠️"}
                         </span>
-                        <span>
-                          {w.message}
+                        <span className="flex-1">
+                          <span className={w.dismissed ? "line-through" : ""}>{w.message}</span>
                           {w.dismissed && w.dismiss_reason && (
-                            <span className="ml-1 italic no-underline text-muted-foreground">
+                            <span className="ml-1 italic text-muted-foreground">
                               — {w.dismiss_reason}
                             </span>
                           )}
                         </span>
+                        {w.dismissed ? (
+                          <span className="flex items-center gap-2 opacity-0 group-hover/w:opacity-100 transition">
+                            <button
+                              type="button"
+                              onClick={() => dismissWarning(f, w.field, w.dismiss_reason)}
+                              className="underline hover:text-foreground"
+                              title="Edit reason"
+                            >
+                              edit reason
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => restoreWarning(f, w.field)}
+                              className="underline hover:text-foreground"
+                              title="Restore as a real warning"
+                            >
+                              restore
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => dismissWarning(f, w.field)}
+                            className="opacity-0 group-hover/w:opacity-100 underline hover:text-foreground transition"
+                            title="Mark as not actually missing"
+                          >
+                            mark as OK
+                          </button>
+                        )}
                       </li>
                     ))}
                   </ul>
