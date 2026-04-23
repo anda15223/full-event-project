@@ -240,6 +240,7 @@ async function extractFromFile({
   file_url,
   file_name,
   mime_type,
+  dry_run,
 }: any) {
   await sb("PATCH", `smart_files?id=eq.${file_id}`, { parse_status: "processing" });
 
