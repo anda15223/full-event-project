@@ -398,12 +398,13 @@ export function SmartCard({
         }).select().single();
         if (fErr || !fileRow) { toast.error("Could not save file"); continue; }
 
-        // Trigger AI extraction
+        // Trigger AI extraction (DRY RUN — produces a proposal the user must Apply)
         setExtracting(true);
         try {
           const { data, error } = await supabase.functions.invoke("smart-card-extract", {
             body: {
               action: "extract",
+              dry_run: true,
               file_id: fileRow.id,
               card_id: card.id,
               card_key: cardKey,
@@ -415,15 +416,13 @@ export function SmartCard({
             },
           });
           if (error) throw error;
-          const wcount = Array.isArray(data?.warnings) ? data.warnings.length : 0;
-          if (wcount > 0) {
-            toast.warning(
-              `AI extracted ${data?.sections_created || 0} sections — ${wcount} issue${wcount === 1 ? "" : "s"} need attention`,
-              { description: data.warnings.slice(0, 3).map((w: any) => `• ${w.message}`).join("\n") },
-            );
-          } else {
-            toast.success(`AI extracted ${data?.sections_created || 0} sections from ${file.name}`);
-          }
+          const proposed = data?.sections_proposed || 0;
+          toast.success(
+            `AI read ${file.name} — ${proposed} section(s) proposed. Review and click Apply.`,
+            { description: "The summary is also posted in the chat below." },
+          );
+          // Bump the chat refresh key so the new assistant message shows up
+          setChatRefreshKey(k => k + 1);
         } catch (e: any) {
           toast.error(`AI extract failed: ${e.message || e}`);
         } finally {
@@ -433,6 +432,48 @@ export function SmartCard({
       await reload();
     } finally {
       setUploading(false);
+    }
+  };
+
+  const applyProposal = async (f: SFile) => {
+    if (!card) return;
+    try {
+      const { error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "apply_proposal",
+          file_id: f.id,
+          card_id: card.id,
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+        },
+      });
+      if (error) throw error;
+      toast.success("Proposal applied — sections added to the card");
+      setChatRefreshKey(k => k + 1);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Apply failed: ${e.message || e}`);
+    }
+  };
+
+  const discardProposal = async (f: SFile) => {
+    if (!card) return;
+    if (!confirm("Discard this AI proposal? The file will stay attached but no sections will be created.")) return;
+    try {
+      const { error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "discard_proposal",
+          file_id: f.id,
+          card_id: card.id,
+        },
+      });
+      if (error) throw error;
+      toast.success("Proposal discarded");
+      setChatRefreshKey(k => k + 1);
+      await reload();
+    } catch (e: any) {
+      toast.error(`Discard failed: ${e.message || e}`);
     }
   };
 
