@@ -62,6 +62,7 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
 
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+            <Route path="/brain" element={<Protected><BrainViewer /></Protected>} />
             <Route path="/email-memory" element={<Protected><EmailMemory /></Protected>} />
             <Route path="/emails" element={<Protected><EmailInbox /></Protected>} />
             <Route path="/tasks" element={<Protected><TaskBoard /></Protected>} />
