@@ -16,6 +16,8 @@ import {
   useExtractInvoice,
   type Email, type EmailAttachment,
 } from "@/hooks/useEmailAgent";
+import { EmailBrainSaver, useEmailsSavedToBrain } from "@/components/inbox/EmailBrainSaver";
+import { Brain } from "lucide-react";
 
 const classificationConfig: Record<string, { label: string; color: string; icon: typeof FileText }> = {
   invoice: { label: "Invoice", color: "bg-primary/10 text-primary border-primary/20", icon: FileText },
@@ -216,22 +218,36 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
 
   const storageBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/email-attachments`;
 
+  const attachmentsText = (attachments ?? [])
+    .map((a) => [a.filename, a.extracted_summary].filter(Boolean).join("\n"))
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Inbox
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => reparseEmail.mutate(email.id)}
-          disabled={reparseEmail.isPending}
-          className="ml-auto text-xs"
-        >
-          <RotateCcw className={`h-3 w-3 mr-1 ${reparseEmail.isPending ? "animate-spin" : ""}`} />
-          Re-parse
-        </Button>
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <EmailBrainSaver
+            emailId={email.id}
+            emailSubject={email.subject}
+            emailSender={email.sender}
+            emailBody={bodyText || null}
+            attachmentsText={attachmentsText || null}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => reparseEmail.mutate(email.id)}
+            disabled={reparseEmail.isPending}
+            className="text-xs"
+          >
+            <RotateCcw className={`h-3 w-3 mr-1 ${reparseEmail.isPending ? "animate-spin" : ""}`} />
+            Re-parse
+          </Button>
+        </div>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -350,6 +366,7 @@ export default function EmailInbox() {
   const [filter, setFilter] = useState("all");
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const { data: emails, isLoading } = useEmails();
+  const { data: savedEmailIds } = useEmailsSavedToBrain();
   const syncAndClassify = useSyncAndClassify();
 
   const filteredEmails = useMemo(() => {
@@ -459,6 +476,9 @@ export default function EmailInbox() {
                             )}
                             {email.has_attachments && (
                               <Paperclip className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            {savedEmailIds?.has(email.id) && (
+                              <Brain className="h-3 w-3 text-primary" aria-label="Saved to Brain" />
                             )}
                             {!email.processed && (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-muted text-muted-foreground">Pending</Badge>
