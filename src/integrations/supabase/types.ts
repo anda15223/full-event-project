@@ -401,6 +401,7 @@ export type Database = {
           company: string | null
           confidence: number | null
           created_at: string
+          folder: string
           has_attachments: boolean | null
           id: string
           language: string | null
@@ -429,6 +430,7 @@ export type Database = {
           company?: string | null
           confidence?: number | null
           created_at?: string
+          folder?: string
           has_attachments?: boolean | null
           id?: string
           language?: string | null
@@ -457,6 +459,7 @@ export type Database = {
           company?: string | null
           confidence?: number | null
           created_at?: string
+          folder?: string
           has_attachments?: boolean | null
           id?: string
           language?: string | null
@@ -475,6 +478,92 @@ export type Database = {
           summary?: string | null
         }
         Relationships: []
+      }
+      extracted_documents: {
+        Row: {
+          ai_summary: string | null
+          amount: number | null
+          category: Database["public"]["Enums"]["document_category"]
+          created_at: string
+          currency: string | null
+          email_id: string | null
+          extracted_text: string | null
+          festival_slug: string | null
+          filename: string
+          folder: string
+          id: string
+          manual_override: boolean
+          mime_type: string | null
+          parse_error: string | null
+          parse_status: string
+          processed_at: string | null
+          received_at: string | null
+          sender: string | null
+          size_bytes: number | null
+          storage_path: string
+          subcategory: string | null
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          amount?: number | null
+          category?: Database["public"]["Enums"]["document_category"]
+          created_at?: string
+          currency?: string | null
+          email_id?: string | null
+          extracted_text?: string | null
+          festival_slug?: string | null
+          filename: string
+          folder?: string
+          id?: string
+          manual_override?: boolean
+          mime_type?: string | null
+          parse_error?: string | null
+          parse_status?: string
+          processed_at?: string | null
+          received_at?: string | null
+          sender?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          subcategory?: string | null
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_summary?: string | null
+          amount?: number | null
+          category?: Database["public"]["Enums"]["document_category"]
+          created_at?: string
+          currency?: string | null
+          email_id?: string | null
+          extracted_text?: string | null
+          festival_slug?: string | null
+          filename?: string
+          folder?: string
+          id?: string
+          manual_override?: boolean
+          mime_type?: string | null
+          parse_error?: string | null
+          parse_status?: string
+          processed_at?: string | null
+          received_at?: string | null
+          sender?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          subcategory?: string | null
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extracted_documents_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       festival_accommodation: {
         Row: {
@@ -1360,6 +1449,36 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       smart_cards: {
         Row: {
           card_key: string
@@ -1758,15 +1877,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       recalculate_invoice_statuses: { Args: never; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "member"
+      document_category:
+        | "invoice"
+        | "festival"
+        | "contract"
+        | "hr"
+        | "supplier"
+        | "authority"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1893,6 +2048,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "member"],
+      document_category: [
+        "invoice",
+        "festival",
+        "contract",
+        "hr",
+        "supplier",
+        "authority",
+        "other",
+      ],
+    },
   },
 } as const
