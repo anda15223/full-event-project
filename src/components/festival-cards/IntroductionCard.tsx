@@ -69,6 +69,7 @@ type BrainEntry = {
   content: string;
   structured_data: any;
   is_active: boolean | null;
+  created_at: string;
 };
 
 type Prefill = {
