@@ -1217,6 +1217,57 @@ export type Database = {
           },
         ]
       }
+      festival_recipes: {
+        Row: {
+          allergen_notes: string | null
+          allergens: string[]
+          concept_id: string | null
+          concept_name: string
+          created_at: string
+          festival_id: string
+          gramaj: number | null
+          id: string
+          ingredients: Json
+          order_index: number
+          product_name: string
+          recipe_text: string | null
+          source_file_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          allergen_notes?: string | null
+          allergens?: string[]
+          concept_id?: string | null
+          concept_name: string
+          created_at?: string
+          festival_id: string
+          gramaj?: number | null
+          id?: string
+          ingredients?: Json
+          order_index?: number
+          product_name: string
+          recipe_text?: string | null
+          source_file_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allergen_notes?: string | null
+          allergens?: string[]
+          concept_id?: string | null
+          concept_name?: string
+          created_at?: string
+          festival_id?: string
+          gramaj?: number | null
+          id?: string
+          ingredients?: Json
+          order_index?: number
+          product_name?: string
+          recipe_text?: string | null
+          source_file_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       festival_reports: {
         Row: {
           festival_id: string
