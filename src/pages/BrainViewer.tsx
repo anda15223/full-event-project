@@ -187,6 +187,11 @@ export default function BrainViewer() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
+        <UploadToBrainPanel
+          festivals={festivals}
+          defaultFestivalId={festivalId === "all" ? null : festivalId}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["brain-entries"] })}
+        />
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
