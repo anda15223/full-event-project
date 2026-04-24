@@ -100,8 +100,8 @@ function ConceptCookingCard({
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
-      const { error } = await supabase.from("equipment_db").update(patch).eq("id", id);
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<{ item_name: string; quantity: string | null; notes: string | null; source: BySource; status: string }> }) => {
+      const { error } = await supabase.from("equipment_db").update(patch as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => invalidate(),
