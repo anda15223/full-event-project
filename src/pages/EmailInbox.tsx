@@ -477,6 +477,9 @@ export default function EmailInbox() {
                             {email.has_attachments && (
                               <Paperclip className="h-3 w-3 text-muted-foreground" />
                             )}
+                            {savedEmailIds?.has(email.id) && (
+                              <Brain className="h-3 w-3 text-primary" aria-label="Saved to Brain" />
+                            )}
                             {!email.processed && (
                               <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-muted text-muted-foreground">Pending</Badge>
                             )}
