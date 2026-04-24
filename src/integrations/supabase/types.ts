@@ -1549,6 +1549,7 @@ export type Database = {
           email: string | null
           festival_id: string
           id: string
+          is_crew: boolean
           name: string
           notes: string | null
           phone: string | null
@@ -1560,6 +1561,7 @@ export type Database = {
           email?: string | null
           festival_id: string
           id?: string
+          is_crew?: boolean
           name: string
           notes?: string | null
           phone?: string | null
@@ -1571,6 +1573,7 @@ export type Database = {
           email?: string | null
           festival_id?: string
           id?: string
+          is_crew?: boolean
           name?: string
           notes?: string | null
           phone?: string | null
