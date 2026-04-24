@@ -27,17 +27,26 @@ export function useDocuments(filter: Filter = {}) {
       q = q.or(`filename.ilike.%${filter.search}%,subject.ilike.%${filter.search}%,sender.ilike.%${filter.search}%`);
     }
 
-    const { data } = await q;
-    setDocuments((data as unknown as DocumentRow[]) || []);
+    const { data, error } = await q;
+    if (error) {
+      console.error("useDocuments load error:", error);
+    } else {
+      // Only overwrite when we actually got a response; keep previous list on error.
+      setDocuments((data as unknown as DocumentRow[]) || []);
+    }
 
-    const { data: countRows } = await supabase
+    const { data: countRows, error: countErr } = await supabase
       .from("extracted_documents")
       .select("category");
-    const c: Record<string, number> = {};
-    (countRows || []).forEach((r: { category: string }) => {
-      c[r.category] = (c[r.category] || 0) + 1;
-    });
-    setCounts(c);
+    if (countErr) {
+      console.error("useDocuments counts error:", countErr);
+    } else {
+      const c: Record<string, number> = {};
+      (countRows || []).forEach((r: { category: string }) => {
+        c[r.category] = (c[r.category] || 0) + 1;
+      });
+      setCounts(c);
+    }
     setLoading(false);
   };
 
