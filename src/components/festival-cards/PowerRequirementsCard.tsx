@@ -19,12 +19,13 @@ interface Props {
   festivalId: string;
 }
 
+type EquipStatus = "pending" | "confirmed" | "delivered" | "returned";
 type EquipRow = {
   id: string;
   item_name: string;
   quantity: string | null;
   source: BySource;
-  status: string;
+  status: EquipStatus;
   card_origin: string | null;
   notes: string | null;
 };
