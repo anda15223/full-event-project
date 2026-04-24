@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -119,34 +119,25 @@ export function SetupTimelineCard({ festivalId }: Props) {
   });
 
   // Hydrate items from saved timeline on first load
-  useState(() => {
-    // ignored — using effect below instead
-  });
-  // Use a real effect so we react to refetches
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useQuery({
-    queryKey: ["hydrate_timeline", festivalId, savedTimeline?.id],
-    queryFn: async () => {
-      const sd: any = savedTimeline?.structured_data ?? {};
-      if (Array.isArray(sd.items) && items.length === 0) {
-        setItems(
-          sd.items.map((it: any) => ({
-            id: it.id || uid(),
-            day_offset: Number(it.day_offset ?? 0),
-            date: it.date ?? "",
-            action: it.action ?? "",
-            responsible: it.responsible ?? "",
-            priority: (it.priority ?? "normal") as TimelineItem["priority"],
-            status: (it.status ?? "pending") as TimelineItem["status"],
-            category: it.category ?? "",
-          })),
-        );
-        if (typeof sd.summary === "string") setAiSummary(sd.summary);
-      }
-      return true;
-    },
-    enabled: !!savedTimeline,
-  });
+  useEffect(() => {
+    const sd: any = savedTimeline?.structured_data ?? {};
+    if (Array.isArray(sd.items) && items.length === 0) {
+      setItems(
+        sd.items.map((it: any) => ({
+          id: it.id || uid(),
+          day_offset: Number(it.day_offset ?? 0),
+          date: it.date ?? "",
+          action: it.action ?? "",
+          responsible: it.responsible ?? "",
+          priority: (it.priority ?? "normal") as TimelineItem["priority"],
+          status: (it.status ?? "pending") as TimelineItem["status"],
+          category: it.category ?? "",
+        })),
+      );
+      if (typeof sd.summary === "string") setAiSummary(sd.summary);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedTimeline?.id]);
 
   // Templates: brain entries scope=global, key starting with timeline_template:
   const { data: templates = [] } = useQuery({
