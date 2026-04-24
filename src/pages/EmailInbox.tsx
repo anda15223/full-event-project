@@ -366,6 +366,7 @@ export default function EmailInbox() {
   const [filter, setFilter] = useState("all");
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const { data: emails, isLoading } = useEmails();
+  const { data: savedEmailIds } = useEmailsSavedToBrain();
   const syncAndClassify = useSyncAndClassify();
 
   const filteredEmails = useMemo(() => {
