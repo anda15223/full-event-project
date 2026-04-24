@@ -63,7 +63,7 @@ export function IntroductionCard({ festivalId }: Props) {
         .eq("festival_id", festivalId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Person[];
+      return (data ?? []) as unknown as Person[];
     },
   });
 
