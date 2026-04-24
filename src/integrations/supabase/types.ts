@@ -1746,6 +1746,7 @@ export type Database = {
           name: string
           needs_accommodation: boolean
           notes: string | null
+          order_index: number
           phone: string | null
           role: string | null
           updated_at: string
@@ -1760,6 +1761,7 @@ export type Database = {
           name: string
           needs_accommodation?: boolean
           notes?: string | null
+          order_index?: number
           phone?: string | null
           role?: string | null
           updated_at?: string
@@ -1774,6 +1776,7 @@ export type Database = {
           name?: string
           needs_accommodation?: boolean
           notes?: string | null
+          order_index?: number
           phone?: string | null
           role?: string | null
           updated_at?: string
