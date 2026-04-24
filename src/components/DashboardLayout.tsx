@@ -87,6 +87,7 @@ function SidebarNav() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, signOut } = useAuth();
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -94,9 +95,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <SidebarInset>
           <header className="h-12 flex items-center border-b border-border/30 bg-white/80 backdrop-blur-xl px-6 sticky top-0 z-40">
             <SidebarTrigger className="mr-4 md:hidden" />
-            <div className="flex items-center gap-2 ml-auto">
-              <div className="h-1.5 w-1.5 rounded-full bg-success" />
-              <span className="text-[11px] text-muted-foreground">All systems online</span>
+            <div className="flex items-center gap-3 ml-auto">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-success" />
+                <span className="text-[11px] text-muted-foreground">All systems online</span>
+              </div>
+              {user && (
+                <>
+                  <span className="text-[11px] text-muted-foreground hidden sm:inline">{user.email}</span>
+                  <Button size="sm" variant="ghost" onClick={signOut} className="h-7 px-2">
+                    <LogOut className="h-3.5 w-3.5" />
+                  </Button>
+                </>
+              )}
             </div>
           </header>
           <main className="flex-1 p-6 md:p-8 overflow-auto min-h-[calc(100vh-3rem)]">
