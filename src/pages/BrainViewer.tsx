@@ -15,9 +15,20 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Brain, Mail, FileText, Pencil, Plus, Search, Tent, Trash2, User,
+  Brain, Mail, FileText, Pencil, Plus, Search, Tent, Trash2, Upload, User, Sparkles, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+
+const BRAIN_CATEGORIES = [
+  "contract",
+  "electricity_plan",
+  "safety_plan",
+  "email",
+  "supplier_quote",
+  "festival_rules",
+  "note",
+  "other",
+] as const;
 
 type BrainEntry = {
   id: string;
@@ -176,6 +187,11 @@ export default function BrainViewer() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
+        <UploadToBrainPanel
+          festivals={festivals}
+          defaultFestivalId={festivalId === "all" ? null : festivalId}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["brain-entries"] })}
+        />
         <div className="flex items-center gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -391,5 +407,243 @@ function AddEntryDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function UploadToBrainPanel({
+  festivals,
+  defaultFestivalId,
+  onSaved,
+}: {
+  festivals: Festival[];
+  defaultFestivalId: string | null;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [fid, setFid] = useState<string>(defaultFestivalId ?? "global");
+  const [category, setCategory] = useState<string>("contract");
+  const [pastedText, setPastedText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState<{
+    summary: string;
+    content: string;
+    storage_path?: string;
+    filename?: string;
+  } | null>(null);
+
+  const reset = () => {
+    setPastedText("");
+    setFile(null);
+    setPreview(null);
+  };
+
+  const extract = async () => {
+    if (!pastedText.trim() && !file) {
+      toast.error("Paste some text or choose a file");
+      return;
+    }
+    setExtracting(true);
+    try {
+      let storage_path: string | undefined;
+      let mime_type: string | undefined;
+      let filename: string | undefined;
+
+      if (file) {
+        const folder = fid === "global" ? "global" : fid;
+        const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+        storage_path = `brain/${folder}/${category}/${Date.now()}_${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("festival-photos")
+          .upload(storage_path, file, { upsert: false, contentType: file.type });
+        if (upErr) throw upErr;
+        mime_type = file.type;
+        filename = file.name;
+      }
+
+      const { data, error } = await supabase.functions.invoke("brain-extract", {
+        body: {
+          storage_path,
+          mime_type,
+          filename,
+          category,
+          pasted_text: pastedText || undefined,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      setPreview({
+        summary: (data as any).summary ?? "",
+        content: (data as any).content ?? "",
+        storage_path,
+        filename,
+      });
+      toast.success("Extracted — review and save");
+    } catch (e: any) {
+      toast.error(e.message || "Extraction failed");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const save = async () => {
+    if (!preview) return;
+    setSaving(true);
+    try {
+      const fest = festivals.find((f) => f.id === fid);
+      const { error } = await supabase.from("brain_entries").insert({
+        key_name: `upload:${category}:${Date.now()}`,
+        content: preview.content,
+        display_name:
+          preview.filename ||
+          preview.summary?.slice(0, 80) ||
+          `${category} upload`,
+        category,
+        source: "upload",
+        festival_id: fid === "global" ? null : fid,
+        scope: fid === "global" ? "global" : "festival",
+        structured_data: {
+          summary: preview.summary,
+          storage_path: preview.storage_path ?? null,
+          filename: preview.filename ?? null,
+          festival_name: fest?.name ?? null,
+        },
+      });
+      if (error) throw error;
+      toast.success("Saved to Brain");
+      onSaved();
+      reset();
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card className="mb-4 p-4 bg-primary/5 border-primary/20">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <Upload className="h-4 w-4 text-primary" />
+          <span className="font-medium text-sm">Upload to Brain</span>
+          <span className="text-xs text-muted-foreground">
+            Contracts, plans, emails, quotes, notes
+          </span>
+        </div>
+        <Plus
+          className={`h-4 w-4 text-muted-foreground transition-transform ${
+            open ? "rotate-45" : ""
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Festival</Label>
+              <Select value={fid} onValueChange={setFid}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">Global (no festival)</SelectItem>
+                  {festivals.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name} {f.year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Category</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {BRAIN_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">File (PDF, image, Word, Excel, txt)</Label>
+            <Input
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md,.doc,.docx,.xls,.xlsx,.csv"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            {file && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {file.name} · {(file.size / 1024).toFixed(0)} KB
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label className="text-xs">…or paste text / email body</Label>
+            <Textarea
+              rows={4}
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+              placeholder="Paste contract text, email body, supplier quote, notes…"
+            />
+          </div>
+
+          {!preview ? (
+            <Button onClick={extract} disabled={extracting} size="sm">
+              {extracting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Extracting…</>
+              ) : (
+                <><Sparkles className="h-4 w-4 mr-2" /> Extract with AI</>
+              )}
+            </Button>
+          ) : (
+            <div className="space-y-3 rounded-md border bg-background p-3">
+              <div>
+                <Label className="text-xs">Summary</Label>
+                <Input
+                  value={preview.summary}
+                  onChange={(e) =>
+                    setPreview({ ...preview, summary: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Content (editable)</Label>
+                <Textarea
+                  rows={10}
+                  value={preview.content}
+                  onChange={(e) =>
+                    setPreview({ ...preview, content: e.target.value })
+                  }
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={save} disabled={saving} size="sm">
+                  {saving ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</>
+                  ) : (
+                    "Save to Brain"
+                  )}
+                </Button>
+                <Button variant="outline" size="sm" onClick={reset}>
+                  Discard
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
