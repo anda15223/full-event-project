@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -12,7 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, UserRound, Users } from "lucide-react";
+import {
+  ChevronDown,
+  Plus,
+  Sparkles,
+  Trash2,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { CardUploadZone, EditableField } from "./shared";
 
@@ -29,24 +44,106 @@ type Person = {
   email: string | null;
   notes: string | null;
   is_crew: boolean;
+  is_driver: boolean;
+  needs_accommodation: boolean;
+  order_index: number;
+  created_at: string;
 };
 
 type Festival = {
   id: string;
   name: string;
   location: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  organiser_name: string | null;
   organiser_phone: string | null;
+  organiser_email: string | null;
 };
+
+type BrainEntry = {
+  id: string;
+  festival_id: string | null;
+  display_name: string | null;
+  key_name: string;
+  content: string;
+  structured_data: any;
+  is_active: boolean | null;
+};
+
+type Prefill = {
+  name?: string;
+  phone?: string;
+  email?: string;
+  isCrew?: "yes" | "no";
+} | null;
+
+const PHONE_RE = /(\+?\d[\d\s\-().]{6,}\d)/;
+const EMAIL_RE = /([^\s<>"']+@[^\s<>"']+\.[^\s<>"']+)/;
+
+function fmtDate(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    return format(parseISO(iso), "d MMM yyyy");
+  } catch {
+    return iso;
+  }
+}
+
+function guessNameFromBrain(b: BrainEntry): string {
+  if (b.display_name && b.display_name.trim()) return b.display_name.trim();
+
+  // "From: Name <email>" pattern
+  const content = b.content ?? "";
+  if (EMAIL_RE.test(content)) {
+    const fromMatch = content.match(/(?:from|fra|de la)\s*[:\-]?\s*([^\n<]+?)\s*<[^>]+>/i);
+    if (fromMatch?.[1]) return fromMatch[1].trim().slice(0, 80);
+    const angleMatch = content.match(/^([^<\n]+?)\s*<[^>]+>/);
+    if (angleMatch?.[1]) return angleMatch[1].trim().slice(0, 80);
+  }
+
+  // First non-empty line
+  const firstLine = content
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l.length > 0);
+  if (firstLine) return firstLine.slice(0, 80);
+
+  return b.key_name;
+}
+
+function extractContact(b: BrainEntry): { phone?: string; email?: string } {
+  const haystack = [
+    b.content ?? "",
+    typeof b.structured_data === "string"
+      ? b.structured_data
+      : JSON.stringify(b.structured_data ?? {}),
+  ].join(" ");
+  const phone = haystack.match(PHONE_RE)?.[1];
+  const email = haystack.match(EMAIL_RE)?.[1];
+  return {
+    phone: phone?.trim(),
+    email: email?.trim().toLowerCase(),
+  };
+}
+
+function normPhone(p: string | null | undefined): string {
+  return (p ?? "").replace(/[^\d+]/g, "");
+}
 
 export function IntroductionCard({ festivalId }: Props) {
   const qc = useQueryClient();
+  const [prefill, setPrefill] = useState<Prefill>(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const { data: festival } = useQuery({
     queryKey: ["festival_intro", festivalId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, location, organiser_phone")
+        .select(
+          "id, name, location, start_date, end_date, organiser_name, organiser_phone, organiser_email",
+        )
         .eq("id", festivalId)
         .maybeSingle();
       if (error) throw error;
@@ -58,12 +155,26 @@ export function IntroductionCard({ festivalId }: Props) {
     queryKey: ["personal_festival_db", festivalId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("personal_festival_db" as any)
+        .from("personal_festival_db")
         .select("*")
         .eq("festival_id", festivalId)
+        .order("order_index", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as Person[];
+    },
+  });
+
+  const { data: brainEntries = [] } = useQuery({
+    queryKey: ["brain_entries_intro", festivalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brain_entries")
+        .select("id, festival_id, display_name, key_name, content, structured_data, is_active")
+        .eq("festival_id", festivalId)
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? []) as unknown as BrainEntry[];
     },
   });
 
@@ -81,6 +192,23 @@ export function IntroductionCard({ festivalId }: Props) {
 
   const crew = people.filter((p) => p.is_crew);
   const contacts = people.filter((p) => !p.is_crew);
+
+  const focusForm = () => {
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
+  const handlePromote = (b: BrainEntry) => {
+    const { phone, email } = extractContact(b);
+    setPrefill({
+      name: guessNameFromBrain(b),
+      phone,
+      email,
+      isCrew: "no",
+    });
+    focusForm();
+  };
 
   return (
     <div className="space-y-5">
@@ -101,30 +229,66 @@ export function IntroductionCard({ festivalId }: Props) {
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">
-              Location
-            </Label>
+            <Label className="text-[11px] text-muted-foreground">Location</Label>
             <EditableField
               value={festival?.location ?? ""}
               onChange={(v) => updateFestival({ location: v || null })}
               placeholder="Add location"
             />
           </div>
-          <div className="col-span-2 space-y-1">
-            <Label className="text-[11px] text-muted-foreground">
-              Festival contact phone
-            </Label>
+
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Start date</Label>
+            <div className="px-2 py-1 text-sm">{fmtDate(festival?.start_date ?? null)}</div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">End date</Label>
+            <div className="px-2 py-1 text-sm">{fmtDate(festival?.end_date ?? null)}</div>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Organiser name</Label>
+            <EditableField
+              value={festival?.organiser_name ?? ""}
+              onChange={(v) => updateFestival({ organiser_name: v || null })}
+              placeholder="Add organiser name"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Organiser phone</Label>
             <EditableField
               value={festival?.organiser_phone ?? ""}
               onChange={(v) => updateFestival({ organiser_phone: v || null })}
-              placeholder="Add festival phone"
+              placeholder="Add organiser phone"
+            />
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Organiser email</Label>
+            <EditableField
+              value={festival?.organiser_email ?? ""}
+              onChange={(v) => updateFestival({ organiser_email: v || null })}
+              placeholder="Add organiser email"
             />
           </div>
         </div>
       </Card>
 
+      {/* Brain suggestions */}
+      <BrainSuggestions
+        entries={brainEntries}
+        people={people}
+        onPromote={handlePromote}
+      />
+
       {/* Add person */}
-      <AddPersonForm festivalId={festivalId} />
+      <div ref={formRef}>
+        <AddPersonForm
+          festivalId={festivalId}
+          people={people}
+          prefill={prefill}
+          onConsumePrefill={() => setPrefill(null)}
+        />
+      </div>
 
       {/* People grouped */}
       <PeopleGroup
@@ -132,6 +296,7 @@ export function IntroductionCard({ festivalId }: Props) {
         icon={<Users className="h-3.5 w-3.5" />}
         people={crew}
         festivalId={festivalId}
+        showCrewToggles
       />
       <PeopleGroup
         title="Festival Contacts"
@@ -151,21 +316,128 @@ export function IntroductionCard({ festivalId }: Props) {
   );
 }
 
-function AddPersonForm({ festivalId }: { festivalId: string }) {
+function BrainSuggestions({
+  entries,
+  people,
+  onPromote,
+}: {
+  entries: BrainEntry[];
+  people: Person[];
+  onPromote: (b: BrainEntry) => void;
+}) {
+  const existingPhones = useMemo(
+    () => new Set(people.map((p) => normPhone(p.phone)).filter(Boolean)),
+    [people],
+  );
+  const existingEmails = useMemo(
+    () => new Set(people.map((p) => (p.email ?? "").toLowerCase().trim()).filter(Boolean)),
+    [people],
+  );
+
+  const suggestions = useMemo(() => {
+    return entries
+      .map((b) => {
+        const c = extractContact(b);
+        if (!c.phone && !c.email) return null;
+        const alreadyAdded =
+          (c.phone && existingPhones.has(normPhone(c.phone))) ||
+          (c.email && existingEmails.has(c.email));
+        return {
+          entry: b,
+          name: guessNameFromBrain(b),
+          phone: c.phone,
+          email: c.email,
+          alreadyAdded: !!alreadyAdded,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [entries, existingPhones, existingEmails]);
+
+  if (suggestions.length === 0) return null;
+
+  return (
+    <Card className="p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-primary" />
+        <h3 className="text-[14px] font-semibold">Brain suggestions</h3>
+        <Badge variant="secondary" className="text-[10px]">
+          {suggestions.length}
+        </Badge>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Contacts the AI extracted from emails for this festival. Promote them to your people directory.
+      </p>
+      <div className="space-y-2">
+        {suggestions.map((s) => (
+          <div
+            key={s.entry.id}
+            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3 bg-background"
+          >
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <div className="text-[13px] font-medium truncate">{s.name}</div>
+              <div className="text-[11px] text-muted-foreground truncate">
+                {[s.phone, s.email].filter(Boolean).join(" · ")}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant={s.alreadyAdded ? "outline" : "default"}
+              className="h-8 shrink-0"
+              disabled={s.alreadyAdded}
+              onClick={() => onPromote(s.entry)}
+            >
+              {s.alreadyAdded ? "Already added" : "Promote to contact"}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function AddPersonForm({
+  festivalId,
+  people,
+  prefill,
+  onConsumePrefill,
+}: {
+  festivalId: string;
+  people: Person[];
+  prefill: Prefill;
+  onConsumePrefill: () => void;
+}) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
   const [isCrew, setIsCrew] = useState<"yes" | "no">("no");
+  const [isDriver, setIsDriver] = useState(false);
+  const [needsAccommodation, setNeedsAccommodation] = useState(false);
   const [saving, setSaving] = useState(false);
+  const consumedRef = useRef<Prefill>(null);
+
+  // Apply prefill once when it arrives
+  if (prefill && consumedRef.current !== prefill) {
+    consumedRef.current = prefill;
+    if (prefill.name !== undefined) setName(prefill.name ?? "");
+    if (prefill.phone !== undefined) setPhone(prefill.phone ?? "");
+    if (prefill.email !== undefined) setEmail(prefill.email ?? "");
+    if (prefill.isCrew !== undefined) setIsCrew(prefill.isCrew);
+  }
 
   const reset = () => {
     setName("");
     setRole("");
     setPhone("");
     setEmail("");
+    setNotes("");
     setIsCrew("no");
+    setIsDriver(false);
+    setNeedsAccommodation(false);
+    consumedRef.current = null;
+    onConsumePrefill();
   };
 
   const submit = async () => {
@@ -174,13 +446,23 @@ function AddPersonForm({ festivalId }: { festivalId: string }) {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("personal_festival_db" as any).insert({
+    const crewFlag = isCrew === "yes";
+    const sameBucket = people.filter((p) => p.is_crew === crewFlag);
+    const nextOrder = sameBucket.length
+      ? Math.max(...sameBucket.map((p) => p.order_index ?? 0)) + 1
+      : 0;
+
+    const { error } = await supabase.from("personal_festival_db").insert({
       festival_id: festivalId,
       name: name.trim(),
       role: role.trim() || null,
       phone: phone.trim() || null,
       email: email.trim() || null,
-      is_crew: isCrew === "yes",
+      notes: notes.trim() || null,
+      is_crew: crewFlag,
+      is_driver: crewFlag ? isDriver : false,
+      needs_accommodation: crewFlag ? needsAccommodation : false,
+      order_index: nextOrder,
     });
     setSaving(false);
     if (error) {
@@ -236,6 +518,15 @@ function AddPersonForm({ festivalId }: { festivalId: string }) {
           />
         </div>
         <div className="col-span-2 space-y-1">
+          <Label className="text-[11px] text-muted-foreground">Notes</Label>
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Optional"
+            className="h-8 text-[13px]"
+          />
+        </div>
+        <div className="col-span-2 space-y-1">
           <Label className="text-[11px] text-muted-foreground">
             Is this person part of the crew?
           </Label>
@@ -249,6 +540,25 @@ function AddPersonForm({ festivalId }: { festivalId: string }) {
             </SelectContent>
           </Select>
         </div>
+
+        {isCrew === "yes" && (
+          <div className="col-span-2 flex flex-wrap items-center gap-4 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+            <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+              <Checkbox
+                checked={isDriver}
+                onCheckedChange={(v) => setIsDriver(v === true)}
+              />
+              <span>Driver</span>
+            </label>
+            <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+              <Checkbox
+                checked={needsAccommodation}
+                onCheckedChange={(v) => setNeedsAccommodation(v === true)}
+              />
+              <span>Needs accommodation</span>
+            </label>
+          </div>
+        )}
       </div>
       <div className="flex justify-end">
         <Button size="sm" onClick={submit} disabled={saving} className="h-8">
@@ -265,17 +575,20 @@ function PeopleGroup({
   icon,
   people,
   festivalId,
+  showCrewToggles = false,
 }: {
   title: string;
   icon: React.ReactNode;
   people: Person[];
   festivalId: string;
+  showCrewToggles?: boolean;
 }) {
   const qc = useQueryClient();
+  const [open, setOpen] = useState(people.length > 0);
 
   const updatePerson = async (id: string, patch: Partial<Person>) => {
     const { error } = await supabase
-      .from("personal_festival_db" as any)
+      .from("personal_festival_db")
       .update(patch)
       .eq("id", id);
     if (error) {
@@ -287,7 +600,7 @@ function PeopleGroup({
 
   const deletePerson = async (id: string) => {
     const { error } = await supabase
-      .from("personal_festival_db" as any)
+      .from("personal_festival_db")
       .delete()
       .eq("id", id);
     if (error) {
@@ -298,96 +611,122 @@ function PeopleGroup({
   };
 
   return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="text-[14px] font-semibold">{title}</h3>
-        <span className="text-[11px] text-muted-foreground">
-          ({people.length})
-        </span>
-      </div>
-
-      {people.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/60 p-4 text-center">
-          <p className="text-[12px] text-muted-foreground">None yet.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {people.map((p) => (
-            <div
-              key={p.id}
-              className="rounded-lg border border-border/60 p-3 space-y-2 bg-background"
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] text-muted-foreground">
-                  {p.is_crew ? "Crew" : "Contact"}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => deletePerson(p.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Name</Label>
-                  <EditableField
-                    value={p.name}
-                    onChange={(v) => updatePerson(p.id, { name: v })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Role</Label>
-                  <EditableField
-                    value={p.role ?? ""}
-                    onChange={(v) => updatePerson(p.id, { role: v || null })}
-                    placeholder="Add role"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Phone</Label>
-                  <EditableField
-                    value={p.phone ?? ""}
-                    onChange={(v) => updatePerson(p.id, { phone: v || null })}
-                    placeholder="Add phone"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Email</Label>
-                  <EditableField
-                    value={p.email ?? ""}
-                    onChange={(v) => updatePerson(p.id, { email: v || null })}
-                    placeholder="Add email"
-                  />
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">
-                    Crew member?
-                  </Label>
-                  <Select
-                    value={p.is_crew ? "yes" : "no"}
-                    onValueChange={(v) =>
-                      updatePerson(p.id, { is_crew: v === "yes" })
-                    }
-                  >
-                    <SelectTrigger className="h-8 text-[13px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes — crew member</SelectItem>
-                      <SelectItem value="no">No — festival contact</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+    <Card className="p-5">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 text-left"
+          >
+            <div className="flex items-center gap-2">
+              {icon}
+              <h3 className="text-[14px] font-semibold">{title}</h3>
+              <Badge variant="secondary" className="text-[10px]">
+                {people.length}
+              </Badge>
             </div>
-          ))}
-        </div>
-      )}
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent className="pt-3">
+          {people.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border/60 p-4 text-center">
+              <p className="text-[12px] text-muted-foreground">None yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {people.map((p) => (
+                <div
+                  key={p.id}
+                  className="rounded-lg border border-border/60 p-3 space-y-2 bg-background"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-[12px] text-muted-foreground">
+                      {p.is_crew ? "Crew" : "Contact"}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deletePerson(p.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Name</Label>
+                      <EditableField
+                        value={p.name}
+                        onChange={(v) => updatePerson(p.id, { name: v })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Role</Label>
+                      <EditableField
+                        value={p.role ?? ""}
+                        onChange={(v) => updatePerson(p.id, { role: v || null })}
+                        placeholder="Add role"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Phone</Label>
+                      <EditableField
+                        value={p.phone ?? ""}
+                        onChange={(v) => updatePerson(p.id, { phone: v || null })}
+                        placeholder="Add phone"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Email</Label>
+                      <EditableField
+                        value={p.email ?? ""}
+                        onChange={(v) => updatePerson(p.id, { email: v || null })}
+                        placeholder="Add email"
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Notes</Label>
+                      <EditableField
+                        value={p.notes ?? ""}
+                        onChange={(v) => updatePerson(p.id, { notes: v || null })}
+                        placeholder="Add notes"
+                      />
+                    </div>
+
+                    {showCrewToggles && p.is_crew && (
+                      <div className="col-span-2 flex flex-wrap items-center gap-4 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                        <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+                          <Checkbox
+                            checked={p.is_driver}
+                            onCheckedChange={(v) =>
+                              updatePerson(p.id, { is_driver: v === true })
+                            }
+                          />
+                          <span>Driver</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-[12px] cursor-pointer">
+                          <Checkbox
+                            checked={p.needs_accommodation}
+                            onCheckedChange={(v) =>
+                              updatePerson(p.id, { needs_accommodation: v === true })
+                            }
+                          />
+                          <span>Needs accommodation</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
