@@ -42,6 +42,7 @@ import DocumentsInvoices from "./pages/documents/DocumentsInvoices";
 import DocumentsFestivals from "./pages/documents/DocumentsFestivals";
 import DocumentsFestivalDetail from "./pages/documents/DocumentsFestivalDetail";
 import DocumentsCategoryPage from "./pages/documents/DocumentsCategoryPage";
+import BrainViewer from "./pages/BrainViewer";
 
 const queryClient = new QueryClient();
 
