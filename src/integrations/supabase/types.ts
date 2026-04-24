@@ -801,8 +801,11 @@ export type Database = {
           created_at: string
           id: string
           item_name: string
+          notes: string | null
           order_index: number
+          photo_path: string | null
           quantity: string | null
+          status: string
           trolley_id: string
         }
         Insert: {
@@ -810,8 +813,11 @@ export type Database = {
           created_at?: string
           id?: string
           item_name: string
+          notes?: string | null
           order_index: number
+          photo_path?: string | null
           quantity?: string | null
+          status?: string
           trolley_id: string
         }
         Update: {
@@ -819,8 +825,11 @@ export type Database = {
           created_at?: string
           id?: string
           item_name?: string
+          notes?: string | null
           order_index?: number
+          photo_path?: string | null
           quantity?: string | null
+          status?: string
           trolley_id?: string
         }
         Relationships: [
@@ -836,21 +845,27 @@ export type Database = {
       festival_bc_trolleys: {
         Row: {
           concept_id: string
+          cost: number | null
           created_at: string
+          currency: string
           id: string
           label: string
           trolley_number: number
         }
         Insert: {
           concept_id: string
+          cost?: number | null
           created_at?: string
+          currency?: string
           id?: string
           label: string
           trolley_number: number
         }
         Update: {
           concept_id?: string
+          cost?: number | null
           created_at?: string
+          currency?: string
           id?: string
           label?: string
           trolley_number?: number
