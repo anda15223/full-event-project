@@ -21,16 +21,52 @@ const TILES = [
 
 export default function DocumentsOverview() {
   const [search, setSearch] = useState("");
+  const [backfilling, setBackfilling] = useState(false);
   const { documents, counts, reload } = useDocuments({ search: search || undefined });
   const recent = documents.slice(0, 20);
 
+  const runBackfill = async () => {
+    setBackfilling(true);
+    let offset = 0;
+    let totalIngested = 0;
+    let totalScanned = 0;
+    try {
+      // Loop through pages until no next_offset
+      // Each batch = 100 emails
+      // Safety cap: 50 iterations = 5000 emails
+      for (let i = 0; i < 50; i++) {
+        const { data, error } = await supabase.functions.invoke("backfill-documents", {
+          body: { limit: 100, offset },
+        });
+        if (error) throw error;
+        totalIngested += (data as any)?.ingested ?? 0;
+        totalScanned += (data as any)?.emails_scanned ?? 0;
+        const next = (data as any)?.next_offset;
+        if (next == null) break;
+        offset = next;
+      }
+      toast.success(`Backfill complete: ${totalIngested} documents from ${totalScanned} emails`);
+      reload();
+    } catch (e: any) {
+      toast.error(`Backfill failed: ${e.message ?? e}`);
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-2xl font-bold">Documents</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Every attachment from your inbox and sent folder, automatically categorized.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Documents</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Every attachment from your inbox and sent folder, automatically categorized.
+          </p>
+        </div>
+        <Button onClick={runBackfill} disabled={backfilling} variant="outline">
+          {backfilling ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {backfilling ? "Backfilling..." : "Backfill existing emails"}
+        </Button>
       </div>
 
       <div className="relative max-w-md">
