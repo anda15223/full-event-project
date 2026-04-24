@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import { useDocuments } from "@/hooks/useDocuments";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import DocumentList from "@/components/documents/DocumentList";
-import { FileText, Tent, FileSignature, Users, Truck, Building2, MoreHorizontal, Search } from "lucide-react";
+import { FileText, Tent, FileSignature, Users, Truck, Building2, MoreHorizontal, Search, RefreshCw, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const TILES = [
   { key: "invoice", label: "Invoices", icon: FileText, path: "/documents/invoices", color: "bg-blue-100 text-blue-700" },
