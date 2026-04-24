@@ -34,9 +34,9 @@ export default function DocumentsOverview() {
       // Loop through pages until no next_offset
       // Each batch = 100 emails
       // Safety cap: 50 iterations = 5000 emails
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 200; i++) {
         const { data, error } = await supabase.functions.invoke("backfill-documents", {
-          body: { limit: 100, offset },
+          body: { limit: 50, offset },
         });
         if (error) throw error;
         totalIngested += (data as any)?.ingested ?? 0;
@@ -45,7 +45,7 @@ export default function DocumentsOverview() {
         if (next == null) break;
         offset = next;
       }
-      toast.success(`Backfill complete: ${totalIngested} documents from ${totalScanned} emails`);
+      toast.success(`Backfill queued: ${totalIngested} documents from ${totalScanned} emails. Processing in background — refresh in a few minutes.`);
       reload();
     } catch (e: any) {
       toast.error(`Backfill failed: ${e.message ?? e}`);

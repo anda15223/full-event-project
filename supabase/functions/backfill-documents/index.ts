@@ -45,32 +45,24 @@ serve(async (req) => {
       }
     }
 
-    let processed = 0;
-    let ingested = 0;
-    let failed = 0;
-
+    // Fire-and-forget: kick off ingestion for each email without awaiting.
+    // Each invocation runs in its own edge function instance, so this request
+    // returns immediately and avoids the 150s idle timeout.
+    const queued = emailIds.length;
     for (const email_id of emailIds) {
-      try {
-        const { data, error: invErr } = await supabase.functions.invoke(
-          "ingest-email-documents",
-          { body: { email_id } },
-        );
-        if (invErr) throw invErr;
-        ingested += (data as any)?.ingested ?? 0;
-        processed++;
-      } catch (e) {
-        failed++;
-        console.error(`backfill failed for ${email_id}:`, e);
-      }
+      // Intentionally not awaited — ingestion runs async in the background.
+      supabase.functions
+        .invoke("ingest-email-documents", { body: { email_id } })
+        .catch((e) => console.error(`backfill invoke failed for ${email_id}:`, e));
     }
 
     return new Response(
       JSON.stringify({
         ok: true,
         emails_scanned: emailIds.length,
-        processed,
-        ingested,
-        failed,
+        queued,
+        // ingested is reported as "queued" here since ingestion runs async
+        ingested: queued,
         next_offset: emailIds.length === limit ? offset + limit : null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
