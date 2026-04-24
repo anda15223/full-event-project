@@ -16,6 +16,8 @@ import {
   useExtractInvoice,
   type Email, type EmailAttachment,
 } from "@/hooks/useEmailAgent";
+import { EmailBrainSaver, useEmailsSavedToBrain } from "@/components/inbox/EmailBrainSaver";
+import { Brain } from "lucide-react";
 
 const classificationConfig: Record<string, { label: string; color: string; icon: typeof FileText }> = {
   invoice: { label: "Invoice", color: "bg-primary/10 text-primary border-primary/20", icon: FileText },
