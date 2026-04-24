@@ -865,6 +865,76 @@ export type Database = {
           },
         ]
       }
+      festival_cars: {
+        Row: {
+          concept_id: string | null
+          created_at: string
+          currency: string
+          driver_id: string | null
+          festival_id: string
+          id: string
+          is_rental: boolean
+          label: string | null
+          license_plate: string | null
+          make_model: string | null
+          notes: string | null
+          rental_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          concept_id?: string | null
+          created_at?: string
+          currency?: string
+          driver_id?: string | null
+          festival_id: string
+          id?: string
+          is_rental?: boolean
+          label?: string | null
+          license_plate?: string | null
+          make_model?: string | null
+          notes?: string | null
+          rental_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          concept_id?: string | null
+          created_at?: string
+          currency?: string
+          driver_id?: string | null
+          festival_id?: string
+          id?: string
+          is_rental?: boolean
+          label?: string | null
+          license_plate?: string | null
+          make_model?: string | null
+          notes?: string | null
+          rental_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_cars_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "festival_concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cars_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "personal_festival_db"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cars_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_concepts: {
         Row: {
           created_at: string
@@ -1022,6 +1092,62 @@ export type Database = {
           value?: string | null
         }
         Relationships: []
+      }
+      festival_hotels: {
+        Row: {
+          address: string | null
+          contact: string | null
+          cost_per_night: number | null
+          created_at: string
+          currency: string
+          festival_id: string
+          id: string
+          name: string | null
+          notes: string | null
+          rooms_count: number | null
+          total_cost: number | null
+          total_nights: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact?: string | null
+          cost_per_night?: number | null
+          created_at?: string
+          currency?: string
+          festival_id: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          rooms_count?: number | null
+          total_cost?: number | null
+          total_nights?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact?: string | null
+          cost_per_night?: number | null
+          created_at?: string
+          currency?: string
+          festival_id?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          rooms_count?: number | null
+          total_cost?: number | null
+          total_nights?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_hotels_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       festival_questions: {
         Row: {
@@ -1550,7 +1676,9 @@ export type Database = {
           festival_id: string
           id: string
           is_crew: boolean
+          is_driver: boolean
           name: string
+          needs_accommodation: boolean
           notes: string | null
           phone: string | null
           role: string | null
@@ -1562,7 +1690,9 @@ export type Database = {
           festival_id: string
           id?: string
           is_crew?: boolean
+          is_driver?: boolean
           name: string
+          needs_accommodation?: boolean
           notes?: string | null
           phone?: string | null
           role?: string | null
@@ -1574,7 +1704,9 @@ export type Database = {
           festival_id?: string
           id?: string
           is_crew?: boolean
+          is_driver?: boolean
           name?: string
+          needs_accommodation?: boolean
           notes?: string | null
           phone?: string | null
           role?: string | null
