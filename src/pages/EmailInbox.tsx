@@ -218,22 +218,36 @@ function EmailDetail({ email, onBack }: { email: Email; onBack: () => void }) {
 
   const storageBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/email-attachments`;
 
+  const attachmentsText = (attachments ?? [])
+    .map((a) => [a.filename, a.extracted_summary].filter(Boolean).join("\n"))
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button variant="ghost" onClick={onBack} className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Inbox
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => reparseEmail.mutate(email.id)}
-          disabled={reparseEmail.isPending}
-          className="ml-auto text-xs"
-        >
-          <RotateCcw className={`h-3 w-3 mr-1 ${reparseEmail.isPending ? "animate-spin" : ""}`} />
-          Re-parse
-        </Button>
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <EmailBrainSaver
+            emailId={email.id}
+            emailSubject={email.subject}
+            emailSender={email.sender}
+            emailBody={bodyText || null}
+            attachmentsText={attachmentsText || null}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => reparseEmail.mutate(email.id)}
+            disabled={reparseEmail.isPending}
+            className="text-xs"
+          >
+            <RotateCcw className={`h-3 w-3 mr-1 ${reparseEmail.isPending ? "animate-spin" : ""}`} />
+            Re-parse
+          </Button>
+        </div>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
