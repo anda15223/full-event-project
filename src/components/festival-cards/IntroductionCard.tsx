@@ -234,7 +234,7 @@ export function IntroductionCard({ festivalId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brain_entries")
-        .select("id, festival_id, display_name, key_name, content, structured_data, is_active")
+        .select("id, festival_id, display_name, key_name, content, structured_data, is_active, created_at")
         .eq("festival_id", festivalId)
         .eq("is_active", true);
       if (error) throw error;
