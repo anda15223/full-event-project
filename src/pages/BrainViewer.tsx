@@ -15,9 +15,20 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Brain, Mail, FileText, Pencil, Plus, Search, Tent, Trash2, User,
+  Brain, Mail, FileText, Pencil, Plus, Search, Tent, Trash2, Upload, User, Sparkles, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
+
+const BRAIN_CATEGORIES = [
+  "contract",
+  "electricity_plan",
+  "safety_plan",
+  "email",
+  "supplier_quote",
+  "festival_rules",
+  "note",
+  "other",
+] as const;
 
 type BrainEntry = {
   id: string;
