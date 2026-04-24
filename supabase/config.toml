@@ -1,4 +1,49 @@
 project_id = "llnmwiyvsmbnzqqhokjo"
 
+[functions.imap-sync]
+verify_jwt = false
+
+[functions.fetch-emails]
+verify_jwt = false
+
+[functions.fetch-email-body]
+verify_jwt = false
+
+[functions.fetch-email-attachment]
+verify_jwt = false
+
+[functions.classify-emails]
+verify_jwt = false
+
+[functions.extract-invoice]
+verify_jwt = false
+
+[functions.invoice-chat]
+verify_jwt = false
+
+[functions.agent-chat]
+verify_jwt = false
+
+[functions.serve-attachment]
+verify_jwt = false
+
+[functions.reprocess-unknown-languages]
+verify_jwt = false
+
+[functions.reprocess-with-claude]
+verify_jwt = false
+
+[functions.section-page-chat]
+verify_jwt = false
+
+[functions.smart-card-chat]
+verify_jwt = false
+
 [functions.smart-card-extract]
+verify_jwt = false
+
+[functions.ingest-email-documents]
+verify_jwt = false
+
+[functions.categorize-document]
 verify_jwt = false

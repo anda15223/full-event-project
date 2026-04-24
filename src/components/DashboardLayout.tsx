@@ -5,27 +5,18 @@ import {
   SidebarInset, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard, Brain, FolderOpen, FileText,
-  ListTodo, ClipboardList, AlertTriangle, Settings,
-  PanelLeft, Zap, Globe, Wrench, BookOpen, TrendingDown,
-  BarChart3, Tent,
+  LayoutDashboard, Mail, FileText, Tent,
+  Settings, PanelLeft, Zap, LogOut,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ChatPanel from "@/components/ChatPanel";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Brain, label: "Email Memory", path: "/email-memory", color: "bg-agent-blue" },
-  { icon: FolderOpen, label: "Organized Inbox", path: "/agent/inbox", color: "bg-agent-purple" },
-  { icon: FileText, label: "Invoice Intelligence", path: "/agent/invoices", color: "bg-agent-green" },
-  { icon: ListTodo, label: "Action Center", path: "/agent/tasks", color: "bg-agent-orange" },
-  { icon: Wrench, label: "Operations", path: "/agent/operations", color: "bg-agent-purple" },
-  { icon: Globe, label: "Romania", path: "/agent/romania", color: "bg-agent-blue" },
-  { icon: ClipboardList, label: "Non-Email Tasks", path: "/tasks", color: "bg-agent-gray" },
-  { icon: BookOpen, label: "Ledger", path: "/ledger", color: "bg-agent-green" },
-  { icon: BarChart3, label: "KPI Ledger", path: "/kpi-ledger", color: "bg-violet-500" },
-  { icon: TrendingDown, label: "Cashflow", path: "/cashflow", color: "bg-agent-orange" },
-  { icon: AlertTriangle, label: "Review Queue", path: "/agent/review" },
+  { icon: Mail, label: "Emails", path: "/emails", color: "bg-agent-blue" },
+  { icon: FileText, label: "Documents", path: "/documents", color: "bg-agent-green" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-agent-purple" },
 ];
 

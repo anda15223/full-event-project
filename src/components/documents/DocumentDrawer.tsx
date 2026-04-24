@@ -57,7 +57,7 @@ export default function DocumentDrawer({
     setUpdating(true);
     const { error } = await supabase
       .from("extracted_documents")
-      .update({ category: newCategory, manual_override: true })
+      .update({ category: newCategory as DocumentRow["category"], manual_override: true })
       .eq("id", doc.id);
     setUpdating(false);
     if (error) toast.error(error.message);

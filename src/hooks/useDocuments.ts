@@ -21,7 +21,7 @@ export function useDocuments(filter: Filter = {}) {
       .order("received_at", { ascending: false })
       .limit(500);
 
-    if (filter.category) q = q.eq("category", filter.category);
+    if (filter.category) q = q.eq("category", filter.category as DocumentRow["category"]);
     if (filter.festival_slug) q = q.eq("festival_slug", filter.festival_slug);
     if (filter.search) {
       q = q.or(`filename.ilike.%${filter.search}%,subject.ilike.%${filter.search}%,sender.ilike.%${filter.search}%`);
