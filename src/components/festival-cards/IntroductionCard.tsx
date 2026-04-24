@@ -399,6 +399,8 @@ function BrainSuggestions({
 
   const suggestions = useMemo(() => {
     return entries
+      .slice()
+      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
       .map((b) => {
         const c = extractContact(b);
         if (!c.phone && !c.email) return null;
