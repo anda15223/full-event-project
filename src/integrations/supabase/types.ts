@@ -164,6 +164,53 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_table: {
+        Row: {
+          amount: number | null
+          card_origin: string | null
+          created_at: string
+          currency: string
+          description: string
+          festival_id: string
+          id: string
+          invoice_url: string | null
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          card_origin?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          festival_id: string
+          id?: string
+          invoice_url?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          card_origin?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          festival_id?: string
+          id?: string
+          invoice_url?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_table_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_attachments: {
         Row: {
           cid: string | null
@@ -478,6 +525,53 @@ export type Database = {
           summary?: string | null
         }
         Relationships: []
+      }
+      equipment_db: {
+        Row: {
+          card_origin: string | null
+          created_at: string
+          festival_id: string
+          id: string
+          item_name: string
+          notes: string | null
+          quantity: string | null
+          source: Database["public"]["Enums"]["equipment_source"]
+          status: Database["public"]["Enums"]["equipment_status"]
+          updated_at: string
+        }
+        Insert: {
+          card_origin?: string | null
+          created_at?: string
+          festival_id: string
+          id?: string
+          item_name: string
+          notes?: string | null
+          quantity?: string | null
+          source?: Database["public"]["Enums"]["equipment_source"]
+          status?: Database["public"]["Enums"]["equipment_status"]
+          updated_at?: string
+        }
+        Update: {
+          card_origin?: string | null
+          created_at?: string
+          festival_id?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          quantity?: string | null
+          source?: Database["public"]["Enums"]["equipment_source"]
+          status?: Database["public"]["Enums"]["equipment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_db_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       extracted_documents: {
         Row: {
@@ -1449,6 +1543,50 @@ export type Database = {
           },
         ]
       }
+      personal_festival_db: {
+        Row: {
+          created_at: string
+          email: string | null
+          festival_id: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          festival_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          festival_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_festival_db_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1877,6 +2015,89 @@ export type Database = {
         }
         Relationships: []
       }
+      suppliers_db: {
+        Row: {
+          contact_person: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          product_categories: string[]
+          updated_at: string
+        }
+        Insert: {
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          product_categories?: string[]
+          updated_at?: string
+        }
+        Update: {
+          contact_person?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          product_categories?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tasks_deadlines: {
+        Row: {
+          card_origin: string | null
+          created_at: string
+          deadline: string | null
+          festival_id: string
+          id: string
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          status: Database["public"]["Enums"]["task_status"]
+          task: string
+          updated_at: string
+        }
+        Insert: {
+          card_origin?: string | null
+          created_at?: string
+          deadline?: string | null
+          festival_id: string
+          id?: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          status?: Database["public"]["Enums"]["task_status"]
+          task: string
+          updated_at?: string
+        }
+        Update: {
+          card_origin?: string | null
+          created_at?: string
+          deadline?: string | null
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          status?: Database["public"]["Enums"]["task_status"]
+          task?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1922,6 +2143,10 @@ export type Database = {
         | "supplier"
         | "authority"
         | "other"
+      equipment_source: "by_us" | "by_festival"
+      equipment_status: "pending" | "confirmed" | "delivered" | "returned"
+      task_priority: "urgent" | "high" | "normal" | "low"
+      task_status: "pending" | "in_progress" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2059,6 +2284,10 @@ export const Constants = {
         "authority",
         "other",
       ],
+      equipment_source: ["by_us", "by_festival"],
+      equipment_status: ["pending", "confirmed", "delivered", "returned"],
+      task_priority: ["urgent", "high", "normal", "low"],
+      task_status: ["pending", "in_progress", "done"],
     },
   },
 } as const
