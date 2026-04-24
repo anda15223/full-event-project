@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Mail, FileText, Tent,
-  Settings, PanelLeft, Zap, LogOut,
+  Settings, PanelLeft, Zap, LogOut, Brain,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import ChatPanel from "@/components/ChatPanel";
@@ -18,6 +18,7 @@ const navItems = [
   { icon: Mail, label: "Emails", path: "/emails", color: "bg-agent-blue" },
   { icon: FileText, label: "Documents", path: "/documents", color: "bg-agent-green" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-agent-purple" },
+  { icon: Brain, label: "Brain", path: "/brain", color: "bg-agent-orange" },
 ];
 
 function SidebarNav() {
