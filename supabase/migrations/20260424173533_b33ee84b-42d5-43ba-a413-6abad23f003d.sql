@@ -1,0 +1,1 @@
+ALTER TABLE public.personal_festival_db ADD COLUMN IF NOT EXISTS is_crew boolean NOT NULL DEFAULT false;
