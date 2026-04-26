@@ -13,6 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Brain, Mail, FileText, Pencil, Plus, Search, Tent, Trash2, Upload, User, Sparkles, Loader2,
@@ -71,6 +72,7 @@ export default function BrainViewer() {
   const [selected, setSelected] = useState<BrainEntry | null>(null);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: festivals = [] } = useQuery({
     queryKey: ["brain-festivals"],
@@ -140,6 +142,43 @@ export default function BrainViewer() {
     },
     onError: (e: any) => toast.error(`Delete failed: ${e.message}`),
   });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("brain_entries").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, ids) => {
+      qc.invalidateQueries({ queryKey: ["brain-entries"] });
+      toast.success(`Deleted ${ids.length} ${ids.length === 1 ? "entry" : "entries"}`);
+      setSelectedIds(new Set());
+    },
+    onError: (e: any) => toast.error(`Bulk delete failed: ${e.message}`),
+  });
+
+  const toggleId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every(e => selectedIds.has(e.id));
+  const someFilteredSelected = filtered.some(e => selectedIds.has(e.id));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        filtered.forEach(e => next.delete(e.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach(e => next.add(e.id));
+      return next;
+    });
+  };
 
   const addMut = useMutation({
     mutationFn: async (payload: { content: string; category: string; display_name: string; festival_id: string | null }) => {
@@ -222,6 +261,37 @@ export default function BrainViewer() {
           </Button>
         </div>
 
+        {(filtered.length > 0 || selectedIds.size > 0) && (
+          <div className="flex items-center gap-3 mb-2 px-1">
+            <Checkbox
+              checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
+              onCheckedChange={toggleSelectAll}
+              aria-label="Select all"
+            />
+            <span className="text-xs text-muted-foreground">
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : `Select all (${filtered.length})`}
+            </span>
+            {selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="ml-auto h-7"
+                disabled={bulkDeleteMut.isPending}
+                onClick={() => {
+                  if (confirm(`Delete ${selectedIds.size} brain ${selectedIds.size === 1 ? "entry" : "entries"}? This cannot be undone.`)) {
+                    bulkDeleteMut.mutate(Array.from(selectedIds));
+                  }
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Delete selected
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
           {isLoading && <div className="text-sm text-muted-foreground p-4">Loading…</div>}
           {!isLoading && filtered.length === 0 && (
@@ -229,6 +299,7 @@ export default function BrainViewer() {
           )}
           {filtered.map(e => {
             const Icon = sourceIcon(e.source);
+            const isChecked = selectedIds.has(e.id);
             return (
               <Card
                 key={e.id}
@@ -236,6 +307,16 @@ export default function BrainViewer() {
                 className="p-3 cursor-pointer hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-start gap-3">
+                  <div
+                    className="pt-1"
+                    onClick={(ev) => ev.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleId(e.id)}
+                      aria-label="Select entry"
+                    />
+                  </div>
                   <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
