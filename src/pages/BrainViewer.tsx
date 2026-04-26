@@ -46,6 +46,14 @@ type BrainEntry = {
 
 type Festival = { id: string; name: string; year: number; start_date: string };
 
+const fileToDataUrl = (input: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+    reader.readAsDataURL(input);
+  });
+
 const sourceIcon = (source: string | null) => {
   switch (source) {
     case "email": return Mail;
