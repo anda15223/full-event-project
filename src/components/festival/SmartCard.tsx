@@ -1368,6 +1368,17 @@ export function SmartCard({
                       <Badge variant="outline" className="text-[10px] h-4 px-1">
                         {d.role === "structured_line" ? "structured" : "AI source"}
                       </Badge>
+                      {d.category && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-4 px-1",
+                            d.same_card ? "border-primary/40 text-primary" : "border-amber-400/50 text-amber-700 dark:text-amber-300"
+                          )}
+                        >
+                          {d.same_card ? d.category : `from: ${d.category}`}
+                        </Badge>
+                      )}
                       {d.scope && (
                         <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground">
                           {d.scope}
