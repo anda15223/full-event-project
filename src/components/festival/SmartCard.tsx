@@ -1152,17 +1152,44 @@ export function SmartCard({
     setBrainPickerOpen(false);
     setGrabbing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
-        body: {
-          action: "grab_brain",
-          card_key: cardKey,
-          festival_id: festivalId,
-          concept_id: conceptId || null,
-          brain_ids: visibleSelectedIds,
-        },
-      });
-      if (error) throw error;
-      const suggestions: Array<{ title: string; lines: any[] }> = data?.suggestions || [];
+      let data: any = null;
+      let suggestions: Array<{ title: string; lines: any[] }> = [];
+      let usedLocalFallback = false;
+
+      try {
+        const result = await supabase.functions.invoke("smart-card-extract", {
+          body: {
+            action: "grab_brain",
+            card_key: cardKey,
+            festival_id: festivalId,
+            concept_id: conceptId || null,
+            brain_ids: visibleSelectedIds,
+          },
+        });
+        if (result.error) throw result.error;
+        data = result.data;
+        suggestions = data?.suggestions || [];
+      } catch (edgeError: any) {
+        const { data: rows, error: dbError } = await (supabase as any)
+          .from("brain_entries")
+          .select("*")
+          .in("id", visibleSelectedIds);
+        if (dbError) throw edgeError || dbError;
+        if (isTrolleyCardKey(cardKey)) {
+          suggestions = buildLocalTrolleySuggestions(rows || []);
+          usedLocalFallback = true;
+          data = {
+            diagnostics: {
+              selection_mode: "local_trolley_fallback",
+              brain_rows_selected: rows?.length || 0,
+              notes: ["Brain service request failed, so trolley lines were parsed directly from the selected Brain documents."],
+            },
+          };
+        } else {
+          throw edgeError;
+        }
+      }
+
       setBrainDiagnostics(data?.diagnostics || null);
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
@@ -1184,9 +1211,11 @@ export function SmartCard({
         }
       }
       toast.success(
-        sourceCardFilter !== "all"
-          ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
-          : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
+        usedLocalFallback
+          ? `Imported ${suggestions.reduce((total, s) => total + (s.lines?.length || 0), 0)} trolley line(s)`
+          : sourceCardFilter !== "all"
+            ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
+            : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
       );
       reload();
     } catch (e: any) {
