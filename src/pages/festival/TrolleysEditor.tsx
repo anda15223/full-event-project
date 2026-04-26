@@ -108,7 +108,10 @@ export default function TrolleysEditor() {
                 festivalId={festival.id}
                 conceptId={t.concept_id}
                 title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
-                subtitle="Upload packing lists or photos, or grab from Brain. Items appear here as suggestions; copy them into the official checklist below."
+                subtitle="Upload packing lists or photos, or grab from Brain. Use the per-row Allocate + Inventory dropdowns to organize each item."
+                siblingConcepts={concepts.map(c => ({ id: c.id, name: c.name }))}
+                enableInlineConceptAllocator
+                inventoryCategories={CATEGORIES}
               />
 
               {/* Official trolley checklist (writes to festival_bc_trolley_items) */}

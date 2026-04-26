@@ -41,6 +41,10 @@ export type SmartCardProps = {
   siblingConcepts?: { id: string; name: string }[];
   /** When true, each line shows a concept dropdown; on Save, lines with concept assigned get moved into that concept's per-concept card */
   conceptAssignerMode?: boolean;
+  /** When provided, each line gets an Inventory category dropdown (persists immediately to meta.inventory_category). */
+  inventoryCategories?: string[];
+  /** When provided alongside siblingConcepts, each line gets a Concept allocator dropdown that persists immediately to meta.allocated_concept_id. */
+  enableInlineConceptAllocator?: boolean;
 };
 
 type SCard = { id: string; title: string | null; meta: any };
@@ -50,6 +54,7 @@ type SLine = {
   quantity: string | null; notes: string | null; status: string | null;
   owner: string | null; due_date: string | null; order_index: number;
   source: string; source_file_id: string | null;
+  meta?: Record<string, any> | null;
 };
 type SValidationWarning = { field: string; message: string; severity: "error" | "warn" };
 type SFile = {
@@ -85,6 +90,7 @@ export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
   hideBrainButton, siblingConcepts, conceptAssignerMode,
+  inventoryCategories, enableInlineConceptAllocator,
 }: SmartCardProps) {
   // line.id -> target concept id chosen via dropdown (only used when conceptAssignerMode)
   const [lineConceptAssignment, setLineConceptAssignment] = useState<Record<string, string>>({});
@@ -1718,8 +1724,22 @@ export function SmartCard({
                       const gridCols = showAssigner
                         ? (canCopy ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px_24px]" : "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]")
                         : (canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]");
+                      const showInlineConcept = enableInlineConceptAllocator && !!siblingConcepts && siblingConcepts.length > 0;
+                      const showInventory = !!inventoryCategories && inventoryCategories.length > 0;
+                      const inlineConceptVal = (line.meta as any)?.allocated_concept_id ?? "";
+                      const inventoryVal = (line.meta as any)?.inventory_category ?? "";
+                      const persistMeta = async (patch: Record<string, any>) => {
+                        const newMeta = { ...((line.meta as any) || {}), ...patch };
+                        // Optimistic update
+                        setLines(prev => prev.map(l => l.id === line.id ? ({ ...l, meta: newMeta }) : l));
+                        if (!isDraftId(line.id)) {
+                          const { error } = await (supabase as any).from("smart_lines").update({ meta: newMeta }).eq("id", line.id);
+                          if (error) toast.error(`Could not save: ${error.message}`);
+                        }
+                      };
                       return (
-                      <div key={line.id} className={cn("grid gap-1.5 items-center group", gridCols)}>
+                      <div key={line.id} className="space-y-1">
+                      <div className={cn("grid gap-1.5 items-center group", gridCols)}>
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
                         <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
@@ -1751,6 +1771,43 @@ export function SmartCard({
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
+                      </div>
+                      {(showInlineConcept || showInventory) && (
+                        <div className="flex gap-1.5 pl-1 items-center">
+                          {showInlineConcept && (
+                            <select
+                              value={inlineConceptVal}
+                              onChange={(e) => persistMeta({ allocated_concept_id: e.target.value || null })}
+                              className={cn(
+                                "h-6 text-[11px] rounded border bg-background px-1.5 min-w-[120px]",
+                                inlineConceptVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                              )}
+                              title="Allocate to station/concept"
+                            >
+                              <option value="">— allocate to —</option>
+                              {siblingConcepts!.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </select>
+                          )}
+                          {showInventory && (
+                            <select
+                              value={inventoryVal}
+                              onChange={(e) => persistMeta({ inventory_category: e.target.value || null })}
+                              className={cn(
+                                "h-6 text-[11px] rounded border bg-background px-1.5 min-w-[140px]",
+                                inventoryVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                              )}
+                              title="Inventory category"
+                            >
+                              <option value="">— inventory —</option>
+                              {inventoryCategories!.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      )}
                       </div>
                       );
                     })
