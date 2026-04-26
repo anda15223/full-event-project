@@ -16,6 +16,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 export type SmartCardProps = {
   /** Stable key for this card type, e.g. 'equipment_list','cooling_storage','safety' */
@@ -92,6 +95,11 @@ export function SmartCard({
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
   const [brainDiagnostics, setBrainDiagnostics] = useState<any | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  // Brain document picker
+  const [brainPickerOpen, setBrainPickerOpen] = useState(false);
+  const [brainDocs, setBrainDocs] = useState<any[]>([]);
+  const [loadingBrainDocs, setLoadingBrainDocs] = useState(false);
+  const [selectedBrainIds, setSelectedBrainIds] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
