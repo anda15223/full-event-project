@@ -708,6 +708,7 @@ export type Database = {
       }
       festival_action_items: {
         Row: {
+          card_origin: string | null
           created_at: string
           deadline: string | null
           festival_id: string
@@ -720,6 +721,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          card_origin?: string | null
           created_at?: string
           deadline?: string | null
           festival_id: string
@@ -732,6 +734,7 @@ export type Database = {
           title: string
         }
         Update: {
+          card_origin?: string | null
           created_at?: string
           deadline?: string | null
           festival_id?: string
