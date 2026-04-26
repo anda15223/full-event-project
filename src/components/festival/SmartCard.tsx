@@ -1014,8 +1014,7 @@ export function SmartCard({
   const confirmGrabFromBrain = async () => {
     if (!card) return;
     const visibleSelectedIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
-    const useSourceCard = sourceCardFilter !== "all";
-    if (!useSourceCard && visibleSelectedIds.length === 0) {
+    if (visibleSelectedIds.length === 0) {
       toast.error("Select the Brain documents you want to extract from.");
       return;
     }
@@ -1029,8 +1028,7 @@ export function SmartCard({
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
-          source_card_key: useSourceCard ? sourceCardFilter : undefined,
-          brain_ids: useSourceCard ? undefined : visibleSelectedIds,
+          brain_ids: visibleSelectedIds,
         },
       });
       if (error) throw error;
@@ -1038,11 +1036,7 @@ export function SmartCard({
       setBrainDiagnostics(data?.diagnostics || null);
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
-        toast.info(
-          useSourceCard
-            ? `No ${cardKey} info found in ${sourceCardFilter}.`
-            : "Picked Brain docs didn't yield card-specific info — try different docs.",
-        );
+        toast.info("Picked Brain docs didn't yield card-specific info — try different docs.");
         return;
       }
       const baseOrder = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
@@ -1060,7 +1054,7 @@ export function SmartCard({
         }
       }
       toast.success(
-        useSourceCard
+        sourceCardFilter !== "all"
           ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
           : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
       );
@@ -2097,10 +2091,15 @@ export function SmartCard({
                       onChange={(e) => {
                         const next = e.target.value;
                         setSourceCardFilter(next);
+                        const pool = brainDocs.filter((d) => {
+                          if (!includeOtherCards && !d.same_card) return false;
+                          if (next !== "all" && d.category !== next) return false;
+                          return true;
+                        });
                         setSelectedBrainIds(
                           next === "all"
-                            ? new Set(brainDocs.filter((d) => d.recommended).map((d) => d.id))
-                            : new Set()
+                            ? new Set(pool.filter((d) => d.recommended).map((d) => d.id))
+                            : new Set(pool.map((d) => d.id))
                         );
                       }}
                       className="h-7 rounded-md border border-input bg-background px-2 text-xs"
@@ -2261,12 +2260,10 @@ export function SmartCard({
               <Button
                 size="sm"
                 onClick={confirmGrabFromBrain}
-                disabled={(sourceCardFilter === "all" && visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length === 0) || grabbing}
+                disabled={visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length === 0 || grabbing}
               >
                 {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                {sourceCardFilter !== "all"
-                  ? `Extract from ${sourceCardFilter}`
-                  : `Extract from ${visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} doc(s)`}
+                {`Extract from ${visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} doc(s)`}
               </Button>
             </div>
           </DialogFooter>
