@@ -86,13 +86,35 @@ export default function SectionEditor() {
 
       {/* SmartCard FIRST so it's the primary surface for these sections */}
       {sectionKey && SMART_CARDS[sectionKey] && festival && (
-        <SmartCard
-          cardKey={sectionKey}
-          festivalId={festival.id}
-          title={SMART_CARDS[sectionKey].title}
-          subtitle={SMART_CARDS[sectionKey].subtitle}
-          emptyStateWarning={SMART_CARDS[sectionKey].warning}
-        />
+        isPerConcept ? (
+          concepts.length === 0 ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">
+              No concepts yet. Add concepts first to create per-concept {SMART_CARDS[sectionKey].title.toLowerCase()} cards.
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {concepts.map((c: any) => (
+                <SmartCard
+                  key={c.id}
+                  cardKey={sectionKey}
+                  festivalId={festival.id}
+                  conceptId={c.id}
+                  title={`${SMART_CARDS[sectionKey].title} — ${c.name}`}
+                  subtitle={SMART_CARDS[sectionKey].subtitle}
+                  emptyStateWarning={SMART_CARDS[sectionKey].warning}
+                />
+              ))}
+            </div>
+          )
+        ) : (
+          <SmartCard
+            cardKey={sectionKey}
+            festivalId={festival.id}
+            title={SMART_CARDS[sectionKey].title}
+            subtitle={SMART_CARDS[sectionKey].subtitle}
+            emptyStateWarning={SMART_CARDS[sectionKey].warning}
+          />
+        )
       )}
 
       {sectionKey && SMART_CARDS[sectionKey] ? null : questions.length === 0 ? (
