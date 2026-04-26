@@ -54,6 +54,7 @@ type SLine = {
   quantity: string | null; notes: string | null; status: string | null;
   owner: string | null; due_date: string | null; order_index: number;
   source: string; source_file_id: string | null;
+  meta?: Record<string, any> | null;
 };
 type SValidationWarning = { field: string; message: string; severity: "error" | "warn" };
 type SFile = {
