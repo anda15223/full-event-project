@@ -1257,6 +1257,118 @@ export function SmartCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Brain document picker */}
+      <Dialog open={brainPickerOpen} onOpenChange={setBrainPickerOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-4 w-4" /> Pick Brain documents to extract from
+            </DialogTitle>
+            <DialogDescription>
+              Choose which documents the AI should read for <span className="font-medium text-foreground">{title}</span>.
+              Recommended ones are pre-selected. Pick fewer for tighter, more specific results.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-1.5">
+            {loadingBrainDocs && (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading Brain…
+              </div>
+            )}
+            {!loadingBrainDocs && brainDocs.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-10">
+                Brain has no documents matching this card yet. Upload one or fill it in manually.
+              </div>
+            )}
+            {!loadingBrainDocs && brainDocs.map((d) => {
+              const checked = selectedBrainIds.has(d.id);
+              return (
+                <label
+                  key={d.id}
+                  className={cn(
+                    "flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors",
+                    checked ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleBrainDoc(d.id)}
+                    className="mt-1 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">
+                        {d.display_name || d.key_name}
+                      </span>
+                      {d.recommended && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 border-primary/40 text-primary">
+                          recommended
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
+                        {d.role === "structured_line" ? "structured" : "AI source"}
+                      </Badge>
+                      {d.scope && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground">
+                          {d.scope}
+                        </Badge>
+                      )}
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        score {d.score} · used {d.frequency}×
+                      </span>
+                    </div>
+                    {d.content_preview && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {d.content_preview}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 border-t pt-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{selectedBrainIds.size} of {brainDocs.length} selected</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => setSelectedBrainIds(new Set(brainDocs.map((d) => d.id)))}
+                disabled={!brainDocs.length}
+              >
+                Select all
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => setSelectedBrainIds(new Set())}
+                disabled={!brainDocs.length}
+              >
+                Clear
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setBrainPickerOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={confirmGrabFromBrain}
+                disabled={selectedBrainIds.size === 0 || grabbing}
+              >
+                {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                Extract from {selectedBrainIds.size} doc(s)
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
