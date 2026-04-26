@@ -33,6 +33,7 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
   const [statusFilter, setStatusFilter] = useState<"all" | "missing" | "short" | "matched">("all");
   const [festivalFilter, setFestivalFilter] = useState<string>("__all__");
   const [conceptFilter, setConceptFilter] = useState<string>("__all__");
+  const [categoryFilter, setCategoryFilter] = useState<string>("__all__");
   const [view, setView] = useState<"visual" | "report">("visual");
 
   const { data, isLoading } = useQuery({
