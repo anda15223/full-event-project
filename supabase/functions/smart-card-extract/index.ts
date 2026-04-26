@@ -264,6 +264,27 @@ Be exhaustive. Prices, quantities and dates are MANDATORY when present in the do
     "This relates to the Fidibus arrival / setup. Extract: Arrival, Setup, Car loading, Wrapping plan, People, Equipment to set up.",
   power_requirements:
     "This is an electricity / power order. Extract per zone or per concept: plug types (16A/32A/63A), phase (1P/3P), counts, cable length, total kW.",
+  concepts: `This is the CONCEPTS card — the food concepts/booths sold at the festival.
+Produce ONE section per concept (e.g. "Crispy Chicken", "Smash Burger", "Loaded Fries"). Inside each concept-section, lines describe that concept ONLY:
+  • label "Zone" / value = zone or location name
+  • label "Tent size" / value = e.g. "3x6m"
+  • label "Products sold" / value = comma-separated menu items
+  • label "Sales hours Thu/Fri/Sat/Sun" / value = "12:00–22:00"
+  • label "Wristbands (normal/black/max)" / value = counts
+  • label "Power baseline" / value = e.g. "63A 3P"
+  • label "Gas required" / value = "yes/no" + supplier
+Do NOT create generic sections like "Operations" or "General info". If the Brain source is a broad operations document, ONLY pull rows that clearly describe a concept/booth. If nothing concept-specific is present, return an empty sections array.`,
+  introduction: `This is the INTRODUCTION card — high-level festival facts.
+Produce ONE section "Festival overview" with lines: Name, Dates, Location, Organiser, Contact email, Contact phone, Expected guests, Site address, Load-in date, Load-out date, Crew count, Notes. Skip any field not in the source.`,
+  facade: `This is the FACADE / branding card. Produce sections:
+1. "Design" — colours, logo files, materials.
+2. "Dimensions" — front/side/back panel sizes.
+3. "Production" — supplier, deadline, cost.
+4. "Install" — install date, contact, tools needed.
+Only include lines actually present in the source.`,
+  recipes: `This is the RECIPES card. Produce ONE section per dish/product. Lines: Ingredient name (label), quantity (value), unit/notes (notes). Add a final line "Allergens" with the allergen list. Skip if source has no recipe data.`,
+  trolley: `This is the BC TROLLEY packing card. Produce sections per trolley (e.g. "Trolley 1 — Crispy Chicken"). Lines: item name (label), quantity (value), category (notes). Skip non-trolley content.`,
+  extra_details: `This is the EXTRA DETAILS card — miscellaneous facts that don't fit elsewhere. Produce sections grouped by topic (e.g. "Wifi", "Waste", "Water"). Each line: label = fact name, value = the fact.`,
 };
 
 async function extractFromFile({
