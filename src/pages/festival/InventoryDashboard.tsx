@@ -33,6 +33,7 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
   const [statusFilter, setStatusFilter] = useState<"all" | "missing" | "short" | "matched">("all");
   const [festivalFilter, setFestivalFilter] = useState<string>("__all__");
   const [conceptFilter, setConceptFilter] = useState<string>("__all__");
+  const [categoryFilter, setCategoryFilter] = useState<string>("__all__");
   const [view, setView] = useState<"visual" | "report">("visual");
 
   const { data, isLoading } = useQuery({
@@ -95,10 +96,21 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
     return Array.from(set.keys()).sort();
   }, [rows, festivalFilter]);
 
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      if (festivalFilter !== "__all__" && r.festival_slug !== festivalFilter) return;
+      if (conceptFilter !== "__all__" && r.concept_name !== conceptFilter) return;
+      if (r.category) set.add(r.category);
+    });
+    return Array.from(set).sort();
+  }, [rows, festivalFilter, conceptFilter]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (festivalFilter !== "__all__" && r.festival_slug !== festivalFilter) return false;
       if (conceptFilter !== "__all__" && r.concept_name !== conceptFilter) return false;
+      if (categoryFilter !== "__all__" && r.category !== categoryFilter) return false;
       if (search && !r.item_name.toLowerCase().includes(search.toLowerCase())) return false;
       const need = r.needed_quantity;
       const counted = r.counted_quantity;
@@ -110,7 +122,7 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
       if (statusFilter === "matched" && !matched) return false;
       return true;
     });
-  }, [rows, festivalFilter, conceptFilter, search, statusFilter]);
+  }, [rows, festivalFilter, conceptFilter, categoryFilter, search, statusFilter]);
 
   const stats = useMemo(() => {
     const total = filtered.length;
@@ -228,12 +240,21 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
             </SelectContent>
           </Select>
         )}
-        <Select value={conceptFilter} onValueChange={setConceptFilter}>
+        <Select value={conceptFilter} onValueChange={(v) => { setConceptFilter(v); setCategoryFilter("__all__"); }}>
           <SelectTrigger className="h-8 w-[180px] text-[12px]"><SelectValue placeholder="All concepts" /></SelectTrigger>
           <SelectContent className="bg-popover">
             <SelectItem value="__all__" className="text-[12px]">All concepts</SelectItem>
             {conceptOptions.map((name) => (
               <SelectItem key={name} value={name} className="text-[12px]">{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-8 w-[180px] text-[12px]"><SelectValue placeholder="All categories" /></SelectTrigger>
+          <SelectContent className="bg-popover">
+            <SelectItem value="__all__" className="text-[12px]">All categories</SelectItem>
+            {categoryOptions.map((name) => (
+              <SelectItem key={name} value={name} className="text-[12px] capitalize">{name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -250,6 +271,44 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
           {filtered.length} of {rows.length}
         </div>
       </div>
+
+      {/* Category chips for quick filtering */}
+      {categoryOptions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setCategoryFilter("__all__")}
+            className={cn(
+              "px-2.5 py-1 rounded-full text-[11px] border transition-colors",
+              categoryFilter === "__all__"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            )}
+          >
+            All
+          </button>
+          {categoryOptions.map((name) => {
+            const count = rows.filter((r) =>
+              (festivalFilter === "__all__" || r.festival_slug === festivalFilter) &&
+              (conceptFilter === "__all__" || r.concept_name === conceptFilter) &&
+              r.category === name
+            ).length;
+            return (
+              <button
+                key={name}
+                onClick={() => setCategoryFilter(name)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-[11px] border transition-colors capitalize",
+                  categoryFilter === name
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:bg-muted"
+                )}
+              >
+                {name} <span className="opacity-60">· {count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {isLoading && (
         <Card className="p-8 text-center text-muted-foreground text-sm">Loading inventory…</Card>
