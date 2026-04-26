@@ -1397,12 +1397,7 @@ export function SmartCard({
               </div>
             )}
             {(() => {
-              const visibleDocs = brainDocs.filter((d) => {
-                if (!includeOtherCards && !d.same_card) return false;
-                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
-                return true;
-              });
-              if (!loadingBrainDocs && visibleDocs.length === 0) {
+              if (!loadingBrainDocs && visibleBrainDocs.length === 0) {
                 return (
                   <div className="text-center text-sm text-muted-foreground py-10">
                     {brainDocs.length === 0
@@ -1416,14 +1411,9 @@ export function SmartCard({
               return null;
             })()}
             {!loadingBrainDocs && brainDocs.length > 0 && (() => {
-              const visibleDocs = brainDocs.filter((d) => {
-                if (!includeOtherCards && !d.same_card) return false;
-                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
-                return true;
-              });
-              if (visibleDocs.length === 0) return null;
-              const visibleSelected = visibleDocs.filter((d) => selectedBrainIds.has(d.id)).length;
-              const allChecked = visibleSelected === visibleDocs.length;
+              if (visibleBrainDocs.length === 0) return null;
+              const visibleSelected = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length;
+              const allChecked = visibleSelected === visibleBrainDocs.length;
               const someChecked = visibleSelected > 0 && !allChecked;
               return (
                 <label className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-background/95 backdrop-blur border-b flex items-center gap-3 cursor-pointer">
@@ -1435,9 +1425,9 @@ export function SmartCard({
                       setSelectedBrainIds((prev) => {
                         const next = new Set(prev);
                         if (allChecked) {
-                          visibleDocs.forEach((d) => next.delete(d.id));
+                          visibleBrainDocs.forEach((d) => next.delete(d.id));
                         } else {
-                          visibleDocs.forEach((d) => next.add(d.id));
+                          visibleBrainDocs.forEach((d) => next.add(d.id));
                         }
                         return next;
                       });
@@ -1448,17 +1438,12 @@ export function SmartCard({
                     {allChecked ? "Uncheck all" : "Check all"}
                   </span>
                   <span className="text-[11px] text-muted-foreground ml-auto">
-                    {visibleSelected} / {visibleDocs.length} shown
+                    {visibleSelected} / {visibleBrainDocs.length} shown
                   </span>
                 </label>
               );
             })()}
-            {!loadingBrainDocs && brainDocs
-              .filter((d) => {
-                if (!includeOtherCards && !d.same_card) return false;
-                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
-                return true;
-              })
+            {!loadingBrainDocs && visibleBrainDocs
               .map((d) => {
               const checked = selectedBrainIds.has(d.id);
               return (
