@@ -1775,13 +1775,13 @@ export function SmartCard({
                       ? `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px_24px]`
                       : `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px_24px]`;
                     return (
-                      <div className={cn("grid gap-1.5 px-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold", cols)}>
+                      <div className={cn("grid gap-1.5 px-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold border-b border-border/40", cols)}>
                         <span>Item</span>
                         <span>Note</span>
                         <span>Amount</span>
                         {hasAssigner && <span>Concept</span>}
                         {hasInventory && <span>Inventory</span>}
-                        <span></span><span></span><span></span><span></span>
+                        <span>Src</span><span></span>{(hasAssigner || hasInventory) && <span></span>}
                       </div>
                     );
                   })()}
