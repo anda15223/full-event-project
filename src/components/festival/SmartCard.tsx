@@ -962,6 +962,19 @@ export function SmartCard({
               <Plus className="h-3.5 w-3.5 mr-1" /> Section
             </Button>
           )}
+          {conceptAssignerMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border-destructive/40 text-destructive hover:bg-destructive/10"
+              onClick={() => setWipeDialogOpen(true)}
+              disabled={wiping}
+              title="Clear all per-concept cards so the Common List becomes the single source of truth"
+            >
+              {wiping ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1" />}
+              Fix legacy mixed items
+            </Button>
+          )}
           {editMode ? (
             <>
               <Button size="sm" variant="ghost" className="h-8" onClick={cancelEdit} disabled={saving}>
