@@ -5,12 +5,147 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Plus, Trash2, Camera, AlertTriangle } from "lucide-react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useTrolleys } from "@/hooks/useFestival";
 import { SmartCard } from "@/components/festival/SmartCard";
+import { cn } from "@/lib/utils";
+
+type TrolleyItem = {
+  id: string;
+  trolley_id: string;
+  item_name: string;
+  category: string;
+  quantity: string | null;
+  needed_quantity: number | null;
+  counted_quantity: number | null;
+  concept_id: string | null;
+  photo_path: string | null;
+};
+
+function ItemPhotoCard({
+  item,
+  concepts,
+  onUpdate,
+  onDelete,
+  conceptName,
+}: {
+  item: TrolleyItem;
+  concepts: { id: string; name: string }[];
+  onUpdate: (id: string, patch: Partial<TrolleyItem>) => void;
+  onDelete: (id: string) => void;
+  conceptName: (cid: string | null) => string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const photoUrl = item.photo_path
+    ? supabase.storage.from("festival-photos").getPublicUrl(item.photo_path).data.publicUrl
+    : null;
+
+  const needed = item.needed_quantity;
+  const counted = item.counted_quantity;
+  const missingNeeded = needed == null || needed === 0;
+  const shortAfterCount = counted != null && needed != null && counted < needed;
+  const matched = counted != null && needed != null && counted === needed;
+
+  const handlePhoto = async (file: File) => {
+    setUploading(true);
+    const path = `trolley-items/${item.id}-${Date.now()}-${file.name}`;
+    const { error: upErr } = await supabase.storage.from("festival-photos").upload(path, file, { upsert: true });
+    if (upErr) { toast.error("Upload failed"); setUploading(false); return; }
+    onUpdate(item.id, { photo_path: path });
+    setUploading(false);
+  };
+
+  return (
+    <Card
+      className={cn(
+        "p-2 space-y-1.5 relative group",
+        missingNeeded && "border-destructive/60 bg-destructive/5",
+        shortAfterCount && "border-amber-500/60 bg-amber-500/5",
+        matched && "border-emerald-500/40"
+      )}
+    >
+      <button
+        onClick={() => onDelete(item.id)}
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition"
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
+
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="aspect-square w-full rounded bg-muted/40 border border-dashed border-border/50 overflow-hidden cursor-pointer flex items-center justify-center"
+      >
+        {photoUrl ? (
+          <img src={photoUrl} alt={item.item_name} className="w-full h-full object-cover" />
+        ) : (
+          <Camera className="h-5 w-5 text-muted-foreground" />
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])}
+        />
+      </div>
+
+      <Input
+        value={item.item_name}
+        onChange={(e) => onUpdate(item.id, { item_name: e.target.value })}
+        className="h-6 text-[11px] font-medium px-1.5"
+      />
+
+      <div className="flex items-center gap-1">
+        <div className="flex-1">
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none">Need</label>
+          <Input
+            type="number"
+            value={needed ?? ""}
+            placeholder="0"
+            onChange={(e) => onUpdate(item.id, { needed_quantity: e.target.value === "" ? null : Number(e.target.value) })}
+            className={cn("h-6 text-[11px] px-1.5", missingNeeded && "border-destructive text-destructive")}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none">Count</label>
+          <Input
+            type="number"
+            value={counted ?? ""}
+            placeholder="–"
+            onChange={(e) => onUpdate(item.id, { counted_quantity: e.target.value === "" ? null : Number(e.target.value) })}
+            className={cn(
+              "h-6 text-[11px] px-1.5",
+              shortAfterCount && "border-amber-500 text-amber-600",
+              matched && "border-emerald-500 text-emerald-600"
+            )}
+          />
+        </div>
+      </div>
+
+      {(missingNeeded || shortAfterCount) && (
+        <div className={cn(
+          "flex items-center gap-1 text-[10px] font-medium",
+          missingNeeded ? "text-destructive" : "text-amber-600"
+        )}>
+          <AlertTriangle className="h-2.5 w-2.5" />
+          {missingNeeded ? "Qty missing" : `Short by ${(needed ?? 0) - (counted ?? 0)}`}
+        </div>
+      )}
+
+      <Select value={item.concept_id ?? "__none__"} onValueChange={(v) => onUpdate(item.id, { concept_id: v === "__none__" ? null : v })}>
+        <SelectTrigger className="h-6 text-[10px] px-1.5"><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-popover">
+          <SelectItem value="__none__" className="text-[11px]">Unassigned</SelectItem>
+          {concepts.map(c => <SelectItem key={c.id} value={c.id} className="text-[11px]">{c.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </Card>
+  );
+}
 
 const CATEGORIES = ["Cooking/small gear", "Serving/packaging", "Cleaning/chemicals", "Stationery/signage"];
 const NO_CONCEPT = "__none__";
