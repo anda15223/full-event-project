@@ -1125,6 +1125,8 @@ async function grabBrain({ card_key, festival_id, concept_id, brain_ids }: any) 
     brain_rows_fetched: allUnique.length,
     brain_rows_considered: scored.length,
     brain_rows_selected: rows.length,
+    user_pinned_ids: pinnedIds,
+    selection_mode: pinnedIds.length ? "manual" : "auto",
     documents: [] as any[],
     notes: [] as string[],
   };
@@ -1398,6 +1400,9 @@ Deno.serve(async (req) => {
         break;
       case "grab_brain":
         result = await grabBrain(body);
+        break;
+      case "list_brain_docs":
+        result = await listBrainDocs(body);
         break;
       case "remember":
         result = await remember(body);
