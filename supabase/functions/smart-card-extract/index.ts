@@ -1158,7 +1158,7 @@ async function grabFromSourceCard({ card_key, festival_id, concept_id, source_ca
     };
   }
 
-  const cardPrompt = CARD_PROMPTS[card_key] || "Extract logical sections and lines from this source card.";
+  const cardPrompt = cardPromptForKey(card_key);
   const structured = await callAI(
     [
       {
