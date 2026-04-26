@@ -784,7 +784,10 @@ async function callClaudeExtraction(
     await upsertInvoice(supabase, emailId, attachmentId, invoiceData, mapped, finalCategory, status, confidence, pdfUrl, notes, rykkerDetected);
 
     console.log(`✅ Extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, confidence=${confidence}, status=${status}`);
-    return { ...id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence };
+    return validateExtractionResult(
+      { ...id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence },
+      { source: pdfUrl ? "attachment" : "email_body", pdfUrl },
+    );
 
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Claude API error";
