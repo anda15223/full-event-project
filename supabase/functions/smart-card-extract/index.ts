@@ -1080,7 +1080,7 @@ async function grabFromSourceCard({ card_key, festival_id, concept_id, source_ca
   }
 
   const cardIds = sourceCards.map((c) => c.id);
-  const cardIdList = cardIds.map((id) => `"${id}"`).join(",");
+  const cardIdList = cardIds.join(",");
   const sections = (await sb(
     "GET",
     `smart_sections?card_id=in.(${cardIdList})&select=*&order=order_index.asc&limit=500`,
@@ -1089,7 +1089,7 @@ async function grabFromSourceCard({ card_key, festival_id, concept_id, source_ca
   const sectionIds = sections.map((s) => s.id);
   let lines: any[] = [];
   if (sectionIds.length) {
-    const sectionIdList = sectionIds.map((id) => `"${id}"`).join(",");
+    const sectionIdList = sectionIds.join(",");
     lines = (await sb(
       "GET",
       `smart_lines?section_id=in.(${sectionIdList})&select=*&order=order_index.asc&limit=2000`,
