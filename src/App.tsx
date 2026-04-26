@@ -89,6 +89,9 @@ const App = () => (
             <Route path="/festivals/:slug/timeline" element={<Protected><TimelineEditor /></Protected>} />
             <Route path="/festivals/:slug/transport" element={<Protected><TransportEditor /></Protected>} />
             <Route path="/festivals/:slug/trolleys" element={<Protected><TrolleysEditor /></Protected>} />
+            <Route path="/festivals/:slug/trolleys" element={<Protected><TrolleysEditor /></Protected>} />
+            <Route path="/festivals/:slug/inventory" element={<Protected><InventoryDashboard scope="festival" /></Protected>} />
+            <Route path="/inventory" element={<Protected><InventoryDashboard scope="global" /></Protected>} />
             <Route path="/festivals/:slug/report" element={<Protected><FestivalReport /></Protected>} />
             <Route path="/admin/sections" element={<Protected><AdminSections /></Protected>} />
 
