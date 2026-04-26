@@ -41,6 +41,10 @@ export type SmartCardProps = {
   siblingConcepts?: { id: string; name: string }[];
   /** When true, each line shows a concept dropdown; on Save, lines with concept assigned get moved into that concept's per-concept card */
   conceptAssignerMode?: boolean;
+  /** When provided, each line gets an Inventory category dropdown (persists immediately to meta.inventory_category). */
+  inventoryCategories?: string[];
+  /** When provided alongside siblingConcepts, each line gets a Concept allocator dropdown that persists immediately to meta.allocated_concept_id. */
+  enableInlineConceptAllocator?: boolean;
 };
 
 type SCard = { id: string; title: string | null; meta: any };
