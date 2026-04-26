@@ -1054,7 +1054,7 @@ export function SmartCard({
         }
       }
       toast.success(
-        useSourceCard
+        sourceCardFilter !== "all"
           ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
           : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
       );
