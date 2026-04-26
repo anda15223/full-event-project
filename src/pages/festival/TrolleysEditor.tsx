@@ -204,6 +204,15 @@ export default function TrolleysEditor() {
     qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
   };
 
+  const updateItem = async (id: string, patch: Partial<TrolleyItem>) => {
+    const { error } = await supabase
+      .from("festival_bc_trolley_items")
+      .update(patch as any)
+      .eq("id", id);
+    if (error) { toast.error("Failed to update"); return; }
+    qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
+  };
+
   const removeItem = async (id: string) => {
     const { error } = await supabase.from("festival_bc_trolley_items").delete().eq("id", id);
     if (error) { toast.error("Failed to delete"); return; }
