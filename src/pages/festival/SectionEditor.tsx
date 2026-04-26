@@ -10,7 +10,7 @@ import { ContactsManager } from "@/components/festival/ContactsManager";
 import { SmartCard } from "@/components/festival/SmartCard";
 import { SectionPageChat } from "@/components/festival/SectionPageChat";
 import {
-  useFestival, useSection, useQuestions, useAnswers
+  useFestival, useSection, useQuestions, useAnswers, useConcepts
 } from "@/hooks/useFestival";
 
 /** Per-section SmartCard configuration. If a section key is in this map,
@@ -51,8 +51,11 @@ export default function SectionEditor() {
   const { data: section } = useSection(sectionKey);
   const { data: questions = [] } = useQuestions(section?.id);
   const { data: answers = [] } = useAnswers(festival?.id);
+  const { data: concepts = [] } = useConcepts(festival?.id);
 
   if (!festival || !section) return <div className="text-sm text-muted-foreground">Loading…</div>;
+
+  const isPerConcept = sectionKey === "cooking_equipment";
 
   const answerFor = (qid: string) => answers.find(a => a.question_id === qid);
 
@@ -83,13 +86,35 @@ export default function SectionEditor() {
 
       {/* SmartCard FIRST so it's the primary surface for these sections */}
       {sectionKey && SMART_CARDS[sectionKey] && festival && (
-        <SmartCard
-          cardKey={sectionKey}
-          festivalId={festival.id}
-          title={SMART_CARDS[sectionKey].title}
-          subtitle={SMART_CARDS[sectionKey].subtitle}
-          emptyStateWarning={SMART_CARDS[sectionKey].warning}
-        />
+        isPerConcept ? (
+          concepts.length === 0 ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">
+              No concepts yet. Add concepts first to create per-concept {SMART_CARDS[sectionKey].title.toLowerCase()} cards.
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {concepts.map((c: any) => (
+                <SmartCard
+                  key={c.id}
+                  cardKey={sectionKey}
+                  festivalId={festival.id}
+                  conceptId={c.id}
+                  title={`${SMART_CARDS[sectionKey].title} — ${c.name}`}
+                  subtitle={SMART_CARDS[sectionKey].subtitle}
+                  emptyStateWarning={SMART_CARDS[sectionKey].warning}
+                />
+              ))}
+            </div>
+          )
+        ) : (
+          <SmartCard
+            cardKey={sectionKey}
+            festivalId={festival.id}
+            title={SMART_CARDS[sectionKey].title}
+            subtitle={SMART_CARDS[sectionKey].subtitle}
+            emptyStateWarning={SMART_CARDS[sectionKey].warning}
+          />
+        )
       )}
 
       {sectionKey && SMART_CARDS[sectionKey] ? null : questions.length === 0 ? (
