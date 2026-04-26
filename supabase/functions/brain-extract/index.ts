@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function cleanBase64(base64String: string): string {
+  const cleaned = base64String.trim().replace(/^data:[^,]+,/, "").replace(/\s/g, "");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
+    throw new Error("Invalid image base64 data");
+  }
+  return cleaned;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,9 +37,11 @@ Deno.serve(async (req) => {
       sourceLabel = "pasted text";
     } else if (storage_path) {
       const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/festival-photos/${storage_path}`;
-      const mt = (mime_type || "").toLowerCase();
-      const isImage = mt.startsWith("image/");
-      const isPdf = mt.includes("pdf");
+      const mt = (mime_type || "").split(";")[0].trim().toLowerCase();
+      const ext = (filename || storage_path || "").split(".").pop()?.toLowerCase();
+      const isJpg = ext === "jpg" || ext === "jpeg" || mt === "image/jpg" || mt === "image/jpeg";
+      const isImage = mt.startsWith("image/") || ["png", "webp", "gif"].includes(ext || "") || isJpg;
+      const isPdf = mt.includes("pdf") || ext === "pdf";
 
       if (isImage) {
         // Fetch image server-side and inline as base64 data URL
@@ -43,14 +53,13 @@ Deno.serve(async (req) => {
         for (let i = 0; i < buf.length; i += chunk) {
           binary += String.fromCharCode(...buf.subarray(i, i + chunk));
         }
-        const b64 = btoa(binary).replace(/\s/g, "");
+        const b64 = cleanBase64(btoa(binary));
 
         // Resolve a clean MIME type Gemini accepts
         const ctHeader = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
         let imgMime = ctHeader || mt;
-        const ext = (filename || storage_path || "").split(".").pop()?.toLowerCase();
         if (!imgMime || !imgMime.startsWith("image/")) {
-          if (ext === "jpg" || ext === "jpeg") imgMime = "image/jpeg";
+          if (isJpg) imgMime = "image/jpeg";
           else if (ext === "webp") imgMime = "image/webp";
           else if (ext === "gif") imgMime = "image/gif";
           else imgMime = "image/png";
