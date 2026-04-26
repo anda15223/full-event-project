@@ -678,7 +678,8 @@ export function SmartCard({
         const { error } = await (supabase as any).from("smart_sections").delete().in("id", pending.sectionDeletes);
         if (error) throw error;
       }
-      // 4. Insert new lines (resolve draft section ids)
+      // 4. Insert new lines (resolve draft section ids) — keep draft->real id map for assigner
+      const lineIdMap: Record<string, string> = {};
       if (pending.lineInserts.length) {
         const rows = pending.lineInserts.map(l => ({
           section_id: sectionIdMap[l.section_id] || l.section_id,
@@ -686,8 +687,9 @@ export function SmartCard({
           status: l.status, owner: l.owner, due_date: l.due_date,
           order_index: l.order_index, source: l.source,
         }));
-        const { error } = await (supabase as any).from("smart_lines").insert(rows);
+        const { data, error } = await (supabase as any).from("smart_lines").insert(rows).select();
         if (error) throw error;
+        pending.lineInserts.forEach((draft, i) => { lineIdMap[draft.id] = data[i].id; });
       }
       // 5. Update existing lines
       for (const [id, patch] of Object.entries(pending.lineUpdates)) {
