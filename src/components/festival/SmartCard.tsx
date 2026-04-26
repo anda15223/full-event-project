@@ -1624,7 +1624,7 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                       const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                       const canCopy = true;
                       // Show concept-assigner dropdown whenever we have sibling concepts to move/assign to.
                       // In conceptAssignerMode (Common List) it splits to that concept on Save.
                       // On per-concept cards it MOVES the line to the chosen concept on Save.
