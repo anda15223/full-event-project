@@ -549,10 +549,12 @@ export function SmartCard({
   // Step 2: actually grab from Brain, restricted to the docs the user picked.
   const confirmGrabFromBrain = async () => {
     if (!card) return;
-    const visibleIds = visibleBrainDocs.map((d) => d.id);
-    const explicitIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
-    const ids = explicitIds.length ? explicitIds : visibleIds;
-    if (!ids.length) return;
+    const visibleSelectedIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
+    const useSourceCard = sourceCardFilter !== "all";
+    if (!useSourceCard && visibleSelectedIds.length === 0) {
+      toast.error("Select the Brain documents you want to extract from.");
+      return;
+    }
 
     setBrainPickerOpen(false);
     setGrabbing(true);
@@ -563,7 +565,8 @@ export function SmartCard({
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
-          brain_ids: ids,
+          source_card_key: useSourceCard ? sourceCardFilter : undefined,
+          brain_ids: useSourceCard ? undefined : visibleSelectedIds,
         },
       });
       if (error) throw error;
@@ -572,9 +575,9 @@ export function SmartCard({
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
         toast.info(
-          ids.length
-            ? "Picked Brain docs didn't yield card-specific info — try different docs."
-            : "Brain has nothing for this card yet — fill it in and it'll learn.",
+          useSourceCard
+            ? `No ${cardKey} info found in ${sourceCardFilter}.`
+            : "Picked Brain docs didn't yield card-specific info — try different docs.",
         );
         return;
       }
@@ -593,7 +596,9 @@ export function SmartCard({
         }
       }
       toast.success(
-        `Grabbed ${suggestions.length} section(s) from ${ids.length || "all matching"} Brain doc(s)`,
+        useSourceCard
+          ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
+          : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
       );
       reload();
     } catch (e: any) {
@@ -610,13 +615,6 @@ export function SmartCard({
       return next;
     });
   };
-  useEffect(() => {
-    if (!brainPickerOpen || loadingBrainDocs || sourceCardFilter === "all") return;
-    const visibleIds = visibleBrainDocs.map((d) => d.id);
-    if (visibleIds.length === 0) return;
-    const selectedVisibleCount = visibleIds.filter((id) => selectedBrainIds.has(id)).length;
-    if (selectedVisibleCount === 0) setSelectedBrainIds(new Set(visibleIds));
-  }, [brainPickerOpen, loadingBrainDocs, sourceCardFilter, visibleBrainDocs, selectedBrainIds]);
 
 
   // File deletion is staged via the AlertDialog (see fileToDelete state).
@@ -1363,17 +1361,11 @@ export function SmartCard({
                       onChange={(e) => {
                         const next = e.target.value;
                         setSourceCardFilter(next);
-                        if (next === "all") {
-                          // Re-select recommended docs across all visible
-                          setSelectedBrainIds(new Set(
-                            brainDocs.filter((d) => d.recommended).map((d) => d.id)
-                          ));
-                        } else {
-                          // Auto-select every doc from the chosen source card
-                          setSelectedBrainIds(new Set(
-                            brainDocs.filter((d) => d.category === next).map((d) => d.id)
-                          ));
-                        }
+                        setSelectedBrainIds(
+                          next === "all"
+                            ? new Set(brainDocs.filter((d) => d.recommended).map((d) => d.id))
+                            : new Set()
+                        );
                       }}
                       className="h-7 rounded-md border border-input bg-background px-2 text-xs"
                     >
@@ -1533,10 +1525,12 @@ export function SmartCard({
               <Button
                 size="sm"
                 onClick={confirmGrabFromBrain}
-                disabled={!visibleBrainDocs.length || grabbing}
+                disabled={(sourceCardFilter === "all" && visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length === 0) || grabbing}
               >
                 {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                Extract from {Math.max(visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length, visibleBrainDocs.length && selectedBrainIds.size === 0 ? visibleBrainDocs.length : 0)} doc(s)
+                {sourceCardFilter !== "all"
+                  ? `Extract from ${sourceCardFilter}`
+                  : `Extract from ${visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} doc(s)`}
               </Button>
             </div>
           </DialogFooter>

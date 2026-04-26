@@ -1052,7 +1052,153 @@ async function listBrainDocs({ card_key, festival_id, concept_id }: any) {
   return { ok: true, items };
 }
 
-async function grabBrain({ card_key, festival_id, concept_id, brain_ids }: any) {
+async function grabFromSourceCard({ card_key, festival_id, concept_id, source_card_key }: any) {
+  const cardFilter = [
+    `festival_id=eq.${encodeURIComponent(festival_id)}`,
+    `card_key=eq.${encodeURIComponent(source_card_key)}`,
+    "select=id,title,card_key,concept_id",
+    "limit=20",
+  ].join("&");
+  const cards = (await sb("GET", `smart_cards?${cardFilter}`)) as any[];
+  const sourceCards = concept_id
+    ? cards.filter((c) => !c.concept_id || c.concept_id === concept_id)
+    : cards;
+
+  if (!sourceCards.length) {
+    return {
+      ok: true,
+      suggestions: [],
+      diagnostics: {
+        card_key,
+        festival_id,
+        concept_id: concept_id || null,
+        source_card_key,
+        selection_mode: "source_card",
+        notes: [`No saved card data found for ${source_card_key}.`],
+      },
+    };
+  }
+
+  const cardIds = sourceCards.map((c) => c.id);
+  const cardIdList = cardIds.map((id) => `"${id}"`).join(",");
+  const sections = (await sb(
+    "GET",
+    `smart_sections?card_id=in.(${cardIdList})&select=*&order=order_index.asc&limit=500`,
+  )) as any[];
+
+  const sectionIds = sections.map((s) => s.id);
+  let lines: any[] = [];
+  if (sectionIds.length) {
+    const sectionIdList = sectionIds.map((id) => `"${id}"`).join(",");
+    lines = (await sb(
+      "GET",
+      `smart_lines?section_id=in.(${sectionIdList})&select=*&order=order_index.asc&limit=2000`,
+    )) as any[];
+  }
+
+  const linesBySection = new Map<string, any[]>();
+  for (const line of lines) {
+    const existing = linesBySection.get(line.section_id) || [];
+    existing.push(line);
+    linesBySection.set(line.section_id, existing);
+  }
+
+  const sourceText = sourceCards.map((card) => {
+    const cardSections = sections.filter((s) => s.card_id === card.id);
+    return [
+      `SOURCE CARD: ${card.title || card.card_key}`,
+      ...cardSections.map((section) => {
+        const sectionLines = linesBySection.get(section.id) || [];
+        return [
+          `SECTION: ${section.title}`,
+          section.description ? `DESCRIPTION: ${section.description}` : "",
+          ...sectionLines.map((line) => {
+            const parts = [
+              line.label ? `label=${line.label}` : "",
+              line.value ? `value=${line.value}` : "",
+              line.quantity ? `quantity=${line.quantity}` : "",
+              line.notes ? `notes=${line.notes}` : "",
+              line.status ? `status=${line.status}` : "",
+            ].filter(Boolean);
+            return `- ${parts.join(" | ")}`;
+          }),
+        ].filter(Boolean).join("\n");
+      }),
+    ].join("\n\n");
+  }).join("\n\n---\n\n");
+
+  if (!sourceText.trim() || !lines.length) {
+    return {
+      ok: true,
+      suggestions: [],
+      diagnostics: {
+        card_key,
+        festival_id,
+        concept_id: concept_id || null,
+        source_card_key,
+        source_cards_found: sourceCards.length,
+        source_sections_found: sections.length,
+        source_lines_found: lines.length,
+        selection_mode: "source_card",
+        notes: [`${source_card_key} has no saved lines to extract from.`],
+      },
+    };
+  }
+
+  const cardPrompt = CARD_PROMPTS[card_key] || "Extract logical sections and lines from this source card.";
+  const structured = await callAI(
+    [
+      {
+        role: "system",
+        content:
+          `You convert already-corrected source card data into another festival operations card. STRICT RULES:\n` +
+          `1. Use ONLY the source card content provided.\n` +
+          `2. Extract only information that fits the target card "${card_key}".\n` +
+          `3. Preserve corrected quantities, names, notes, and statuses from the source card.\n` +
+          `4. Do not use all Brain documents or invent missing data.\n` +
+          `5. Return empty sections if the source card contains nothing relevant.`,
+      },
+      {
+        role: "user",
+        content: `${cardPrompt}\n\nTarget card key: ${card_key}\nSource card key: ${source_card_key}\n\nCorrected source card content:\n\n${sourceText.slice(0, 180000)}`,
+      },
+    ],
+    STRUCTURE_SCHEMA,
+  );
+
+  const rawAiSections = structured.sections || [];
+  const sanitised = sanitizeSections(card_key, rawAiSections);
+  const suggestions = sanitised.sections;
+
+  return {
+    ok: true,
+    suggestions,
+    diagnostics: {
+      card_key,
+      festival_id,
+      concept_id: concept_id || null,
+      source_card_key,
+      source_cards_found: sourceCards.length,
+      source_sections_found: sections.length,
+      source_lines_found: lines.length,
+      selection_mode: "source_card",
+      ai_extraction: {
+        attempted: true,
+        succeeded: true,
+        sections_returned: rawAiSections.length,
+        sections_kept: suggestions.length,
+        sections_rejected: sanitised.rejected,
+        summary: structured.summary || null,
+      },
+      notes: suggestions.length ? [] : [`No ${card_key} info found in ${source_card_key}.`],
+    },
+  };
+}
+
+async function grabBrain({ card_key, festival_id, concept_id, brain_ids, source_card_key }: any) {
+  if (source_card_key && source_card_key !== "all") {
+    return await grabFromSourceCard({ card_key, festival_id, concept_id, source_card_key });
+  }
   const queries: string[] = [];
   const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
 
