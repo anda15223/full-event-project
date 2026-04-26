@@ -652,7 +652,7 @@ export function SmartCard({
       }
       // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
       const movedLineIds: string[] = [];
-      if (conceptAssignerMode && Object.keys(lineConceptAssignment).length) {
+      if (Object.keys(lineConceptAssignment).length) {
         // group by concept
         const byConcept: Record<string, string[]> = {};
         for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
