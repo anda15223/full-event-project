@@ -42,6 +42,11 @@ const SMART_CARDS: Record<string, { title: string; subtitle?: string; warning?: 
     subtitle: "Upload power plans, generator offers, electrician quotes or site power maps. AI will extract loads & circuits.",
     warning: { label: "No power info yet", description: "Add baseline kW per concept, generator size, and any extras." },
   },
+  facade: {
+    title: "Façade",
+    subtitle: "Upload façade designs, mockups, signage, vinyl prints or supplier offers. AI will extract dimensions, materials and costs.",
+    warning: { label: "No façade info yet", description: "Add façade design, signage and any supplier quotes." },
+  },
 };
 
 export default function SectionEditor() {
