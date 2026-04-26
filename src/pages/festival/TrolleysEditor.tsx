@@ -110,7 +110,6 @@ export default function TrolleysEditor() {
                 title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
                 subtitle="Upload packing lists or photos, or grab from Brain. Use the per-row Allocate + Inventory dropdowns to organize each item."
                 siblingConcepts={concepts.map(c => ({ id: c.id, name: c.name }))}
-                enableInlineConceptAllocator
                 inventoryCategories={CATEGORIES}
               />
 
