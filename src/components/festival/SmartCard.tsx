@@ -1282,6 +1282,31 @@ export function SmartCard({
                 Brain has no documents matching this card yet. Upload one or fill it in manually.
               </div>
             )}
+            {!loadingBrainDocs && brainDocs.length > 0 && (() => {
+              const allChecked = selectedBrainIds.size === brainDocs.length;
+              const someChecked = selectedBrainIds.size > 0 && !allChecked;
+              return (
+                <label className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-background/95 backdrop-blur border-b flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    ref={(el) => { if (el) el.indeterminate = someChecked; }}
+                    onChange={() =>
+                      setSelectedBrainIds(
+                        allChecked ? new Set() : new Set(brainDocs.map((d) => d.id)),
+                      )
+                    }
+                    className="cursor-pointer"
+                  />
+                  <span className="text-xs font-medium">
+                    {allChecked ? "Uncheck all" : "Check all"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground ml-auto">
+                    {selectedBrainIds.size} / {brainDocs.length} selected
+                  </span>
+                </label>
+              );
+            })()}
             {!loadingBrainDocs && brainDocs.map((d) => {
               const checked = selectedBrainIds.has(d.id);
               return (
