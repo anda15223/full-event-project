@@ -1770,10 +1770,10 @@ export function SmartCard({
                   {editMode && sectionLines.length > 0 && (() => {
                     const hasAssigner = !!siblingConcepts && siblingConcepts.length > 0;
                     const hasInventory = !!inventoryCategories && inventoryCategories.length > 0;
-                    const extraCol = hasInventory ? "_130px" : "";
+                    const extraCol = hasInventory ? "_minmax(0,130px)" : "";
                     const cols = hasAssigner
-                      ? `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px_24px]`
-                      : `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px_24px]`;
+                      ? `grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_60px_minmax(0,110px)${extraCol}_50px_24px_24px]`
+                      : `grid-cols-[minmax(0,1fr)_minmax(0,2fr)_70px${extraCol}_50px_24px_24px]`;
                     return (
                       <div className={cn("grid gap-1.5 px-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold border-b border-border/40", cols)}>
                         <span>Item</span>
@@ -1795,10 +1795,10 @@ export function SmartCard({
                       const assigned = lineConceptAssignment[line.id] || "";
                       const showInlineConcept = enableInlineConceptAllocator && !!siblingConcepts && siblingConcepts.length > 0;
                       const showInventory = !!inventoryCategories && inventoryCategories.length > 0;
-                      const extraCol = showInventory ? "_130px" : "";
+                      const extraCol = showInventory ? "_minmax(0,130px)" : "";
                       const gridCols = showAssigner
-                        ? (canCopy ? `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px_24px]` : `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px]`)
-                        : (canCopy ? `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px_24px]` : `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px]`);
+                        ? (canCopy ? `grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_60px_minmax(0,110px)${extraCol}_50px_24px_24px]` : `grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_60px_minmax(0,110px)${extraCol}_50px_24px]`)
+                        : (canCopy ? `grid-cols-[minmax(0,1fr)_minmax(0,2fr)_70px${extraCol}_50px_24px_24px]` : `grid-cols-[minmax(0,1fr)_minmax(0,2fr)_70px${extraCol}_50px_24px]`);
                       const inlineConceptVal = (line.meta as any)?.allocated_concept_id ?? "";
                       const inventoryVal = (line.meta as any)?.inventory_category ?? "";
                       const persistMeta = async (patch: Record<string, any>) => {
