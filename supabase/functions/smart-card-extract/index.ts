@@ -1052,7 +1052,10 @@ async function listBrainDocs({ card_key, festival_id, concept_id }: any) {
   return { ok: true, items };
 }
 
-async function grabBrain({ card_key, festival_id, concept_id, brain_ids }: any) {
+async function grabBrain({ card_key, festival_id, concept_id, brain_ids, source_card_key }: any) {
+  if (source_card_key && source_card_key !== "all") {
+    return await grabFromSourceCard({ card_key, festival_id, concept_id, source_card_key });
+  }
   const queries: string[] = [];
   const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
 
