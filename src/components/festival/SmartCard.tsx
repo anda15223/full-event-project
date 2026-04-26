@@ -1506,13 +1506,13 @@ export function SmartCard({
 
           <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 border-t pt-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{selectedBrainIds.size} of {brainDocs.length} selected</span>
+              <span>{visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} of {visibleBrainDocs.length} shown selected</span>
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs"
-                onClick={() => setSelectedBrainIds(new Set(brainDocs.map((d) => d.id)))}
-                disabled={!brainDocs.length}
+                onClick={() => setSelectedBrainIds(new Set(visibleBrainDocs.map((d) => d.id)))}
+                disabled={!visibleBrainDocs.length}
               >
                 Select all
               </Button>
@@ -1521,7 +1521,7 @@ export function SmartCard({
                 variant="ghost"
                 className="h-7 text-xs"
                 onClick={() => setSelectedBrainIds(new Set())}
-                disabled={!brainDocs.length}
+                disabled={!selectedBrainIds.size}
               >
                 Clear
               </Button>
@@ -1533,10 +1533,10 @@ export function SmartCard({
               <Button
                 size="sm"
                 onClick={confirmGrabFromBrain}
-                disabled={selectedBrainIds.size === 0 || grabbing}
+                disabled={!visibleBrainDocs.length || grabbing}
               >
                 {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                Extract from {selectedBrainIds.size} doc(s)
+                Extract from {Math.max(visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length, visibleBrainDocs.length && selectedBrainIds.size === 0 ? visibleBrainDocs.length : 0)} doc(s)
               </Button>
             </div>
           </DialogFooter>
