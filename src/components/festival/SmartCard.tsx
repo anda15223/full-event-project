@@ -1642,6 +1642,43 @@ export function SmartCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Copy line to other concepts */}
+      <Dialog open={!!copyOpenForLine} onOpenChange={(o) => !o && setCopyOpenForLine(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copy item to other concepts</DialogTitle>
+            <DialogDescription>
+              The item will be added to the same section in each selected concept's card.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-72 overflow-y-auto">
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).map(c => (
+              <label key={c.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!copyTargets[c.id]}
+                  onChange={(e) => setCopyTargets(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).length === 0 && (
+              <p className="text-xs text-muted-foreground">No other concepts available.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setCopyOpenForLine(null)} disabled={copying}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={copyLineToConcepts} disabled={copying}>
+              {copying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+              Copy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
+
