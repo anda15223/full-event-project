@@ -1901,6 +1901,30 @@ export function SmartCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Wipe per-concept cards confirmation */}
+      <AlertDialog open={wipeDialogOpen} onOpenChange={setWipeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all per-concept cards?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes every section and line from the per-concept {title.split(" — ")[0].toLowerCase()} cards (Fish & Chips, Gyros, La Creperie, Chicks 'n' Buns, …) for this festival.
+              Uploaded files and the Common List are <strong>not</strong> touched. After this, assign concepts on each Common List row and press <strong>Save</strong> to repopulate the concept cards cleanly.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={wiping}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); wipePerConceptCards(); }}
+              disabled={wiping}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {wiping ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Clear concept cards
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
