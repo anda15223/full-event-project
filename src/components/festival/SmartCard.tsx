@@ -2031,6 +2031,43 @@ export function SmartCard({
         </DialogContent>
       </Dialog>
 
+      {/* Duplicate entire section to other concepts */}
+      <Dialog open={!!dupSectionId} onOpenChange={(o) => !o && setDupSectionId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicate section to other concepts</DialogTitle>
+            <DialogDescription>
+              The section and all its lines will be copied into each selected concept's card.
+              If a section with the same title already exists, the lines will be appended.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-72 overflow-y-auto">
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).map(c => (
+              <label key={c.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!dupTargets[c.id]}
+                  onChange={(e) => setDupTargets(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).length === 0 && (
+              <p className="text-xs text-muted-foreground">No other concepts available.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDupSectionId(null)} disabled={duplicating}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={duplicateSectionToConcepts} disabled={duplicating}>
+              {duplicating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+              Duplicate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Wipe per-concept cards confirmation */}
       <AlertDialog open={wipeDialogOpen} onOpenChange={setWipeDialogOpen}>
         <AlertDialogContent>
