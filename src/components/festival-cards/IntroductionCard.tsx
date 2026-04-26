@@ -69,16 +69,7 @@ type Festival = {
   organiser_email: string | null;
 };
 
-type BrainEntry = {
-  id: string;
-  festival_id: string | null;
-  display_name: string | null;
-  key_name: string;
-  content: string;
-  structured_data: any;
-  is_active: boolean | null;
-  created_at: string;
-};
+// BrainEntry is imported from ./shared
 
 type Prefill = {
   name?: string;
