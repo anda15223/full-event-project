@@ -156,18 +156,17 @@ export function SmartCard({
     if (!festivalId) return;
     setLoading(true);
     try {
-      // Find or create the SmartCard row
-      const filter: any = { card_key: cardKey, festival_id: festivalId };
-      if (conceptId) filter.concept_id = conceptId;
-      let { data: cards } = await (supabase as any)
+      // Find or create the SmartCard row (scope: festival-level when no conceptId, else per-concept)
+      let query = (supabase as any)
         .from("smart_cards")
         .select("*")
-        .match(filter)
-        .limit(1);
+        .eq("card_key", cardKey)
+        .eq("festival_id", festivalId);
+      query = conceptId ? query.eq("concept_id", conceptId) : query.is("concept_id", null);
+      let { data: cards } = await query.limit(1);
       let c = cards?.[0];
       if (!c) {
-        const insert: any = { card_key: cardKey, festival_id: festivalId, title };
-        if (conceptId) insert.concept_id = conceptId;
+        const insert: any = { card_key: cardKey, festival_id: festivalId, title, concept_id: conceptId ?? null };
         const { data: created, error } = await (supabase as any)
           .from("smart_cards").insert(insert).select().single();
         if (error) throw error;
