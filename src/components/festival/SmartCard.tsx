@@ -294,6 +294,122 @@ export function SmartCard({
   const [copyTargets, setCopyTargets] = useState<Record<string, boolean>>({});
   const [copying, setCopying] = useState(false);
 
+  // ---- Duplicate an entire section (with its lines) into other concept cards ----
+  const [dupSectionId, setDupSectionId] = useState<string | null>(null);
+  const [dupTargets, setDupTargets] = useState<Record<string, boolean>>({});
+  const [duplicating, setDuplicating] = useState(false);
+
+  const openDuplicateSection = (sectionId: string) => {
+    setDupTargets({});
+    setDupSectionId(sectionId);
+  };
+
+  const duplicateSectionToConcepts = async () => {
+    if (!dupSectionId) return;
+    const section = sections.find(s => s.id === dupSectionId);
+    if (!section) { toast.error("Section not found"); return; }
+    if (isDraftId(section.id)) { toast.error("Save the section first, then duplicate."); return; }
+    const targets = Object.entries(dupTargets).filter(([, v]) => v).map(([k]) => k);
+    if (!targets.length) { toast.error("Pick at least one concept"); return; }
+    const sectionLines = lines.filter(l => l.section_id === section.id && !isDraftId(l.id));
+
+    setDuplicating(true);
+    try {
+      for (const targetConceptId of targets) {
+        // 1. Find/create target SmartCard
+        let { data: targetCard } = await (supabase as any)
+          .from("smart_cards")
+          .select("id")
+          .eq("festival_id", festivalId)
+          .eq("card_key", cardKey)
+          .eq("concept_id", targetConceptId)
+          .maybeSingle();
+
+        if (!targetCard) {
+          const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+          const { data: created, error: cErr } = await (supabase as any)
+            .from("smart_cards")
+            .insert({
+              festival_id: festivalId,
+              card_key: cardKey,
+              concept_id: targetConceptId,
+              title: `${title.split(" — ")[0]} — ${conceptName}`,
+              meta: {},
+            })
+            .select("id")
+            .single();
+          if (cErr) throw cErr;
+          targetCard = created;
+        }
+
+        // 2. Find/create section by title
+        let { data: targetSection } = await (supabase as any)
+          .from("smart_sections")
+          .select("id")
+          .eq("card_id", targetCard.id)
+          .eq("title", section.title)
+          .maybeSingle();
+
+        if (!targetSection) {
+          const { data: maxRow } = await (supabase as any)
+            .from("smart_sections")
+            .select("order_index")
+            .eq("card_id", targetCard.id)
+            .order("order_index", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const nextOrder = (maxRow?.order_index ?? -1) + 1;
+          const { data: createdSec, error: sErr } = await (supabase as any)
+            .from("smart_sections")
+            .insert({
+              card_id: targetCard.id,
+              title: section.title,
+              description: section.description,
+              order_index: nextOrder,
+              source: "manual",
+            })
+            .select("id")
+            .single();
+          if (sErr) throw sErr;
+          targetSection = createdSec;
+        }
+
+        // 3. Insert all lines
+        if (sectionLines.length > 0) {
+          const { data: maxLine } = await (supabase as any)
+            .from("smart_lines")
+            .select("order_index")
+            .eq("section_id", targetSection.id)
+            .order("order_index", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          let next = (maxLine?.order_index ?? -1) + 1;
+          const payload = sectionLines.map(l => ({
+            section_id: targetSection.id,
+            label: l.label,
+            value: l.value,
+            quantity: l.quantity,
+            notes: l.notes,
+            status: l.status,
+            owner: l.owner,
+            due_date: l.due_date,
+            order_index: next++,
+            source: "manual",
+          }));
+          const { error: lErr } = await (supabase as any).from("smart_lines").insert(payload);
+          if (lErr) throw lErr;
+        }
+      }
+      toast.success(`Section duplicated to ${targets.length} concept${targets.length > 1 ? "s" : ""}`);
+      setDupSectionId(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Duplicate failed: ${e.message ?? "unknown"}`);
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const openCopyDialog = (lineId: string) => {
     setCopyTargets({});
     setCopyOpenForLine(lineId);
