@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Camera, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Camera, AlertTriangle, ChevronDown, ChevronRight, Download } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -267,13 +267,65 @@ export default function TrolleysEditor() {
   const qc = useQueryClient();
   const { data: festival } = useFestival(slug);
   const trolleysQ = useTrolleys(festival?.id);
-  
+  const [collapsedBrain, setCollapsedBrain] = useState<Record<string, boolean>>({});
+  const [importing, setImporting] = useState<Record<string, boolean>>({});
 
   if (!festival) return <div className="text-sm text-muted-foreground">Loading…</div>;
   const { trolleys = [], items = [], concepts = [] } = trolleysQ.data || {};
 
   const conceptName = (cid: string | null | undefined) =>
     concepts.find(c => c.id === cid)?.name || "Unassigned";
+
+  const importFromBrain = async (trolley: any) => {
+    setImporting(prev => ({ ...prev, [trolley.id]: true }));
+    try {
+      const cardKey = `trolley_${trolley.id}`;
+      const { data: card } = await (supabase as any)
+        .from("smart_cards")
+        .select("id")
+        .eq("festival_id", festival.id)
+        .eq("card_key", cardKey)
+        .maybeSingle();
+      if (!card) { toast.error("No Upload & Brain card found yet"); return; }
+      const { data: sections } = await (supabase as any)
+        .from("smart_sections").select("id, title").eq("card_id", card.id);
+      const secIds = (sections || []).map((s: any) => s.id);
+      if (secIds.length === 0) { toast.error("Brain panel is empty"); return; }
+      const { data: lines } = await (supabase as any)
+        .from("smart_lines").select("label, quantity, notes, section_id").in("section_id", secIds);
+      if (!lines || lines.length === 0) { toast.error("No lines in Brain panel"); return; }
+
+      const existingNames = new Set(
+        items.filter(i => i.trolley_id === trolley.id).map(i => (i.item_name || "").trim().toLowerCase())
+      );
+      const baseOrder = items.filter(i => i.trolley_id === trolley.id).length;
+      const rows = lines
+        .filter((l: any) => l.label && !existingNames.has(l.label.trim().toLowerCase()))
+        .map((l: any, idx: number) => {
+          const qStr = (l.quantity ?? "").toString().trim();
+          const qNum = qStr ? Number(qStr.replace(/[^\d.]/g, "")) : null;
+          return {
+            trolley_id: trolley.id,
+            category: CATEGORIES[0],
+            item_name: l.label.trim(),
+            quantity: qStr || null,
+            needed_quantity: Number.isFinite(qNum as number) ? qNum : null,
+            placed_quantity: null,
+            counted_quantity: null,
+            order_index: baseOrder + idx,
+            concept_id: trolley.concept_id,
+            photo_path: null,
+          };
+        });
+      if (rows.length === 0) { toast.info("All Brain items already in inventory"); return; }
+      const { error } = await (supabase as any).from("festival_bc_trolley_items").insert(rows);
+      if (error) { toast.error("Import failed"); return; }
+      toast.success(`Imported ${rows.length} items to inventory`);
+      qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
+    } finally {
+      setImporting(prev => ({ ...prev, [trolley.id]: false }));
+    }
+  };
 
   const addItemFromCard = async (
     trolleyId: string,
@@ -365,17 +417,39 @@ export default function TrolleysEditor() {
 
           return (
             <div key={t.id} className="space-y-3">
-              {/* Upload + Brain panel (AI extract / brain grab) — items land in smart_lines for review */}
-              <SmartCard
-                cardKey={`trolley_${t.id}`}
-                festivalId={festival.id}
-                conceptId={t.concept_id}
-                title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
-                subtitle="Upload packing lists or photos, or grab from Brain. Use the per-row Allocate + Inventory dropdowns to organize each item."
-                siblingConcepts={concepts.map(c => ({ id: c.id, name: c.name }))}
-                inventoryCategories={CATEGORIES}
-              />
-
+              {/* Upload + Brain panel — collapsible. "Import to inventory" creates one box per row */}
+              <Card className="p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setCollapsedBrain(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
+                    className="flex items-center gap-1.5 text-[12px] font-medium hover:text-primary transition"
+                  >
+                    {collapsedBrain[t.id] ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    {conceptName(t.concept_id)} · Trolley #{t.trolley_number} — Upload & Brain
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    onClick={() => importFromBrain(t)}
+                    disabled={importing[t.id]}
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    {importing[t.id] ? "Importing…" : "Import to inventory"}
+                  </Button>
+                </div>
+                {!collapsedBrain[t.id] && (
+                  <SmartCard
+                    cardKey={`trolley_${t.id}`}
+                    festivalId={festival.id}
+                    conceptId={t.concept_id}
+                    title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
+                    subtitle="Upload packing lists or photos, or grab from Brain. Use the per-row Allocate + Inventory dropdowns to organize each item."
+                    siblingConcepts={concepts.map(c => ({ id: c.id, name: c.name }))}
+                    inventoryCategories={CATEGORIES}
+                  />
+                )}
+              </Card>
               {/* Official trolley checklist (writes to festival_bc_trolley_items) */}
               <Card className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
