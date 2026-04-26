@@ -460,6 +460,9 @@ function UploadToBrainPanel({
       let file_data_url: string | undefined;
 
       if (file) {
+        if (file.size === 0) {
+          throw new Error("This file is empty. Please re-save it as a JPG/PNG/PDF and upload it again.");
+        }
         const folder = fid === "global" ? "global" : fid;
         const safeName = file.name.replace(/[^\w.\-]+/g, "_");
         storage_path = `brain/${folder}/${category}/${Date.now()}_${safeName}`;

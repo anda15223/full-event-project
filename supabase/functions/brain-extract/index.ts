@@ -8,8 +8,11 @@ const corsHeaders = {
 
 function cleanBase64(base64String: string): string {
   const cleaned = base64String.trim().replace(/^data:[^,]+,/, "").replace(/\s/g, "");
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
-    throw new Error("Invalid image base64 data");
+  if (!cleaned) {
+    throw new Error("The uploaded file is empty. Please choose a non-empty JPG, PNG, WebP, GIF, or PDF.");
+  }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned) || cleaned.length % 4 !== 0) {
+    throw new Error("Invalid base64 string after cleaning");
   }
   return cleaned;
 }
@@ -80,7 +83,10 @@ Deno.serve(async (req) => {
         const binary = atob(b64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const detectedMime = detectImageMime(bytes) || (isJpg ? "image/jpeg" : mt === "image/webp" ? "image/webp" : mt === "image/gif" ? "image/gif" : "image/png");
+        const detectedMime = detectImageMime(bytes);
+        if (!detectedMime) {
+          throw new Error("This image is not a valid JPG, PNG, WebP, or GIF. Please re-save it as a real JPG or PNG and upload again.");
+        }
         userParts.push({
           type: "text",
           text: `Extract the full readable content from this image (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
