@@ -1579,8 +1579,11 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
-                      const showAssigner = conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0;
+                       const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      // Show concept-assigner dropdown whenever we have sibling concepts to move/assign to.
+                      // In conceptAssignerMode (Common List) it splits to that concept on Save.
+                      // On per-concept cards it MOVES the line to the chosen concept on Save.
+                      const showAssigner = !!siblingConcepts && siblingConcepts.filter(c => c.id !== conceptId).length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
                       const gridCols = showAssigner
                         ? (canCopy ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px_24px]" : "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]")
