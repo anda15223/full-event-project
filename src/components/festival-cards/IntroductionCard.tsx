@@ -29,7 +29,15 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { CardUploadZone, EditableField } from "./shared";
+import {
+  CardUploadZone,
+  EditableField,
+  BrainSuggestions,
+  guessNameFromBrain,
+  extractContact,
+  normPhone,
+  type BrainEntry,
+} from "./shared";
 
 interface Props {
   festivalId: string;
