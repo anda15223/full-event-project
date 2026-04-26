@@ -8,8 +8,11 @@ const corsHeaders = {
 
 function cleanBase64(base64String: string): string {
   const cleaned = base64String.trim().replace(/^data:[^,]+,/, "").replace(/\s/g, "");
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
-    throw new Error("Invalid image base64 data");
+  if (!cleaned) {
+    throw new Error("The uploaded file is empty. Please choose a non-empty JPG, PNG, WebP, GIF, or PDF.");
+  }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned) || cleaned.length % 4 !== 0) {
+    throw new Error("Invalid base64 string after cleaning");
   }
   return cleaned;
 }
