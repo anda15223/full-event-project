@@ -90,6 +90,7 @@ export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
   hideBrainButton, siblingConcepts, conceptAssignerMode,
+  inventoryCategories, enableInlineConceptAllocator,
 }: SmartCardProps) {
   // line.id -> target concept id chosen via dropdown (only used when conceptAssignerMode)
   const [lineConceptAssignment, setLineConceptAssignment] = useState<Record<string, string>>({});
