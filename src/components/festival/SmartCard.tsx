@@ -657,6 +657,7 @@ export function SmartCard({
         const byConcept: Record<string, string[]> = {};
         for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
           if (!targetConceptId || isDraftId(lineId)) continue;
+          if (targetConceptId === conceptId) continue; // same card, no-op
           (byConcept[targetConceptId] ||= []).push(lineId);
         }
         for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
