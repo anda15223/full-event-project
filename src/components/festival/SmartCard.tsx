@@ -615,13 +615,6 @@ export function SmartCard({
       return next;
     });
   };
-  useEffect(() => {
-    if (!brainPickerOpen || loadingBrainDocs || sourceCardFilter === "all") return;
-    const visibleIds = visibleBrainDocs.map((d) => d.id);
-    if (visibleIds.length === 0) return;
-    const selectedVisibleCount = visibleIds.filter((id) => selectedBrainIds.has(id)).length;
-    if (selectedVisibleCount === 0) setSelectedBrainIds(new Set(visibleIds));
-  }, [brainPickerOpen, loadingBrainDocs, sourceCardFilter, visibleBrainDocs, selectedBrainIds]);
 
 
   // File deletion is staged via the AlertDialog (see fileToDelete state).
