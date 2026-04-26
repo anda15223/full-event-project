@@ -20,6 +20,7 @@ type TrolleyItem = {
   category: string;
   quantity: string | null;
   needed_quantity: number | null;
+  placed_quantity: number | null;
   counted_quantity: number | null;
   concept_id: string | null;
   photo_path: string | null;
