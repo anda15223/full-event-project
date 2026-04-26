@@ -39,6 +39,8 @@ export type SmartCardProps = {
   hideBrainButton?: boolean;
   /** Other concepts in the same festival/section — enables "Copy item to other concepts" */
   siblingConcepts?: { id: string; name: string }[];
+  /** When true, each line shows a concept dropdown; on Save, lines with concept assigned get moved into that concept's per-concept card */
+  conceptAssignerMode?: boolean;
 };
 
 type SCard = { id: string; title: string | null; meta: any };
