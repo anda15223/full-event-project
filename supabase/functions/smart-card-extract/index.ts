@@ -21,7 +21,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-async function sb(method: string, path: string, body?: unknown, extra: Record<string, string> = {}) {
+async function sb(
+  method: string,
+  path: string,
+  body?: unknown,
+  extra: Record<string, string> = {},
+) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     method,
     headers: {
@@ -45,7 +50,11 @@ async function sb(method: string, path: string, body?: unknown, extra: Record<st
 // SheetJS for XLSX/XLS parsing in Deno
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
-async function downloadFileText(url: string, mime: string, fileName = ""): Promise<string> {
+async function downloadFileText(
+  url: string,
+  mime: string,
+  fileName = "",
+): Promise<string> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed ${r.status}`);
 
@@ -87,7 +96,9 @@ async function downloadFileText(url: string, mime: string, fileName = ""): Promi
   return "";
 }
 
-async function downloadFileBase64(url: string): Promise<{ b64: string; mime: string }> {
+async function downloadFileBase64(
+  url: string,
+): Promise<{ b64: string; mime: string }> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed ${r.status}`);
   const mime = r.headers.get("content-type") || "application/octet-stream";
@@ -117,7 +128,10 @@ async function callAI(messages: any[], schema?: any) {
         },
       },
     ];
-    body.tool_choice = { type: "function", function: { name: "structure_card" } };
+    body.tool_choice = {
+      type: "function",
+      function: { name: "structure_card" },
+    };
   }
 
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -130,7 +144,10 @@ async function callAI(messages: any[], schema?: any) {
   });
 
   if (r.status === 429) throw new Error("Rate limited by AI gateway");
-  if (r.status === 402) throw new Error("AI credits exhausted - add funds in Settings → Workspace → Usage");
+  if (r.status === 402)
+    throw new Error(
+      "AI credits exhausted - add funds in Settings → Workspace → Usage",
+    );
   if (!r.ok) {
     const t = await r.text();
     throw new Error(`AI gateway error ${r.status}: ${t}`);
@@ -147,7 +164,10 @@ async function callAI(messages: any[], schema?: any) {
 const STRUCTURE_SCHEMA = {
   type: "object",
   properties: {
-    summary: { type: "string", description: "1-2 sentence summary of what this document contains" },
+    summary: {
+      type: "string",
+      description: "1-2 sentence summary of what this document contains",
+    },
     sections: {
       type: "array",
       description: "Logical sections found in the document",
@@ -161,11 +181,20 @@ const STRUCTURE_SCHEMA = {
             items: {
               type: "object",
               properties: {
-                label: { type: "string", description: "Item name / left side label" },
-                value: { type: "string", description: "Right side value (e.g. spec)" },
+                label: {
+                  type: "string",
+                  description: "Item name / left side label",
+                },
+                value: {
+                  type: "string",
+                  description: "Right side value (e.g. spec)",
+                },
                 quantity: { type: "string", description: "How many" },
                 notes: { type: "string" },
-                status: { type: "string", description: "todo/done/ordered/blocked - if discoverable" },
+                status: {
+                  type: "string",
+                  description: "todo/done/ordered/blocked - if discoverable",
+                },
               },
               required: ["label"],
               additionalProperties: false,
@@ -223,12 +252,18 @@ Extract EVERY relevant piece of data, organised into these sections (omit a sect
 5. "Delivery plan" — lines describing: delivery address, drop-off time window, contact on-site, vehicle/access notes, return/pickup plan.
 
 Be exhaustive. Prices, quantities and dates are MANDATORY when present in the document — never skip them.`,
-  cooking_equipment: "Extract cooking equipment per concept. Group into categories: cooking appliances, prep tools, serving equipment, small wares, spare parts.",
-  safety: "This is a safety / compliance document. Extract sections like Fire safety, Gas safety, Food hygiene, Allergens, Certificates & permits, Risk assessment, Emergency contacts, Inspection checklist, Expiry dates.",
-  setup_timeline: "This is a setup timeline / schedule. Extract steps and group by phase (Pre-festival, Build days D-3/D-2/D-1, Festival days, Teardown). Include owners and times when present.",
-  transportation: "This relates to transportation. Extract: Vehicles, Drivers, Loads, Trips, Schedule, Documents.",
-  fidibus: "This relates to the Fidibus arrival / setup. Extract: Arrival, Setup, Car loading, Wrapping plan, People, Equipment to set up.",
-  power_requirements: "This is an electricity / power order. Extract per zone or per concept: plug types (16A/32A/63A), phase (1P/3P), counts, cable length, total kW.",
+  cooking_equipment:
+    "Extract cooking equipment per concept. Group into categories: cooking appliances, prep tools, serving equipment, small wares, spare parts.",
+  safety:
+    "This is a safety / compliance document. Extract sections like Fire safety, Gas safety, Food hygiene, Allergens, Certificates & permits, Risk assessment, Emergency contacts, Inspection checklist, Expiry dates.",
+  setup_timeline:
+    "This is a setup timeline / schedule. Extract steps and group by phase (Pre-festival, Build days D-3/D-2/D-1, Festival days, Teardown). Include owners and times when present.",
+  transportation:
+    "This relates to transportation. Extract: Vehicles, Drivers, Loads, Trips, Schedule, Documents.",
+  fidibus:
+    "This relates to the Fidibus arrival / setup. Extract: Arrival, Setup, Car loading, Wrapping plan, People, Equipment to set up.",
+  power_requirements:
+    "This is an electricity / power order. Extract per zone or per concept: plug types (16A/32A/63A), phase (1P/3P), counts, cable length, total kW.",
 };
 
 async function extractFromFile({
@@ -242,9 +277,13 @@ async function extractFromFile({
   mime_type,
   dry_run,
 }: any) {
-  await sb("PATCH", `smart_files?id=eq.${file_id}`, { parse_status: "processing" });
+  await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+    parse_status: "processing",
+  });
 
-  const cardPrompt = CARD_PROMPTS[card_key] || "Extract logical sections and lines from this document.";
+  const cardPrompt =
+    CARD_PROMPTS[card_key] ||
+    "Extract logical sections and lines from this document.";
 
   const summaryInstruction = `\n\nIMPORTANT:
 - Always populate the "summary" field with a thorough plain-text summary (5-15 lines) of EVERYTHING you can read in the document — supplier, items, prices, dates, addresses, contacts, notes. This is the user's safety net if structured extraction misses something.
@@ -252,7 +291,11 @@ async function extractFromFile({
 - If the document is a scan / image / unclear, do your best OCR and still write the summary with whatever you can read.`;
 
   let userContent: any;
-  const text = await downloadFileText(file_url, mime_type || "", file_name || "");
+  const text = await downloadFileText(
+    file_url,
+    mime_type || "",
+    file_name || "",
+  );
   if (text) {
     userContent = `${cardPrompt}${summaryInstruction}\n\nDocument content (parsed from ${file_name}):\n${text.slice(0, 180000)}`;
   } else {
@@ -261,14 +304,21 @@ async function extractFromFile({
       const { b64, mime: detectedMime } = await downloadFileBase64(file_url);
       const effectiveMime = mime_type || detectedMime;
       const isImage = /^image\//i.test(effectiveMime);
-      const isPdf = /pdf/i.test(effectiveMime) || /\.pdf$/i.test(file_name || "");
+      const isPdf =
+        /pdf/i.test(effectiveMime) || /\.pdf$/i.test(file_name || "");
 
       if (isImage || isPdf) {
         userContent = [
-          { type: "text", text: cardPrompt + summaryInstruction + `\n\nFile name: ${file_name}` },
+          {
+            type: "text",
+            text:
+              cardPrompt + summaryInstruction + `\n\nFile name: ${file_name}`,
+          },
           {
             type: "image_url",
-            image_url: { url: `data:${isPdf ? "application/pdf" : effectiveMime};base64,${b64}` },
+            image_url: {
+              url: `data:${isPdf ? "application/pdf" : effectiveMime};base64,${b64}`,
+            },
           },
         ];
       } else {
@@ -308,9 +358,14 @@ async function extractFromFile({
   if (summaryText) {
     sectionsToCreate.push({
       title: `📄 Document summary — ${file_name || "uploaded file"}`,
-      description: "Raw AI read of the document. Move/split any line into the right section manually.",
+      description:
+        "Raw AI read of the document. Move/split any line into the right section manually.",
       lines: [
-        { label: "Summary", value: summaryText, notes: "Source: AI OCR/read of the uploaded document." },
+        {
+          label: "Summary",
+          value: summaryText,
+          notes: "Source: AI OCR/read of the uploaded document.",
+        },
       ],
     });
   }
@@ -333,7 +388,7 @@ async function extractFromFile({
     try {
       const summaryMsg =
         `📄 **${file_name || "Uploaded file"}** — AI read complete\n\n` +
-        `${(extracted.summary || "(no summary)")}\n\n` +
+        `${extracted.summary || "(no summary)"}\n\n` +
         `**Proposed structure:** ${(extracted.sections || []).length} section(s), ` +
         `${(extracted.sections || []).reduce((n: number, s: any) => n + (s.lines?.length || 0), 0)} line(s).\n\n` +
         `Review the preview on the card and click **Apply** to add it, or **Discard** to throw it away.`;
@@ -437,12 +492,26 @@ async function extractFromFile({
     console.error("brain feed failed:", e);
   }
 
-  return { ok: true, sections_created: created.length, summary: extracted.summary, warnings };
+  return {
+    ok: true,
+    sections_created: created.length,
+    summary: extracted.summary,
+    warnings,
+  };
 }
 
 // Apply a previously-stored proposal (from dry_run) to the card.
-async function applyProposal({ file_id, card_id, card_key, festival_id, concept_id }: any) {
-  const fileRows = (await sb("GET", `smart_files?id=eq.${file_id}&select=*`)) as any[];
+async function applyProposal({
+  file_id,
+  card_id,
+  card_key,
+  festival_id,
+  concept_id,
+}: any) {
+  const fileRows = (await sb(
+    "GET",
+    `smart_files?id=eq.${file_id}&select=*`,
+  )) as any[];
   const file = fileRows?.[0];
   if (!file) throw new Error("file not found");
   const proposal = file?.meta?.proposal;
@@ -544,7 +613,10 @@ async function applyProposal({ file_id, card_id, card_key, festival_id, concept_
 
 // Discard a pending proposal without writing anything.
 async function discardProposal({ file_id, card_id }: any) {
-  const fileRows = (await sb("GET", `smart_files?id=eq.${file_id}&select=*`)) as any[];
+  const fileRows = (await sb(
+    "GET",
+    `smart_files?id=eq.${file_id}&select=*`,
+  )) as any[];
   const file = fileRows?.[0];
   if (!file) throw new Error("file not found");
   const meta = { ...(file.meta || {}) };
@@ -567,12 +639,22 @@ async function discardProposal({ file_id, card_id }: any) {
 }
 
 /* ---------------- Validators per card_key ---------------- */
-type ValidationWarning = { field: string; message: string; severity: "error" | "warn" };
+type ValidationWarning = {
+  field: string;
+  message: string;
+  severity: "error" | "warn";
+};
 
-function validateExtraction(card_key: string, sections: any[]): ValidationWarning[] {
+function validateExtraction(
+  card_key: string,
+  sections: any[],
+): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
   const allLines = sections.flatMap((s: any) =>
-    (s.lines || []).map((l: any) => ({ ...l, _section: (s.title || "").toLowerCase() })),
+    (s.lines || []).map((l: any) => ({
+      ...l,
+      _section: (s.title || "").toLowerCase(),
+    })),
   );
   const findLine = (re: RegExp) =>
     allLines.find((l: any) =>
@@ -590,7 +672,8 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
     if (!unitLines.length) {
       warnings.push({
         field: "unit_type",
-        message: "No fridge / freezer / container units detected. Add the unit type(s).",
+        message:
+          "No fridge / freezer / container units detected. Add the unit type(s).",
         severity: "error",
       });
     } else {
@@ -614,8 +697,14 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
     }
 
     // 2. Invoice deadline
-    const invoiceDeadline = findLine(/invoice|payment|betaling|faktura|pay.*by|due/);
-    if (!invoiceDeadline || (!hasNonEmpty(invoiceDeadline.value) && !hasNonEmpty(invoiceDeadline.due_date))) {
+    const invoiceDeadline = findLine(
+      /invoice|payment|betaling|faktura|pay.*by|due/,
+    );
+    if (
+      !invoiceDeadline ||
+      (!hasNonEmpty(invoiceDeadline.value) &&
+        !hasNonEmpty(invoiceDeadline.due_date))
+    ) {
       warnings.push({
         field: "invoice_deadline",
         message: "No invoice/payment deadline found.",
@@ -624,8 +713,14 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
     }
 
     // 3. Delivery deadline
-    const deliveryDeadline = findLine(/deliver|drop.?off|on.?site|levering|leverings/);
-    if (!deliveryDeadline || (!hasNonEmpty(deliveryDeadline.value) && !hasNonEmpty(deliveryDeadline.due_date))) {
+    const deliveryDeadline = findLine(
+      /deliver|drop.?off|on.?site|levering|leverings/,
+    );
+    if (
+      !deliveryDeadline ||
+      (!hasNonEmpty(deliveryDeadline.value) &&
+        !hasNonEmpty(deliveryDeadline.due_date))
+    ) {
       warnings.push({
         field: "delivery_deadline",
         message: "No on-site delivery deadline found.",
@@ -635,7 +730,9 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
 
     // 4. Supplier name
     const supplier = allLines.find((l: any) =>
-      /supplier|vendor|firma|company|leverandør/i.test(`${l.label || ""} ${l._section || ""}`),
+      /supplier|vendor|firma|company|leverandør/i.test(
+        `${l.label || ""} ${l._section || ""}`,
+      ),
     );
     if (!supplier || !hasNonEmpty(supplier.value)) {
       warnings.push({
@@ -666,7 +763,8 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
     if (!deliveryPlan || !(deliveryPlan.lines || []).length) {
       warnings.push({
         field: "delivery_plan",
-        message: "Delivery plan (address, time window, on-site contact) is missing.",
+        message:
+          "Delivery plan (address, time window, on-site contact) is missing.",
         severity: "warn",
       });
     }
@@ -675,36 +773,222 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
   return warnings;
 }
 
+const CARD_BRAIN_HINTS: Record<string, string[]> = {
+  concepts_brain: [
+    "concept",
+    "concepts",
+    "contract",
+    "email",
+    "other",
+    "facade",
+    "power_requirements",
+    "setup_timeline",
+  ],
+  intro: ["intro", "introduction", "contract", "email", "other"],
+  equipment_list: ["equipment_list", "equipment", "other", "contract", "email"],
+  cooling_storage: [
+    "cooling_storage",
+    "cooling",
+    "equipment_list",
+    "other",
+    "contract",
+    "email",
+  ],
+  cooking_equipment: [
+    "cooking_equipment",
+    "equipment_list",
+    "equipment",
+    "other",
+    "contract",
+    "email",
+  ],
+  safety_compliance: [
+    "safety_compliance",
+    "safety",
+    "contract",
+    "other",
+    "email",
+  ],
+  setup_timeline: ["setup_timeline", "timeline", "contract", "email", "other"],
+  transportation: ["transportation", "transport", "contract", "email", "other"],
+  power_requirements: [
+    "power_requirements",
+    "power",
+    "electric",
+    "electricity",
+    "contract",
+    "email",
+    "other",
+  ],
+};
+
+const CARD_BRAIN_TERMS: Record<string, RegExp> = {
+  concepts_brain:
+    /concept|stall|stand|bod|brand|menu|food|mad|gyros|creperie|chicks|fish|burger|zone|inside|camping|facade|sign/i,
+  intro:
+    /organiser|kontakt|contact|deadline|festival|address|location|phone|email|contract|aftale/i,
+  equipment_list:
+    /equipment|udstyr|table|tent|fridge|freezer|burner|oven|fryer|grill|container|inventory|packing/i,
+  cooling_storage:
+    /cool|cold|fridge|freezer|køl|frost|container|ice|temperature/i,
+  cooking_equipment:
+    /cooking|kitchen|burner|oven|fryer|grill|gas|stove|pan|pot/i,
+  safety_compliance:
+    /safety|fire|brand|gas|hygiene|allergen|certificate|permit|inspection|compliance/i,
+  setup_timeline:
+    /setup|timeline|schedule|deadline|arrival|build|teardown|pickup|delivery/i,
+  transportation:
+    /transport|vehicle|car|truck|driver|load|trip|parking|delivery|pickup/i,
+  power_requirements:
+    /power|electric|amp|kw|kwh|socket|plug|16a|32a|63a|phase|strøm/i,
+};
+
+function uniqRows(rows: any[]) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = row?.id || row?.key_name;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function scoreBrainRow(
+  row: any,
+  cardKey: string,
+  festivalId?: string,
+  conceptId?: string,
+) {
+  const category = String(row.category || "").toLowerCase();
+  const keyName = String(row.key_name || "").toLowerCase();
+  const subjectType = String(row.subject_type || "").toLowerCase();
+  const haystack = `${row.display_name || ""}
+${row.content || ""}
+${JSON.stringify(row.structured_data || {})}`;
+  const hints = CARD_BRAIN_HINTS[cardKey] || [cardKey];
+  const terms = CARD_BRAIN_TERMS[cardKey];
+  let score = 0;
+
+  if (category === cardKey) score += 120;
+  if (subjectType === cardKey) score += 60;
+  if (hints.includes(category)) score += 45;
+  if (hints.some((hint) => keyName.includes(hint))) score += 35;
+  if (terms?.test(haystack)) score += 30;
+  if (
+    festivalId &&
+    (row.festival_id === festivalId || row.last_seen_festival_id === festivalId)
+  )
+    score += 20;
+  if (conceptId && row.subject_id === conceptId) score += 80;
+  if (!conceptId && row.scope === "festival") score += 8;
+  if (String(row.content || "").trim().length > 120) score += 10;
+  if (row.structured_data?.section || row.structured_data?.label) score += 15;
+
+  return score;
+}
+
 async function grabBrain({ card_key, festival_id, concept_id }: any) {
-  // Pull most-frequent brain entries for this card_key, prefer matching concept, exclude current festival.
-  const filters = new URLSearchParams();
-  filters.set("category", `eq.${card_key}`);
-  if (festival_id) filters.set("festival_id", `neq.${festival_id}`);
-  if (concept_id) filters.set("subject_id", `eq.${concept_id}`);
+  const queries: string[] = [];
+  const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
 
-  const rows = (await sb(
-    "GET",
-    `brain_entries?${filters.toString()}&select=*&order=frequency.desc,last_seen_at.desc&limit=200`,
-  )) as any[];
+  queries.push(
+    `brain_entries?category=eq.${encodeURIComponent(card_key)}&${select}`,
+  );
+  if (festival_id) {
+    queries.push(
+      `brain_entries?festival_id=eq.${encodeURIComponent(festival_id)}&${select}`,
+    );
+    queries.push(
+      `brain_entries?last_seen_festival_id=eq.${encodeURIComponent(festival_id)}&${select}`,
+    );
+  }
+  if (concept_id)
+    queries.push(
+      `brain_entries?subject_id=eq.${encodeURIComponent(concept_id)}&${select}`,
+    );
+  queries.push(`brain_entries?scope=eq.global&${select}`);
 
-  // Group by section
+  const fetched = await Promise.all(
+    queries.map(async (query) => {
+      try {
+        return ((await sb("GET", query)) as any[]) || [];
+      } catch (e) {
+        console.error("brain query failed", query, e);
+        return [];
+      }
+    }),
+  );
+
+  const rows = uniqRows(fetched.flat())
+    .map((row) => ({
+      row,
+      score: scoreBrainRow(row, card_key, festival_id, concept_id),
+    }))
+    .filter(({ score }) => score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score || (b.row.frequency || 0) - (a.row.frequency || 0),
+    )
+    .slice(0, 40)
+    .map(({ row }) => row);
+
   const bySection: Record<string, any[]> = {};
-  for (const r of rows || []) {
-    const section = r.structured_data?.section || "General";
-    if (!bySection[section]) bySection[section] = [];
-    bySection[section].push({
-      label: r.structured_data?.label || r.display_name,
-      value: r.structured_data?.value,
-      quantity: r.structured_data?.quantity,
-      notes: r.structured_data?.notes,
-      frequency: r.frequency,
-    });
+  const sourceDocs: string[] = [];
+  for (const r of rows) {
+    const hasStructuredLine =
+      r.structured_data?.section || r.structured_data?.label;
+    if (hasStructuredLine) {
+      const section = r.structured_data?.section || "General";
+      if (!bySection[section]) bySection[section] = [];
+      bySection[section].push({
+        label: r.structured_data?.label || r.display_name || r.key_name,
+        value: r.structured_data?.value || r.content || null,
+        quantity: r.structured_data?.quantity || null,
+        notes: r.structured_data?.notes || null,
+        frequency: r.frequency,
+      });
+    } else if (String(r.content || "").trim()) {
+      sourceDocs.push(
+        `SOURCE: ${r.display_name || r.key_name || r.category}
+CATEGORY: ${r.category || "unknown"}
+${String(r.content).slice(0, 12000)}`,
+      );
+    }
   }
 
-  return {
-    ok: true,
-    suggestions: Object.entries(bySection).map(([title, lines]) => ({ title, lines })),
-  };
+  let suggestions = Object.entries(bySection).map(([title, lines]) => ({
+    title,
+    lines,
+  }));
+
+  if (sourceDocs.length) {
+    const cardPrompt =
+      CARD_PROMPTS[card_key] ||
+      "Extract logical sections and lines from this Brain knowledge.";
+    const structured = await callAI(
+      [
+        {
+          role: "system",
+          content:
+            "You convert stored Brain knowledge into editable card sections for a festival operations app. Use only information relevant to the requested card. If the Brain sources include a broad operations plan, extract the matching details instead of saying there is no data.",
+        },
+        {
+          role: "user",
+          content: `${cardPrompt}
+
+Requested card key: ${card_key}
+
+Brain sources:
+
+${sourceDocs.join("\\n\\n---\\n\\n")}`,
+        },
+      ],
+      STRUCTURE_SCHEMA,
+    );
+    suggestions = [...(structured.sections || []), ...suggestions];
+  }
+
+  return { ok: true, suggestions };
 }
 
 async function remember(payload: any) {
@@ -720,7 +1004,10 @@ async function remember(payload: any) {
       last_seen_at: new Date().toISOString(),
       last_seen_festival_id: payload.festival_id || null,
       content: payload.value || existing[0].content,
-      structured_data: { ...(existing[0].structured_data || {}), ...(payload.structured_data || {}) },
+      structured_data: {
+        ...(existing[0].structured_data || {}),
+        ...(payload.structured_data || {}),
+      },
     });
   } else {
     await sb("POST", "brain_entries", {
@@ -729,11 +1016,16 @@ async function remember(payload: any) {
       category: payload.card_key || "manual",
       source: "user_correction",
       content: payload.value,
-      scope: payload.concept_id ? "concept" : payload.festival_id ? "festival" : "global",
+      scope: payload.concept_id
+        ? "concept"
+        : payload.festival_id
+          ? "festival"
+          : "global",
       festival_id: payload.festival_id || null,
       last_seen_festival_id: payload.festival_id || null,
       subject_type: payload.subject_type || payload.card_key,
-      subject_id: payload.subject_id || payload.concept_id || payload.festival_id,
+      subject_id:
+        payload.subject_id || payload.concept_id || payload.festival_id,
       structured_data: payload.structured_data || {},
       frequency: 1,
       confidence: payload.confidence ?? 0.7,
@@ -747,9 +1039,15 @@ async function remember(payload: any) {
 // Used by the Brain "store silently" upload flow. The user must click
 // "Propose changes" later to run the full extract.
 async function summarizeFile({ file_id, file_url, file_name, mime_type }: any) {
-  await sb("PATCH", `smart_files?id=eq.${file_id}`, { parse_status: "processing" });
+  await sb("PATCH", `smart_files?id=eq.${file_id}`, {
+    parse_status: "processing",
+  });
   let userContent: any;
-  const text = await downloadFileText(file_url, mime_type || "", file_name || "");
+  const text = await downloadFileText(
+    file_url,
+    mime_type || "",
+    file_name || "",
+  );
   const instr = `Read this document and write a concise plain-text summary (5-12 lines) capturing supplier, items, prices, dates, addresses, contacts and anything else useful. No JSON, no markdown headings — just the summary text.`;
   if (text) {
     userContent = `${instr}\n\nFile: ${file_name}\n\n${text.slice(0, 180000)}`;
@@ -758,11 +1056,17 @@ async function summarizeFile({ file_id, file_url, file_name, mime_type }: any) {
       const { b64, mime: detectedMime } = await downloadFileBase64(file_url);
       const effectiveMime = mime_type || detectedMime;
       const isImage = /^image\//i.test(effectiveMime);
-      const isPdf = /pdf/i.test(effectiveMime) || /\.pdf$/i.test(file_name || "");
+      const isPdf =
+        /pdf/i.test(effectiveMime) || /\.pdf$/i.test(file_name || "");
       if (isImage || isPdf) {
         userContent = [
           { type: "text", text: `${instr}\n\nFile name: ${file_name}` },
-          { type: "image_url", image_url: { url: `data:${isPdf ? "application/pdf" : effectiveMime};base64,${b64}` } },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${isPdf ? "application/pdf" : effectiveMime};base64,${b64}`,
+            },
+          },
         ];
       } else {
         userContent = `${instr}\n\nFile: ${file_name} (${effectiveMime}) — binary file, summarise from the filename.`;
@@ -774,7 +1078,11 @@ async function summarizeFile({ file_id, file_url, file_name, mime_type }: any) {
   let summary = "";
   try {
     summary = await callAI([
-      { role: "system", content: "You read messy real-world festival documents and produce short, accurate plain-text summaries. Always perform OCR on images/PDFs." },
+      {
+        role: "system",
+        content:
+          "You read messy real-world festival documents and produce short, accurate plain-text summaries. Always perform OCR on images/PDFs.",
+      },
       { role: "user", content: userContent },
     ]);
   } catch (e) {
@@ -793,7 +1101,8 @@ async function summarizeFile({ file_id, file_url, file_name, mime_type }: any) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
   try {
     const body = await req.json();
     let result: any;
@@ -824,9 +1133,12 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: String((e as Error).message || e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: String((e as Error).message || e) }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
