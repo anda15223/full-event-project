@@ -1036,7 +1036,12 @@ ${String(r.content).slice(0, 12000)}`,
           {
             role: "system",
             content:
-              "You convert stored Brain knowledge into editable card sections for a festival operations app. Use only information relevant to the requested card. If the Brain sources include a broad operations plan, extract the matching details instead of saying there is no data.",
+              `You convert stored Brain knowledge into editable card sections for a festival operations app. STRICT RULES:
+1. ONLY extract content that directly fits the requested card "${card_key}". Ignore everything else in the sources, even if useful for another card.
+2. Follow the card-specific structure in the user prompt EXACTLY — do not invent generic sections like "Operations", "General", "Misc", "Document content".
+3. Each line must be a discrete fact (label + value), not a paragraph dump.
+4. If the Brain sources contain NO information that matches this card's purpose, return {"sections": []} — do NOT fabricate or pad.
+5. Never copy raw paragraphs into a single line — split them into structured fields.`,
           },
           {
             role: "user",
@@ -1044,7 +1049,7 @@ ${String(r.content).slice(0, 12000)}`,
 
 Requested card key: ${card_key}
 
-Brain sources:
+Brain sources (may contain unrelated content — filter strictly):
 
 ${sourceDocs.join("\\n\\n---\\n\\n")}`,
           },
