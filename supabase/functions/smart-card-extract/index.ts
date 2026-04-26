@@ -926,6 +926,7 @@ const CARD_BRAIN_HINTS: Record<string, string[]> = {
     "email",
     "other",
   ],
+  trolley: ["trolley", "bc trolley", "cleaning", "packaging", "packing", "inventory", "equipment_list", "equipment", "other"],
 };
 
 const CARD_BRAIN_TERMS: Record<string, RegExp> = {
