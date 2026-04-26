@@ -1579,11 +1579,11 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                      const canCopy = !conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
                       const showAssigner = conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
                       const gridCols = showAssigner
-                        ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]"
+                        ? (canCopy ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px_24px]" : "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]")
                         : (canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]");
                       return (
                       <div key={line.id} className={cn("grid gap-1.5 items-center group", gridCols)}>
@@ -1611,7 +1611,7 @@ export function SmartCard({
                           {sourceLabel(line.source)}
                         </Badge>
                         {canCopy && (
-                          <Button variant="ghost" size="sm" title="Copy to other concepts" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100" onClick={() => openCopyDialog(line.id)}>
+                          <Button variant="ghost" size="sm" title="Duplicate this line to other concepts" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={() => openCopyDialog(line.id)}>
                             <Copy className="h-3 w-3" />
                           </Button>
                         )}
