@@ -680,7 +680,7 @@ export function SmartCard({
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           {editMode && !hideBrainButton && (
-            <Button size="sm" variant="outline" className="h-8" onClick={grabFromBrain} disabled={grabbing}>
+            <Button size="sm" variant="outline" className="h-8" onClick={openBrainPicker} disabled={grabbing}>
               {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Brain className="h-3.5 w-3.5 mr-1" />}
               Grab info
             </Button>
