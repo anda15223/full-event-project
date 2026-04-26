@@ -79,23 +79,30 @@ Deno.serve(async (req) => {
 
       if (isImage) {
         // Binary image: send bytes as base64 to Gemini vision.
-        // Match the working SmartCard extractor payload shape: text first, image second.
         const r = await fetch(publicUrl);
         if (!r.ok) throw new Error(`Failed to fetch image: ${r.status}`);
         const buf = new Uint8Array(await r.arrayBuffer());
+        const detectedMime = detectImageMime(buf);
+
+        if (!detectedMime) {
+          const preview = new TextDecoder().decode(buf.slice(0, 120));
+          console.error("brain-extract invalid image bytes", {
+            filename,
+            storage_path,
+            mime_type,
+            response_content_type: r.headers.get("content-type"),
+            size: buf.length,
+            preview,
+          });
+          throw new Error("This file is not a readable JPG/PNG/WebP/GIF image. Please re-save it as a real JPG or PNG and upload again.");
+        }
+
         let binary = "";
         const chunk = 0x8000;
         for (let i = 0; i < buf.length; i += chunk) {
           binary += String.fromCharCode.apply(null, buf.subarray(i, i + chunk) as any);
         }
         const b64 = cleanBase64(btoa(binary));
-        if (b64.length % 4 !== 0) throw new Error("Invalid image base64 length");
-
-        const ctHeader = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-        let effectiveMime = "image/png";
-        if (isJpg) effectiveMime = "image/jpeg";
-        else if (ext === "webp" || ctHeader === "image/webp" || mt === "image/webp") effectiveMime = "image/webp";
-        else if (ext === "png" || ctHeader === "image/png" || mt === "image/png") effectiveMime = "image/png";
 
         userParts.push({
           type: "text",
@@ -104,7 +111,7 @@ Deno.serve(async (req) => {
         userParts.push({
           type: "image_url",
           image_url: {
-            url: `data:${effectiveMime};base64,${b64}`,
+            url: `data:${detectedMime};base64,${b64}`,
           },
         });
       } else if (isPdf) {
