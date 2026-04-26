@@ -549,10 +549,12 @@ export function SmartCard({
   // Step 2: actually grab from Brain, restricted to the docs the user picked.
   const confirmGrabFromBrain = async () => {
     if (!card) return;
-    const visibleIds = visibleBrainDocs.map((d) => d.id);
-    const explicitIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
-    const ids = explicitIds.length ? explicitIds : visibleIds;
-    if (!ids.length) return;
+    const visibleSelectedIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
+    const useSourceCard = sourceCardFilter !== "all";
+    if (!useSourceCard && visibleSelectedIds.length === 0) {
+      toast.error("Select the Brain documents you want to extract from.");
+      return;
+    }
 
     setBrainPickerOpen(false);
     setGrabbing(true);
@@ -563,7 +565,8 @@ export function SmartCard({
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
-          brain_ids: ids,
+          source_card_key: useSourceCard ? sourceCardFilter : undefined,
+          brain_ids: useSourceCard ? undefined : visibleSelectedIds,
         },
       });
       if (error) throw error;
