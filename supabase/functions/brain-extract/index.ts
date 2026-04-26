@@ -123,17 +123,16 @@ Deno.serve(async (req) => {
         let binary = "";
         const chunk = 0x8000;
         for (let i = 0; i < buf.length; i += chunk) {
-          binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+          binary += String.fromCharCode.apply(null, buf.subarray(i, i + chunk) as any);
         }
-        const b64 = btoa(binary);
-        const dataUrl = `data:application/pdf;base64,${b64}`;
-        userParts.push({
-          type: "image_url",
-          image_url: { url: dataUrl },
-        });
+        const b64 = cleanBase64(btoa(binary));
         userParts.push({
           type: "text",
           text: `Extract the full readable content from this PDF (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+        });
+        userParts.push({
+          type: "image_url",
+          image_url: { url: `data:application/pdf;base64,${b64}` },
         });
       } else {
         // Fallback: try to fetch as text
