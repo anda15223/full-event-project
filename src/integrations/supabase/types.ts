@@ -801,6 +801,7 @@ export type Database = {
       festival_bc_trolley_items: {
         Row: {
           category: string
+          concept_id: string | null
           created_at: string
           id: string
           item_name: string
@@ -813,6 +814,7 @@ export type Database = {
         }
         Insert: {
           category: string
+          concept_id?: string | null
           created_at?: string
           id?: string
           item_name: string
@@ -825,6 +827,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          concept_id?: string | null
           created_at?: string
           id?: string
           item_name?: string
@@ -836,6 +839,13 @@ export type Database = {
           trolley_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_bc_trolley_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "festival_concepts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_bc_trolley_items_trolley_id_fkey"
             columns: ["trolley_id"]
