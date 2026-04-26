@@ -1304,43 +1304,95 @@ export function SmartCard({
             </DialogDescription>
           </DialogHeader>
 
+          {/* Cross-card toggle */}
+          {!loadingBrainDocs && brainDocs.length > 0 && (
+            <label className="flex items-center gap-2 px-1 pt-1 pb-2 cursor-pointer text-xs">
+              <input
+                type="checkbox"
+                checked={includeOtherCards}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setIncludeOtherCards(next);
+                  if (!next) {
+                    // Drop any currently-selected docs that belong to other cards
+                    setSelectedBrainIds((prev) => {
+                      const out = new Set<string>();
+                      brainDocs.forEach((d) => {
+                        if (d.same_card && prev.has(d.id)) out.add(d.id);
+                      });
+                      return out;
+                    });
+                  }
+                }}
+                className="cursor-pointer"
+              />
+              <span className="font-medium">Include info from other cards</span>
+              <span className="text-muted-foreground">
+                ({brainDocs.filter((d) => !d.same_card).length} cross-card docs)
+              </span>
+            </label>
+          )}
+
           <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-1.5">
             {loadingBrainDocs && (
               <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Loading Brain…
               </div>
             )}
-            {!loadingBrainDocs && brainDocs.length === 0 && (
-              <div className="text-center text-sm text-muted-foreground py-10">
-                Brain has no documents matching this card yet. Upload one or fill it in manually.
-              </div>
-            )}
+            {(() => {
+              const visibleDocs = includeOtherCards
+                ? brainDocs
+                : brainDocs.filter((d) => d.same_card);
+              if (!loadingBrainDocs && visibleDocs.length === 0) {
+                return (
+                  <div className="text-center text-sm text-muted-foreground py-10">
+                    {brainDocs.length === 0
+                      ? "Brain has no documents matching this card yet. Upload one or fill it in manually."
+                      : "No documents on this card yet. Toggle “Include info from other cards” to pull from elsewhere."}
+                  </div>
+                );
+              }
+              return null;
+            })()}
             {!loadingBrainDocs && brainDocs.length > 0 && (() => {
-              const allChecked = selectedBrainIds.size === brainDocs.length;
-              const someChecked = selectedBrainIds.size > 0 && !allChecked;
+              const visibleDocs = includeOtherCards
+                ? brainDocs
+                : brainDocs.filter((d) => d.same_card);
+              if (visibleDocs.length === 0) return null;
+              const visibleSelected = visibleDocs.filter((d) => selectedBrainIds.has(d.id)).length;
+              const allChecked = visibleSelected === visibleDocs.length;
+              const someChecked = visibleSelected > 0 && !allChecked;
               return (
                 <label className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-background/95 backdrop-blur border-b flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={allChecked}
                     ref={(el) => { if (el) el.indeterminate = someChecked; }}
-                    onChange={() =>
-                      setSelectedBrainIds(
-                        allChecked ? new Set() : new Set(brainDocs.map((d) => d.id)),
-                      )
-                    }
+                    onChange={() => {
+                      setSelectedBrainIds((prev) => {
+                        const next = new Set(prev);
+                        if (allChecked) {
+                          visibleDocs.forEach((d) => next.delete(d.id));
+                        } else {
+                          visibleDocs.forEach((d) => next.add(d.id));
+                        }
+                        return next;
+                      });
+                    }}
                     className="cursor-pointer"
                   />
                   <span className="text-xs font-medium">
                     {allChecked ? "Uncheck all" : "Check all"}
                   </span>
                   <span className="text-[11px] text-muted-foreground ml-auto">
-                    {selectedBrainIds.size} / {brainDocs.length} selected
+                    {visibleSelected} / {visibleDocs.length} shown
                   </span>
                 </label>
               );
             })()}
-            {!loadingBrainDocs && brainDocs.map((d) => {
+            {!loadingBrainDocs && brainDocs
+              .filter((d) => includeOtherCards || d.same_card)
+              .map((d) => {
               const checked = selectedBrainIds.has(d.id);
               return (
                 <label
