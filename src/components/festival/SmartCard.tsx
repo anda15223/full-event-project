@@ -1722,8 +1722,8 @@ export function SmartCard({
                       const showAssigner = !!siblingConcepts && siblingConcepts.length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
                       const gridCols = showAssigner
-                        ? (canCopy ? "grid-cols-[1fr_2fr_60px_1.4fr_120px_60px_24px_24px]" : "grid-cols-[1fr_2fr_60px_1.4fr_120px_60px_24px]")
-                        : (canCopy ? "grid-cols-[1fr_2.4fr_70px_1.4fr_60px_24px_24px]" : "grid-cols-[1fr_2.4fr_70px_1.4fr_60px_24px]");
+                        ? (canCopy ? "grid-cols-[1fr_2.4fr_70px_120px_60px_24px_24px]" : "grid-cols-[1fr_2.4fr_70px_120px_60px_24px]")
+                        : (canCopy ? "grid-cols-[1fr_2.8fr_80px_60px_24px_24px]" : "grid-cols-[1fr_2.8fr_80px_60px_24px]");
                       const showInlineConcept = enableInlineConceptAllocator && !!siblingConcepts && siblingConcepts.length > 0;
                       const showInventory = !!inventoryCategories && inventoryCategories.length > 0;
                       const inlineConceptVal = (line.meta as any)?.allocated_concept_id ?? "";
@@ -1743,7 +1743,7 @@ export function SmartCard({
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
                         <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
-                        <Input value={line.notes ?? ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} placeholder="Notes" className="h-7 text-xs" />
+                        
                         {showAssigner && (
                           <select
                             value={assigned}
