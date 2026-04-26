@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function cleanBase64(base64String: string): string {
+  const cleaned = base64String.trim().replace(/^data:[^,]+,/, "").replace(/\s/g, "");
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(cleaned)) {
+    throw new Error("Invalid image base64 data");
+  }
+  return cleaned;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -29,9 +37,11 @@ Deno.serve(async (req) => {
       sourceLabel = "pasted text";
     } else if (storage_path) {
       const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/festival-photos/${storage_path}`;
-      const mt = (mime_type || "").toLowerCase();
-      const isImage = mt.startsWith("image/");
-      const isPdf = mt.includes("pdf");
+      const mt = (mime_type || "").split(";")[0].trim().toLowerCase();
+      const ext = (filename || storage_path || "").split(".").pop()?.toLowerCase();
+      const isJpg = ext === "jpg" || ext === "jpeg" || mt === "image/jpg" || mt === "image/jpeg";
+      const isImage = mt.startsWith("image/") || ["png", "webp", "gif"].includes(ext || "") || isJpg;
+      const isPdf = mt.includes("pdf") || ext === "pdf";
 
       if (isImage) {
         // Fetch image server-side and inline as base64 data URL
