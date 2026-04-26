@@ -1713,6 +1713,78 @@ export function SmartCard({
                   {sectionLines.length === 0 && (
                     <p className="text-xs text-muted-foreground italic">No lines yet.</p>
                   )}
+                  {editMode && sectionLines.length > 0 && (() => {
+                    const hasAssigner = !!siblingConcepts && siblingConcepts.length > 0;
+                    const hasInventory = !!inventoryCategories && inventoryCategories.length > 0;
+                    if (!hasAssigner && !hasInventory) return null;
+                    const bulkApplyConcept = (cid: string) => {
+                      if (!cid) return;
+                      sectionLines.forEach(l => setLineConceptAssignment(prev => ({ ...prev, [l.id]: cid })));
+                      toast.success(`Assigned ${sectionLines.length} rows. Press Save to move.`);
+                    };
+                    const bulkApplyInventory = async (cat: string) => {
+                      if (!cat) return;
+                      const ids = sectionLines.filter(l => !isDraftId(l.id)).map(l => l.id);
+                      setLines(prev => prev.map(l => sectionLines.find(s => s.id === l.id) ? ({ ...l, meta: { ...((l.meta as any) || {}), inventory_category: cat } }) : l));
+                      if (ids.length) {
+                        for (const id of ids) {
+                          const cur = sectionLines.find(s => s.id === id);
+                          const newMeta = { ...((cur?.meta as any) || {}), inventory_category: cat };
+                          await (supabase as any).from("smart_lines").update({ meta: newMeta }).eq("id", id);
+                        }
+                      }
+                      toast.success(`Set inventory on ${sectionLines.length} rows.`);
+                    };
+                    return (
+                      <div className="flex flex-wrap items-center gap-2 px-1 py-1.5 mb-1 rounded bg-muted/40 border border-border/40">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Bulk:</span>
+                        {hasAssigner && (
+                          <select
+                            onChange={(e) => { bulkApplyConcept(e.target.value); e.target.value = ""; }}
+                            defaultValue=""
+                            className="h-6 text-[11px] rounded border border-border bg-background px-1.5"
+                            title="Assign all rows to concept"
+                          >
+                            <option value="">Assign all to concept…</option>
+                            {siblingConcepts!.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        )}
+                        {hasInventory && (
+                          <select
+                            onChange={(e) => { bulkApplyInventory(e.target.value); e.target.value = ""; }}
+                            defaultValue=""
+                            className="h-6 text-[11px] rounded border border-border bg-background px-1.5"
+                            title="Set inventory on all rows"
+                          >
+                            <option value="">Set inventory on all…</option>
+                            {inventoryCategories!.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {editMode && sectionLines.length > 0 && (() => {
+                    const hasAssigner = !!siblingConcepts && siblingConcepts.length > 0;
+                    const hasInventory = !!inventoryCategories && inventoryCategories.length > 0;
+                    const extraCol = hasInventory ? "_130px" : "";
+                    const cols = hasAssigner
+                      ? `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px_24px]`
+                      : `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px_24px]`;
+                    return (
+                      <div className={cn("grid gap-1.5 px-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold", cols)}>
+                        <span>Item</span>
+                        <span>Note</span>
+                        <span>Amount</span>
+                        {hasAssigner && <span>Concept</span>}
+                        {hasInventory && <span>Inventory</span>}
+                        <span></span><span></span><span></span><span></span>
+                      </div>
+                    );
+                  })()}
                   {editMode ? (
                     sectionLines.map(line => {
                        const canCopy = true;
