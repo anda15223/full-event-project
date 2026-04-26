@@ -807,11 +807,7 @@ Requested card key: ${card_key}
 
 Brain sources:
 
-${sourceDocs.join("
-
----
-
-")}`,
+${sourceDocs.join("\\n\\n---\\n\\n")}`,
         },
       ],
       STRUCTURE_SCHEMA,
