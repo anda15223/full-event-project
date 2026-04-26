@@ -289,6 +289,50 @@ export function SmartCard({
     }
   };
 
+  // Duplicate a line inline — inserts a copy directly under the source line in the same section.
+  const duplicateLineInline = (id: string) => {
+    const src = lines.find(l => l.id === id);
+    if (!src) return;
+    const draft: SLine = {
+      id: `draft-${crypto.randomUUID()}`,
+      section_id: src.section_id,
+      label: src.label, value: src.value, quantity: src.quantity, notes: src.notes,
+      status: src.status, owner: src.owner, due_date: src.due_date,
+      order_index: src.order_index + 0.5, // temporary; we re-sequence below
+      source: "manual", source_file_id: null,
+    };
+    setLines(prev => {
+      // insert directly after src, then renumber order_index for that section
+      const sectionLines = prev.filter(l => l.section_id === src.section_id);
+      const others = prev.filter(l => l.section_id !== src.section_id);
+      const idx = sectionLines.findIndex(l => l.id === src.id);
+      const inserted = [...sectionLines.slice(0, idx + 1), draft, ...sectionLines.slice(idx + 1)]
+        .map((l, i) => ({ ...l, order_index: i }));
+      // capture renumbered order changes for non-draft existing lines
+      setPending(p => {
+        const lineUpdates = { ...p.lineUpdates };
+        for (const l of inserted) {
+          if (l.id === draft.id) continue;
+          if (isDraftId(l.id)) continue;
+          lineUpdates[l.id] = { ...(lineUpdates[l.id] || {}), order_index: l.order_index };
+        }
+        // replace lineInserts entries' order for draft items in this section
+        const lineInserts = p.lineInserts.map(li => {
+          if (li.section_id !== src.section_id) return li;
+          const match = inserted.find(x => x.id === li.id);
+          return match ? { ...li, order_index: match.order_index } : li;
+        });
+        return {
+          ...p,
+          lineInserts: [...lineInserts, { ...draft, order_index: inserted.find(x => x.id === draft.id)!.order_index }],
+          lineUpdates,
+        };
+      });
+      return [...others, ...inserted];
+    });
+  };
+
+
   // ---- Copy a single line into other concept cards (same cardKey + section title) ----
   const [copyOpenForLine, setCopyOpenForLine] = useState<string | null>(null);
   const [copyTargets, setCopyTargets] = useState<Record<string, boolean>>({});
