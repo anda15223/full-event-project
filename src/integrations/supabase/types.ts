@@ -802,9 +802,11 @@ export type Database = {
         Row: {
           category: string
           concept_id: string | null
+          counted_quantity: number | null
           created_at: string
           id: string
           item_name: string
+          needed_quantity: number | null
           notes: string | null
           order_index: number
           photo_path: string | null
@@ -815,9 +817,11 @@ export type Database = {
         Insert: {
           category: string
           concept_id?: string | null
+          counted_quantity?: number | null
           created_at?: string
           id?: string
           item_name: string
+          needed_quantity?: number | null
           notes?: string | null
           order_index: number
           photo_path?: string | null
@@ -828,9 +832,11 @@ export type Database = {
         Update: {
           category?: string
           concept_id?: string | null
+          counted_quantity?: number | null
           created_at?: string
           id?: string
           item_name?: string
+          needed_quantity?: number | null
           notes?: string | null
           order_index?: number
           photo_path?: string | null
