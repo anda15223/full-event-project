@@ -3,3 +3,10 @@ export { EditableField } from "./EditableField";
 export { BySourceDropdown, type BySource } from "./BySourceDropdown";
 export { MissingFlag } from "./MissingFlag";
 export { DocumentList } from "./DocumentList";
+export {
+  BrainSuggestions,
+  guessNameFromBrain,
+  extractContact,
+  normPhone,
+  type BrainEntry,
+} from "./BrainSuggestions";
