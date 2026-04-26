@@ -1565,6 +1565,31 @@ export function SmartCard({
         </div>
       )}
 
+      {/* Move-failure inline alert */}
+      {moveErrors.length > 0 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <div className="font-medium text-destructive">
+              {moveErrors.reduce((s, f) => s + f.count, 0)} line{moveErrors.reduce((s, f) => s + f.count, 0) === 1 ? "" : "s"} could not be moved
+            </div>
+            <button
+              type="button"
+              onClick={() => setMoveErrors([])}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Dismiss
+            </button>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            {moveErrors.map((f, i) => (
+              <li key={i}>
+                <span className="font-medium text-foreground">{f.conceptName}</span>: {f.count} line{f.count === 1 ? "" : "s"} — {f.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Concept assigner banner */}
       {conceptAssignerMode && editMode && siblingConcepts && siblingConcepts.length > 0 && (() => {
         const totalLines = lines.filter(l => !isDraftId(l.id)).length;
