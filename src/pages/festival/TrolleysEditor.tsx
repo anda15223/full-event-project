@@ -351,7 +351,7 @@ export default function TrolleysEditor() {
       <div className="space-y-8">
         {trolleys.map(t => {
           const tItems = items.filter(i => i.trolley_id === t.id);
-          const draft = newItem[t.id] || { name: "", qty: "", cat: CATEGORIES[0], concept_id: t.concept_id ?? NO_CONCEPT };
+          
 
           // Group items by concept for easier navigation
           const grouped = tItems.reduce<Record<string, typeof tItems>>((acc, it) => {
