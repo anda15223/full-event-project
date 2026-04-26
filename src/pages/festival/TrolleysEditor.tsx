@@ -267,56 +267,30 @@ export default function TrolleysEditor() {
                   <Badge variant="outline" className="text-[10px]">{tItems.length} items</Badge>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {tItems.length === 0 && (
                     <p className="text-[11px] text-muted-foreground italic">No items yet</p>
                   )}
                   {groupKeys.map(gk => (
-                    <div key={gk} className="space-y-1">
+                    <div key={gk} className="space-y-1.5">
                       <div className="flex items-center gap-2 px-1">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                           {conceptName(gk === NO_CONCEPT ? null : gk)}
                         </span>
                         <span className="text-[10px] text-muted-foreground">· {grouped[gk].length}</span>
                       </div>
-                      {grouped[gk].map(i => (
-                        <div key={i.id} className="flex items-center justify-between gap-2 text-[12px] py-1 px-2 rounded hover:bg-secondary/40">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <span className="truncate">{i.item_name}</span>
-                            {i.quantity && <span className="text-muted-foreground shrink-0">× {i.quantity}</span>}
-                          </div>
-                          <Select
-                            value={i.category}
-                            onValueChange={(v) => updateItemCategory(i.id, v)}
-                          >
-                            <SelectTrigger className="h-7 w-[150px] text-[11px]">
-                              <SelectValue placeholder="Inventory" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover">
-                              {CATEGORIES.map(c => (
-                                <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={(i as any).concept_id ?? NO_CONCEPT}
-                            onValueChange={(v) => updateItemConcept(i.id, v)}
-                          >
-                            <SelectTrigger className="h-7 w-[140px] text-[11px]">
-                              <SelectValue placeholder="Concept" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover">
-                              <SelectItem value={NO_CONCEPT} className="text-[12px]">Unassigned</SelectItem>
-                              {concepts.map(c => (
-                                <SelectItem key={c.id} value={c.id} className="text-[12px]">{c.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <button onClick={() => removeItem(i.id)} className="text-muted-foreground hover:text-destructive shrink-0">
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        {grouped[gk].map(i => (
+                          <ItemPhotoCard
+                            key={i.id}
+                            item={i as any}
+                            concepts={concepts}
+                            conceptName={conceptName}
+                            onUpdate={updateItem}
+                            onDelete={removeItem}
+                          />
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
