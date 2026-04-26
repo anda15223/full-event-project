@@ -452,12 +452,24 @@ export default function TrolleysEditor() {
               </Card>
               {/* Official trolley checklist (writes to festival_bc_trolley_items) */}
               <Card className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div>
                     <h3 className="font-medium text-[13px]">{conceptName(t.concept_id)} — Official checklist</h3>
                     <p className="text-[11px] text-muted-foreground">Trolley #{t.trolley_number} · {t.label}</p>
                   </div>
-                  <Badge variant="outline" className="text-[10px]">{tItems.length} items</Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[11px]"
+                      onClick={() => importFromBrain(t)}
+                      disabled={importing[t.id]}
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      {importing[t.id] ? "Importing…" : "Import from Brain"}
+                    </Button>
+                    <Badge variant="outline" className="text-[10px]">{tItems.length} items</Badge>
+                  </div>
                 </div>
 
                 <div className="space-y-4">
