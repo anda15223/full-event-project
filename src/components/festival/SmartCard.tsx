@@ -1325,13 +1325,34 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      const canCopy = !conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      const showAssigner = conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0;
+                      const assigned = lineConceptAssignment[line.id] || "";
+                      const gridCols = showAssigner
+                        ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]"
+                        : (canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]");
                       return (
-                      <div key={line.id} className={cn("grid gap-1.5 items-center group", canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]") }>
+                      <div key={line.id} className={cn("grid gap-1.5 items-center group", gridCols)}>
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
                         <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
                         <Input value={line.notes ?? ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} placeholder="Notes" className="h-7 text-xs" />
+                        {showAssigner && (
+                          <select
+                            value={assigned}
+                            onChange={(e) => setLineConceptAssignment(prev => ({ ...prev, [line.id]: e.target.value }))}
+                            className={cn(
+                              "h-7 text-xs rounded border bg-background px-1",
+                              assigned ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                            )}
+                            title="Assign to concept (moves on Save)"
+                          >
+                            <option value="">— concept —</option>
+                            {siblingConcepts!.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        )}
                         <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
                           {sourceLabel(line.source)}
                         </Badge>
