@@ -675,36 +675,151 @@ function validateExtraction(card_key: string, sections: any[]): ValidationWarnin
   return warnings;
 }
 
+const CARD_BRAIN_HINTS: Record<string, string[]> = {
+  concepts_brain: ["concept", "concepts", "contract", "email", "other", "facade", "power_requirements", "setup_timeline"],
+  intro: ["intro", "introduction", "contract", "email", "other"],
+  equipment_list: ["equipment_list", "equipment", "other", "contract", "email"],
+  cooling_storage: ["cooling_storage", "cooling", "equipment_list", "other", "contract", "email"],
+  cooking_equipment: ["cooking_equipment", "equipment_list", "equipment", "other", "contract", "email"],
+  safety_compliance: ["safety_compliance", "safety", "contract", "other", "email"],
+  setup_timeline: ["setup_timeline", "timeline", "contract", "email", "other"],
+  transportation: ["transportation", "transport", "contract", "email", "other"],
+  power_requirements: ["power_requirements", "power", "electric", "electricity", "contract", "email", "other"],
+};
+
+const CARD_BRAIN_TERMS: Record<string, RegExp> = {
+  concepts_brain: /concept|stall|stand|bod|brand|menu|food|mad|gyros|creperie|chicks|fish|burger|zone|inside|camping|facade|sign/i,
+  intro: /organiser|kontakt|contact|deadline|festival|address|location|phone|email|contract|aftale/i,
+  equipment_list: /equipment|udstyr|table|tent|fridge|freezer|burner|oven|fryer|grill|container|inventory|packing/i,
+  cooling_storage: /cool|cold|fridge|freezer|køl|frost|container|ice|temperature/i,
+  cooking_equipment: /cooking|kitchen|burner|oven|fryer|grill|gas|stove|pan|pot/i,
+  safety_compliance: /safety|fire|brand|gas|hygiene|allergen|certificate|permit|inspection|compliance/i,
+  setup_timeline: /setup|timeline|schedule|deadline|arrival|build|teardown|pickup|delivery/i,
+  transportation: /transport|vehicle|car|truck|driver|load|trip|parking|delivery|pickup/i,
+  power_requirements: /power|electric|amp|kw|kwh|socket|plug|16a|32a|63a|phase|strøm/i,
+};
+
+function uniqRows(rows: any[]) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = row?.id || row?.key_name;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function scoreBrainRow(row: any, cardKey: string, festivalId?: string, conceptId?: string) {
+  const category = String(row.category || "").toLowerCase();
+  const keyName = String(row.key_name || "").toLowerCase();
+  const subjectType = String(row.subject_type || "").toLowerCase();
+  const haystack = `${row.display_name || ""}
+${row.content || ""}
+${JSON.stringify(row.structured_data || {})}`;
+  const hints = CARD_BRAIN_HINTS[cardKey] || [cardKey];
+  const terms = CARD_BRAIN_TERMS[cardKey];
+  let score = 0;
+
+  if (category === cardKey) score += 120;
+  if (subjectType === cardKey) score += 60;
+  if (hints.includes(category)) score += 45;
+  if (hints.some((hint) => keyName.includes(hint))) score += 35;
+  if (terms?.test(haystack)) score += 30;
+  if (festivalId && (row.festival_id === festivalId || row.last_seen_festival_id === festivalId)) score += 20;
+  if (conceptId && row.subject_id === conceptId) score += 80;
+  if (!conceptId && row.scope === "festival") score += 8;
+  if (String(row.content || "").trim().length > 120) score += 10;
+  if (row.structured_data?.section || row.structured_data?.label) score += 15;
+
+  return score;
+}
+
 async function grabBrain({ card_key, festival_id, concept_id }: any) {
-  // Pull most-frequent brain entries for this card_key, prefer matching concept, exclude current festival.
-  const filters = new URLSearchParams();
-  filters.set("category", `eq.${card_key}`);
-  if (festival_id) filters.set("festival_id", `neq.${festival_id}`);
-  if (concept_id) filters.set("subject_id", `eq.${concept_id}`);
+  const queries: string[] = [];
+  const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
 
-  const rows = (await sb(
-    "GET",
-    `brain_entries?${filters.toString()}&select=*&order=frequency.desc,last_seen_at.desc&limit=200`,
-  )) as any[];
+  queries.push(`brain_entries?category=eq.${encodeURIComponent(card_key)}&${select}`);
+  if (festival_id) {
+    queries.push(`brain_entries?festival_id=eq.${encodeURIComponent(festival_id)}&${select}`);
+    queries.push(`brain_entries?last_seen_festival_id=eq.${encodeURIComponent(festival_id)}&${select}`);
+  }
+  if (concept_id) queries.push(`brain_entries?subject_id=eq.${encodeURIComponent(concept_id)}&${select}`);
+  queries.push(`brain_entries?scope=eq.global&${select}`);
 
-  // Group by section
+  const fetched = await Promise.all(
+    queries.map(async (query) => {
+      try {
+        return ((await sb("GET", query)) as any[]) || [];
+      } catch (e) {
+        console.error("brain query failed", query, e);
+        return [];
+      }
+    }),
+  );
+
+  const rows = uniqRows(fetched.flat())
+    .map((row) => ({ row, score: scoreBrainRow(row, card_key, festival_id, concept_id) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || (b.row.frequency || 0) - (a.row.frequency || 0))
+    .slice(0, 40)
+    .map(({ row }) => row);
+
   const bySection: Record<string, any[]> = {};
-  for (const r of rows || []) {
-    const section = r.structured_data?.section || "General";
-    if (!bySection[section]) bySection[section] = [];
-    bySection[section].push({
-      label: r.structured_data?.label || r.display_name,
-      value: r.structured_data?.value,
-      quantity: r.structured_data?.quantity,
-      notes: r.structured_data?.notes,
-      frequency: r.frequency,
-    });
+  const sourceDocs: string[] = [];
+  for (const r of rows) {
+    const hasStructuredLine = r.structured_data?.section || r.structured_data?.label;
+    if (hasStructuredLine) {
+      const section = r.structured_data?.section || "General";
+      if (!bySection[section]) bySection[section] = [];
+      bySection[section].push({
+        label: r.structured_data?.label || r.display_name || r.key_name,
+        value: r.structured_data?.value || r.content || null,
+        quantity: r.structured_data?.quantity || null,
+        notes: r.structured_data?.notes || null,
+        frequency: r.frequency,
+      });
+    } else if (String(r.content || "").trim()) {
+      sourceDocs.push(
+        `SOURCE: ${r.display_name || r.key_name || r.category}
+CATEGORY: ${r.category || "unknown"}
+${String(r.content).slice(0, 12000)}`,
+      );
+    }
   }
 
-  return {
-    ok: true,
-    suggestions: Object.entries(bySection).map(([title, lines]) => ({ title, lines })),
-  };
+  let suggestions = Object.entries(bySection).map(([title, lines]) => ({ title, lines }));
+
+  if (sourceDocs.length) {
+    const cardPrompt = CARD_PROMPTS[card_key] || "Extract logical sections and lines from this Brain knowledge.";
+    const structured = await callAI(
+      [
+        {
+          role: "system",
+          content:
+            "You convert stored Brain knowledge into editable card sections for a festival operations app. Use only information relevant to the requested card. If the Brain sources include a broad operations plan, extract the matching details instead of saying there is no data.",
+        },
+        {
+          role: "user",
+          content:
+            `${cardPrompt}
+
+Requested card key: ${card_key}
+
+Brain sources:
+
+${sourceDocs.join("
+
+---
+
+")}`,
+        },
+      ],
+      STRUCTURE_SCHEMA,
+    );
+    suggestions = [...(structured.sections || []), ...suggestions];
+  }
+
+  return { ok: true, suggestions };
 }
 
 async function remember(payload: any) {
