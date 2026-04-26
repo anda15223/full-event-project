@@ -44,33 +44,34 @@ Deno.serve(async (req) => {
       const isPdf = mt.includes("pdf") || ext === "pdf";
 
       if (isImage) {
-        // Fetch image server-side and inline as base64 data URL
+        // Binary image: send bytes as base64 to Gemini vision.
+        // Match the working SmartCard extractor payload shape: text first, image second.
         const r = await fetch(publicUrl);
         if (!r.ok) throw new Error(`Failed to fetch image: ${r.status}`);
         const buf = new Uint8Array(await r.arrayBuffer());
         let binary = "";
         const chunk = 0x8000;
         for (let i = 0; i < buf.length; i += chunk) {
-          binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+          binary += String.fromCharCode.apply(null, buf.subarray(i, i + chunk) as any);
         }
         const b64 = cleanBase64(btoa(binary));
+        if (b64.length % 4 !== 0) throw new Error("Invalid image base64 length");
 
-        // Resolve a clean MIME type Gemini accepts
         const ctHeader = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-        let imgMime = ctHeader || mt;
-        if (!imgMime || !imgMime.startsWith("image/")) {
-          if (isJpg) imgMime = "image/jpeg";
-          else if (ext === "webp") imgMime = "image/webp";
-          else if (ext === "gif") imgMime = "image/gif";
-          else imgMime = "image/png";
-        }
-        if (imgMime === "image/jpg") imgMime = "image/jpeg";
+        let effectiveMime = "image/png";
+        if (isJpg) effectiveMime = "image/jpeg";
+        else if (ext === "webp" || ctHeader === "image/webp" || mt === "image/webp") effectiveMime = "image/webp";
+        else if (ext === "png" || ctHeader === "image/png" || mt === "image/png") effectiveMime = "image/png";
 
-        const dataUrl = `data:${imgMime};base64,${b64}`;
-        userParts.push({ type: "image_url", image_url: { url: dataUrl } });
         userParts.push({
           type: "text",
           text: `Extract the full readable content from this image (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+        });
+        userParts.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${effectiveMime};base64,${b64}`,
+          },
         });
       } else if (isPdf) {
         // PDFs: must be sent as base64 data URL with application/pdf MIME type
