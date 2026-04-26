@@ -1147,12 +1147,12 @@ export function SmartCard({
   return (
     <Card className="overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      <div className="px-5 py-4 border-b border-border bg-muted/20 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:flex-wrap">
+        <div className="min-w-0 flex-1 sm:basis-full md:basis-auto md:min-w-[260px]">
           <h3 className="text-lg font-semibold leading-tight">{title}</h3>
           {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap shrink-0">
           {editMode && !hideBrainButton && (
             <Button size="sm" variant="outline" className="h-8" onClick={openBrainPicker} disabled={grabbing}>
               {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Brain className="h-3.5 w-3.5 mr-1" />}
