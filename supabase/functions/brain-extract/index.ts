@@ -53,14 +53,13 @@ Deno.serve(async (req) => {
         for (let i = 0; i < buf.length; i += chunk) {
           binary += String.fromCharCode(...buf.subarray(i, i + chunk));
         }
-        const b64 = btoa(binary).replace(/\s/g, "");
+        const b64 = cleanBase64(btoa(binary));
 
         // Resolve a clean MIME type Gemini accepts
         const ctHeader = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
         let imgMime = ctHeader || mt;
-        const ext = (filename || storage_path || "").split(".").pop()?.toLowerCase();
         if (!imgMime || !imgMime.startsWith("image/")) {
-          if (ext === "jpg" || ext === "jpeg") imgMime = "image/jpeg";
+          if (isJpg) imgMime = "image/jpeg";
           else if (ext === "webp") imgMime = "image/webp";
           else if (ext === "gif") imgMime = "image/gif";
           else imgMime = "image/png";
