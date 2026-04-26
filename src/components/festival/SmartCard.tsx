@@ -492,9 +492,81 @@ export function SmartCard({
         const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
         if (error) throw error;
       }
-      // 6. Delete lines
-      if (pending.lineDeletes.length) {
-        const { error } = await (supabase as any).from("smart_lines").delete().in("id", pending.lineDeletes);
+      // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
+      const movedLineIds: string[] = [];
+      if (conceptAssignerMode && Object.keys(lineConceptAssignment).length) {
+        // group by concept
+        const byConcept: Record<string, string[]> = {};
+        for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
+          if (!targetConceptId || isDraftId(lineId)) continue;
+          (byConcept[targetConceptId] ||= []).push(lineId);
+        }
+        for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
+          const linesToMove = lines.filter(l => lineIds.includes(l.id));
+          if (!linesToMove.length) continue;
+
+          // Get-or-create target SmartCard
+          let { data: tCard } = await (supabase as any)
+            .from("smart_cards")
+            .select("id")
+            .eq("festival_id", festivalId)
+            .eq("card_key", cardKey)
+            .eq("concept_id", targetConceptId)
+            .maybeSingle();
+          if (!tCard) {
+            const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+            const { data: created, error: cErr } = await (supabase as any)
+              .from("smart_cards")
+              .insert({ festival_id: festivalId, card_key: cardKey, concept_id: targetConceptId, title: `${title.split(" — ")[0]} — ${conceptName}`, meta: {} })
+              .select("id").single();
+            if (cErr) throw cErr;
+            tCard = created;
+          }
+
+          // For each source section, get-or-create matching section in target card and insert lines
+          const sectionsTouched = Array.from(new Set(linesToMove.map(l => l.section_id)));
+          for (const srcSecId of sectionsTouched) {
+            const srcSec = sections.find(s => s.id === srcSecId);
+            if (!srcSec) continue;
+            let { data: tSec } = await (supabase as any)
+              .from("smart_sections").select("id, order_index")
+              .eq("card_id", tCard.id).eq("title", srcSec.title).maybeSingle();
+            if (!tSec) {
+              const { data: maxRow } = await (supabase as any)
+                .from("smart_sections").select("order_index")
+                .eq("card_id", tCard.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
+              const nextOrder = (maxRow?.order_index ?? -1) + 1;
+              const { data: createdSec, error: sErr } = await (supabase as any)
+                .from("smart_sections")
+                .insert({ card_id: tCard.id, title: srcSec.title, description: srcSec.description, order_index: nextOrder, source: "manual" })
+                .select("id, order_index").single();
+              if (sErr) throw sErr;
+              tSec = createdSec;
+            }
+            const { data: maxLine } = await (supabase as any)
+              .from("smart_lines").select("order_index")
+              .eq("section_id", tSec.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
+            let nextLineOrder = (maxLine?.order_index ?? -1) + 1;
+            const rows = linesToMove
+              .filter(l => l.section_id === srcSecId)
+              .map(l => ({
+                section_id: tSec.id,
+                label: l.label, value: l.value, quantity: l.quantity, notes: l.notes,
+                status: l.status, owner: l.owner, due_date: l.due_date,
+                order_index: nextLineOrder++, source: l.source,
+              }));
+            if (rows.length) {
+              const { error: lErr } = await (supabase as any).from("smart_lines").insert(rows);
+              if (lErr) throw lErr;
+            }
+          }
+          movedLineIds.push(...linesToMove.map(l => l.id));
+        }
+      }
+      // 6. Delete lines (including moved ones)
+      const allDeletes = Array.from(new Set([...pending.lineDeletes, ...movedLineIds]));
+      if (allDeletes.length) {
+        const { error } = await (supabase as any).from("smart_lines").delete().in("id", allDeletes);
         if (error) throw error;
       }
       // 7. Update todos
