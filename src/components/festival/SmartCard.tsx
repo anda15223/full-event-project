@@ -549,17 +549,21 @@ export function SmartCard({
   // Step 2: actually grab from Brain, restricted to the docs the user picked.
   const confirmGrabFromBrain = async () => {
     if (!card) return;
+    const visibleIds = visibleBrainDocs.map((d) => d.id);
+    const explicitIds = Array.from(selectedBrainIds);
+    const ids = explicitIds.length ? explicitIds : visibleIds;
+    if (!ids.length) return;
+
     setBrainPickerOpen(false);
     setGrabbing(true);
     try {
-      const ids = Array.from(selectedBrainIds);
       const { data, error } = await supabase.functions.invoke("smart-card-extract", {
         body: {
           action: "grab_brain",
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
-          brain_ids: ids.length ? ids : undefined,
+          brain_ids: ids,
         },
       });
       if (error) throw error;
