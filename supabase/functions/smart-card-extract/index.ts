@@ -968,21 +968,23 @@ function scoreBrainRow(
   festivalId?: string,
   conceptId?: string,
 ) {
+  const targetKey = isTrolleyCardKey(cardKey) ? "trolley" : cardKey;
   const category = String(row.category || "").toLowerCase();
   const keyName = String(row.key_name || "").toLowerCase();
   const subjectType = String(row.subject_type || "").toLowerCase();
   const haystack = `${row.display_name || ""}
 ${row.content || ""}
 ${JSON.stringify(row.structured_data || {})}`;
-  const hints = CARD_BRAIN_HINTS[cardKey] || [cardKey];
-  const terms = CARD_BRAIN_TERMS[cardKey];
+  const hints = CARD_BRAIN_HINTS[targetKey] || [targetKey];
+  const terms = CARD_BRAIN_TERMS[targetKey];
   let score = 0;
 
-  if (category === cardKey) score += 120;
-  if (subjectType === cardKey) score += 60;
-  if (hints.includes(category)) score += 45;
+  if (category === cardKey || category === targetKey) score += 120;
+  if (subjectType === cardKey || subjectType === targetKey) score += 60;
+  if (hints.some((hint) => category.includes(hint))) score += 45;
   if (hints.some((hint) => keyName.includes(hint))) score += 35;
   if (terms?.test(haystack)) score += 30;
+  if (isTrolleyCardKey(cardKey) && /(^|\n).+(:|\s\d)/.test(String(row.content || ""))) score += 20;
   if (
     festivalId &&
     (row.festival_id === festivalId || row.last_seen_festival_id === festivalId)
