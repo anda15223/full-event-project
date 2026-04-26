@@ -1531,10 +1531,12 @@ export function SmartCard({
               <Button
                 size="sm"
                 onClick={confirmGrabFromBrain}
-                disabled={!visibleBrainDocs.length || grabbing}
+                disabled={(sourceCardFilter === "all" && visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length === 0) || grabbing}
               >
                 {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                Extract from {Math.max(visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length, visibleBrainDocs.length && selectedBrainIds.size === 0 ? visibleBrainDocs.length : 0)} doc(s)
+                {sourceCardFilter !== "all"
+                  ? `Extract from ${sourceCardFilter}`
+                  : `Extract from ${visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} doc(s)`}
               </Button>
             </div>
           </DialogFooter>
