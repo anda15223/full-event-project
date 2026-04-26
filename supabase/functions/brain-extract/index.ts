@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
 
       if (isImage) {
         // Fetch image server-side and inline as base64 data URL
-        // (Google AI Studio sometimes can't reach Supabase storage URLs directly)
         const r = await fetch(publicUrl);
         if (!r.ok) throw new Error(`Failed to fetch image: ${r.status}`);
         const buf = new Uint8Array(await r.arrayBuffer());
@@ -44,13 +43,22 @@ Deno.serve(async (req) => {
         for (let i = 0; i < buf.length; i += chunk) {
           binary += String.fromCharCode(...buf.subarray(i, i + chunk));
         }
-        const b64 = btoa(binary);
-        const imgMime = mt || "image/png";
+        const b64 = btoa(binary).replace(/\s/g, "");
+
+        // Resolve a clean MIME type Gemini accepts
+        const ctHeader = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+        let imgMime = ctHeader || mt;
+        const ext = (filename || storage_path || "").split(".").pop()?.toLowerCase();
+        if (!imgMime || !imgMime.startsWith("image/")) {
+          if (ext === "jpg" || ext === "jpeg") imgMime = "image/jpeg";
+          else if (ext === "webp") imgMime = "image/webp";
+          else if (ext === "gif") imgMime = "image/gif";
+          else imgMime = "image/png";
+        }
+        if (imgMime === "image/jpg") imgMime = "image/jpeg";
+
         const dataUrl = `data:${imgMime};base64,${b64}`;
-        userParts.push({
-          type: "image_url",
-          image_url: { url: dataUrl },
-        });
+        userParts.push({ type: "image_url", image_url: { url: dataUrl } });
         userParts.push({
           type: "text",
           text: `Extract the full readable content from this image (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
