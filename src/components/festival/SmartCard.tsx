@@ -16,6 +16,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 export type SmartCardProps = {
   /** Stable key for this card type, e.g. 'equipment_list','cooling_storage','safety' */
@@ -92,6 +95,11 @@ export function SmartCard({
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
   const [brainDiagnostics, setBrainDiagnostics] = useState<any | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  // Brain document picker
+  const [brainPickerOpen, setBrainPickerOpen] = useState(false);
+  const [brainDocs, setBrainDocs] = useState<any[]>([]);
+  const [loadingBrainDocs, setLoadingBrainDocs] = useState(false);
+  const [selectedBrainIds, setSelectedBrainIds] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
@@ -504,16 +512,47 @@ export function SmartCard({
     }
   };
 
-  const grabFromBrain = async () => {
+  // Step 1: open the picker — load the available Brain documents for this card.
+  const openBrainPicker = async () => {
     if (!card) return;
+    setBrainPickerOpen(true);
+    setLoadingBrainDocs(true);
+    setBrainDocs([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "list_brain_docs",
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+        },
+      });
+      if (error) throw error;
+      const items: any[] = data?.items || [];
+      setBrainDocs(items);
+      // Pre-select the recommended ones so the default behaviour matches the old "auto" flow.
+      setSelectedBrainIds(new Set(items.filter((d) => d.recommended).map((d) => d.id)));
+    } catch (e: any) {
+      toast.error(`Could not load Brain docs: ${e.message || e}`);
+    } finally {
+      setLoadingBrainDocs(false);
+    }
+  };
+
+  // Step 2: actually grab from Brain, restricted to the docs the user picked.
+  const confirmGrabFromBrain = async () => {
+    if (!card) return;
+    setBrainPickerOpen(false);
     setGrabbing(true);
     try {
+      const ids = Array.from(selectedBrainIds);
       const { data, error } = await supabase.functions.invoke("smart-card-extract", {
         body: {
           action: "grab_brain",
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
+          brain_ids: ids.length ? ids : undefined,
         },
       });
       if (error) throw error;
@@ -521,10 +560,13 @@ export function SmartCard({
       setBrainDiagnostics(data?.diagnostics || null);
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
-        toast.info("Brain has nothing for this card yet — fill it in and it'll learn.");
+        toast.info(
+          ids.length
+            ? "Picked Brain docs didn't yield card-specific info — try different docs."
+            : "Brain has nothing for this card yet — fill it in and it'll learn.",
+        );
         return;
       }
-      // Insert each suggestion as a section with brain source
       const baseOrder = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
       let order = baseOrder;
       for (const s of suggestions) {
@@ -539,7 +581,9 @@ export function SmartCard({
           })));
         }
       }
-      toast.success(`Grabbed ${suggestions.length} sections from Brain`);
+      toast.success(
+        `Grabbed ${suggestions.length} section(s) from ${ids.length || "all matching"} Brain doc(s)`,
+      );
       reload();
     } catch (e: any) {
       toast.error(`Brain grab failed: ${e.message || e}`);
@@ -547,6 +591,15 @@ export function SmartCard({
       setGrabbing(false);
     }
   };
+
+  const toggleBrainDoc = (id: string) => {
+    setSelectedBrainIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
 
   // File deletion is staged via the AlertDialog (see fileToDelete state).
   const performDeleteFile = async (f: SFile, alsoDeleteData: boolean) => {
@@ -627,7 +680,7 @@ export function SmartCard({
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           {editMode && !hideBrainButton && (
-            <Button size="sm" variant="outline" className="h-8" onClick={grabFromBrain} disabled={grabbing}>
+            <Button size="sm" variant="outline" className="h-8" onClick={openBrainPicker} disabled={grabbing}>
               {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Brain className="h-3.5 w-3.5 mr-1" />}
               Grab info
             </Button>
@@ -1204,6 +1257,118 @@ export function SmartCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Brain document picker */}
+      <Dialog open={brainPickerOpen} onOpenChange={setBrainPickerOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-4 w-4" /> Pick Brain documents to extract from
+            </DialogTitle>
+            <DialogDescription>
+              Choose which documents the AI should read for <span className="font-medium text-foreground">{title}</span>.
+              Recommended ones are pre-selected. Pick fewer for tighter, more specific results.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-1.5">
+            {loadingBrainDocs && (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading Brain…
+              </div>
+            )}
+            {!loadingBrainDocs && brainDocs.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-10">
+                Brain has no documents matching this card yet. Upload one or fill it in manually.
+              </div>
+            )}
+            {!loadingBrainDocs && brainDocs.map((d) => {
+              const checked = selectedBrainIds.has(d.id);
+              return (
+                <label
+                  key={d.id}
+                  className={cn(
+                    "flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors",
+                    checked ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleBrainDoc(d.id)}
+                    className="mt-1 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm truncate">
+                        {d.display_name || d.key_name}
+                      </span>
+                      {d.recommended && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 border-primary/40 text-primary">
+                          recommended
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
+                        {d.role === "structured_line" ? "structured" : "AI source"}
+                      </Badge>
+                      {d.scope && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground">
+                          {d.scope}
+                        </Badge>
+                      )}
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        score {d.score} · used {d.frequency}×
+                      </span>
+                    </div>
+                    {d.content_preview && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {d.content_preview}
+                      </p>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 border-t pt-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{selectedBrainIds.size} of {brainDocs.length} selected</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => setSelectedBrainIds(new Set(brainDocs.map((d) => d.id)))}
+                disabled={!brainDocs.length}
+              >
+                Select all
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() => setSelectedBrainIds(new Set())}
+                disabled={!brainDocs.length}
+              >
+                Clear
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setBrainPickerOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={confirmGrabFromBrain}
+                disabled={selectedBrainIds.size === 0 || grabbing}
+              >
+                {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+                Extract from {selectedBrainIds.size} doc(s)
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -985,7 +985,63 @@ ${JSON.stringify(row.structured_data || {})}`;
   return score;
 }
 
-async function grabBrain({ card_key, festival_id, concept_id }: any) {
+// List Brain documents that COULD be used for this card, with score + role.
+// Used by the UI to let the user hand-pick which documents to feed the AI.
+async function listBrainDocs({ card_key, festival_id, concept_id }: any) {
+  const queries: string[] = [];
+  const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
+  queries.push(
+    `brain_entries?category=eq.${encodeURIComponent(card_key)}&${select}`,
+  );
+  if (festival_id) {
+    queries.push(
+      `brain_entries?festival_id=eq.${encodeURIComponent(festival_id)}&${select}`,
+    );
+    queries.push(
+      `brain_entries?last_seen_festival_id=eq.${encodeURIComponent(festival_id)}&${select}`,
+    );
+  }
+  if (concept_id)
+    queries.push(
+      `brain_entries?subject_id=eq.${encodeURIComponent(concept_id)}&${select}`,
+    );
+  queries.push(`brain_entries?scope=eq.global&${select}`);
+
+  const fetched = await Promise.all(
+    queries.map(async (q) => {
+      try { return ((await sb("GET", q)) as any[]) || []; }
+      catch { return []; }
+    }),
+  );
+  const allUnique = uniqRows(fetched.flat());
+  const items = allUnique
+    .map((row) => {
+      const score = scoreBrainRow(row, card_key, festival_id, concept_id);
+      const hasStructured =
+        row.structured_data?.section || row.structured_data?.label;
+      return {
+        id: row.id,
+        key_name: row.key_name,
+        display_name: row.display_name || row.key_name,
+        category: row.category,
+        scope: row.scope,
+        festival_id: row.festival_id,
+        frequency: row.frequency || 0,
+        last_seen_at: row.last_seen_at,
+        score,
+        recommended: score > 0,
+        role: hasStructured ? "structured_line" : "ai_source",
+        content_preview: String(row.content || "").slice(0, 240),
+        content_chars: String(row.content || "").length,
+      };
+    })
+    .sort((a, b) =>
+      (b.score - a.score) || (b.frequency - a.frequency),
+    );
+  return { ok: true, items };
+}
+
+async function grabBrain({ card_key, festival_id, concept_id, brain_ids }: any) {
   const queries: string[] = [];
   const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
 
@@ -1006,6 +1062,16 @@ async function grabBrain({ card_key, festival_id, concept_id }: any) {
     );
   queries.push(`brain_entries?scope=eq.global&${select}`);
 
+  // If the caller pinned a specific set of Brain ids, also fetch those directly
+  // so a manual pick can never be filtered out by the scope queries.
+  const pinnedIds: string[] = Array.isArray(brain_ids)
+    ? brain_ids.filter((x: any) => typeof x === "string" && x.length > 0)
+    : [];
+  if (pinnedIds.length) {
+    const inList = pinnedIds.map((id) => `"${id}"`).join(",");
+    queries.push(`brain_entries?id=in.(${inList})&select=*&limit=200`);
+  }
+
   const fetched = await Promise.all(
     queries.map(async (query) => {
       try {
@@ -1018,19 +1084,37 @@ async function grabBrain({ card_key, festival_id, concept_id }: any) {
   );
 
   const allUnique = uniqRows(fetched.flat());
+
+  // If the user pinned specific docs, ONLY use those (skip scoring filter).
+  let ranked: { row: any; score: number }[];
+  if (pinnedIds.length) {
+    const pinnedSet = new Set(pinnedIds);
+    ranked = allUnique
+      .filter((r) => pinnedSet.has(r.id))
+      .map((row) => ({
+        row,
+        score: scoreBrainRow(row, card_key, festival_id, concept_id) || 1,
+      }));
+  } else {
+    const scored = allUnique.map((row) => ({
+      row,
+      score: scoreBrainRow(row, card_key, festival_id, concept_id),
+    }));
+    ranked = scored
+      .filter(({ score }) => score > 0)
+      .sort(
+        (a, b) =>
+          b.score - a.score || (b.row.frequency || 0) - (a.row.frequency || 0),
+      )
+      .slice(0, 40);
+  }
   const scored = allUnique.map((row) => ({
     row,
     score: scoreBrainRow(row, card_key, festival_id, concept_id),
   }));
-  const ranked = scored
-    .filter(({ score }) => score > 0)
-    .sort(
-      (a, b) =>
-        b.score - a.score || (b.row.frequency || 0) - (a.row.frequency || 0),
-    )
-    .slice(0, 40);
   const rows = ranked.map(({ row }) => row);
   const scoreById = new Map(ranked.map(({ row, score }) => [row.id, score]));
+
 
   // Diagnostics: per-Brain-document decisions
   const diagnostics: any = {
@@ -1041,6 +1125,8 @@ async function grabBrain({ card_key, festival_id, concept_id }: any) {
     brain_rows_fetched: allUnique.length,
     brain_rows_considered: scored.length,
     brain_rows_selected: rows.length,
+    user_pinned_ids: pinnedIds,
+    selection_mode: pinnedIds.length ? "manual" : "auto",
     documents: [] as any[],
     notes: [] as string[],
   };
@@ -1314,6 +1400,9 @@ Deno.serve(async (req) => {
         break;
       case "grab_brain":
         result = await grabBrain(body);
+        break;
+      case "list_brain_docs":
+        result = await listBrainDocs(body);
         break;
       case "remember":
         result = await remember(body);
