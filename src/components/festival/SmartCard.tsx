@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, Upload, FileText, File as FileIcon, Loader2, Sparkles, Brain,
-  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X,
+  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,8 @@ export type SmartCardProps = {
   acceptedFileTypes?: string;
   /** Hide the brain "Grab info" button (default false) */
   hideBrainButton?: boolean;
+  /** Other concepts in the same festival/section — enables "Copy item to other concepts" */
+  siblingConcepts?: { id: string; name: string }[];
 };
 
 type SCard = { id: string; title: string | null; meta: any };
@@ -80,7 +82,7 @@ const sourceLabel = (s: string) => {
 export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
-  hideBrainButton,
+  hideBrainButton, siblingConcepts,
 }: SmartCardProps) {
   const [card, setCard] = useState<SCard | null>(null);
   const [sections, setSections] = useState<SSection[]>([]);
@@ -280,6 +282,122 @@ export function SmartCard({
       setPending(p => ({ ...p, lineDeletes: [...p.lineDeletes, id] }));
     }
   };
+
+  // ---- Copy a single line into other concept cards (same cardKey + section title) ----
+  const [copyOpenForLine, setCopyOpenForLine] = useState<string | null>(null);
+  const [copyTargets, setCopyTargets] = useState<Record<string, boolean>>({});
+  const [copying, setCopying] = useState(false);
+
+  const openCopyDialog = (lineId: string) => {
+    setCopyTargets({});
+    setCopyOpenForLine(lineId);
+  };
+
+  const copyLineToConcepts = async () => {
+    if (!copyOpenForLine) return;
+    const line = lines.find(l => l.id === copyOpenForLine);
+    const section = sections.find(s => s.id === line?.section_id);
+    if (!line || !section) { toast.error("Line not found"); return; }
+    const targets = Object.entries(copyTargets).filter(([, v]) => v).map(([k]) => k);
+    if (!targets.length) { toast.error("Pick at least one concept"); return; }
+
+    setCopying(true);
+    try {
+      for (const targetConceptId of targets) {
+        // 1. Find or create the target SmartCard
+        let { data: targetCard } = await (supabase as any)
+          .from("smart_cards")
+          .select("id")
+          .eq("festival_id", festivalId)
+          .eq("card_key", cardKey)
+          .eq("concept_id", targetConceptId)
+          .maybeSingle();
+
+        if (!targetCard) {
+          const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+          const { data: created, error: cErr } = await (supabase as any)
+            .from("smart_cards")
+            .insert({
+              festival_id: festivalId,
+              card_key: cardKey,
+              concept_id: targetConceptId,
+              title: `${title.split(" — ")[0]} — ${conceptName}`,
+              meta: {},
+            })
+            .select("id")
+            .single();
+          if (cErr) throw cErr;
+          targetCard = created;
+        }
+
+        // 2. Find or create section with same title in target card
+        let { data: targetSection } = await (supabase as any)
+          .from("smart_sections")
+          .select("id, order_index")
+          .eq("card_id", targetCard.id)
+          .eq("title", section.title)
+          .maybeSingle();
+
+        if (!targetSection) {
+          const { data: maxRow } = await (supabase as any)
+            .from("smart_sections")
+            .select("order_index")
+            .eq("card_id", targetCard.id)
+            .order("order_index", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const nextOrder = (maxRow?.order_index ?? -1) + 1;
+          const { data: createdSec, error: sErr } = await (supabase as any)
+            .from("smart_sections")
+            .insert({
+              card_id: targetCard.id,
+              title: section.title,
+              description: section.description,
+              order_index: nextOrder,
+              source: "manual",
+            })
+            .select("id, order_index")
+            .single();
+          if (sErr) throw sErr;
+          targetSection = createdSec;
+        }
+
+        // 3. Insert duplicated line
+        const { data: maxLine } = await (supabase as any)
+          .from("smart_lines")
+          .select("order_index")
+          .eq("section_id", targetSection.id)
+          .order("order_index", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextLineOrder = (maxLine?.order_index ?? -1) + 1;
+
+        const { error: lErr } = await (supabase as any)
+          .from("smart_lines")
+          .insert({
+            section_id: targetSection.id,
+            label: line.label,
+            value: line.value,
+            quantity: line.quantity,
+            notes: line.notes,
+            status: line.status,
+            owner: line.owner,
+            due_date: line.due_date,
+            order_index: nextLineOrder,
+            source: "manual",
+          });
+        if (lErr) throw lErr;
+      }
+      toast.success(`Copied to ${targets.length} concept${targets.length > 1 ? "s" : ""}`);
+      setCopyOpenForLine(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Copy failed: ${e.message ?? "unknown"}`);
+    } finally {
+      setCopying(false);
+    }
+  };
+
 
   // ---- Todo CRUD (deferred when in edit mode) ----
   const toggleTodo = (id: string, current: string) => {
@@ -1129,8 +1247,10 @@ export function SmartCard({
                     <p className="text-xs text-muted-foreground italic">No lines yet.</p>
                   )}
                   {editMode ? (
-                    sectionLines.map(line => (
-                      <div key={line.id} className="grid grid-cols-[1fr_1.4fr_70px_1fr_60px_24px] gap-1.5 items-center group">
+                    sectionLines.map(line => {
+                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      return (
+                      <div key={line.id} className={cn("grid gap-1.5 items-center group", canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]") }>
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
                         <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
@@ -1138,11 +1258,17 @@ export function SmartCard({
                         <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
                           {sourceLabel(line.source)}
                         </Badge>
+                        {canCopy && (
+                          <Button variant="ghost" size="sm" title="Copy to other concepts" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100" onClick={() => openCopyDialog(line.id)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     sectionLines.length > 0 && (
                       <div className="rounded-md border border-border/60 overflow-hidden">
@@ -1516,6 +1642,43 @@ export function SmartCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Copy line to other concepts */}
+      <Dialog open={!!copyOpenForLine} onOpenChange={(o) => !o && setCopyOpenForLine(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copy item to other concepts</DialogTitle>
+            <DialogDescription>
+              The item will be added to the same section in each selected concept's card.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-72 overflow-y-auto">
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).map(c => (
+              <label key={c.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!copyTargets[c.id]}
+                  onChange={(e) => setCopyTargets(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).length === 0 && (
+              <p className="text-xs text-muted-foreground">No other concepts available.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setCopyOpenForLine(null)} disabled={copying}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={copyLineToConcepts} disabled={copying}>
+              {copying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+              Copy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
+

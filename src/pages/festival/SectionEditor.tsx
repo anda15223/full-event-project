@@ -102,6 +102,7 @@ export default function SectionEditor() {
                   title={`${SMART_CARDS[sectionKey].title} — ${c.name}`}
                   subtitle={SMART_CARDS[sectionKey].subtitle}
                   emptyStateWarning={SMART_CARDS[sectionKey].warning}
+                  siblingConcepts={concepts.map((x: any) => ({ id: x.id, name: x.name }))}
                 />
               ))}
             </div>
