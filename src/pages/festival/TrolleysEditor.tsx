@@ -46,8 +46,10 @@ function ItemPhotoCard({
     : null;
 
   const needed = item.needed_quantity;
+  const placed = item.placed_quantity;
   const counted = item.counted_quantity;
   const missingNeeded = needed == null || needed === 0;
+  const notPlaced = needed != null && needed > 0 && (placed == null || placed < needed);
   const shortAfterCount = counted != null && needed != null && counted < needed;
   const matched = counted != null && needed != null && counted === needed;
 
@@ -65,13 +67,13 @@ function ItemPhotoCard({
       className={cn(
         "p-2 space-y-1.5 relative group",
         missingNeeded && "border-destructive/60 bg-destructive/5",
-        shortAfterCount && "border-amber-500/60 bg-amber-500/5",
+        !missingNeeded && shortAfterCount && "border-amber-500/60 bg-amber-500/5",
         matched && "border-emerald-500/40"
       )}
     >
       <button
         onClick={() => onDelete(item.id)}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition"
+        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition"
       >
         <Trash2 className="h-3 w-3" />
       </button>
@@ -100,26 +102,36 @@ function ItemPhotoCard({
         className="h-6 text-[11px] font-medium px-1.5"
       />
 
-      <div className="flex items-center gap-1">
-        <div className="flex-1">
-          <label className="text-[9px] text-muted-foreground uppercase block leading-none">Need</label>
+      <div className="grid grid-cols-3 gap-1">
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Need</label>
           <Input
             type="number"
             value={needed ?? ""}
             placeholder="0"
             onChange={(e) => onUpdate(item.id, { needed_quantity: e.target.value === "" ? null : Number(e.target.value) })}
-            className={cn("h-6 text-[11px] px-1.5", missingNeeded && "border-destructive text-destructive")}
+            className={cn("h-6 text-[11px] px-1", missingNeeded && "border-destructive text-destructive")}
           />
         </div>
-        <div className="flex-1">
-          <label className="text-[9px] text-muted-foreground uppercase block leading-none">Count</label>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Placed</label>
+          <Input
+            type="number"
+            value={placed ?? ""}
+            placeholder="–"
+            onChange={(e) => onUpdate(item.id, { placed_quantity: e.target.value === "" ? null : Number(e.target.value) })}
+            className={cn("h-6 text-[11px] px-1", notPlaced && "border-amber-500 text-amber-600")}
+          />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Done</label>
           <Input
             type="number"
             value={counted ?? ""}
             placeholder="–"
             onChange={(e) => onUpdate(item.id, { counted_quantity: e.target.value === "" ? null : Number(e.target.value) })}
             className={cn(
-              "h-6 text-[11px] px-1.5",
+              "h-6 text-[11px] px-1",
               shortAfterCount && "border-amber-500 text-amber-600",
               matched && "border-emerald-500 text-emerald-600"
             )}
@@ -127,13 +139,17 @@ function ItemPhotoCard({
         </div>
       </div>
 
-      {(missingNeeded || shortAfterCount) && (
+      {(missingNeeded || shortAfterCount || notPlaced) && (
         <div className={cn(
           "flex items-center gap-1 text-[10px] font-medium",
           missingNeeded ? "text-destructive" : "text-amber-600"
         )}>
           <AlertTriangle className="h-2.5 w-2.5" />
-          {missingNeeded ? "Qty missing" : `Short by ${(needed ?? 0) - (counted ?? 0)}`}
+          {missingNeeded
+            ? "Need missing"
+            : shortAfterCount
+              ? `Short by ${(needed ?? 0) - (counted ?? 0)}`
+              : `Not placed (${(needed ?? 0) - (placed ?? 0)} left)`}
         </div>
       )}
 
@@ -144,6 +160,101 @@ function ItemPhotoCard({
           {concepts.map(c => <SelectItem key={c.id} value={c.id} className="text-[11px]">{c.name}</SelectItem>)}
         </SelectContent>
       </Select>
+    </Card>
+  );
+}
+
+function AddItemCard({
+  trolleyId,
+  defaultConceptId,
+  defaultCategory,
+  concepts,
+  onAdd,
+}: {
+  trolleyId: string;
+  defaultConceptId: string | null;
+  defaultCategory: string;
+  concepts: { id: string; name: string }[];
+  onAdd: (data: { name: string; needed: number | null; placed: number | null; counted: number | null; conceptId: string | null; category: string; photoFile: File | null }) => Promise<void>;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState("");
+  const [needed, setNeeded] = useState<string>("");
+  const [placed, setPlaced] = useState<string>("");
+  const [counted, setCounted] = useState<string>("");
+  const [conceptId, setConceptId] = useState<string>(defaultConceptId ?? "__none__");
+  const [category, setCategory] = useState<string>(defaultCategory);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const photoPreview = photoFile ? URL.createObjectURL(photoFile) : null;
+
+  const submit = async () => {
+    if (!name.trim()) { toast.error("Name required"); return; }
+    setSubmitting(true);
+    await onAdd({
+      name: name.trim(),
+      needed: needed === "" ? null : Number(needed),
+      placed: placed === "" ? null : Number(placed),
+      counted: counted === "" ? null : Number(counted),
+      conceptId: conceptId === "__none__" ? null : conceptId,
+      category,
+      photoFile,
+    });
+    setName(""); setNeeded(""); setPlaced(""); setCounted(""); setPhotoFile(null);
+    setSubmitting(false);
+  };
+
+  return (
+    <Card className="p-2 space-y-1.5 border-dashed border-primary/40 bg-primary/[0.02]">
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="aspect-square w-full rounded bg-muted/40 border border-dashed border-border/50 overflow-hidden cursor-pointer flex items-center justify-center"
+      >
+        {photoPreview ? (
+          <img src={photoPreview} alt="preview" className="w-full h-full object-cover" />
+        ) : (
+          <Camera className="h-5 w-5 text-muted-foreground" />
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && setPhotoFile(e.target.files[0])}
+        />
+      </div>
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New item" className="h-6 text-[11px] font-medium px-1.5" />
+      <div className="grid grid-cols-3 gap-1">
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Need</label>
+          <Input type="number" value={needed} onChange={(e) => setNeeded(e.target.value)} placeholder="0" className="h-6 text-[11px] px-1" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Placed</label>
+          <Input type="number" value={placed} onChange={(e) => setPlaced(e.target.value)} placeholder="–" className="h-6 text-[11px] px-1" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Done</label>
+          <Input type="number" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder="–" className="h-6 text-[11px] px-1" />
+        </div>
+      </div>
+      <Select value={conceptId} onValueChange={setConceptId}>
+        <SelectTrigger className="h-6 text-[10px] px-1.5"><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-popover">
+          <SelectItem value="__none__" className="text-[11px]">Unassigned</SelectItem>
+          {concepts.map(c => <SelectItem key={c.id} value={c.id} className="text-[11px]">{c.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={category} onValueChange={setCategory}>
+        <SelectTrigger className="h-6 text-[10px] px-1.5"><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-popover">
+          {CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-[11px]">{c}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Button size="sm" variant="outline" className="w-full h-7 text-[11px]" onClick={submit} disabled={submitting}>
+        <Plus className="h-3 w-3 mr-1" /> Add to trolley
+      </Button>
     </Card>
   );
 }
