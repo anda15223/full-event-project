@@ -90,6 +90,8 @@ export function SmartCard({
   const [grabbing, setGrabbing] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [openSummary, setOpenSummary] = useState<Record<string, boolean>>({});
+  const [brainDiagnostics, setBrainDiagnostics] = useState<any | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
