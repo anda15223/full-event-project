@@ -508,7 +508,7 @@ function UploadToBrainPanel({
   defaultFestivalId: string | null;
   onSaved: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [fid, setFid] = useState<string>(defaultFestivalId ?? "global");
   const [category, setCategory] = useState<string>("contract");
   const [pastedText, setPastedText] = useState("");
