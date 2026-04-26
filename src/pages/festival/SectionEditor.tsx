@@ -55,7 +55,15 @@ export default function SectionEditor() {
 
   if (!festival || !section) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
-  const isPerConcept = sectionKey === "cooking_equipment";
+  // Sections that benefit from a Common List + per-concept split workflow.
+  // Add a section key here to enable the concept-assigner dropdown on every line.
+  const PER_CONCEPT_SECTIONS = new Set([
+    "cooking_equipment",
+    "equipment_list",
+    "cooling_storage",
+    "power",
+  ]);
+  const isPerConcept = !!sectionKey && PER_CONCEPT_SECTIONS.has(sectionKey);
 
   const answerFor = (qid: string) => answers.find(a => a.question_id === qid);
 
