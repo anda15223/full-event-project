@@ -51,8 +51,11 @@ export default function SectionEditor() {
   const { data: section } = useSection(sectionKey);
   const { data: questions = [] } = useQuestions(section?.id);
   const { data: answers = [] } = useAnswers(festival?.id);
+  const { data: concepts = [] } = useConcepts(festival?.id);
 
   if (!festival || !section) return <div className="text-sm text-muted-foreground">Loading…</div>;
+
+  const isPerConcept = sectionKey === "cooking_equipment";
 
   const answerFor = (qid: string) => answers.find(a => a.question_id === qid);
 
