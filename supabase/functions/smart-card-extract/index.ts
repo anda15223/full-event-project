@@ -948,6 +948,8 @@ const CARD_BRAIN_TERMS: Record<string, RegExp> = {
     /transport|vehicle|car|truck|driver|load|trip|parking|delivery|pickup/i,
   power_requirements:
     /power|electric|amp|kw|kwh|socket|plug|16a|32a|63a|phase|strøm/i,
+  trolley:
+    /trolley|bc trolley|packing|cleaning|packaging|inventory|stocklist|small equipment|bowls|whisk|kniv|knife|napkin|gloves|garbage|boxes|spatula|forks|serving/i,
 };
 
 function uniqRows(rows: any[]) {
