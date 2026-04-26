@@ -43,6 +43,7 @@ import DocumentsFestivals from "./pages/documents/DocumentsFestivals";
 import DocumentsFestivalDetail from "./pages/documents/DocumentsFestivalDetail";
 import DocumentsCategoryPage from "./pages/documents/DocumentsCategoryPage";
 import BrainViewer from "./pages/BrainViewer";
+import InventoryDashboard from "./pages/festival/InventoryDashboard";
 
 const queryClient = new QueryClient();
 
