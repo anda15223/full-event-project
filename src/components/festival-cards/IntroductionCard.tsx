@@ -235,7 +235,16 @@ export function IntroductionCard({ festivalId }: Props) {
       {/* Brain suggestions */}
       <BrainSuggestions
         entries={brainEntries}
-        people={people}
+        existingPhones={
+          new Set(people.map((p) => normPhone(p.phone)).filter(Boolean))
+        }
+        existingEmails={
+          new Set(
+            people
+              .map((p) => (p.email ?? "").toLowerCase().trim())
+              .filter(Boolean),
+          )
+        }
         onPromote={handlePromote}
       />
 
@@ -275,86 +284,8 @@ export function IntroductionCard({ festivalId }: Props) {
   );
 }
 
-function BrainSuggestions({
-  entries,
-  people,
-  onPromote,
-}: {
-  entries: BrainEntry[];
-  people: Person[];
-  onPromote: (b: BrainEntry) => void;
-}) {
-  const existingPhones = useMemo(
-    () => new Set(people.map((p) => normPhone(p.phone)).filter(Boolean)),
-    [people],
-  );
-  const existingEmails = useMemo(
-    () => new Set(people.map((p) => (p.email ?? "").toLowerCase().trim()).filter(Boolean)),
-    [people],
-  );
+// BrainSuggestions component is imported from ./shared
 
-  const suggestions = useMemo(() => {
-    return entries
-      .slice()
-      .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
-      .map((b) => {
-        const c = extractContact(b);
-        if (!c.phone && !c.email) return null;
-        const alreadyAdded =
-          (c.phone && existingPhones.has(normPhone(c.phone))) ||
-          (c.email && existingEmails.has(c.email));
-        return {
-          entry: b,
-          name: guessNameFromBrain(b),
-          phone: c.phone,
-          email: c.email,
-          alreadyAdded: !!alreadyAdded,
-        };
-      })
-      .filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [entries, existingPhones, existingEmails]);
-
-  if (suggestions.length === 0) return null;
-
-  return (
-    <Card className="p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <h3 className="text-[14px] font-semibold">Brain suggestions</h3>
-        <Badge variant="secondary" className="text-[10px]">
-          {suggestions.length}
-        </Badge>
-      </div>
-      <p className="text-[11px] text-muted-foreground">
-        Contacts the AI extracted from emails for this festival. Promote them to your people directory.
-      </p>
-      <div className="space-y-2">
-        {suggestions.map((s) => (
-          <div
-            key={s.entry.id}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3 bg-background"
-          >
-            <div className="min-w-0 flex-1 space-y-0.5">
-              <div className="text-[13px] font-medium truncate">{s.name}</div>
-              <div className="text-[11px] text-muted-foreground truncate">
-                {[s.phone, s.email].filter(Boolean).join(" · ")}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant={s.alreadyAdded ? "outline" : "default"}
-              className="h-8 shrink-0"
-              disabled={s.alreadyAdded}
-              onClick={() => onPromote(s.entry)}
-            >
-              {s.alreadyAdded ? "Already added" : "Promote to contact"}
-            </Button>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
-}
 
 function AddPersonForm({
   festivalId,
