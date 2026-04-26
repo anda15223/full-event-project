@@ -457,14 +457,16 @@ function UploadToBrainPanel({
       let storage_path: string | undefined;
       let mime_type: string | undefined;
       let filename: string | undefined;
+      let file_data_url: string | undefined;
 
       if (file) {
         const folder = fid === "global" ? "global" : fid;
         const safeName = file.name.replace(/[^\w.\-]+/g, "_");
         storage_path = `brain/${folder}/${category}/${Date.now()}_${safeName}`;
+        file_data_url = await fileToDataUrl(file);
         const { error: upErr } = await supabase.storage
           .from("festival-photos")
-          .upload(storage_path, file, { upsert: false, contentType: file.type });
+          .upload(storage_path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
         if (upErr) throw upErr;
         mime_type = file.type;
         filename = file.name;
