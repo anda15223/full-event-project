@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,18 @@ export default function DocumentDrawer({
     else setPreviewUrl(data.signedUrl);
   };
 
+  // Load preview whenever the drawer is open with a doc (handles initial mount + doc switching)
+  useEffect(() => {
+    if (open && doc) {
+      setPreviewUrl(null);
+      loadPreview();
+    }
+    if (!open) {
+      setPreviewUrl(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, doc?.id]);
+
   const handleRecategorize = async (newCategory: string) => {
     if (!doc) return;
     setUpdating(true);
@@ -70,7 +82,7 @@ export default function DocumentDrawer({
   const isPdf = doc.mime_type === "application/pdf";
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { onOpenChange(o); if (o) loadPreview(); else setPreviewUrl(null); }}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-base">{doc.filename}</SheetTitle>
