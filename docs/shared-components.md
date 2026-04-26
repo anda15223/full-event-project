@@ -67,6 +67,7 @@ All five components live in `src/components/festival-cards/shared/`.
 | `<BySourceDropdown />` | `BySourceDropdown.tsx` | None | `equipment_db` | Selects existing row by `(festival_id, item_name, card_origin)`; UPDATE if found, INSERT otherwise. Switching to `by_festival` updates the source — never deletes. |
 | `<MissingFlag />` | `MissingFlag.tsx` | None | `festival_action_items` | Creates a task with `priority='high'`, `status='open'` (see status mapping below), `section_key=cardOrigin`, `title=label`, optional `deadline`. |
 | `<DocumentList />` (shared) | `shared/DocumentList.tsx` | Generic `DocumentList` viewer | reads `smart_files` joined to `smart_cards` | DB-indexed (filters by `card_key=cardName` + `festival_id`). Faster and supports delete vs. listing Storage paths directly. |
+| `<BrainSuggestions />` | `shared/BrainSuggestions.tsx` | None — pure UI | nothing (parent `onPromote` callback writes) | Lifted byte-for-byte from `IntroductionCard` (Sprint 2.3). Surfaces `brain_entries` whose `content` or `structured_data` contains a phone or email. Props: `entries`, `existingPhones?: Set<string>`, `existingEmails?: Set<string>`, `onPromote(entry)`. Exports helpers `guessNameFromBrain`, `extractContact`, `normPhone` for parents that build their own prefill payloads. |
 
 ### `SmartCard` props (unchanged — do not modify)
 
