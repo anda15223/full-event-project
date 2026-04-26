@@ -159,7 +159,7 @@ export function SmartCard({
     pending.lineDeletes.length > 0 ||
     Object.keys(pending.todoUpdates).length > 0 ||
     pending.todoDeletes.length > 0 ||
-    (conceptAssignerMode && Object.values(lineConceptAssignment).some(v => !!v));
+    Object.values(lineConceptAssignment).some(v => !!v);
 
   // ---- Initial load: get-or-create the card, then sections+lines+files ----
   const reload = useCallback(async () => {
