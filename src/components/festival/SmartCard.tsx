@@ -1288,6 +1288,77 @@ export function SmartCard({
         </div>
       )}
 
+      {/* Concept assigner banner */}
+      {conceptAssignerMode && editMode && siblingConcepts && siblingConcepts.length > 0 && (() => {
+        const totalLines = lines.filter(l => !isDraftId(l.id)).length;
+        const assignedCount = Object.values(lineConceptAssignment).filter(v => !!v).length;
+        const byConcept: Record<string, number> = {};
+        Object.entries(lineConceptAssignment).forEach(([, cId]) => {
+          if (cId) byConcept[cId] = (byConcept[cId] || 0) + 1;
+        });
+        const assignAllUnassigned = (cId: string) => {
+          setLineConceptAssignment(prev => {
+            const next = { ...prev };
+            for (const l of lines) {
+              if (isDraftId(l.id)) continue;
+              if (!next[l.id]) next[l.id] = cId;
+            }
+            return next;
+          });
+        };
+        return (
+          <div className="px-4 py-3 bg-primary/5 border-y border-primary/20">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="text-xs">
+                <p className="font-semibold text-primary mb-1">
+                  Split items into concept cards
+                </p>
+                <p className="text-muted-foreground">
+                  Pick a concept on each row using the <span className="font-medium text-foreground">— concept —</span> dropdown, then press <span className="font-medium text-foreground">Save</span>. Items will move to the matching concept card below.
+                </p>
+                <p className="mt-1 text-foreground">
+                  <span className="font-medium">{assignedCount}</span> of {totalLines} assigned
+                  {Object.keys(byConcept).length > 0 && (
+                    <span className="text-muted-foreground">
+                      {" "}— {Object.entries(byConcept).map(([cId, n]) => {
+                        const name = siblingConcepts.find(c => c.id === cId)?.name ?? "?";
+                        return `${name}: ${n}`;
+                      }).join(", ")}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Bulk assign all unassigned →</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {siblingConcepts.map(c => (
+                    <Button
+                      key={c.id}
+                      size="sm"
+                      variant="outline"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => assignAllUnassigned(c.id)}
+                    >
+                      {c.name}
+                    </Button>
+                  ))}
+                  {assignedCount > 0 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[11px] text-muted-foreground"
+                      onClick={() => setLineConceptAssignment({})}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Sections */}
       <div className="divide-y divide-border/60">
         {sections.map(section => {
