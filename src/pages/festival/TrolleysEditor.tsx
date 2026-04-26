@@ -59,60 +59,72 @@ export default function TrolleysEditor() {
         <p className="text-sm text-muted-foreground mt-1">{trolleys.length} trolleys · {items.length} items</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="space-y-8">
         {trolleys.map(t => {
           const tItems = items.filter(i => i.trolley_id === t.id);
           const draft = newItem[t.id] || { name: "", qty: "", cat: CATEGORIES[0] };
           return (
-            <Card key={t.id} className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-[13px]">{conceptName(t.concept_id)}</h3>
-                  <p className="text-[11px] text-muted-foreground">Trolley #{t.trolley_number} · {t.label}</p>
-                </div>
-                <Badge variant="outline" className="text-[10px]">{tItems.length} items</Badge>
-              </div>
-              <div className="space-y-1">
-                {tItems.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground italic">No items yet</p>
-                )}
-                {tItems.map(i => (
-                  <div key={i.id} className="flex items-center justify-between text-[12px] py-1 px-2 rounded hover:bg-secondary/40">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px]">{i.category}</Badge>
-                      <span>{i.item_name}</span>
-                      {i.quantity && <span className="text-muted-foreground">× {i.quantity}</span>}
-                    </div>
-                    <button onClick={() => removeItem(i.id)} className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+            <div key={t.id} className="space-y-3">
+              {/* Upload + Brain panel (AI extract / brain grab) — items land in smart_lines for review */}
+              <SmartCard
+                cardKey={`trolley_${t.id}`}
+                festivalId={festival.id}
+                conceptId={t.concept_id}
+                title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
+                subtitle="Upload packing lists or photos, or grab from Brain. Items appear here as suggestions; copy them into the official checklist below."
+              />
+
+              {/* Official trolley checklist (writes to festival_bc_trolley_items) */}
+              <Card className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-[13px]">{conceptName(t.concept_id)} — Official checklist</h3>
+                    <p className="text-[11px] text-muted-foreground">Trolley #{t.trolley_number} · {t.label}</p>
                   </div>
-                ))}
-              </div>
-              <div className="border-t border-border/30 pt-3 grid grid-cols-12 gap-1.5">
-                <Select value={draft.cat} onValueChange={(v) => setNewItem(s => ({ ...s, [t.id]: { ...draft, cat: v } }))}>
-                  <SelectTrigger className="col-span-4 h-8 text-[11px]"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    {CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Item"
-                  value={draft.name}
-                  className="col-span-5 h-8 text-[12px]"
-                  onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, name: e.target.value } }))}
-                />
-                <Input
-                  placeholder="Qty"
-                  value={draft.qty}
-                  className="col-span-2 h-8 text-[12px]"
-                  onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, qty: e.target.value } }))}
-                />
-                <Button size="sm" variant="outline" className="col-span-1 h-8 px-0" onClick={() => addItem(t.id)}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </Card>
+                  <Badge variant="outline" className="text-[10px]">{tItems.length} items</Badge>
+                </div>
+                <div className="space-y-1">
+                  {tItems.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground italic">No items yet</p>
+                  )}
+                  {tItems.map(i => (
+                    <div key={i.id} className="flex items-center justify-between text-[12px] py-1 px-2 rounded hover:bg-secondary/40">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px]">{i.category}</Badge>
+                        <span>{i.item_name}</span>
+                        {i.quantity && <span className="text-muted-foreground">× {i.quantity}</span>}
+                      </div>
+                      <button onClick={() => removeItem(i.id)} className="text-muted-foreground hover:text-destructive">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-border/30 pt-3 grid grid-cols-12 gap-1.5">
+                  <Select value={draft.cat} onValueChange={(v) => setNewItem(s => ({ ...s, [t.id]: { ...draft, cat: v } }))}>
+                    <SelectTrigger className="col-span-4 h-8 text-[11px]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover">
+                      {CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Item"
+                    value={draft.name}
+                    className="col-span-5 h-8 text-[12px]"
+                    onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, name: e.target.value } }))}
+                  />
+                  <Input
+                    placeholder="Qty"
+                    value={draft.qty}
+                    className="col-span-2 h-8 text-[12px]"
+                    onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, qty: e.target.value } }))}
+                  />
+                  <Button size="sm" variant="outline" className="col-span-1 h-8 px-0" onClick={() => addItem(t.id)}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </Card>
+            </div>
           );
         })}
       </div>
