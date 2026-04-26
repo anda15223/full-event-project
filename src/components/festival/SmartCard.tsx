@@ -283,6 +283,122 @@ export function SmartCard({
     }
   };
 
+  // ---- Copy a single line into other concept cards (same cardKey + section title) ----
+  const [copyOpenForLine, setCopyOpenForLine] = useState<string | null>(null);
+  const [copyTargets, setCopyTargets] = useState<Record<string, boolean>>({});
+  const [copying, setCopying] = useState(false);
+
+  const openCopyDialog = (lineId: string) => {
+    setCopyTargets({});
+    setCopyOpenForLine(lineId);
+  };
+
+  const copyLineToConcepts = async () => {
+    if (!copyOpenForLine) return;
+    const line = lines.find(l => l.id === copyOpenForLine);
+    const section = sections.find(s => s.id === line?.section_id);
+    if (!line || !section) { toast.error("Line not found"); return; }
+    const targets = Object.entries(copyTargets).filter(([, v]) => v).map(([k]) => k);
+    if (!targets.length) { toast.error("Pick at least one concept"); return; }
+
+    setCopying(true);
+    try {
+      for (const targetConceptId of targets) {
+        // 1. Find or create the target SmartCard
+        let { data: targetCard } = await (supabase as any)
+          .from("smart_cards")
+          .select("id")
+          .eq("festival_id", festivalId)
+          .eq("card_key", cardKey)
+          .eq("concept_id", targetConceptId)
+          .maybeSingle();
+
+        if (!targetCard) {
+          const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+          const { data: created, error: cErr } = await (supabase as any)
+            .from("smart_cards")
+            .insert({
+              festival_id: festivalId,
+              card_key: cardKey,
+              concept_id: targetConceptId,
+              title: `${title.split(" — ")[0]} — ${conceptName}`,
+              meta: {},
+            })
+            .select("id")
+            .single();
+          if (cErr) throw cErr;
+          targetCard = created;
+        }
+
+        // 2. Find or create section with same title in target card
+        let { data: targetSection } = await (supabase as any)
+          .from("smart_sections")
+          .select("id, order_index")
+          .eq("card_id", targetCard.id)
+          .eq("title", section.title)
+          .maybeSingle();
+
+        if (!targetSection) {
+          const { data: maxRow } = await (supabase as any)
+            .from("smart_sections")
+            .select("order_index")
+            .eq("card_id", targetCard.id)
+            .order("order_index", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const nextOrder = (maxRow?.order_index ?? -1) + 1;
+          const { data: createdSec, error: sErr } = await (supabase as any)
+            .from("smart_sections")
+            .insert({
+              card_id: targetCard.id,
+              title: section.title,
+              description: section.description,
+              order_index: nextOrder,
+              source: "manual",
+            })
+            .select("id, order_index")
+            .single();
+          if (sErr) throw sErr;
+          targetSection = createdSec;
+        }
+
+        // 3. Insert duplicated line
+        const { data: maxLine } = await (supabase as any)
+          .from("smart_lines")
+          .select("order_index")
+          .eq("section_id", targetSection.id)
+          .order("order_index", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextLineOrder = (maxLine?.order_index ?? -1) + 1;
+
+        const { error: lErr } = await (supabase as any)
+          .from("smart_lines")
+          .insert({
+            section_id: targetSection.id,
+            label: line.label,
+            value: line.value,
+            quantity: line.quantity,
+            notes: line.notes,
+            status: line.status,
+            owner: line.owner,
+            due_date: line.due_date,
+            order_index: nextLineOrder,
+            source: "manual",
+          });
+        if (lErr) throw lErr;
+      }
+      toast.success(`Copied to ${targets.length} concept${targets.length > 1 ? "s" : ""}`);
+      setCopyOpenForLine(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Copy failed: ${e.message ?? "unknown"}`);
+    } finally {
+      setCopying(false);
+    }
+  };
+
+
   // ---- Todo CRUD (deferred when in edit mode) ----
   const toggleTodo = (id: string, current: string) => {
     const next = current === "done" ? "open" : "done";
