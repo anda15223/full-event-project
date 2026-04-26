@@ -1247,8 +1247,10 @@ export function SmartCard({
                     <p className="text-xs text-muted-foreground italic">No lines yet.</p>
                   )}
                   {editMode ? (
-                    sectionLines.map(line => (
-                      <div key={line.id} className="grid grid-cols-[1fr_1.4fr_70px_1fr_60px_24px] gap-1.5 items-center group">
+                    sectionLines.map(line => {
+                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      return (
+                      <div key={line.id} className={cn("grid gap-1.5 items-center group", canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]") }>
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
                         <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
@@ -1256,11 +1258,17 @@ export function SmartCard({
                         <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
                           {sourceLabel(line.source)}
                         </Badge>
+                        {canCopy && (
+                          <Button variant="ghost" size="sm" title="Copy to other concepts" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100" onClick={() => openCopyDialog(line.id)}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                    ))
+                      );
+                    })
                   ) : (
                     sectionLines.length > 0 && (
                       <div className="rounded-md border border-border/60 overflow-hidden">
