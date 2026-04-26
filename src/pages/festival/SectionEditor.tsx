@@ -37,6 +37,11 @@ const SMART_CARDS: Record<string, { title: string; subtitle?: string; warning?: 
     subtitle: "Upload fire safety PDFs, food handling certs, insurance docs. AI will read them.",
     warning: { label: "No safety documents uploaded", description: "Compliance docs, fire plan and certificates are required before opening." },
   },
+  power: {
+    title: "Power requirements",
+    subtitle: "Upload power plans, generator offers, electrician quotes or site power maps. AI will extract loads & circuits.",
+    warning: { label: "No power info yet", description: "Add baseline kW per concept, generator size, and any extras." },
+  },
 };
 
 export default function SectionEditor() {
