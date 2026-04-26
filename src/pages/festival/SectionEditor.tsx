@@ -169,6 +169,10 @@ export default function SectionEditor() {
         <ContactsManager festivalId={festival.id} />
       )}
 
+      {sectionKey === "facade" && festival && slug && (
+        <FacadeInventoryCard festivalId={festival.id} festivalSlug={slug} />
+      )}
+
       {festival && sectionKey && (
         <SectionPageChat
           festivalId={festival.id}
