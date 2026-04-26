@@ -2255,12 +2255,10 @@ export function SmartCard({
               <Button
                 size="sm"
                 onClick={confirmGrabFromBrain}
-                disabled={(sourceCardFilter === "all" && visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length === 0) || grabbing}
+                disabled={visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length === 0 || grabbing}
               >
                 {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                {sourceCardFilter !== "all"
-                  ? `Extract from ${sourceCardFilter}`
-                  : `Extract from ${visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} doc(s)`}
+                {`Extract from ${visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} doc(s)`}
               </Button>
             </div>
           </DialogFooter>
