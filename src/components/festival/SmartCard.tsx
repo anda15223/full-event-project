@@ -1743,7 +1743,7 @@ export function SmartCard({
                       <div className={cn("grid gap-1.5 items-center group", gridCols)}>
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Item" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Note" className="h-7 text-xs" />
-                        <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Amount" className="h-7 text-xs" />
+                        <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Amount (Qty)" className="h-7 text-xs" />
                         
                         {showAssigner && (
                           <select
@@ -1817,9 +1817,9 @@ export function SmartCard({
                           <thead className="bg-muted/50 text-xs text-muted-foreground">
                             <tr>
                               <th className="text-left font-medium px-3 py-1.5 w-[35%]">Item</th>
-                              <th className="text-left font-medium px-3 py-1.5 w-[20%]">Detail</th>
-                              <th className="text-left font-medium px-3 py-1.5 w-[12%]">Qty</th>
-                              <th className="text-left font-medium px-3 py-1.5">Notes</th>
+                              <th className="text-left font-medium px-3 py-1.5 w-[35%]">Note</th>
+                              <th className="text-left font-medium px-3 py-1.5 w-[15%]">Amount (Qty)</th>
+                              <th className="text-left font-medium px-3 py-1.5">Extra</th>
                             </tr>
                           </thead>
                           <tbody>
