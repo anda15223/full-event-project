@@ -550,7 +550,7 @@ export function SmartCard({
   const confirmGrabFromBrain = async () => {
     if (!card) return;
     const visibleIds = visibleBrainDocs.map((d) => d.id);
-    const explicitIds = Array.from(selectedBrainIds);
+    const explicitIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
     const ids = explicitIds.length ? explicitIds : visibleIds;
     if (!ids.length) return;
 
