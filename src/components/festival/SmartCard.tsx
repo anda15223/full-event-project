@@ -518,6 +518,8 @@ export function SmartCard({
       });
       if (error) throw error;
       const suggestions: Array<{ title: string; lines: any[] }> = data?.suggestions || [];
+      setBrainDiagnostics(data?.diagnostics || null);
+      if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
         toast.info("Brain has nothing for this card yet — fill it in and it'll learn.");
         return;
