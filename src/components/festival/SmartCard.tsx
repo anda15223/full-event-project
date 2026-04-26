@@ -101,6 +101,7 @@ export function SmartCard({
   const [loadingBrainDocs, setLoadingBrainDocs] = useState(false);
   const [selectedBrainIds, setSelectedBrainIds] = useState<Set<string>>(new Set());
   const [includeOtherCards, setIncludeOtherCards] = useState(true);
+  const [sourceCardFilter, setSourceCardFilter] = useState<string>("all");
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
@@ -1304,34 +1305,73 @@ export function SmartCard({
             </DialogDescription>
           </DialogHeader>
 
-          {/* Cross-card toggle */}
-          {!loadingBrainDocs && brainDocs.length > 0 && (
-            <label className="flex items-center gap-2 px-1 pt-1 pb-2 cursor-pointer text-xs">
-              <input
-                type="checkbox"
-                checked={includeOtherCards}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  setIncludeOtherCards(next);
-                  if (!next) {
-                    // Drop any currently-selected docs that belong to other cards
-                    setSelectedBrainIds((prev) => {
-                      const out = new Set<string>();
-                      brainDocs.forEach((d) => {
-                        if (d.same_card && prev.has(d.id)) out.add(d.id);
-                      });
-                      return out;
-                    });
-                  }
-                }}
-                className="cursor-pointer"
-              />
-              <span className="font-medium">Include info from other cards</span>
-              <span className="text-muted-foreground">
-                ({brainDocs.filter((d) => !d.same_card).length} cross-card docs)
-              </span>
-            </label>
-          )}
+          {/* Cross-card toggle + source card filter */}
+          {!loadingBrainDocs && brainDocs.length > 0 && (() => {
+            // Build list of distinct source cards present in brainDocs
+            const cardsPresent = Array.from(
+              new Set(brainDocs.map((d) => d.category).filter(Boolean) as string[])
+            ).sort();
+            return (
+              <div className="flex flex-wrap items-center gap-3 px-1 pt-1 pb-2 text-xs border-b">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeOtherCards}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setIncludeOtherCards(next);
+                      if (!next) {
+                        setSourceCardFilter("all");
+                        setSelectedBrainIds((prev) => {
+                          const out = new Set<string>();
+                          brainDocs.forEach((d) => {
+                            if (d.same_card && prev.has(d.id)) out.add(d.id);
+                          });
+                          return out;
+                        });
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <span className="font-medium">Include info from other cards</span>
+                  <span className="text-muted-foreground">
+                    ({brainDocs.filter((d) => !d.same_card).length} cross-card docs)
+                  </span>
+                </label>
+
+                {includeOtherCards && cardsPresent.length > 1 && (
+                  <label className="flex items-center gap-2 ml-auto">
+                    <span className="text-muted-foreground">Source card:</span>
+                    <select
+                      value={sourceCardFilter}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setSourceCardFilter(next);
+                        if (next !== "all") {
+                          // Drop selections that don't match the chosen source card
+                          setSelectedBrainIds((prev) => {
+                            const out = new Set<string>();
+                            brainDocs.forEach((d) => {
+                              if (d.category === next && prev.has(d.id)) out.add(d.id);
+                            });
+                            return out;
+                          });
+                        }
+                      }}
+                      className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="all">All cards</option>
+                      {cardsPresent.map((c) => (
+                        <option key={c} value={c}>
+                          {c === cardKey ? `${c} (this card)` : c}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="flex-1 overflow-y-auto -mx-6 px-6 py-2 space-y-1.5">
             {loadingBrainDocs && (
@@ -1340,24 +1380,30 @@ export function SmartCard({
               </div>
             )}
             {(() => {
-              const visibleDocs = includeOtherCards
-                ? brainDocs
-                : brainDocs.filter((d) => d.same_card);
+              const visibleDocs = brainDocs.filter((d) => {
+                if (!includeOtherCards && !d.same_card) return false;
+                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
+                return true;
+              });
               if (!loadingBrainDocs && visibleDocs.length === 0) {
                 return (
                   <div className="text-center text-sm text-muted-foreground py-10">
                     {brainDocs.length === 0
                       ? "Brain has no documents matching this card yet. Upload one or fill it in manually."
-                      : "No documents on this card yet. Toggle “Include info from other cards” to pull from elsewhere."}
+                      : sourceCardFilter !== "all"
+                        ? `No documents from “${sourceCardFilter}”. Pick another source card or choose “All cards”.`
+                        : "No documents on this card yet. Toggle “Include info from other cards” to pull from elsewhere."}
                   </div>
                 );
               }
               return null;
             })()}
             {!loadingBrainDocs && brainDocs.length > 0 && (() => {
-              const visibleDocs = includeOtherCards
-                ? brainDocs
-                : brainDocs.filter((d) => d.same_card);
+              const visibleDocs = brainDocs.filter((d) => {
+                if (!includeOtherCards && !d.same_card) return false;
+                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
+                return true;
+              });
               if (visibleDocs.length === 0) return null;
               const visibleSelected = visibleDocs.filter((d) => selectedBrainIds.has(d.id)).length;
               const allChecked = visibleSelected === visibleDocs.length;
@@ -1391,7 +1437,11 @@ export function SmartCard({
               );
             })()}
             {!loadingBrainDocs && brainDocs
-              .filter((d) => includeOtherCards || d.same_card)
+              .filter((d) => {
+                if (!includeOtherCards && !d.same_card) return false;
+                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
+                return true;
+              })
               .map((d) => {
               const checked = selectedBrainIds.has(d.id);
               return (
