@@ -312,9 +312,7 @@ async function extractFromFile({
     parse_status: "processing",
   });
 
-  const cardPrompt =
-    CARD_PROMPTS[card_key] ||
-    "Extract logical sections and lines from this document.";
+  const cardPrompt = cardPromptForKey(card_key);
 
   const summaryInstruction = `\n\nIMPORTANT:
 - Always populate the "summary" field with a thorough plain-text summary (5-15 lines) of EVERYTHING you can read in the document — supplier, items, prices, dates, addresses, contacts, notes. This is the user's safety net if structured extraction misses something.
