@@ -915,6 +915,116 @@ export function SmartCard({
         </div>
       )}
 
+      {/* Brain diagnostics panel */}
+      {brainDiagnostics && (
+        <div className="px-5 py-3 border-b border-border/50 bg-amber-50/40 dark:bg-amber-950/20">
+          <button
+            type="button"
+            onClick={() => setShowDiagnostics((v) => !v)}
+            className="w-full flex items-center justify-between text-left group"
+          >
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-amber-800 dark:text-amber-300">
+              <Brain className="h-3.5 w-3.5" />
+              Brain diagnostics
+              <span className="font-normal normal-case tracking-normal text-muted-foreground">
+                · {brainDiagnostics.brain_rows_selected ?? 0} doc(s) selected ·{" "}
+                {brainDiagnostics.structured_sections ?? 0} structured + {brainDiagnostics.ai_source_docs ?? 0} AI source(s)
+              </span>
+            </div>
+            {showDiagnostics ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+            )}
+          </button>
+          {showDiagnostics && (
+            <div className="mt-3 space-y-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="rounded border border-border/60 bg-background/60 px-2 py-1.5">
+                  <div className="text-[10px] uppercase text-muted-foreground">Fetched</div>
+                  <div className="font-semibold">{brainDiagnostics.brain_rows_fetched ?? 0}</div>
+                </div>
+                <div className="rounded border border-border/60 bg-background/60 px-2 py-1.5">
+                  <div className="text-[10px] uppercase text-muted-foreground">Considered</div>
+                  <div className="font-semibold">{brainDiagnostics.brain_rows_considered ?? 0}</div>
+                </div>
+                <div className="rounded border border-border/60 bg-background/60 px-2 py-1.5">
+                  <div className="text-[10px] uppercase text-muted-foreground">Selected</div>
+                  <div className="font-semibold">{brainDiagnostics.brain_rows_selected ?? 0}</div>
+                </div>
+                <div className="rounded border border-border/60 bg-background/60 px-2 py-1.5">
+                  <div className="text-[10px] uppercase text-muted-foreground">AI extraction</div>
+                  <div className="font-semibold">
+                    {brainDiagnostics.ai_extraction?.attempted
+                      ? brainDiagnostics.ai_extraction?.succeeded
+                        ? `OK (${brainDiagnostics.ai_extraction?.sections_returned ?? 0} sections)`
+                        : "Failed"
+                      : "Skipped"}
+                  </div>
+                </div>
+              </div>
+
+              {brainDiagnostics.ai_extraction && !brainDiagnostics.ai_extraction.attempted && (
+                <p className="text-muted-foreground italic">
+                  AI extraction skipped — {brainDiagnostics.ai_extraction.reason}
+                </p>
+              )}
+              {brainDiagnostics.ai_extraction?.attempted && !brainDiagnostics.ai_extraction.succeeded && (
+                <p className="text-destructive">
+                  AI extraction failed: {brainDiagnostics.ai_extraction.error}
+                </p>
+              )}
+
+              {Array.isArray(brainDiagnostics.documents) && brainDiagnostics.documents.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase text-muted-foreground mb-1">Selected Brain documents</div>
+                  <ul className="space-y-1 max-h-48 overflow-auto pr-1">
+                    {brainDiagnostics.documents.map((d: any) => (
+                      <li key={d.id} className="rounded border border-border/40 bg-background/50 px-2 py-1 flex items-center gap-2">
+                        <Badge variant="outline" className="h-4 px-1 text-[9px] uppercase shrink-0">
+                          {d.role === "structured_line" ? "structured" : "AI source"}
+                        </Badge>
+                        <span className="truncate flex-1" title={d.key_name || d.display_name || d.id}>
+                          {d.display_name || d.key_name || d.id}
+                        </span>
+                        <span className="text-muted-foreground text-[10px] shrink-0">
+                          {d.category || "—"} · score {d.score} · {d.content_chars}c
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {Array.isArray(brainDiagnostics.rejected_examples) && brainDiagnostics.rejected_examples.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase text-muted-foreground mb-1">Rejected (top 5)</div>
+                  <ul className="space-y-1">
+                    {brainDiagnostics.rejected_examples.map((d: any) => (
+                      <li key={d.id} className="text-muted-foreground">
+                        <span className="font-medium text-foreground/80">{d.key_name || d.id}</span>
+                        {" — "}{d.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {Array.isArray(brainDiagnostics.notes) && brainDiagnostics.notes.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase text-muted-foreground mb-1">Notes</div>
+                  <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                    {brainDiagnostics.notes.map((n: string, i: number) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sections */}
       <div className="divide-y divide-border/60">
         {sections.map(section => {
