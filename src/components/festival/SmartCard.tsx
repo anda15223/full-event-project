@@ -447,6 +447,46 @@ export function SmartCard({
     setEditMode(false);
   };
 
+  /** Wipe ALL per-concept cards (concept_id IS NOT NULL) for this card_key + festival.
+   *  Used to reset legacy mixed data so the Common List becomes the single source of truth.
+   *  Only meaningful in conceptAssignerMode (the Common List card itself). */
+  const wipePerConceptCards = async () => {
+    if (!conceptAssignerMode || !festivalId) return;
+    setWiping(true);
+    try {
+      const { data: targetCards, error: cErr } = await (supabase as any)
+        .from("smart_cards")
+        .select("id")
+        .eq("festival_id", festivalId)
+        .eq("card_key", cardKey)
+        .not("concept_id", "is", null);
+      if (cErr) throw cErr;
+      const cardIds = (targetCards ?? []).map((c: any) => c.id);
+      if (!cardIds.length) {
+        toast.info("No per-concept cards to clear");
+        return;
+      }
+      const { data: secs, error: sErr } = await (supabase as any)
+        .from("smart_sections").select("id").in("card_id", cardIds);
+      if (sErr) throw sErr;
+      const secIds = (secs ?? []).map((s: any) => s.id);
+      if (secIds.length) {
+        const { error: lErr } = await (supabase as any)
+          .from("smart_lines").delete().in("section_id", secIds);
+        if (lErr) throw lErr;
+        const { error: dsErr } = await (supabase as any)
+          .from("smart_sections").delete().in("id", secIds);
+        if (dsErr) throw dsErr;
+      }
+      toast.success(`Cleared ${cardIds.length} concept card${cardIds.length === 1 ? "" : "s"}. Now assign concepts in the Common List and Save.`);
+    } catch (e: any) {
+      toast.error(`Reset failed: ${e.message || e}`);
+    } finally {
+      setWiping(false);
+      setWipeDialogOpen(false);
+    }
+  };
+
   const saveChanges = async () => {
     if (!card) return;
     if (!hasUnsavedChanges()) {
