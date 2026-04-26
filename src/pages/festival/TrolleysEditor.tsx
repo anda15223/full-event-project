@@ -267,13 +267,65 @@ export default function TrolleysEditor() {
   const qc = useQueryClient();
   const { data: festival } = useFestival(slug);
   const trolleysQ = useTrolleys(festival?.id);
-  
+  const [collapsedBrain, setCollapsedBrain] = useState<Record<string, boolean>>({});
+  const [importing, setImporting] = useState<Record<string, boolean>>({});
 
   if (!festival) return <div className="text-sm text-muted-foreground">Loading…</div>;
   const { trolleys = [], items = [], concepts = [] } = trolleysQ.data || {};
 
   const conceptName = (cid: string | null | undefined) =>
     concepts.find(c => c.id === cid)?.name || "Unassigned";
+
+  const importFromBrain = async (trolley: any) => {
+    setImporting(prev => ({ ...prev, [trolley.id]: true }));
+    try {
+      const cardKey = `trolley_${trolley.id}`;
+      const { data: card } = await (supabase as any)
+        .from("smart_cards")
+        .select("id")
+        .eq("festival_id", festival.id)
+        .eq("card_key", cardKey)
+        .maybeSingle();
+      if (!card) { toast.error("No Upload & Brain card found yet"); return; }
+      const { data: sections } = await (supabase as any)
+        .from("smart_sections").select("id, title").eq("card_id", card.id);
+      const secIds = (sections || []).map((s: any) => s.id);
+      if (secIds.length === 0) { toast.error("Brain panel is empty"); return; }
+      const { data: lines } = await (supabase as any)
+        .from("smart_lines").select("label, quantity, notes, section_id").in("section_id", secIds);
+      if (!lines || lines.length === 0) { toast.error("No lines in Brain panel"); return; }
+
+      const existingNames = new Set(
+        items.filter(i => i.trolley_id === trolley.id).map(i => (i.item_name || "").trim().toLowerCase())
+      );
+      const baseOrder = items.filter(i => i.trolley_id === trolley.id).length;
+      const rows = lines
+        .filter((l: any) => l.label && !existingNames.has(l.label.trim().toLowerCase()))
+        .map((l: any, idx: number) => {
+          const qStr = (l.quantity ?? "").toString().trim();
+          const qNum = qStr ? Number(qStr.replace(/[^\d.]/g, "")) : null;
+          return {
+            trolley_id: trolley.id,
+            category: CATEGORIES[0],
+            item_name: l.label.trim(),
+            quantity: qStr || null,
+            needed_quantity: Number.isFinite(qNum as number) ? qNum : null,
+            placed_quantity: null,
+            counted_quantity: null,
+            order_index: baseOrder + idx,
+            concept_id: trolley.concept_id,
+            photo_path: null,
+          };
+        });
+      if (rows.length === 0) { toast.info("All Brain items already in inventory"); return; }
+      const { error } = await (supabase as any).from("festival_bc_trolley_items").insert(rows);
+      if (error) { toast.error("Import failed"); return; }
+      toast.success(`Imported ${rows.length} items to inventory`);
+      qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
+    } finally {
+      setImporting(prev => ({ ...prev, [trolley.id]: false }));
+    }
+  };
 
   const addItemFromCard = async (
     trolleyId: string,
