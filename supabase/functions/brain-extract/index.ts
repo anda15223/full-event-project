@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { storage_path, mime_type, category, pasted_text, filename } =
+    const { storage_path, file_data_url, mime_type, category, pasted_text, filename } =
       await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
