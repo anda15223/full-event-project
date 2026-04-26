@@ -1145,55 +1145,35 @@ export function SmartCard({
                     ))
                   ) : (
                     sectionLines.length > 0 && (
-                      cardKey === "equipment_list" ? (
-                        <div className="rounded-md border border-border/60 overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/50 text-xs text-muted-foreground">
-                              <tr>
-                                <th className="text-left font-medium px-3 py-1.5 w-[35%]">Item</th>
-                                <th className="text-left font-medium px-3 py-1.5 w-[20%]">Detail</th>
-                                <th className="text-left font-medium px-3 py-1.5 w-[12%]">Qty</th>
-                                <th className="text-left font-medium px-3 py-1.5">Notes</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {sectionLines.map((line, idx) => {
-                                const hasLabel = !!line.label?.trim();
-                                const hasValue = !!line.value?.trim();
-                                const hasQty = !!line.quantity?.trim();
-                                const hasNotes = !!line.notes?.trim();
-                                if (!hasLabel && !hasValue && !hasQty && !hasNotes) return null;
-                                return (
-                                  <tr key={line.id} className={cn("border-t border-border/40", idx % 2 === 1 && "bg-muted/20")}>
-                                    <td className="px-3 py-1.5 font-medium text-foreground align-top">{line.label || "—"}</td>
-                                    <td className="px-3 py-1.5 text-foreground/90 align-top">{line.value || ""}</td>
-                                    <td className="px-3 py-1.5 text-muted-foreground align-top tabular-nums">{line.quantity || ""}</td>
-                                    <td className="px-3 py-1.5 text-muted-foreground italic align-top">{line.notes || ""}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <ul className="space-y-1">
-                          {sectionLines.map(line => {
-                            const hasLabel = !!line.label?.trim();
-                            const hasValue = !!line.value?.trim();
-                            const hasQty = !!line.quantity?.trim();
-                            const hasNotes = !!line.notes?.trim();
-                            if (!hasLabel && !hasValue && !hasQty && !hasNotes) return null;
-                            return (
-                              <li key={line.id} className="text-sm flex flex-wrap items-baseline gap-x-2 gap-y-0.5 leading-snug">
-                                {hasLabel && <span className="font-medium text-foreground">{line.label}{hasValue ? ":" : ""}</span>}
-                                {hasValue && <span className="text-foreground/90">{line.value}</span>}
-                                {hasQty && <span className="text-xs text-muted-foreground">× {line.quantity}</span>}
-                                {hasNotes && <span className="text-xs text-muted-foreground italic">— {line.notes}</span>}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )
+                      <div className="rounded-md border border-border/60 overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted/50 text-xs text-muted-foreground">
+                            <tr>
+                              <th className="text-left font-medium px-3 py-1.5 w-[35%]">Item</th>
+                              <th className="text-left font-medium px-3 py-1.5 w-[20%]">Detail</th>
+                              <th className="text-left font-medium px-3 py-1.5 w-[12%]">Qty</th>
+                              <th className="text-left font-medium px-3 py-1.5">Notes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sectionLines.map((line, idx) => {
+                              const hasLabel = !!line.label?.trim();
+                              const hasValue = !!line.value?.trim();
+                              const hasQty = !!line.quantity?.trim();
+                              const hasNotes = !!line.notes?.trim();
+                              if (!hasLabel && !hasValue && !hasQty && !hasNotes) return null;
+                              return (
+                                <tr key={line.id} className={cn("border-t border-border/40", idx % 2 === 1 && "bg-muted/20")}>
+                                  <td className="px-3 py-1.5 font-medium text-foreground align-top">{line.label || "—"}</td>
+                                  <td className="px-3 py-1.5 text-foreground/90 align-top">{line.value || ""}</td>
+                                  <td className="px-3 py-1.5 text-muted-foreground align-top tabular-nums">{line.quantity || ""}</td>
+                                  <td className="px-3 py-1.5 text-muted-foreground italic align-top">{line.notes || ""}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     )
                   )}
                   {editMode && (
