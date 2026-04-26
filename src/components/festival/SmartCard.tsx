@@ -84,8 +84,10 @@ const sourceLabel = (s: string) => {
 export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
-  hideBrainButton, siblingConcepts,
+  hideBrainButton, siblingConcepts, conceptAssignerMode,
 }: SmartCardProps) {
+  // line.id -> target concept id chosen via dropdown (only used when conceptAssignerMode)
+  const [lineConceptAssignment, setLineConceptAssignment] = useState<Record<string, string>>({});
   const [card, setCard] = useState<SCard | null>(null);
   const [sections, setSections] = useState<SSection[]>([]);
   const [lines, setLines] = useState<SLine[]>([]);
