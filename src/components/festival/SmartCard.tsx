@@ -119,6 +119,7 @@ export function SmartCard({
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [moveErrors, setMoveErrors] = useState<{ conceptName: string; count: number; reason: string }[]>([]);
   const [chatRefreshKey, setChatRefreshKey] = useState(0);
   // Snapshot taken when entering edit mode, used to revert on cancel
   const [snapshot, setSnapshot] = useState<{ sections: SSection[]; lines: SLine[]; todos: STodo[] } | null>(null);
@@ -698,88 +699,124 @@ export function SmartCard({
       }
       // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
       const movedLineIds: string[] = [];
+      const moveFailures: { conceptName: string; count: number; reason: string }[] = [];
+      setMoveErrors([]);
       if (Object.keys(lineConceptAssignment).length) {
         // group by concept (translate draft line ids -> real ids inserted in step 4)
         const byConcept: Record<string, string[]> = {};
+        const unresolvedDrafts: string[] = [];
         for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
           if (!targetConceptId) continue;
           const realId = isDraftId(lineId) ? lineIdMap[lineId] : lineId;
-          if (!realId) continue;
+          if (!realId) { unresolvedDrafts.push(lineId); continue; }
           if (targetConceptId === conceptId) continue; // same card, no-op
           (byConcept[targetConceptId] ||= []).push(realId);
         }
+        if (unresolvedDrafts.length) {
+          moveFailures.push({
+            conceptName: "—",
+            count: unresolvedDrafts.length,
+            reason: "Draft lines weren't saved before move (missing real id).",
+          });
+        }
         for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
-          // Fetch moved lines fresh from DB so we have real section_ids + values
-          const { data: linesToMove } = await (supabase as any)
-            .from("smart_lines").select("*").in("id", lineIds);
-          if (!linesToMove?.length) continue;
+          const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+          try {
+            // Fetch moved lines fresh from DB so we have real section_ids + values
+            const { data: linesToMove, error: fetchErr } = await (supabase as any)
+              .from("smart_lines").select("*").in("id", lineIds);
+            if (fetchErr) throw fetchErr;
+            if (!linesToMove?.length) {
+              moveFailures.push({ conceptName, count: lineIds.length, reason: "Lines not found in database." });
+              continue;
+            }
+            if (linesToMove.length < lineIds.length) {
+              moveFailures.push({
+                conceptName,
+                count: lineIds.length - linesToMove.length,
+                reason: "Some lines were deleted before save.",
+              });
+            }
 
-          // Get-or-create target SmartCard
-          let { data: tCard } = await (supabase as any)
-            .from("smart_cards")
-            .select("id")
-            .eq("festival_id", festivalId)
-            .eq("card_key", cardKey)
-            .eq("concept_id", targetConceptId)
-            .maybeSingle();
-          if (!tCard) {
-            const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
-            const { data: created, error: cErr } = await (supabase as any)
+            // Get-or-create target SmartCard
+            let { data: tCard, error: tCardErr } = await (supabase as any)
               .from("smart_cards")
-              .insert({ festival_id: festivalId, card_key: cardKey, concept_id: targetConceptId, title: `${title.split(" — ")[0]} — ${conceptName}`, meta: {} })
-              .select("id").single();
-            if (cErr) throw cErr;
-            tCard = created;
-          }
+              .select("id")
+              .eq("festival_id", festivalId)
+              .eq("card_key", cardKey)
+              .eq("concept_id", targetConceptId)
+              .maybeSingle();
+            if (tCardErr) throw tCardErr;
+            if (!tCard) {
+              const { data: created, error: cErr } = await (supabase as any)
+                .from("smart_cards")
+                .insert({ festival_id: festivalId, card_key: cardKey, concept_id: targetConceptId, title: `${title.split(" — ")[0]} — ${conceptName}`, meta: {} })
+                .select("id").single();
+              if (cErr) throw cErr;
+              tCard = created;
+            }
 
-          // For each source section, get-or-create matching section in target card and insert lines
-          const sectionsTouched = Array.from(new Set(linesToMove.map(l => l.section_id)));
-          for (const srcSecId of sectionsTouched) {
-            // Try in-memory first; if section was just inserted, look up via reverse sectionIdMap; else fetch from DB
-            let srcSec: any = sections.find(s => s.id === srcSecId);
-            if (!srcSec) {
-              const draftId = Object.keys(sectionIdMap).find(k => sectionIdMap[k] === srcSecId);
-              if (draftId) srcSec = sections.find(s => s.id === draftId);
-            }
-            if (!srcSec) {
-              const { data: fetched } = await (supabase as any)
-                .from("smart_sections").select("id, title, description").eq("id", srcSecId).maybeSingle();
-              srcSec = fetched;
-            }
-            if (!srcSec) continue;
-            let { data: tSec } = await (supabase as any)
-              .from("smart_sections").select("id, order_index")
-              .eq("card_id", tCard.id).eq("title", srcSec.title).maybeSingle();
-            if (!tSec) {
-              const { data: maxRow } = await (supabase as any)
-                .from("smart_sections").select("order_index")
-                .eq("card_id", tCard.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
-              const nextOrder = (maxRow?.order_index ?? -1) + 1;
-              const { data: createdSec, error: sErr } = await (supabase as any)
-                .from("smart_sections")
-                .insert({ card_id: tCard.id, title: srcSec.title, description: srcSec.description, order_index: nextOrder, source: "manual" })
-                .select("id, order_index").single();
-              if (sErr) throw sErr;
-              tSec = createdSec;
-            }
-            const { data: maxLine } = await (supabase as any)
-              .from("smart_lines").select("order_index")
-              .eq("section_id", tSec.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
-            let nextLineOrder = (maxLine?.order_index ?? -1) + 1;
-            const rows = linesToMove
-              .filter(l => l.section_id === srcSecId)
-              .map(l => ({
+            const successfullyMoved: string[] = [];
+            // For each source section, get-or-create matching section in target card and insert lines
+            const sectionsTouched = Array.from(new Set(linesToMove.map((l: any) => l.section_id)));
+            for (const srcSecId of sectionsTouched) {
+              // Try in-memory first; if section was just inserted, look up via reverse sectionIdMap; else fetch from DB
+              let srcSec: any = sections.find(s => s.id === srcSecId);
+              if (!srcSec) {
+                const draftId = Object.keys(sectionIdMap).find(k => sectionIdMap[k] === srcSecId);
+                if (draftId) srcSec = sections.find(s => s.id === draftId);
+              }
+              if (!srcSec) {
+                const { data: fetched } = await (supabase as any)
+                  .from("smart_sections").select("id, title, description").eq("id", srcSecId).maybeSingle();
+                srcSec = fetched;
+              }
+              const inSection = linesToMove.filter((l: any) => l.section_id === srcSecId);
+              if (!srcSec) {
+                moveFailures.push({ conceptName, count: inSection.length, reason: "Source section could not be resolved." });
+                continue;
+              }
+              let { data: tSec } = await (supabase as any)
+                .from("smart_sections").select("id, order_index")
+                .eq("card_id", tCard.id).eq("title", srcSec.title).maybeSingle();
+              if (!tSec) {
+                const { data: maxRow } = await (supabase as any)
+                  .from("smart_sections").select("order_index")
+                  .eq("card_id", tCard.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
+                const nextOrder = (maxRow?.order_index ?? -1) + 1;
+                const { data: createdSec, error: sErr } = await (supabase as any)
+                  .from("smart_sections")
+                  .insert({ card_id: tCard.id, title: srcSec.title, description: srcSec.description, order_index: nextOrder, source: "manual" })
+                  .select("id, order_index").single();
+                if (sErr) {
+                  moveFailures.push({ conceptName, count: inSection.length, reason: `Couldn't create target section: ${sErr.message}` });
+                  continue;
+                }
+                tSec = createdSec;
+              }
+              const { data: maxLine } = await (supabase as any)
+                .from("smart_lines").select("order_index")
+                .eq("section_id", tSec.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
+              let nextLineOrder = (maxLine?.order_index ?? -1) + 1;
+              const rows = inSection.map((l: any) => ({
                 section_id: tSec.id,
                 label: l.label, value: l.value, quantity: l.quantity, notes: l.notes,
                 status: l.status, owner: l.owner, due_date: l.due_date,
                 order_index: nextLineOrder++, source: l.source,
               }));
-            if (rows.length) {
-              const { error: lErr } = await (supabase as any).from("smart_lines").insert(rows);
-              if (lErr) throw lErr;
+              if (rows.length) {
+                const { error: lErr } = await (supabase as any).from("smart_lines").insert(rows);
+                if (lErr) {
+                  moveFailures.push({ conceptName, count: rows.length, reason: `Insert failed: ${lErr.message}` });
+                  continue;
+                }
+                successfullyMoved.push(...inSection.map((l: any) => l.id));
+              }
             }
+            movedLineIds.push(...successfullyMoved);
+          } catch (e: any) {
+            moveFailures.push({ conceptName, count: lineIds.length, reason: e?.message || "Unknown error" });
           }
-          movedLineIds.push(...linesToMove.map(l => l.id));
         }
       }
       // 6. Delete lines (including moved ones)
@@ -798,7 +835,14 @@ export function SmartCard({
         const { error } = await (supabase as any).from("smart_todos").delete().in("id", pending.todoDeletes);
         if (error) throw error;
       }
-      toast.success("Saved");
+      const totalFailed = moveFailures.reduce((s, f) => s + f.count, 0);
+      if (totalFailed > 0) {
+        setMoveErrors(moveFailures);
+        toast.warning(`Saved with ${totalFailed} line${totalFailed === 1 ? "" : "s"} not moved. See details below.`);
+      } else {
+        setMoveErrors([]);
+        toast.success("Saved");
+      }
       resetPending();
       setLineConceptAssignment({});
       setSnapshot(null);
@@ -1518,6 +1562,31 @@ export function SmartCard({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Move-failure inline alert */}
+      {moveErrors.length > 0 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <div className="font-medium text-destructive">
+              {moveErrors.reduce((s, f) => s + f.count, 0)} line{moveErrors.reduce((s, f) => s + f.count, 0) === 1 ? "" : "s"} could not be moved
+            </div>
+            <button
+              type="button"
+              onClick={() => setMoveErrors([])}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Dismiss
+            </button>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            {moveErrors.map((f, i) => (
+              <li key={i}>
+                <span className="font-medium text-foreground">{f.conceptName}</span>: {f.count} line{f.count === 1 ? "" : "s"} — {f.reason}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
