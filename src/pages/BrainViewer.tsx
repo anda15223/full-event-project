@@ -72,6 +72,7 @@ export default function BrainViewer() {
   const [selected, setSelected] = useState<BrainEntry | null>(null);
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: festivals = [] } = useQuery({
     queryKey: ["brain-festivals"],
