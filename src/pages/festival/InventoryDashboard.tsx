@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Search, AlertTriangle, CheckCircle2, Package } from "lucide-react";
+import { ArrowLeft, Search, AlertTriangle, CheckCircle2, Package, LayoutGrid, Table as TableIcon, ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Row = {
@@ -27,21 +27,17 @@ type Row = {
   festival_slug?: string;
 };
 
-/**
- * Inventory dashboard.
- * - If used at /festivals/:slug/inventory → scoped to that festival.
- * - If used at /inventory → global, with festival picker.
- */
 export default function InventoryDashboard({ scope }: { scope: "global" | "festival" }) {
   const { slug } = useParams<{ slug: string }>();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "missing" | "short" | "matched">("all");
   const [festivalFilter, setFestivalFilter] = useState<string>("__all__");
+  const [conceptFilter, setConceptFilter] = useState<string>("__all__");
+  const [view, setView] = useState<"visual" | "report">("visual");
 
   const { data, isLoading } = useQuery({
     queryKey: ["inventory_dashboard", scope, slug],
     queryFn: async () => {
-      // Resolve festivals in scope
       let festivalsQ = (supabase as any).from("festivals").select("id, name, slug");
       if (scope === "festival" && slug) festivalsQ = festivalsQ.eq("slug", slug);
       const { data: festivals } = await festivalsQ;
@@ -89,9 +85,20 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
   const rows = data?.rows || [];
   const festivals = data?.festivals || [];
 
+  const conceptOptions = useMemo(() => {
+    const set = new Map<string, string>();
+    rows.forEach((r) => {
+      if (r.concept_name && (festivalFilter === "__all__" || r.festival_slug === festivalFilter)) {
+        set.set(r.concept_name, r.concept_name);
+      }
+    });
+    return Array.from(set.keys()).sort();
+  }, [rows, festivalFilter]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (festivalFilter !== "__all__" && r.festival_slug !== festivalFilter) return false;
+      if (conceptFilter !== "__all__" && r.concept_name !== conceptFilter) return false;
       if (search && !r.item_name.toLowerCase().includes(search.toLowerCase())) return false;
       const need = r.needed_quantity;
       const counted = r.counted_quantity;
@@ -103,19 +110,42 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
       if (statusFilter === "matched" && !matched) return false;
       return true;
     });
-  }, [rows, festivalFilter, search, statusFilter]);
+  }, [rows, festivalFilter, conceptFilter, search, statusFilter]);
 
   const stats = useMemo(() => {
-    const total = rows.length;
-    const missing = rows.filter((r) => r.needed_quantity == null || r.needed_quantity === 0).length;
-    const matched = rows.filter((r) =>
+    const total = filtered.length;
+    const missing = filtered.filter((r) => r.needed_quantity == null || r.needed_quantity === 0).length;
+    const matched = filtered.filter((r) =>
       r.counted_quantity != null && r.needed_quantity != null && r.counted_quantity === r.needed_quantity
     ).length;
-    const short = rows.filter((r) =>
+    const short = filtered.filter((r) =>
       r.counted_quantity != null && r.needed_quantity != null && r.counted_quantity < r.needed_quantity
     ).length;
     return { total, missing, matched, short };
-  }, [rows]);
+  }, [filtered]);
+
+  // Group by concept for visual view
+  const groupedByConcept = useMemo(() => {
+    const groups = new Map<string, Row[]>();
+    filtered.forEach((r) => {
+      const key = r.concept_name || "Uncategorised";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(r);
+    });
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filtered]);
+
+  const photoUrlFor = (path: string | null) =>
+    path ? supabase.storage.from("festival-photos").getPublicUrl(path).data.publicUrl : null;
+
+  const statusOf = (r: Row) => {
+    const need = r.needed_quantity;
+    const counted = r.counted_quantity;
+    const missing = need == null || need === 0;
+    const short = counted != null && need != null && counted < need;
+    const matched = counted != null && need != null && counted === need;
+    return { missing, short, matched, need, counted, placed: r.placed_quantity };
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -129,21 +159,37 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
         <div className="h-10 w-10 rounded-xl bg-destructive/10 flex items-center justify-center">
           <Package className="h-5 w-5 text-destructive" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-destructive">Inventory</span>
             {scope === "festival" && rows[0]?.festival_name ? ` · ${rows[0].festival_name}` : ""}
           </h1>
           <p className="text-sm text-muted-foreground">
-            All trolley items across {scope === "global" ? "every festival" : "this festival"}.
+            Visual inventory grouped by concept. Switch to Report view for the spreadsheet.
           </p>
+        </div>
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setView("visual")}
+            className={cn("px-3 py-1.5 text-[12px] flex items-center gap-1.5",
+              view === "visual" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" /> Visual
+          </button>
+          <button
+            onClick={() => setView("report")}
+            className={cn("px-3 py-1.5 text-[12px] flex items-center gap-1.5",
+              view === "report" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted")}
+          >
+            <TableIcon className="h-3.5 w-3.5" /> Report
+          </button>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total items</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Items shown</div>
           <div className="text-2xl font-bold mt-1">{stats.total}</div>
         </Card>
         <Card className="p-3 border-destructive/30">
@@ -172,8 +218,8 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
           />
         </div>
         {scope === "global" && (
-          <Select value={festivalFilter} onValueChange={setFestivalFilter}>
-            <SelectTrigger className="h-8 w-[200px] text-[12px]"><SelectValue /></SelectTrigger>
+          <Select value={festivalFilter} onValueChange={(v) => { setFestivalFilter(v); setConceptFilter("__all__"); }}>
+            <SelectTrigger className="h-8 w-[180px] text-[12px]"><SelectValue /></SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="__all__" className="text-[12px]">All festivals</SelectItem>
               {festivals.map((f: any) => (
@@ -182,8 +228,17 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
             </SelectContent>
           </Select>
         )}
+        <Select value={conceptFilter} onValueChange={setConceptFilter}>
+          <SelectTrigger className="h-8 w-[180px] text-[12px]"><SelectValue placeholder="All concepts" /></SelectTrigger>
+          <SelectContent className="bg-popover">
+            <SelectItem value="__all__" className="text-[12px]">All concepts</SelectItem>
+            {conceptOptions.map((name) => (
+              <SelectItem key={name} value={name} className="text-[12px]">{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-          <SelectTrigger className="h-8 w-[180px] text-[12px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-[170px] text-[12px]"><SelectValue /></SelectTrigger>
           <SelectContent className="bg-popover">
             <SelectItem value="all" className="text-[12px]">All statuses</SelectItem>
             <SelectItem value="missing" className="text-[12px]">Missing need</SelectItem>
@@ -196,97 +251,178 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
         </div>
       </div>
 
-      {/* Table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-[12px]">
-            <thead className="bg-muted/40 text-muted-foreground">
-              <tr>
-                <th className="text-left font-medium px-3 py-2 w-12"></th>
-                <th className="text-left font-medium px-3 py-2">Item</th>
-                {scope === "global" && <th className="text-left font-medium px-3 py-2">Festival</th>}
-                <th className="text-left font-medium px-3 py-2">Concept</th>
-                <th className="text-left font-medium px-3 py-2">Trolley</th>
-                <th className="text-right font-medium px-3 py-2">Need</th>
-                <th className="text-right font-medium px-3 py-2">Placed</th>
-                <th className="text-right font-medium px-3 py-2">Done</th>
-                <th className="text-left font-medium px-3 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Loading…</td></tr>
-              )}
-              {!isLoading && filtered.length === 0 && (
-                <tr><td colSpan={9} className="text-center py-8 text-muted-foreground italic">No items match</td></tr>
-              )}
-              {filtered.map((r) => {
-                const photoUrl = r.photo_path
-                  ? supabase.storage.from("festival-photos").getPublicUrl(r.photo_path).data.publicUrl
-                  : null;
-                const need = r.needed_quantity;
-                const placed = r.placed_quantity;
-                const counted = r.counted_quantity;
-                const missing = need == null || need === 0;
-                const short = counted != null && need != null && counted < need;
-                const matched = counted != null && need != null && counted === need;
+      {isLoading && (
+        <Card className="p-8 text-center text-muted-foreground text-sm">Loading inventory…</Card>
+      )}
 
-                return (
-                  <tr key={r.id} className="border-t border-border/30 hover:bg-muted/20">
-                    <td className="px-3 py-2">
-                      {photoUrl ? (
-                        <img src={photoUrl} alt={r.item_name} className="h-8 w-8 rounded object-cover" />
-                      ) : (
-                        <div className="h-8 w-8 rounded bg-muted/50" />
-                      )}
-                    </td>
-                    <td className="px-3 py-2 font-medium">{r.item_name}</td>
-                    {scope === "global" && (
-                      <td className="px-3 py-2 text-muted-foreground">
-                        {r.festival_slug ? (
-                          <Link to={`/festivals/${r.festival_slug}/inventory`} className="hover:text-primary">
-                            {r.festival_name}
-                          </Link>
-                        ) : "—"}
-                      </td>
-                    )}
-                    <td className="px-3 py-2 text-muted-foreground">{r.concept_name || "—"}</td>
-                    <td className="px-3 py-2 text-muted-foreground">#{r.trolley_number}</td>
-                    <td className={cn("px-3 py-2 text-right tabular-nums", missing && "text-destructive font-semibold")}>
-                      {need ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{placed ?? "—"}</td>
-                    <td className={cn(
-                      "px-3 py-2 text-right tabular-nums",
-                      short && "text-amber-600",
-                      matched && "text-emerald-600"
-                    )}>{counted ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      {missing ? (
-                        <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
-                          <AlertTriangle className="h-2.5 w-2.5 mr-1" /> Need missing
-                        </Badge>
-                      ) : matched ? (
-                        <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">
-                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Matched
-                        </Badge>
-                      ) : short ? (
-                        <Badge variant="outline" className="border-amber-500/40 text-amber-600 text-[10px]">
-                          <AlertTriangle className="h-2.5 w-2.5 mr-1" /> Short by {(need ?? 0) - (counted ?? 0)}
-                        </Badge>
-                      ) : counted == null ? (
-                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Not counted</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px]">OK</Badge>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {!isLoading && filtered.length === 0 && (
+        <Card className="p-8 text-center text-muted-foreground text-sm italic">No items match these filters</Card>
+      )}
+
+      {/* VISUAL VIEW — grouped by concept, photo cards */}
+      {!isLoading && view === "visual" && filtered.length > 0 && (
+        <div className="space-y-8">
+          {groupedByConcept.map(([conceptName, items]) => {
+            const conceptStats = {
+              total: items.length,
+              missing: items.filter((r) => r.needed_quantity == null || r.needed_quantity === 0).length,
+              matched: items.filter((r) => r.counted_quantity != null && r.needed_quantity != null && r.counted_quantity === r.needed_quantity).length,
+            };
+            return (
+              <section key={conceptName} className="space-y-3">
+                <div className="flex items-center gap-3 sticky top-0 z-10 bg-background/95 backdrop-blur py-2 border-b border-border">
+                  <h2 className="text-lg font-semibold">{conceptName}</h2>
+                  <Badge variant="outline" className="text-[10px]">{conceptStats.total} items</Badge>
+                  {conceptStats.missing > 0 && (
+                    <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
+                      {conceptStats.missing} missing need
+                    </Badge>
+                  )}
+                  {conceptStats.matched > 0 && (
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">
+                      {conceptStats.matched} matched
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {items.map((r) => {
+                    const url = photoUrlFor(r.photo_path);
+                    const s = statusOf(r);
+                    return (
+                      <Card key={r.id} className={cn(
+                        "overflow-hidden group transition-shadow hover:shadow-md",
+                        s.missing && "border-destructive/40",
+                        s.short && "border-amber-500/40",
+                        s.matched && "border-emerald-500/40",
+                      )}>
+                        <div className="aspect-square bg-muted/40 relative overflow-hidden">
+                          {url ? (
+                            <img src={url} alt={r.item_name} className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                              <ImageOff className="h-8 w-8" />
+                            </div>
+                          )}
+                          <div className="absolute top-1.5 right-1.5">
+                            {s.missing ? (
+                              <Badge variant="outline" className="bg-background/95 border-destructive/50 text-destructive text-[9px] px-1.5 py-0">
+                                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> Need
+                              </Badge>
+                            ) : s.matched ? (
+                              <Badge variant="outline" className="bg-background/95 border-emerald-500/50 text-emerald-600 text-[9px] px-1.5 py-0">
+                                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> OK
+                              </Badge>
+                            ) : s.short ? (
+                              <Badge variant="outline" className="bg-background/95 border-amber-500/50 text-amber-600 text-[9px] px-1.5 py-0">
+                                Short {(s.need ?? 0) - (s.counted ?? 0)}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          {r.trolley_number != null && (
+                            <div className="absolute bottom-1.5 left-1.5">
+                              <Badge variant="outline" className="bg-background/95 text-[9px] px-1.5 py-0">
+                                Trolley #{r.trolley_number}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-2.5 space-y-1">
+                          <div className="text-[12px] font-medium leading-tight line-clamp-2" title={r.item_name}>
+                            {r.item_name}
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground tabular-nums">
+                            <span>Need <strong className={cn("text-foreground", s.missing && "text-destructive")}>{s.need ?? "—"}</strong></span>
+                            <span>Placed <strong className="text-foreground">{s.placed ?? "—"}</strong></span>
+                            <span>Done <strong className={cn("text-foreground", s.short && "text-amber-600", s.matched && "text-emerald-600")}>{s.counted ?? "—"}</strong></span>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
-      </Card>
+      )}
+
+      {/* REPORT VIEW — original table */}
+      {!isLoading && view === "report" && filtered.length > 0 && (
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th className="text-left font-medium px-3 py-2 w-12"></th>
+                  <th className="text-left font-medium px-3 py-2">Item</th>
+                  {scope === "global" && <th className="text-left font-medium px-3 py-2">Festival</th>}
+                  <th className="text-left font-medium px-3 py-2">Concept</th>
+                  <th className="text-left font-medium px-3 py-2">Trolley</th>
+                  <th className="text-right font-medium px-3 py-2">Need</th>
+                  <th className="text-right font-medium px-3 py-2">Placed</th>
+                  <th className="text-right font-medium px-3 py-2">Done</th>
+                  <th className="text-left font-medium px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => {
+                  const photoUrl = photoUrlFor(r.photo_path);
+                  const s = statusOf(r);
+                  return (
+                    <tr key={r.id} className="border-t border-border/30 hover:bg-muted/20">
+                      <td className="px-3 py-2">
+                        {photoUrl ? (
+                          <img src={photoUrl} alt={r.item_name} className="h-8 w-8 rounded object-cover" />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-muted/50" />
+                        )}
+                      </td>
+                      <td className="px-3 py-2 font-medium">{r.item_name}</td>
+                      {scope === "global" && (
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {r.festival_slug ? (
+                            <Link to={`/festivals/${r.festival_slug}/inventory`} className="hover:text-primary">
+                              {r.festival_name}
+                            </Link>
+                          ) : "—"}
+                        </td>
+                      )}
+                      <td className="px-3 py-2 text-muted-foreground">{r.concept_name || "—"}</td>
+                      <td className="px-3 py-2 text-muted-foreground">#{r.trolley_number}</td>
+                      <td className={cn("px-3 py-2 text-right tabular-nums", s.missing && "text-destructive font-semibold")}>
+                        {s.need ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">{s.placed ?? "—"}</td>
+                      <td className={cn("px-3 py-2 text-right tabular-nums", s.short && "text-amber-600", s.matched && "text-emerald-600")}>
+                        {s.counted ?? "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        {s.missing ? (
+                          <Badge variant="outline" className="border-destructive/40 text-destructive text-[10px]">
+                            <AlertTriangle className="h-2.5 w-2.5 mr-1" /> Need missing
+                          </Badge>
+                        ) : s.matched ? (
+                          <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">
+                            <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Matched
+                          </Badge>
+                        ) : s.short ? (
+                          <Badge variant="outline" className="border-amber-500/40 text-amber-600 text-[10px]">
+                            <AlertTriangle className="h-2.5 w-2.5 mr-1" /> Short by {(s.need ?? 0) - (s.counted ?? 0)}
+                          </Badge>
+                        ) : s.counted == null ? (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Not counted</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px]">OK</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
