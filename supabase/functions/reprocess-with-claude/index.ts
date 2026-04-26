@@ -294,7 +294,7 @@ async function handleRetryErrors(supabase: any, supabaseUrl: string, supabaseKey
     const chunk = batch.slice(i, i + parallel);
 
     const results = await Promise.allSettled(
-      chunk.map(async (emailId, idx) => {
+      chunk.map(async (emailId: string, idx: number) => {
         // Stagger retry calls
         if (idx > 0) await new Promise(r => setTimeout(r, idx * 1500));
         const email = invoiceEmails.find((e: any) => e.id === emailId);

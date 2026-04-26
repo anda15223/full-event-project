@@ -472,7 +472,7 @@ async function processEmailBody(
 /* ── Process a single attachment ── */
 async function processAttachment(
   supabase: any, att: any, supabaseUrl: string, claudeKey: string
-): Promise<{ email_id: string; attachment_id: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> {
+): Promise<{ email_id: string; attachment_id?: string; status: string; error?: string; error_category?: ErrorCategory; [key: string]: any }> {
   if (!att.storage_path) {
     return { email_id: att.email_id, attachment_id: att.id, status: "skipped", error: "No storage path", error_category: "attachment_download" };
   }
