@@ -39,6 +39,8 @@ export type SmartCardProps = {
   hideBrainButton?: boolean;
   /** Other concepts in the same festival/section — enables "Copy item to other concepts" */
   siblingConcepts?: { id: string; name: string }[];
+  /** When true, each line shows a concept dropdown; on Save, lines with concept assigned get moved into that concept's per-concept card */
+  conceptAssignerMode?: boolean;
 };
 
 type SCard = { id: string; title: string | null; meta: any };
@@ -82,8 +84,10 @@ const sourceLabel = (s: string) => {
 export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
-  hideBrainButton, siblingConcepts,
+  hideBrainButton, siblingConcepts, conceptAssignerMode,
 }: SmartCardProps) {
+  // line.id -> target concept id chosen via dropdown (only used when conceptAssignerMode)
+  const [lineConceptAssignment, setLineConceptAssignment] = useState<Record<string, string>>({});
   const [card, setCard] = useState<SCard | null>(null);
   const [sections, setSections] = useState<SSection[]>([]);
   const [lines, setLines] = useState<SLine[]>([]);
@@ -152,18 +156,17 @@ export function SmartCard({
     if (!festivalId) return;
     setLoading(true);
     try {
-      // Find or create the SmartCard row
-      const filter: any = { card_key: cardKey, festival_id: festivalId };
-      if (conceptId) filter.concept_id = conceptId;
-      let { data: cards } = await (supabase as any)
+      // Find or create the SmartCard row (scope: festival-level when no conceptId, else per-concept)
+      let query = (supabase as any)
         .from("smart_cards")
         .select("*")
-        .match(filter)
-        .limit(1);
+        .eq("card_key", cardKey)
+        .eq("festival_id", festivalId);
+      query = conceptId ? query.eq("concept_id", conceptId) : query.is("concept_id", null);
+      let { data: cards } = await query.limit(1);
       let c = cards?.[0];
       if (!c) {
-        const insert: any = { card_key: cardKey, festival_id: festivalId, title };
-        if (conceptId) insert.concept_id = conceptId;
+        const insert: any = { card_key: cardKey, festival_id: festivalId, title, concept_id: conceptId ?? null };
         const { data: created, error } = await (supabase as any)
           .from("smart_cards").insert(insert).select().single();
         if (error) throw error;
@@ -488,9 +491,81 @@ export function SmartCard({
         const { error } = await (supabase as any).from("smart_lines").update(patch).eq("id", id);
         if (error) throw error;
       }
-      // 6. Delete lines
-      if (pending.lineDeletes.length) {
-        const { error } = await (supabase as any).from("smart_lines").delete().in("id", pending.lineDeletes);
+      // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
+      const movedLineIds: string[] = [];
+      if (conceptAssignerMode && Object.keys(lineConceptAssignment).length) {
+        // group by concept
+        const byConcept: Record<string, string[]> = {};
+        for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
+          if (!targetConceptId || isDraftId(lineId)) continue;
+          (byConcept[targetConceptId] ||= []).push(lineId);
+        }
+        for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
+          const linesToMove = lines.filter(l => lineIds.includes(l.id));
+          if (!linesToMove.length) continue;
+
+          // Get-or-create target SmartCard
+          let { data: tCard } = await (supabase as any)
+            .from("smart_cards")
+            .select("id")
+            .eq("festival_id", festivalId)
+            .eq("card_key", cardKey)
+            .eq("concept_id", targetConceptId)
+            .maybeSingle();
+          if (!tCard) {
+            const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+            const { data: created, error: cErr } = await (supabase as any)
+              .from("smart_cards")
+              .insert({ festival_id: festivalId, card_key: cardKey, concept_id: targetConceptId, title: `${title.split(" — ")[0]} — ${conceptName}`, meta: {} })
+              .select("id").single();
+            if (cErr) throw cErr;
+            tCard = created;
+          }
+
+          // For each source section, get-or-create matching section in target card and insert lines
+          const sectionsTouched = Array.from(new Set(linesToMove.map(l => l.section_id)));
+          for (const srcSecId of sectionsTouched) {
+            const srcSec = sections.find(s => s.id === srcSecId);
+            if (!srcSec) continue;
+            let { data: tSec } = await (supabase as any)
+              .from("smart_sections").select("id, order_index")
+              .eq("card_id", tCard.id).eq("title", srcSec.title).maybeSingle();
+            if (!tSec) {
+              const { data: maxRow } = await (supabase as any)
+                .from("smart_sections").select("order_index")
+                .eq("card_id", tCard.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
+              const nextOrder = (maxRow?.order_index ?? -1) + 1;
+              const { data: createdSec, error: sErr } = await (supabase as any)
+                .from("smart_sections")
+                .insert({ card_id: tCard.id, title: srcSec.title, description: srcSec.description, order_index: nextOrder, source: "manual" })
+                .select("id, order_index").single();
+              if (sErr) throw sErr;
+              tSec = createdSec;
+            }
+            const { data: maxLine } = await (supabase as any)
+              .from("smart_lines").select("order_index")
+              .eq("section_id", tSec.id).order("order_index", { ascending: false }).limit(1).maybeSingle();
+            let nextLineOrder = (maxLine?.order_index ?? -1) + 1;
+            const rows = linesToMove
+              .filter(l => l.section_id === srcSecId)
+              .map(l => ({
+                section_id: tSec.id,
+                label: l.label, value: l.value, quantity: l.quantity, notes: l.notes,
+                status: l.status, owner: l.owner, due_date: l.due_date,
+                order_index: nextLineOrder++, source: l.source,
+              }));
+            if (rows.length) {
+              const { error: lErr } = await (supabase as any).from("smart_lines").insert(rows);
+              if (lErr) throw lErr;
+            }
+          }
+          movedLineIds.push(...linesToMove.map(l => l.id));
+        }
+      }
+      // 6. Delete lines (including moved ones)
+      const allDeletes = Array.from(new Set([...pending.lineDeletes, ...movedLineIds]));
+      if (allDeletes.length) {
+        const { error } = await (supabase as any).from("smart_lines").delete().in("id", allDeletes);
         if (error) throw error;
       }
       // 7. Update todos
@@ -505,6 +580,7 @@ export function SmartCard({
       }
       toast.success("Saved");
       resetPending();
+      setLineConceptAssignment({});
       setSnapshot(null);
       setEditMode(false);
       await reload();
@@ -1248,13 +1324,34 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      const canCopy = !conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      const showAssigner = conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0;
+                      const assigned = lineConceptAssignment[line.id] || "";
+                      const gridCols = showAssigner
+                        ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]"
+                        : (canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]");
                       return (
-                      <div key={line.id} className={cn("grid gap-1.5 items-center group", canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]") }>
+                      <div key={line.id} className={cn("grid gap-1.5 items-center group", gridCols)}>
                         <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
                         <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
                         <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
                         <Input value={line.notes ?? ""} onChange={(e) => updateLine(line.id, { notes: e.target.value })} placeholder="Notes" className="h-7 text-xs" />
+                        {showAssigner && (
+                          <select
+                            value={assigned}
+                            onChange={(e) => setLineConceptAssignment(prev => ({ ...prev, [line.id]: e.target.value }))}
+                            className={cn(
+                              "h-7 text-xs rounded border bg-background px-1",
+                              assigned ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                            )}
+                            title="Assign to concept (moves on Save)"
+                          >
+                            <option value="">— concept —</option>
+                            {siblingConcepts!.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        )}
                         <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
                           {sourceLabel(line.source)}
                         </Badge>

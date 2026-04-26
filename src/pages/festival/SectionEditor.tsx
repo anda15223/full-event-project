@@ -93,6 +93,16 @@ export default function SectionEditor() {
             </Card>
           ) : (
             <div className="space-y-6">
+              {/* Common list — grab/upload here, then assign each line to a concept and Save to split */}
+              <SmartCard
+                cardKey={sectionKey}
+                festivalId={festival.id}
+                title={`${SMART_CARDS[sectionKey].title} — Common list`}
+                subtitle="Upload or grab everything here. In edit mode, pick a concept per line — on Save the line moves into that concept's card below."
+                emptyStateWarning={SMART_CARDS[sectionKey].warning}
+                siblingConcepts={concepts.map((x: any) => ({ id: x.id, name: x.name }))}
+                conceptAssignerMode
+              />
               {concepts.map((c: any) => (
                 <SmartCard
                   key={c.id}
