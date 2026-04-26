@@ -2091,10 +2091,15 @@ export function SmartCard({
                       onChange={(e) => {
                         const next = e.target.value;
                         setSourceCardFilter(next);
+                        const pool = brainDocs.filter((d) => {
+                          if (!includeOtherCards && !d.same_card) return false;
+                          if (next !== "all" && d.category !== next) return false;
+                          return true;
+                        });
                         setSelectedBrainIds(
                           next === "all"
-                            ? new Set(brainDocs.filter((d) => d.recommended).map((d) => d.id))
-                            : new Set()
+                            ? new Set(pool.filter((d) => d.recommended).map((d) => d.id))
+                            : new Set(pool.map((d) => d.id))
                         );
                       }}
                       className="h-7 rounded-md border border-input bg-background px-2 text-xs"
