@@ -9,6 +9,7 @@ import { QuestionInput } from "@/components/festival/QuestionInput";
 import { ContactsManager } from "@/components/festival/ContactsManager";
 import { SmartCard } from "@/components/festival/SmartCard";
 import { SectionPageChat } from "@/components/festival/SectionPageChat";
+import { FacadeInventoryCard } from "@/components/festival/FacadeInventoryCard";
 import {
   useFestival, useSection, useQuestions, useAnswers, useConcepts
 } from "@/hooks/useFestival";
@@ -166,6 +167,10 @@ export default function SectionEditor() {
 
       {sectionKey === "intro" && festival && (
         <ContactsManager festivalId={festival.id} />
+      )}
+
+      {sectionKey === "facade" && festival && slug && (
+        <FacadeInventoryCard festivalId={festival.id} festivalSlug={slug} />
       )}
 
       {festival && sectionKey && (
