@@ -283,9 +283,19 @@ Produce ONE section "Festival overview" with lines: Name, Dates, Location, Organ
 4. "Install" — install date, contact, tools needed.
 Only include lines actually present in the source.`,
   recipes: `This is the RECIPES card. Produce ONE section per dish/product. Lines: Ingredient name (label), quantity (value), unit/notes (notes). Add a final line "Allergens" with the allergen list. Skip if source has no recipe data.`,
-  trolley: `This is the BC TROLLEY packing card. Produce sections per trolley (e.g. "Trolley 1 — Crispy Chicken"). Lines: item name (label), quantity (value), category (notes). Skip non-trolley content.`,
+  trolley: `This is the BC TROLLEY packing card. Extract the actual trolley inventory/checklist from photos, OCR text, Brain notes, or corrected card data.
+Create one section per source list/concept when possible. Every physical item must become its own line.
+For each line:
+  • label = item name (bowls, whisker, knives, napkins, gloves, garbage bags, etc.)
+  • quantity = the count/text after ':' or trailing quantity (e.g. "2", "5000 pcs", "S M L")
+  • value = size/spec only if present
+  • notes = category/source if useful (cleaning, packaging, small equipment)
+Do not skip cleaning/packaging lists. Do not summarise — preserve every item as editable checklist rows.`,
   extra_details: `This is the EXTRA DETAILS card — miscellaneous facts that don't fit elsewhere. Produce sections grouped by topic (e.g. "Wifi", "Waste", "Water"). Each line: label = fact name, value = the fact.`,
 };
+
+const isTrolleyCardKey = (key: string) => /^trolley[_-]/i.test(String(key || ""));
+const cardPromptForKey = (key: string) => CARD_PROMPTS[key] || (isTrolleyCardKey(key) ? CARD_PROMPTS.trolley : "Extract logical sections and lines from this document.");
 
 async function extractFromFile({
   file_id,
