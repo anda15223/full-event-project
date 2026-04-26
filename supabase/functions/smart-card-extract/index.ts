@@ -393,6 +393,16 @@ async function extractFromFile({
   for (const s of extracted.sections || []) sectionsToCreate.push(s);
   extracted.sections = sectionsToCreate;
 
+  // ---- Schema sanitiser: drop dump-like sections / lines that don't fit the card ----
+  const sanitised = sanitizeSections(card_key, extracted.sections || []);
+  extracted.sections = sanitised.sections;
+  if (sanitised.rejected.length) {
+    console.log(
+      `[sanitiser] ${card_key}: rejected`,
+      sanitised.rejected,
+    );
+  }
+
   // ---- Per-card validation: flag missing required info ----
   const warnings = validateExtraction(card_key, extracted.sections || []);
 
