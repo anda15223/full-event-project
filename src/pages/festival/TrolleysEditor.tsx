@@ -60,6 +60,15 @@ export default function TrolleysEditor() {
     qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
   };
 
+  const updateItemCategory = async (id: string, category: string) => {
+    const { error } = await supabase
+      .from("festival_bc_trolley_items")
+      .update({ category })
+      .eq("id", id);
+    if (error) { toast.error("Failed to update"); return; }
+    qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
+  };
+
   const removeItem = async (id: string) => {
     const { error } = await supabase.from("festival_bc_trolley_items").delete().eq("id", id);
     if (error) { toast.error("Failed to delete"); return; }
@@ -127,16 +136,28 @@ export default function TrolleysEditor() {
                       {grouped[gk].map(i => (
                         <div key={i.id} className="flex items-center justify-between gap-2 text-[12px] py-1 px-2 rounded hover:bg-secondary/40">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Badge variant="outline" className="text-[10px] shrink-0">{i.category}</Badge>
                             <span className="truncate">{i.item_name}</span>
                             {i.quantity && <span className="text-muted-foreground shrink-0">× {i.quantity}</span>}
                           </div>
                           <Select
+                            value={i.category}
+                            onValueChange={(v) => updateItemCategory(i.id, v)}
+                          >
+                            <SelectTrigger className="h-7 w-[150px] text-[11px]">
+                              <SelectValue placeholder="Inventory" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover">
+                              {CATEGORIES.map(c => (
+                                <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
                             value={(i as any).concept_id ?? NO_CONCEPT}
                             onValueChange={(v) => updateItemConcept(i.id, v)}
                           >
-                            <SelectTrigger className="h-7 w-[160px] text-[11px]">
-                              <SelectValue placeholder="Affiliate to…" />
+                            <SelectTrigger className="h-7 w-[140px] text-[11px]">
+                              <SelectValue placeholder="Concept" />
                             </SelectTrigger>
                             <SelectContent className="bg-popover">
                               <SelectItem value={NO_CONCEPT} className="text-[12px]">Unassigned</SelectItem>
