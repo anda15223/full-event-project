@@ -1721,12 +1721,12 @@ export function SmartCard({
                       // On per-concept cards it MOVES the line to the chosen concept on Save.
                       const showAssigner = !!siblingConcepts && siblingConcepts.length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
+                      const showInlineConcept = enableInlineConceptAllocator && !!siblingConcepts && siblingConcepts.length > 0;
+                      const showInventory = !!inventoryCategories && inventoryCategories.length > 0;
                       const extraCol = showInventory ? "_130px" : "";
                       const gridCols = showAssigner
                         ? (canCopy ? `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px_24px]` : `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px]`)
                         : (canCopy ? `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px_24px]` : `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px]`);
-                      const showInlineConcept = enableInlineConceptAllocator && !!siblingConcepts && siblingConcepts.length > 0;
-                      const showInventory = !!inventoryCategories && inventoryCategories.length > 0;
                       const inlineConceptVal = (line.meta as any)?.allocated_concept_id ?? "";
                       const inventoryVal = (line.meta as any)?.inventory_category ?? "";
                       const persistMeta = async (patch: Record<string, any>) => {
