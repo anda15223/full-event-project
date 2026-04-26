@@ -652,11 +652,12 @@ export function SmartCard({
       }
       // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
       const movedLineIds: string[] = [];
-      if (conceptAssignerMode && Object.keys(lineConceptAssignment).length) {
+      if (Object.keys(lineConceptAssignment).length) {
         // group by concept
         const byConcept: Record<string, string[]> = {};
         for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
           if (!targetConceptId || isDraftId(lineId)) continue;
+          if (targetConceptId === conceptId) continue; // same card, no-op
           (byConcept[targetConceptId] ||= []).push(lineId);
         }
         for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
@@ -1579,8 +1580,11 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
-                      const showAssigner = conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0;
+                       const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      // Show concept-assigner dropdown whenever we have sibling concepts to move/assign to.
+                      // In conceptAssignerMode (Common List) it splits to that concept on Save.
+                      // On per-concept cards it MOVES the line to the chosen concept on Save.
+                      const showAssigner = !!siblingConcepts && siblingConcepts.filter(c => c.id !== conceptId).length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
                       const gridCols = showAssigner
                         ? (canCopy ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px_24px]" : "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]")
@@ -1602,7 +1606,7 @@ export function SmartCard({
                             title="Assign to concept (moves on Save)"
                           >
                             <option value="">— concept —</option>
-                            {siblingConcepts!.map(c => (
+                            {siblingConcepts!.filter(c => c.id !== conceptId).map(c => (
                               <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                           </select>
