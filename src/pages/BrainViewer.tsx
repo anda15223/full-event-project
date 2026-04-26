@@ -475,6 +475,7 @@ function UploadToBrainPanel({
       const { data, error } = await supabase.functions.invoke("brain-extract", {
         body: {
           storage_path,
+          file_data_url,
           mime_type,
           filename,
           category,
