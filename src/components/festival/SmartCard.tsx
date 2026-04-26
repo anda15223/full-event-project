@@ -581,6 +581,7 @@ export function SmartCard({
       }
       toast.success("Saved");
       resetPending();
+      setLineConceptAssignment({});
       setSnapshot(null);
       setEditMode(false);
       await reload();
