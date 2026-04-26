@@ -835,7 +835,14 @@ export function SmartCard({
         const { error } = await (supabase as any).from("smart_todos").delete().in("id", pending.todoDeletes);
         if (error) throw error;
       }
-      toast.success("Saved");
+      const totalFailed = moveFailures.reduce((s, f) => s + f.count, 0);
+      if (totalFailed > 0) {
+        setMoveErrors(moveFailures);
+        toast.warning(`Saved with ${totalFailed} line${totalFailed === 1 ? "" : "s"} not moved. See details below.`);
+      } else {
+        setMoveErrors([]);
+        toast.success("Saved");
+      }
       resetPending();
       setLineConceptAssignment({});
       setSnapshot(null);
