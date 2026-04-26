@@ -735,7 +735,17 @@ export function SmartCard({
           // For each source section, get-or-create matching section in target card and insert lines
           const sectionsTouched = Array.from(new Set(linesToMove.map(l => l.section_id)));
           for (const srcSecId of sectionsTouched) {
-            const srcSec = sections.find(s => s.id === srcSecId);
+            // Try in-memory first; if section was just inserted, look up via reverse sectionIdMap; else fetch from DB
+            let srcSec: any = sections.find(s => s.id === srcSecId);
+            if (!srcSec) {
+              const draftId = Object.keys(sectionIdMap).find(k => sectionIdMap[k] === srcSecId);
+              if (draftId) srcSec = sections.find(s => s.id === draftId);
+            }
+            if (!srcSec) {
+              const { data: fetched } = await (supabase as any)
+                .from("smart_sections").select("id, title, description").eq("id", srcSecId).maybeSingle();
+              srcSec = fetched;
+            }
             if (!srcSec) continue;
             let { data: tSec } = await (supabase as any)
               .from("smart_sections").select("id, order_index")
