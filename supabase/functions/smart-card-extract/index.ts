@@ -283,9 +283,19 @@ Produce ONE section "Festival overview" with lines: Name, Dates, Location, Organ
 4. "Install" — install date, contact, tools needed.
 Only include lines actually present in the source.`,
   recipes: `This is the RECIPES card. Produce ONE section per dish/product. Lines: Ingredient name (label), quantity (value), unit/notes (notes). Add a final line "Allergens" with the allergen list. Skip if source has no recipe data.`,
-  trolley: `This is the BC TROLLEY packing card. Produce sections per trolley (e.g. "Trolley 1 — Crispy Chicken"). Lines: item name (label), quantity (value), category (notes). Skip non-trolley content.`,
+  trolley: `This is the BC TROLLEY packing card. Extract the actual trolley inventory/checklist from photos, OCR text, Brain notes, or corrected card data.
+Create one section per source list/concept when possible. Every physical item must become its own line.
+For each line:
+  • label = item name (bowls, whisker, knives, napkins, gloves, garbage bags, etc.)
+  • quantity = the count/text after ':' or trailing quantity (e.g. "2", "5000 pcs", "S M L")
+  • value = size/spec only if present
+  • notes = category/source if useful (cleaning, packaging, small equipment)
+Do not skip cleaning/packaging lists. Do not summarise — preserve every item as editable checklist rows.`,
   extra_details: `This is the EXTRA DETAILS card — miscellaneous facts that don't fit elsewhere. Produce sections grouped by topic (e.g. "Wifi", "Waste", "Water"). Each line: label = fact name, value = the fact.`,
 };
+
+const isTrolleyCardKey = (key: string) => /^trolley[_-]/i.test(String(key || ""));
+const cardPromptForKey = (key: string) => CARD_PROMPTS[key] || (isTrolleyCardKey(key) ? CARD_PROMPTS.trolley : "Extract logical sections and lines from this document.");
 
 async function extractFromFile({
   file_id,
@@ -302,9 +312,7 @@ async function extractFromFile({
     parse_status: "processing",
   });
 
-  const cardPrompt =
-    CARD_PROMPTS[card_key] ||
-    "Extract logical sections and lines from this document.";
+  const cardPrompt = cardPromptForKey(card_key);
 
   const summaryInstruction = `\n\nIMPORTANT:
 - Always populate the "summary" field with a thorough plain-text summary (5-15 lines) of EVERYTHING you can read in the document — supplier, items, prices, dates, addresses, contacts, notes. This is the user's safety net if structured extraction misses something.
@@ -918,6 +926,7 @@ const CARD_BRAIN_HINTS: Record<string, string[]> = {
     "email",
     "other",
   ],
+  trolley: ["trolley", "bc trolley", "cleaning", "packaging", "packing", "inventory", "equipment_list", "equipment", "other"],
 };
 
 const CARD_BRAIN_TERMS: Record<string, RegExp> = {
@@ -939,6 +948,8 @@ const CARD_BRAIN_TERMS: Record<string, RegExp> = {
     /transport|vehicle|car|truck|driver|load|trip|parking|delivery|pickup/i,
   power_requirements:
     /power|electric|amp|kw|kwh|socket|plug|16a|32a|63a|phase|strøm/i,
+  trolley:
+    /trolley|bc trolley|packing|cleaning|packaging|inventory|stocklist|small equipment|bowls|whisk|kniv|knife|napkin|gloves|garbage|boxes|spatula|forks|serving/i,
 };
 
 function uniqRows(rows: any[]) {
@@ -957,21 +968,23 @@ function scoreBrainRow(
   festivalId?: string,
   conceptId?: string,
 ) {
+  const targetKey = isTrolleyCardKey(cardKey) ? "trolley" : cardKey;
   const category = String(row.category || "").toLowerCase();
   const keyName = String(row.key_name || "").toLowerCase();
   const subjectType = String(row.subject_type || "").toLowerCase();
   const haystack = `${row.display_name || ""}
 ${row.content || ""}
 ${JSON.stringify(row.structured_data || {})}`;
-  const hints = CARD_BRAIN_HINTS[cardKey] || [cardKey];
-  const terms = CARD_BRAIN_TERMS[cardKey];
+  const hints = CARD_BRAIN_HINTS[targetKey] || [targetKey];
+  const terms = CARD_BRAIN_TERMS[targetKey];
   let score = 0;
 
-  if (category === cardKey) score += 120;
-  if (subjectType === cardKey) score += 60;
-  if (hints.includes(category)) score += 45;
+  if (category === cardKey || category === targetKey) score += 120;
+  if (subjectType === cardKey || subjectType === targetKey) score += 60;
+  if (hints.some((hint) => category.includes(hint))) score += 45;
   if (hints.some((hint) => keyName.includes(hint))) score += 35;
   if (terms?.test(haystack)) score += 30;
+  if (isTrolleyCardKey(cardKey) && /(^|\n).+(:|\s\d)/.test(String(row.content || ""))) score += 20;
   if (
     festivalId &&
     (row.festival_id === festivalId || row.last_seen_festival_id === festivalId)
@@ -1145,7 +1158,7 @@ async function grabFromSourceCard({ card_key, festival_id, concept_id, source_ca
     };
   }
 
-  const cardPrompt = CARD_PROMPTS[card_key] || "Extract logical sections and lines from this source card.";
+  const cardPrompt = cardPromptForKey(card_key);
   const structured = await callAI(
     [
       {
@@ -1347,9 +1360,7 @@ ${String(r.content).slice(0, 12000)}`,
   diagnostics.ai_source_docs = sourceDocs.length;
 
   if (sourceDocs.length) {
-    const cardPrompt =
-      CARD_PROMPTS[card_key] ||
-      "Extract logical sections and lines from this Brain knowledge.";
+    const cardPrompt = cardPromptForKey(card_key);
     try {
       const structured = await callAI(
         [

@@ -86,6 +86,112 @@ const sourceLabel = (s: string) => {
   }
 };
 
+const isTrolleyCardKey = (key: string) => /^trolley[_-]/i.test(key);
+
+const normaliseText = (value: unknown) =>
+  String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const conceptAliases = (name?: string | null) => {
+  const n = normaliseText(name);
+  if (!n) return [];
+  const aliases = new Set([n]);
+  n.split(" ").filter((part) => part.length > 2).forEach((part) => aliases.add(part));
+  return Array.from(aliases);
+};
+
+const scoreBrainDocLocally = (row: any, cardKey: string, festivalId: string, conceptId?: string | null, conceptName?: string | null) => {
+  const category = String(row.category || "");
+  const keyName = String(row.key_name || "");
+  const subjectType = String(row.subject_type || "");
+  const haystack = `${category}\n${keyName}\n${row.display_name || ""}\n${row.content || ""}\n${JSON.stringify(row.structured_data || {})}`;
+  const haystackNorm = normaliseText(haystack);
+  let score = 0;
+
+  if (category === cardKey) score += 120;
+  if (subjectType === cardKey) score += 60;
+  if (row.festival_id === festivalId || row.last_seen_festival_id === festivalId) score += 20;
+  if (conceptId && row.subject_id === conceptId) score += 80;
+  if (row.structured_data?.section || row.structured_data?.label) score += 15;
+
+  if (isTrolleyCardKey(cardKey)) {
+    if (/trolley|packing|cleaning|packaging|inventory|equipment|small equipment|bc trolley/i.test(haystack)) score += 45;
+    if (/\n.+(:|\s\d)/.test(String(row.content || ""))) score += 20;
+    const aliases = conceptAliases(conceptName);
+    if (aliases.some((alias) => haystackNorm.includes(alias))) score += 90;
+  }
+
+  return score;
+};
+
+const toBrainPickerItem = (row: any, cardKey: string, festivalId: string, conceptId?: string | null, conceptName?: string | null) => {
+  const score = scoreBrainDocLocally(row, cardKey, festivalId, conceptId, conceptName);
+  const sameCard = row.category === cardKey;
+  const hasStructured = row.structured_data?.section || row.structured_data?.label;
+  return {
+    id: row.id,
+    key_name: row.key_name,
+    display_name: row.display_name || row.key_name,
+    category: row.category,
+    same_card: sameCard,
+    scope: row.scope,
+    festival_id: row.festival_id,
+    frequency: row.frequency || 0,
+    last_seen_at: row.last_seen_at,
+    score,
+    recommended: sameCard || (isTrolleyCardKey(cardKey) && score >= 120),
+    role: hasStructured ? "structured_line" : "ai_source",
+    content_preview: String(row.content || row.structured_data?.summary || "").slice(0, 240),
+    content_chars: String(row.content || "").length,
+  };
+};
+
+const parseInventoryLine = (raw: string) => {
+  const text = raw.replace(/^[-•*]\s*/, "").trim();
+  if (!text) return null;
+  if (/^(packing\/?cleaning|packing|cleaning|bc trolleys?|inventory|stocklist)$/i.test(text)) return null;
+  if (/^[a-z '&]+\s*[–-]\s*bc trolleys?$/i.test(text)) return null;
+
+  const colonMatch = text.match(/^(.+?)\s*[:：]\s*(.+)$/);
+  if (colonMatch) {
+    return { label: colonMatch[1].trim(), quantity: colonMatch[2].trim() };
+  }
+
+  const trailingQty = text.match(/^(.+?)\s+((?:\d+(?:[.,]\d+)?\s*(?:pcs?|stk|boxes?|box|rolls?|roll|packs?|pack|bottles?|bottle|bags?|bag|sets?|set|x|l|kg)?|[sml](?:\s+[sml])*)\b.*)$/i);
+  if (trailingQty) {
+    return { label: trailingQty[1].trim(), quantity: trailingQty[2].trim() };
+  }
+
+  return { label: text, quantity: null };
+};
+
+const buildLocalTrolleySuggestions = (rows: any[]) => {
+  const sections = rows.map((row) => {
+    const lines = String(row.content || "")
+      .split(/\r?\n/)
+      .map(parseInventoryLine)
+      .filter(Boolean)
+      .map((line: any) => ({
+        label: line.label,
+        value: null,
+        quantity: line.quantity,
+        notes: row.category || null,
+        status: "todo",
+      }));
+
+    return {
+      title: row.category || row.display_name || "Trolley inventory",
+      lines,
+    };
+  }).filter((section) => section.lines.length > 0);
+
+  return sections;
+};
+
 export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
@@ -990,18 +1096,42 @@ export function SmartCard({
     setLoadingBrainDocs(true);
     setBrainDocs([]);
     try {
-      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
-        body: {
-          action: "list_brain_docs",
-          card_key: cardKey,
-          festival_id: festivalId,
-          concept_id: conceptId || null,
-        },
-      });
-      if (error) throw error;
-      const items: any[] = data?.items || [];
+      let items: any[] = [];
+      let edgeError: any = null;
+
+      try {
+        const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+          body: {
+            action: "list_brain_docs",
+            card_key: cardKey,
+            festival_id: festivalId,
+            concept_id: conceptId || null,
+          },
+        });
+        if (error) throw error;
+        items = data?.items || [];
+      } catch (e: any) {
+        edgeError = e;
+        const { data: rows, error: dbError } = await (supabase as any)
+          .from("brain_entries")
+          .select("*")
+          .or(`festival_id.eq.${festivalId},last_seen_festival_id.eq.${festivalId},category.eq.${cardKey}${conceptId ? `,subject_id.eq.${conceptId}` : ""}`)
+          .order("last_seen_at", { ascending: false })
+          .limit(300);
+        if (dbError) throw edgeError || dbError;
+        items = (rows || [])
+          .map((row: any) => toBrainPickerItem(row, cardKey, festivalId, conceptId, title))
+          .filter((item: any) => item.score > 0 || item.same_card)
+          .sort((a: any, b: any) =>
+            (Number(b.same_card) - Number(a.same_card)) ||
+            (Number(b.recommended) - Number(a.recommended)) ||
+            (b.score - a.score) ||
+            (b.frequency - a.frequency)
+          );
+        if (items.length) toast.info("Loaded Brain docs directly");
+      }
+
       setBrainDocs(items);
-      // Pre-select the recommended ones so the default behaviour matches the old "auto" flow.
       setSelectedBrainIds(new Set(items.filter((d) => d.recommended).map((d) => d.id)));
     } catch (e: any) {
       toast.error(`Could not load Brain docs: ${e.message || e}`);
@@ -1022,17 +1152,44 @@ export function SmartCard({
     setBrainPickerOpen(false);
     setGrabbing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
-        body: {
-          action: "grab_brain",
-          card_key: cardKey,
-          festival_id: festivalId,
-          concept_id: conceptId || null,
-          brain_ids: visibleSelectedIds,
-        },
-      });
-      if (error) throw error;
-      const suggestions: Array<{ title: string; lines: any[] }> = data?.suggestions || [];
+      let data: any = null;
+      let suggestions: Array<{ title: string; lines: any[] }> = [];
+      let usedLocalFallback = false;
+
+      try {
+        const result = await supabase.functions.invoke("smart-card-extract", {
+          body: {
+            action: "grab_brain",
+            card_key: cardKey,
+            festival_id: festivalId,
+            concept_id: conceptId || null,
+            brain_ids: visibleSelectedIds,
+          },
+        });
+        if (result.error) throw result.error;
+        data = result.data;
+        suggestions = data?.suggestions || [];
+      } catch (edgeError: any) {
+        const { data: rows, error: dbError } = await (supabase as any)
+          .from("brain_entries")
+          .select("*")
+          .in("id", visibleSelectedIds);
+        if (dbError) throw edgeError || dbError;
+        if (isTrolleyCardKey(cardKey)) {
+          suggestions = buildLocalTrolleySuggestions(rows || []);
+          usedLocalFallback = true;
+          data = {
+            diagnostics: {
+              selection_mode: "local_trolley_fallback",
+              brain_rows_selected: rows?.length || 0,
+              notes: ["Brain service request failed, so trolley lines were parsed directly from the selected Brain documents."],
+            },
+          };
+        } else {
+          throw edgeError;
+        }
+      }
+
       setBrainDiagnostics(data?.diagnostics || null);
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
@@ -1054,9 +1211,11 @@ export function SmartCard({
         }
       }
       toast.success(
-        sourceCardFilter !== "all"
-          ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
-          : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
+        usedLocalFallback
+          ? `Imported ${suggestions.reduce((total, s) => total + (s.lines?.length || 0), 0)} trolley line(s)`
+          : sourceCardFilter !== "all"
+            ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
+            : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
       );
       reload();
     } catch (e: any) {
