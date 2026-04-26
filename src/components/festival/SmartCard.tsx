@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, Upload, FileText, File as FileIcon, Loader2, Sparkles, Brain,
-  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X, Copy, Wand2,
+  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X, Copy, Wand2, Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -1767,24 +1767,7 @@ export function SmartCard({
                       </div>
                     );
                   })()}
-                  {editMode && sectionLines.length > 0 && (() => {
-                    const hasAssigner = !!siblingConcepts && siblingConcepts.length > 0;
-                    const hasInventory = !!inventoryCategories && inventoryCategories.length > 0;
-                    const extraCol = hasInventory ? "_minmax(0,130px)" : "";
-                    const cols = hasAssigner
-                      ? `grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_60px_minmax(0,110px)${extraCol}_50px_24px_24px]`
-                      : `grid-cols-[minmax(0,1fr)_minmax(0,2fr)_70px${extraCol}_50px_24px_24px]`;
-                    return (
-                      <div className={cn("grid gap-1.5 px-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold border-b border-border/40", cols)}>
-                        <span>Item</span>
-                        <span>Note</span>
-                        <span>Amount</span>
-                        {hasAssigner && <span>Concept</span>}
-                        {hasInventory && <span>Inventory</span>}
-                        <span>Src</span><span></span>{(hasAssigner || hasInventory) && <span></span>}
-                      </div>
-                    );
-                  })()}
+                  
                   {editMode ? (
                     sectionLines.map(line => {
                        const canCopy = true;
@@ -1810,75 +1793,109 @@ export function SmartCard({
                           if (error) toast.error(`Could not save: ${error.message}`);
                         }
                       };
+                      const photoUrl = (line.meta as any)?.photo_url ?? "";
+                      const photoPath = (line.meta as any)?.photo_path ?? "";
+                      const handlePhotoUpload = async (file: File) => {
+                        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 60);
+                        const path = `${festivalId}/${cardKey}/line-photos/${line.id}-${Date.now()}-${safe}`;
+                        const { error: upErr } = await supabase.storage
+                          .from("festival-photos")
+                          .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+                        if (upErr) { toast.error(`Photo upload failed`); return; }
+                        const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(path);
+                        if (photoPath) await supabase.storage.from("festival-photos").remove([photoPath]).catch(() => {});
+                        await persistMeta({ photo_path: path, photo_url: pub.publicUrl });
+                        toast.success("Photo added");
+                      };
+                      const removePhoto = async () => {
+                        if (photoPath) await supabase.storage.from("festival-photos").remove([photoPath]).catch(() => {});
+                        await persistMeta({ photo_path: null, photo_url: null });
+                      };
                       return (
-                      <div key={line.id} className="space-y-1">
-                      <div className={cn("grid gap-1.5 items-center group", gridCols)}>
-                        <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Item" className="h-7 text-xs" />
-                        <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Note" className="h-7 text-xs" />
-                        <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Amount (Qty)" className="h-7 text-xs" />
-                        
-                        {showAssigner && (
-                          <select
-                            value={assigned}
-                            onChange={(e) => setLineConceptAssignment(prev => ({ ...prev, [line.id]: e.target.value }))}
-                            className={cn(
-                              "h-7 text-xs rounded border bg-background px-1",
-                              assigned ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
-                            )}
-                            title="Assign to concept (moves on Save)"
-                          >
-                            <option value="">— concept —</option>
-                            {siblingConcepts!.map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
-                        )}
-                        {showInventory && (
-                          <select
-                            value={inventoryVal}
-                            onChange={(e) => persistMeta({ inventory_category: e.target.value || null })}
-                            className={cn(
-                              "h-7 text-[11px] rounded border bg-background px-1",
-                              inventoryVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
-                            )}
-                            title="Inventory category"
-                          >
-                            <option value="">— inventory —</option>
-                            {inventoryCategories!.map(c => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </select>
-                        )}
-                        <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
-                          {sourceLabel(line.source)}
-                        </Badge>
-                        {canCopy && (
-                          <Button variant="ghost" size="sm" title="Duplicate this line right below" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={() => duplicateLineInline(line.id)}>
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100" onClick={() => deleteLine(line.id)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      {showInlineConcept && (
-                        <div className="flex gap-1.5 pl-1 items-center">
-                          <select
-                            value={inlineConceptVal}
-                            onChange={(e) => persistMeta({ allocated_concept_id: e.target.value || null })}
-                            className={cn(
-                              "h-6 text-[11px] rounded border bg-background px-1.5 min-w-[120px]",
-                              inlineConceptVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
-                            )}
-                            title="Allocate to station/concept"
-                          >
-                            <option value="">— allocate to —</option>
-                            {siblingConcepts!.map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </select>
+                      <div key={line.id} className="group relative flex gap-2 p-2 rounded-md border border-border/50 bg-card hover:border-primary/40 hover:shadow-sm transition-all">
+                        {/* Photo thumbnail / upload */}
+                        <div className="shrink-0">
+                          {photoUrl ? (
+                            <div className="relative w-14 h-14 rounded overflow-hidden border border-border/40 group/img">
+                              <img src={photoUrl} alt={line.label || "item"} className="w-full h-full object-cover" />
+                              <button
+                                onClick={removePhoto}
+                                className="absolute top-0.5 right-0.5 h-4 w-4 rounded-full bg-background/80 text-destructive opacity-0 group-hover/img:opacity-100 flex items-center justify-center"
+                                title="Remove photo"
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="w-14 h-14 rounded border border-dashed border-border bg-muted/30 hover:border-primary hover:bg-muted/50 flex items-center justify-center cursor-pointer text-muted-foreground hover:text-primary transition-colors" title="Add photo">
+                              <Camera className="h-5 w-5" />
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f); e.target.value = ""; }} />
+                            </label>
+                          )}
                         </div>
-                      )}
+
+                        {/* Fields */}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          {/* Row 1: item + amount */}
+                          <div className="flex gap-1.5 items-center">
+                            <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Item" className="h-6 text-xs font-medium flex-1 min-w-0" />
+                            <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-6 text-xs w-14 shrink-0 text-center" />
+                            <Badge variant="outline" className={cn("h-4 px-1 text-[8px] shrink-0", sourceColor(line.source))}>
+                              {sourceLabel(line.source)}
+                            </Badge>
+                          </div>
+                          {/* Row 2: note */}
+                          <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Note (e.g. 2 fires, brand…)" className="h-6 text-[11px] text-muted-foreground" />
+                          {/* Row 3: dropdowns */}
+                          {(showAssigner || showInventory) && (
+                            <div className="flex gap-1.5">
+                              {showAssigner && (
+                                <select
+                                  value={assigned}
+                                  onChange={(e) => setLineConceptAssignment(prev => ({ ...prev, [line.id]: e.target.value }))}
+                                  className={cn(
+                                    "h-6 text-[10px] rounded border bg-background px-1 flex-1 min-w-0",
+                                    assigned ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                                  )}
+                                  title="Assign to concept (moves on Save)"
+                                >
+                                  <option value="">— concept —</option>
+                                  {siblingConcepts!.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                  ))}
+                                </select>
+                              )}
+                              {showInventory && (
+                                <select
+                                  value={inventoryVal}
+                                  onChange={(e) => persistMeta({ inventory_category: e.target.value || null })}
+                                  className={cn(
+                                    "h-6 text-[10px] rounded border bg-background px-1 flex-1 min-w-0",
+                                    inventoryVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                                  )}
+                                  title="Inventory category"
+                                >
+                                  <option value="">— inventory —</option>
+                                  {inventoryCategories!.map(c => (
+                                    <option key={c} value={c}>{c}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions (right) */}
+                        <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canCopy && (
+                            <Button variant="ghost" size="sm" title="Duplicate" className="h-6 w-6 p-0 text-muted-foreground hover:text-primary" onClick={() => duplicateLineInline(line.id)}>
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteLine(line.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                       );
                     })
