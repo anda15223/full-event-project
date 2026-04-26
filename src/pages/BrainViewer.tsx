@@ -46,6 +46,14 @@ type BrainEntry = {
 
 type Festival = { id: string; name: string; year: number; start_date: string };
 
+const fileToDataUrl = (input: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
+    reader.readAsDataURL(input);
+  });
+
 const sourceIcon = (source: string | null) => {
   switch (source) {
     case "email": return Mail;
@@ -449,14 +457,16 @@ function UploadToBrainPanel({
       let storage_path: string | undefined;
       let mime_type: string | undefined;
       let filename: string | undefined;
+      let file_data_url: string | undefined;
 
       if (file) {
         const folder = fid === "global" ? "global" : fid;
         const safeName = file.name.replace(/[^\w.\-]+/g, "_");
         storage_path = `brain/${folder}/${category}/${Date.now()}_${safeName}`;
+        file_data_url = await fileToDataUrl(file);
         const { error: upErr } = await supabase.storage
           .from("festival-photos")
-          .upload(storage_path, file, { upsert: false, contentType: file.type });
+          .upload(storage_path, file, { upsert: false, contentType: file.type || "application/octet-stream" });
         if (upErr) throw upErr;
         mime_type = file.type;
         filename = file.name;
@@ -465,6 +475,7 @@ function UploadToBrainPanel({
       const { data, error } = await supabase.functions.invoke("brain-extract", {
         body: {
           storage_path,
+          file_data_url,
           mime_type,
           filename,
           category,

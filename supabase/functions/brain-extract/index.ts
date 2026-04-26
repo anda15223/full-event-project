@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { storage_path, mime_type, category, pasted_text, filename } =
+    const { storage_path, file_data_url, mime_type, category, pasted_text, filename } =
       await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -69,6 +69,32 @@ Deno.serve(async (req) => {
         text: `The user pasted the following content (category: ${category}):\n\n${pasted_text}`,
       });
       sourceLabel = "pasted text";
+    } else if (file_data_url) {
+      const mt = (mime_type || file_data_url.match(/^data:([^;]+);base64,/)?.[1] || "").split(";")[0].trim().toLowerCase();
+      const ext = (filename || "").split(".").pop()?.toLowerCase();
+      const isJpg = ext === "jpg" || ext === "jpeg" || mt === "image/jpg" || mt === "image/jpeg";
+      const isImage = mt.startsWith("image/") || ["png", "webp", "gif"].includes(ext || "") || isJpg;
+      const isPdf = mt.includes("pdf") || ext === "pdf";
+      const b64 = cleanBase64(file_data_url);
+      if (isImage) {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const detectedMime = detectImageMime(bytes) || (isJpg ? "image/jpeg" : mt === "image/webp" ? "image/webp" : mt === "image/gif" ? "image/gif" : "image/png");
+        userParts.push({
+          type: "text",
+          text: `Extract the full readable content from this image (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+        });
+        userParts.push({ type: "image_url", image_url: { url: `data:${detectedMime};base64,${b64}` } });
+      } else if (isPdf) {
+        userParts.push({
+          type: "text",
+          text: `Extract the full readable content from this PDF (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+        });
+        userParts.push({ type: "image_url", image_url: { url: `data:application/pdf;base64,${b64}` } });
+      } else {
+        throw new Error("This file type cannot be read by AI yet. Please upload a JPG, PNG, WebP, GIF, PDF, or paste text.");
+      }
     } else if (storage_path) {
       const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/festival-photos/${storage_path}`;
       const mt = (mime_type || "").split(";")[0].trim().toLowerCase();
