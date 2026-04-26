@@ -78,12 +78,8 @@ type Prefill = {
   isCrew?: "yes" | "no";
 } | null;
 
-const PHONE_RE = /(\+?\d[\d\s\-().]{6,}\d)/;
-const EMAIL_RE = /([^\s<>"']+@[^\s<>"']+\.[^\s<>"']+)/;
-
-const PHONE_KEYS = ["phone", "phone_number", "phonenumber", "tel", "telephone", "mobile", "mobile_number", "cell"];
-const EMAIL_KEYS = ["email", "e-mail", "email_address", "emailaddress", "mail"];
-const NAME_KEYS = ["name", "contact_name", "full_name", "fullname", "contact", "person"];
+// Brain helpers (walkLeaves, extractContact, guessNameFromBrain, normPhone, etc.)
+// are imported from ./shared/BrainSuggestions.
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -92,106 +88,6 @@ function fmtDate(iso: string | null): string {
   } catch {
     return iso;
   }
-}
-
-/**
- * Walk a JSON tree, calling visit(key, value) for every leaf string value.
- * key is the (lowercased) leaf key; for array items the parent key is reused.
- */
-function walkLeaves(node: any, visit: (key: string, value: string) => void, parentKey = ""): void {
-  if (node == null) return;
-  if (typeof node === "string") {
-    visit(parentKey.toLowerCase(), node);
-    return;
-  }
-  if (typeof node === "number" || typeof node === "boolean") {
-    visit(parentKey.toLowerCase(), String(node));
-    return;
-  }
-  if (Array.isArray(node)) {
-    for (const item of node) walkLeaves(item, visit, parentKey);
-    return;
-  }
-  if (typeof node === "object") {
-    for (const [k, v] of Object.entries(node)) walkLeaves(v, visit, k);
-  }
-}
-
-function parseStructured(sd: any): any {
-  if (sd == null) return null;
-  if (typeof sd === "string") {
-    try { return JSON.parse(sd); } catch { return sd; }
-  }
-  return sd;
-}
-
-function findByKey(sd: any, keyList: string[]): string | undefined {
-  let found: string | undefined;
-  walkLeaves(sd, (k, v) => {
-    if (found) return;
-    if (keyList.includes(k) && v && v.trim()) found = v.trim();
-  });
-  return found;
-}
-
-function findByPattern(sd: any, re: RegExp): string | undefined {
-  let found: string | undefined;
-  walkLeaves(sd, (_k, v) => {
-    if (found) return;
-    const m = v.match(re);
-    if (m?.[1]) found = m[1].trim();
-  });
-  return found;
-}
-
-function guessNameFromBrain(b: BrainEntry): string {
-  if (b.display_name && b.display_name.trim()) return b.display_name.trim();
-
-  const sd = parseStructured(b.structured_data);
-  const sdName = findByKey(sd, NAME_KEYS);
-  if (sdName) return sdName.slice(0, 80);
-
-  const content = b.content ?? "";
-  if (EMAIL_RE.test(content)) {
-    const fromMatch = content.match(/(?:from|fra|de la)\s*[:\-]?\s*([^\n<]+?)\s*<[^>]+>/i);
-    if (fromMatch?.[1]) return fromMatch[1].trim().slice(0, 80);
-    const angleMatch = content.match(/^([^<\n]+?)\s*<[^>]+>/);
-    if (angleMatch?.[1]) return angleMatch[1].trim().slice(0, 80);
-  }
-
-  const firstLine = content
-    .split("\n")
-    .map((l) => l.trim())
-    .find((l) => l.length > 0);
-  if (firstLine) return firstLine.slice(0, 80);
-
-  return b.key_name;
-}
-
-function extractContact(b: BrainEntry): { phone?: string; email?: string } {
-  const content = b.content ?? "";
-  const sd = parseStructured(b.structured_data);
-
-  // PHONE: structured key → content regex → recursive structured pattern
-  let phone =
-    findByKey(sd, PHONE_KEYS) ??
-    content.match(PHONE_RE)?.[1] ??
-    findByPattern(sd, PHONE_RE);
-
-  // EMAIL: structured key → content regex → recursive structured pattern
-  let email =
-    findByKey(sd, EMAIL_KEYS) ??
-    content.match(EMAIL_RE)?.[1] ??
-    findByPattern(sd, EMAIL_RE);
-
-  return {
-    phone: phone?.trim(),
-    email: email?.trim().toLowerCase(),
-  };
-}
-
-function normPhone(p: string | null | undefined): string {
-  return (p ?? "").replace(/[^\d+]/g, "");
 }
 
 export function IntroductionCard({ festivalId }: Props) {
