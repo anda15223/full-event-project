@@ -531,7 +531,7 @@ function ConceptSubCard({
           </div>
         </div>
         {wristbandWarning && (
-          <p className="text-[11px] text-amber-600">
+          <p className="text-[11px] text-muted-foreground">
             ⚠ Black + Normal ({wristbandSum}) doesn't match Max ({concept.wristband_max}).
           </p>
         )}
