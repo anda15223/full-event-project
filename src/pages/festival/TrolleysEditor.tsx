@@ -414,42 +414,17 @@ export default function TrolleysEditor() {
                   ))}
                 </div>
 
-                <div className="border-t border-border/30 pt-3 grid grid-cols-12 gap-1.5">
-                  <Select value={draft.cat} onValueChange={(v) => setNewItem(s => ({ ...s, [t.id]: { ...draft, cat: v } }))}>
-                    <SelectTrigger className="col-span-3 h-8 text-[11px]"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      {CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={draft.concept_id || (t.concept_id ?? NO_CONCEPT)}
-                    onValueChange={(v) => setNewItem(s => ({ ...s, [t.id]: { ...draft, concept_id: v } }))}
-                  >
-                    <SelectTrigger className="col-span-3 h-8 text-[11px]">
-                      <SelectValue placeholder="Affiliate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value={NO_CONCEPT} className="text-[12px]">Unassigned</SelectItem>
-                      {concepts.map(c => (
-                        <SelectItem key={c.id} value={c.id} className="text-[12px]">{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Item"
-                    value={draft.name}
-                    className="col-span-3 h-8 text-[12px]"
-                    onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, name: e.target.value } }))}
-                  />
-                  <Input
-                    placeholder="Qty"
-                    value={draft.qty}
-                    className="col-span-2 h-8 text-[12px]"
-                    onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, qty: e.target.value } }))}
-                  />
-                  <Button size="sm" variant="outline" className="col-span-1 h-8 px-0" onClick={() => addItem(t.id, t.concept_id)}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="border-t border-border/30 pt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">Add new item</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <AddItemCard
+                      trolleyId={t.id}
+                      defaultConceptId={t.concept_id}
+                      defaultCategory={CATEGORIES[0]}
+                      concepts={concepts}
+                      onAdd={(data) => addItemFromCard(t.id, data)}
+                    />
+                  </div>
                 </div>
               </Card>
             </div>
