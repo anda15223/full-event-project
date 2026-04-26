@@ -1767,24 +1767,7 @@ export function SmartCard({
                       </div>
                     );
                   })()}
-                  {editMode && sectionLines.length > 0 && (() => {
-                    const hasAssigner = !!siblingConcepts && siblingConcepts.length > 0;
-                    const hasInventory = !!inventoryCategories && inventoryCategories.length > 0;
-                    const extraCol = hasInventory ? "_minmax(0,130px)" : "";
-                    const cols = hasAssigner
-                      ? `grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_60px_minmax(0,110px)${extraCol}_50px_24px_24px]`
-                      : `grid-cols-[minmax(0,1fr)_minmax(0,2fr)_70px${extraCol}_50px_24px_24px]`;
-                    return (
-                      <div className={cn("grid gap-1.5 px-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold border-b border-border/40", cols)}>
-                        <span>Item</span>
-                        <span>Note</span>
-                        <span>Amount</span>
-                        {hasAssigner && <span>Concept</span>}
-                        {hasInventory && <span>Inventory</span>}
-                        <span>Src</span><span></span>{(hasAssigner || hasInventory) && <span></span>}
-                      </div>
-                    );
-                  })()}
+                  
                   {editMode ? (
                     sectionLines.map(line => {
                        const canCopy = true;
