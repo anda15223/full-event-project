@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Camera, AlertTriangle, ChevronDown, ChevronRight, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Camera, AlertTriangle, ChevronDown, ChevronRight, Download, Package } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -395,9 +395,17 @@ export default function TrolleysEditor() {
       <Button asChild variant="ghost" size="sm" className="-ml-2">
         <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" />Back</Link>
       </Button>
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">BC Trolley Checklists</h1>
-        <p className="text-sm text-muted-foreground mt-1">{trolleys.length} trolleys · {items.length} items</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">BC Trolley Checklists</h1>
+          <p className="text-sm text-muted-foreground mt-1">{trolleys.length} trolleys · {items.length} items</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to={`/festivals/${slug}/inventory`}>
+            <Package className="h-4 w-4 mr-1.5 text-destructive" />
+            <span className="text-destructive font-semibold">Inventory</span>
+          </Link>
+        </Button>
       </div>
 
       <div className="space-y-8">
