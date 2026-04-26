@@ -28,10 +28,13 @@ interface Props {
   festivalId: string;
 }
 
+// Clean concept names — brand affiliation (e.g. "/ The Fish Project")
+// is OUT OF SCOPE for Sprint 2.3. See deliverables item #8: a future sprint
+// should add a `brand_entity_id` column linking concepts → legal entities.
 const DEFAULT_CONCEPTS = [
-  "Fish & Chips / The Fish Project",
-  "Gyros by Gaia",
-  "La Creperie",
+  "Fish & Chips",
+  "Gyros",
+  "La Crêperie",
   "Chicks 'n' Buns",
 ];
 
