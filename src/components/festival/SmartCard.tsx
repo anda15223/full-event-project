@@ -289,6 +289,50 @@ export function SmartCard({
     }
   };
 
+  // Duplicate a line inline — inserts a copy directly under the source line in the same section.
+  const duplicateLineInline = (id: string) => {
+    const src = lines.find(l => l.id === id);
+    if (!src) return;
+    const draft: SLine = {
+      id: `draft-${crypto.randomUUID()}`,
+      section_id: src.section_id,
+      label: src.label, value: src.value, quantity: src.quantity, notes: src.notes,
+      status: src.status, owner: src.owner, due_date: src.due_date,
+      order_index: src.order_index + 0.5, // temporary; we re-sequence below
+      source: "manual", source_file_id: null,
+    };
+    setLines(prev => {
+      // insert directly after src, then renumber order_index for that section
+      const sectionLines = prev.filter(l => l.section_id === src.section_id);
+      const others = prev.filter(l => l.section_id !== src.section_id);
+      const idx = sectionLines.findIndex(l => l.id === src.id);
+      const inserted = [...sectionLines.slice(0, idx + 1), draft, ...sectionLines.slice(idx + 1)]
+        .map((l, i) => ({ ...l, order_index: i }));
+      // capture renumbered order changes for non-draft existing lines
+      setPending(p => {
+        const lineUpdates = { ...p.lineUpdates };
+        for (const l of inserted) {
+          if (l.id === draft.id) continue;
+          if (isDraftId(l.id)) continue;
+          lineUpdates[l.id] = { ...(lineUpdates[l.id] || {}), order_index: l.order_index };
+        }
+        // replace lineInserts entries' order for draft items in this section
+        const lineInserts = p.lineInserts.map(li => {
+          if (li.section_id !== src.section_id) return li;
+          const match = inserted.find(x => x.id === li.id);
+          return match ? { ...li, order_index: match.order_index } : li;
+        });
+        return {
+          ...p,
+          lineInserts: [...lineInserts, { ...draft, order_index: inserted.find(x => x.id === draft.id)!.order_index }],
+          lineUpdates,
+        };
+      });
+      return [...others, ...inserted];
+    });
+  };
+
+
   // ---- Copy a single line into other concept cards (same cardKey + section title) ----
   const [copyOpenForLine, setCopyOpenForLine] = useState<string | null>(null);
   const [copyTargets, setCopyTargets] = useState<Record<string, boolean>>({});
@@ -1580,7 +1624,7 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                       const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                       const canCopy = true;
                       // Show concept-assigner dropdown whenever we have sibling concepts to move/assign to.
                       // In conceptAssignerMode (Common List) it splits to that concept on Save.
                       // On per-concept cards it MOVES the line to the chosen concept on Save.
@@ -1615,7 +1659,7 @@ export function SmartCard({
                           {sourceLabel(line.source)}
                         </Badge>
                         {canCopy && (
-                          <Button variant="ghost" size="sm" title="Duplicate this line to other concepts" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={() => openCopyDialog(line.id)}>
+                          <Button variant="ghost" size="sm" title="Duplicate this line right below" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={() => duplicateLineInline(line.id)}>
                             <Copy className="h-3 w-3" />
                           </Button>
                         )}
