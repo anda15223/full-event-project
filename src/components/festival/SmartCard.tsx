@@ -1299,7 +1299,7 @@ export function SmartCard({
             </DialogTitle>
             <DialogDescription>
               Choose which documents the AI should read for <span className="font-medium text-foreground">{title}</span>.
-              Recommended ones are pre-selected. Pick fewer for tighter, more specific results.
+              Recommended ones (matching this card) are pre-selected. You can also pull info from <span className="font-medium text-foreground">other cards</span> by ticking them below.
             </DialogDescription>
           </DialogHeader>
 
