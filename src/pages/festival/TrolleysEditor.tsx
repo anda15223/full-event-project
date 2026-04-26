@@ -417,17 +417,39 @@ export default function TrolleysEditor() {
 
           return (
             <div key={t.id} className="space-y-3">
-              {/* Upload + Brain panel (AI extract / brain grab) — items land in smart_lines for review */}
-              <SmartCard
-                cardKey={`trolley_${t.id}`}
-                festivalId={festival.id}
-                conceptId={t.concept_id}
-                title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
-                subtitle="Upload packing lists or photos, or grab from Brain. Use the per-row Allocate + Inventory dropdowns to organize each item."
-                siblingConcepts={concepts.map(c => ({ id: c.id, name: c.name }))}
-                inventoryCategories={CATEGORIES}
-              />
-
+              {/* Upload + Brain panel — collapsible. "Import to inventory" creates one box per row */}
+              <Card className="p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => setCollapsedBrain(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
+                    className="flex items-center gap-1.5 text-[12px] font-medium hover:text-primary transition"
+                  >
+                    {collapsedBrain[t.id] ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    {conceptName(t.concept_id)} · Trolley #{t.trolley_number} — Upload & Brain
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px]"
+                    onClick={() => importFromBrain(t)}
+                    disabled={importing[t.id]}
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    {importing[t.id] ? "Importing…" : "Import to inventory"}
+                  </Button>
+                </div>
+                {!collapsedBrain[t.id] && (
+                  <SmartCard
+                    cardKey={`trolley_${t.id}`}
+                    festivalId={festival.id}
+                    conceptId={t.concept_id}
+                    title={`${conceptName(t.concept_id)} · Trolley #${t.trolley_number} — Upload & Brain`}
+                    subtitle="Upload packing lists or photos, or grab from Brain. Use the per-row Allocate + Inventory dropdowns to organize each item."
+                    siblingConcepts={concepts.map(c => ({ id: c.id, name: c.name }))}
+                    inventoryCategories={CATEGORIES}
+                  />
+                )}
+              </Card>
               {/* Official trolley checklist (writes to festival_bc_trolley_items) */}
               <Card className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
