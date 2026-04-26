@@ -14,6 +14,55 @@ const RequestSchema = z.object({
   batch: z.boolean().optional(),
 });
 
+/* ── Runtime validator for extraction results ──
+ * attachment_id is REQUIRED when the result came from a PDF/attachment path
+ * (signalled by a non-null pdf_url or source === "attachment"). */
+const ExtractionResultSchema = z
+  .object({
+    email_id: z.string().uuid(),
+    attachment_id: z.string().uuid().optional(),
+    status: z.string(),
+    error: z.string().optional(),
+    error_category: z.string().optional(),
+    pdf_url: z.string().nullable().optional(),
+    source: z.string().optional(),
+  })
+  .passthrough()
+  .superRefine((val, ctx) => {
+    const requiresAttachment =
+      val.source === "attachment" || (val.pdf_url != null && val.pdf_url !== "");
+    if (requiresAttachment && !val.attachment_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["attachment_id"],
+        message: "attachment_id is required when extraction comes from a PDF attachment",
+      });
+    }
+  });
+
+function validateExtractionResult<T extends Record<string, any>>(
+  result: T,
+  context: { source: "attachment" | "email_body"; pdfUrl?: string | null },
+): T & { validation_error?: string } {
+  const parsed = ExtractionResultSchema.safeParse({
+    ...result,
+    source: context.source,
+    pdf_url: context.pdfUrl ?? result.pdf_url ?? null,
+  });
+  if (!parsed.success) {
+    const msg = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+    console.error("⚠️ Extraction result validation failed:", msg, "result:", result);
+    return {
+      ...result,
+      status: "error",
+      error: `Validation failed: ${msg}`,
+      error_category: "validation",
+      validation_error: msg,
+    };
+  }
+  return result;
+}
+
 /* ── Company mapping rules ── */
 const LOCATION_COMPANY_MAP: Record<string, string> = {
   "reffen": "Blue Fish ApS",
@@ -735,7 +784,10 @@ async function callClaudeExtraction(
     await upsertInvoice(supabase, emailId, attachmentId, invoiceData, mapped, finalCategory, status, confidence, pdfUrl, notes, rykkerDetected);
 
     console.log(`✅ Extracted: ${invoiceData.supplier_name}, ${invoiceData.amount} ${invoiceData.currency}, confidence=${confidence}, status=${status}`);
-    return { ...id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence };
+    return validateExtractionResult(
+      { ...id, status: "extracted", supplier_name: invoiceData.supplier_name, amount: invoiceData.total_with_vat || invoiceData.amount, currency: invoiceData.currency || "DKK", company: mapped.company, location: mapped.location || invoiceData.location, invoice_number: invoiceData.invoice_number, confidence },
+      { source: pdfUrl ? "attachment" : "email_body", pdfUrl },
+    );
 
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : "Claude API error";
