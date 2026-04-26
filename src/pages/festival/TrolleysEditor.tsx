@@ -268,6 +268,7 @@ export default function TrolleysEditor() {
   const { data: festival } = useFestival(slug);
   const trolleysQ = useTrolleys(festival?.id);
   const [collapsedBrain, setCollapsedBrain] = useState<Record<string, boolean>>({});
+  const [collapsedChecklist, setCollapsedChecklist] = useState<Record<string, boolean>>({});
   const [importing, setImporting] = useState<Record<string, boolean>>({});
 
   if (!festival) return <div className="text-sm text-muted-foreground">Loading…</div>;
