@@ -462,10 +462,17 @@ export default function TrolleysEditor() {
               {/* Official trolley checklist (writes to festival_bc_trolley_items) */}
               <Card className="p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <h3 className="font-medium text-[13px]">{conceptName(t.concept_id)} — Official checklist</h3>
-                    <p className="text-[11px] text-muted-foreground">Trolley #{t.trolley_number} · {t.label}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCollapsedChecklist(prev => ({ ...prev, [t.id]: !prev[t.id] }))}
+                    className="flex items-center gap-2 text-left flex-1 min-w-0 hover:opacity-80"
+                  >
+                    {collapsedChecklist[t.id] ? <ChevronRight className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
+                    <div className="min-w-0">
+                      <h3 className="font-medium text-[13px] truncate">{conceptName(t.concept_id)} — Official checklist</h3>
+                      <p className="text-[11px] text-muted-foreground truncate">Trolley #{t.trolley_number} · {t.label}</p>
+                    </div>
+                  </button>
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
@@ -481,46 +488,50 @@ export default function TrolleysEditor() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {tItems.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground italic">No items yet</p>
-                  )}
-                  {groupKeys.map(gk => (
-                    <div key={gk} className="space-y-1.5">
-                      <div className="flex items-center gap-2 px-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {conceptName(gk === NO_CONCEPT ? null : gk)}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">· {grouped[gk].length}</span>
-                      </div>
+                {!collapsedChecklist[t.id] && (
+                  <>
+                    <div className="space-y-4">
+                      {tItems.length === 0 && (
+                        <p className="text-[11px] text-muted-foreground italic">No items yet</p>
+                      )}
+                      {groupKeys.map(gk => (
+                        <div key={gk} className="space-y-1.5">
+                          <div className="flex items-center gap-2 px-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              {conceptName(gk === NO_CONCEPT ? null : gk)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">· {grouped[gk].length}</span>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                            {grouped[gk].map(i => (
+                              <ItemPhotoCard
+                                key={i.id}
+                                item={i as any}
+                                concepts={concepts}
+                                conceptName={conceptName}
+                                onUpdate={updateItem}
+                                onDelete={removeItem}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-border/30 pt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">Add new item</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                        {grouped[gk].map(i => (
-                          <ItemPhotoCard
-                            key={i.id}
-                            item={i as any}
-                            concepts={concepts}
-                            conceptName={conceptName}
-                            onUpdate={updateItem}
-                            onDelete={removeItem}
-                          />
-                        ))}
+                        <AddItemCard
+                          trolleyId={t.id}
+                          defaultConceptId={t.concept_id}
+                          defaultCategory={CATEGORIES[0]}
+                          concepts={concepts}
+                          onAdd={(data) => addItemFromCard(t.id, data)}
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                <div className="border-t border-border/30 pt-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">Add new item</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                    <AddItemCard
-                      trolleyId={t.id}
-                      defaultConceptId={t.concept_id}
-                      defaultCategory={CATEGORIES[0]}
-                      concepts={concepts}
-                      onAdd={(data) => addItemFromCard(t.id, data)}
-                    />
-                  </div>
-                </div>
+                  </>
+                )}
               </Card>
             </div>
           );
