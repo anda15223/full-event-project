@@ -1611,7 +1611,7 @@ export function SmartCard({
                           {sourceLabel(line.source)}
                         </Badge>
                         {canCopy && (
-                          <Button variant="ghost" size="sm" title="Copy to other concepts" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100" onClick={() => openCopyDialog(line.id)}>
+                          <Button variant="ghost" size="sm" title="Duplicate this line to other concepts" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={() => openCopyDialog(line.id)}>
                             <Copy className="h-3 w-3" />
                           </Button>
                         )}
