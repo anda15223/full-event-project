@@ -20,6 +20,7 @@ type TrolleyItem = {
   category: string;
   quantity: string | null;
   needed_quantity: number | null;
+  placed_quantity: number | null;
   counted_quantity: number | null;
   concept_id: string | null;
   photo_path: string | null;
@@ -45,8 +46,10 @@ function ItemPhotoCard({
     : null;
 
   const needed = item.needed_quantity;
+  const placed = item.placed_quantity;
   const counted = item.counted_quantity;
   const missingNeeded = needed == null || needed === 0;
+  const notPlaced = needed != null && needed > 0 && (placed == null || placed < needed);
   const shortAfterCount = counted != null && needed != null && counted < needed;
   const matched = counted != null && needed != null && counted === needed;
 
@@ -64,13 +67,13 @@ function ItemPhotoCard({
       className={cn(
         "p-2 space-y-1.5 relative group",
         missingNeeded && "border-destructive/60 bg-destructive/5",
-        shortAfterCount && "border-amber-500/60 bg-amber-500/5",
+        !missingNeeded && shortAfterCount && "border-amber-500/60 bg-amber-500/5",
         matched && "border-emerald-500/40"
       )}
     >
       <button
         onClick={() => onDelete(item.id)}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition"
+        className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition"
       >
         <Trash2 className="h-3 w-3" />
       </button>
@@ -99,26 +102,36 @@ function ItemPhotoCard({
         className="h-6 text-[11px] font-medium px-1.5"
       />
 
-      <div className="flex items-center gap-1">
-        <div className="flex-1">
-          <label className="text-[9px] text-muted-foreground uppercase block leading-none">Need</label>
+      <div className="grid grid-cols-3 gap-1">
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Need</label>
           <Input
             type="number"
             value={needed ?? ""}
             placeholder="0"
             onChange={(e) => onUpdate(item.id, { needed_quantity: e.target.value === "" ? null : Number(e.target.value) })}
-            className={cn("h-6 text-[11px] px-1.5", missingNeeded && "border-destructive text-destructive")}
+            className={cn("h-6 text-[11px] px-1", missingNeeded && "border-destructive text-destructive")}
           />
         </div>
-        <div className="flex-1">
-          <label className="text-[9px] text-muted-foreground uppercase block leading-none">Count</label>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Placed</label>
+          <Input
+            type="number"
+            value={placed ?? ""}
+            placeholder="–"
+            onChange={(e) => onUpdate(item.id, { placed_quantity: e.target.value === "" ? null : Number(e.target.value) })}
+            className={cn("h-6 text-[11px] px-1", notPlaced && "border-amber-500 text-amber-600")}
+          />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Done</label>
           <Input
             type="number"
             value={counted ?? ""}
             placeholder="–"
             onChange={(e) => onUpdate(item.id, { counted_quantity: e.target.value === "" ? null : Number(e.target.value) })}
             className={cn(
-              "h-6 text-[11px] px-1.5",
+              "h-6 text-[11px] px-1",
               shortAfterCount && "border-amber-500 text-amber-600",
               matched && "border-emerald-500 text-emerald-600"
             )}
@@ -126,13 +139,17 @@ function ItemPhotoCard({
         </div>
       </div>
 
-      {(missingNeeded || shortAfterCount) && (
+      {(missingNeeded || shortAfterCount || notPlaced) && (
         <div className={cn(
           "flex items-center gap-1 text-[10px] font-medium",
           missingNeeded ? "text-destructive" : "text-amber-600"
         )}>
           <AlertTriangle className="h-2.5 w-2.5" />
-          {missingNeeded ? "Qty missing" : `Short by ${(needed ?? 0) - (counted ?? 0)}`}
+          {missingNeeded
+            ? "Need missing"
+            : shortAfterCount
+              ? `Short by ${(needed ?? 0) - (counted ?? 0)}`
+              : `Not placed (${(needed ?? 0) - (placed ?? 0)} left)`}
         </div>
       )}
 
@@ -147,6 +164,101 @@ function ItemPhotoCard({
   );
 }
 
+function AddItemCard({
+  trolleyId,
+  defaultConceptId,
+  defaultCategory,
+  concepts,
+  onAdd,
+}: {
+  trolleyId: string;
+  defaultConceptId: string | null;
+  defaultCategory: string;
+  concepts: { id: string; name: string }[];
+  onAdd: (data: { name: string; needed: number | null; placed: number | null; counted: number | null; conceptId: string | null; category: string; photoFile: File | null }) => Promise<void>;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState("");
+  const [needed, setNeeded] = useState<string>("");
+  const [placed, setPlaced] = useState<string>("");
+  const [counted, setCounted] = useState<string>("");
+  const [conceptId, setConceptId] = useState<string>(defaultConceptId ?? "__none__");
+  const [category, setCategory] = useState<string>(defaultCategory);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const photoPreview = photoFile ? URL.createObjectURL(photoFile) : null;
+
+  const submit = async () => {
+    if (!name.trim()) { toast.error("Name required"); return; }
+    setSubmitting(true);
+    await onAdd({
+      name: name.trim(),
+      needed: needed === "" ? null : Number(needed),
+      placed: placed === "" ? null : Number(placed),
+      counted: counted === "" ? null : Number(counted),
+      conceptId: conceptId === "__none__" ? null : conceptId,
+      category,
+      photoFile,
+    });
+    setName(""); setNeeded(""); setPlaced(""); setCounted(""); setPhotoFile(null);
+    setSubmitting(false);
+  };
+
+  return (
+    <Card className="p-2 space-y-1.5 border-dashed border-primary/40 bg-primary/[0.02]">
+      <div
+        onClick={() => fileRef.current?.click()}
+        className="aspect-square w-full rounded bg-muted/40 border border-dashed border-border/50 overflow-hidden cursor-pointer flex items-center justify-center"
+      >
+        {photoPreview ? (
+          <img src={photoPreview} alt="preview" className="w-full h-full object-cover" />
+        ) : (
+          <Camera className="h-5 w-5 text-muted-foreground" />
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => e.target.files?.[0] && setPhotoFile(e.target.files[0])}
+        />
+      </div>
+      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New item" className="h-6 text-[11px] font-medium px-1.5" />
+      <div className="grid grid-cols-3 gap-1">
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Need</label>
+          <Input type="number" value={needed} onChange={(e) => setNeeded(e.target.value)} placeholder="0" className="h-6 text-[11px] px-1" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Placed</label>
+          <Input type="number" value={placed} onChange={(e) => setPlaced(e.target.value)} placeholder="–" className="h-6 text-[11px] px-1" />
+        </div>
+        <div>
+          <label className="text-[9px] text-muted-foreground uppercase block leading-none mb-0.5">Done</label>
+          <Input type="number" value={counted} onChange={(e) => setCounted(e.target.value)} placeholder="–" className="h-6 text-[11px] px-1" />
+        </div>
+      </div>
+      <Select value={conceptId} onValueChange={setConceptId}>
+        <SelectTrigger className="h-6 text-[10px] px-1.5"><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-popover">
+          <SelectItem value="__none__" className="text-[11px]">Unassigned</SelectItem>
+          {concepts.map(c => <SelectItem key={c.id} value={c.id} className="text-[11px]">{c.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={category} onValueChange={setCategory}>
+        <SelectTrigger className="h-6 text-[10px] px-1.5"><SelectValue /></SelectTrigger>
+        <SelectContent className="bg-popover">
+          {CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-[11px]">{c}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Button size="sm" variant="outline" className="w-full h-7 text-[11px]" onClick={submit} disabled={submitting}>
+        <Plus className="h-3 w-3 mr-1" /> Add to trolley
+      </Button>
+    </Card>
+  );
+}
+
 const CATEGORIES = ["Cooking/small gear", "Serving/packaging", "Cleaning/chemicals", "Stationery/signage"];
 const NO_CONCEPT = "__none__";
 
@@ -155,7 +267,7 @@ export default function TrolleysEditor() {
   const qc = useQueryClient();
   const { data: festival } = useFestival(slug);
   const trolleysQ = useTrolleys(festival?.id);
-  const [newItem, setNewItem] = useState<Record<string, { name: string; qty: string; cat: string; concept_id: string }>>({});
+  
 
   if (!festival) return <div className="text-sm text-muted-foreground">Loading…</div>;
   const { trolleys = [], items = [], concepts = [] } = trolleysQ.data || {};
@@ -163,25 +275,32 @@ export default function TrolleysEditor() {
   const conceptName = (cid: string | null | undefined) =>
     concepts.find(c => c.id === cid)?.name || "Unassigned";
 
-  const addItem = async (trolleyId: string, defaultConceptId: string | null) => {
-    const draft = newItem[trolleyId];
-    if (!draft?.name || !draft?.cat) { toast.error("Name and category required"); return; }
+  const addItemFromCard = async (
+    trolleyId: string,
+    data: { name: string; needed: number | null; placed: number | null; counted: number | null; conceptId: string | null; category: string; photoFile: File | null }
+  ) => {
     const existing = items.filter(i => i.trolley_id === trolleyId);
     const orderIndex = existing.length;
-    const conceptId =
-      draft.concept_id && draft.concept_id !== NO_CONCEPT
-        ? draft.concept_id
-        : defaultConceptId;
+    let photo_path: string | null = null;
+    if (data.photoFile) {
+      const path = `trolley-items/${trolleyId}-${Date.now()}-${data.photoFile.name}`;
+      const { error: upErr } = await supabase.storage.from("festival-photos").upload(path, data.photoFile, { upsert: true });
+      if (upErr) { toast.error("Photo upload failed"); }
+      else photo_path = path;
+    }
     const { error } = await supabase.from("festival_bc_trolley_items").insert({
       trolley_id: trolleyId,
-      category: draft.cat,
-      item_name: draft.name,
-      quantity: draft.qty || null,
+      category: data.category,
+      item_name: data.name,
+      quantity: data.needed != null ? String(data.needed) : null,
+      needed_quantity: data.needed,
+      placed_quantity: data.placed,
+      counted_quantity: data.counted,
       order_index: orderIndex,
-      concept_id: conceptId,
-    });
+      concept_id: data.conceptId,
+      photo_path,
+    } as any);
     if (error) { toast.error("Failed to add"); return; }
-    setNewItem(s => ({ ...s, [trolleyId]: { name: "", qty: "", cat: draft.cat, concept_id: draft.concept_id } }));
     qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
   };
 
@@ -232,7 +351,7 @@ export default function TrolleysEditor() {
       <div className="space-y-8">
         {trolleys.map(t => {
           const tItems = items.filter(i => i.trolley_id === t.id);
-          const draft = newItem[t.id] || { name: "", qty: "", cat: CATEGORIES[0], concept_id: t.concept_id ?? NO_CONCEPT };
+          
 
           // Group items by concept for easier navigation
           const grouped = tItems.reduce<Record<string, typeof tItems>>((acc, it) => {
@@ -295,42 +414,17 @@ export default function TrolleysEditor() {
                   ))}
                 </div>
 
-                <div className="border-t border-border/30 pt-3 grid grid-cols-12 gap-1.5">
-                  <Select value={draft.cat} onValueChange={(v) => setNewItem(s => ({ ...s, [t.id]: { ...draft, cat: v } }))}>
-                    <SelectTrigger className="col-span-3 h-8 text-[11px]"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      {CATEGORIES.map(c => <SelectItem key={c} value={c} className="text-[12px]">{c}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={draft.concept_id || (t.concept_id ?? NO_CONCEPT)}
-                    onValueChange={(v) => setNewItem(s => ({ ...s, [t.id]: { ...draft, concept_id: v } }))}
-                  >
-                    <SelectTrigger className="col-span-3 h-8 text-[11px]">
-                      <SelectValue placeholder="Affiliate" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value={NO_CONCEPT} className="text-[12px]">Unassigned</SelectItem>
-                      {concepts.map(c => (
-                        <SelectItem key={c.id} value={c.id} className="text-[12px]">{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    placeholder="Item"
-                    value={draft.name}
-                    className="col-span-3 h-8 text-[12px]"
-                    onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, name: e.target.value } }))}
-                  />
-                  <Input
-                    placeholder="Qty"
-                    value={draft.qty}
-                    className="col-span-2 h-8 text-[12px]"
-                    onChange={(e) => setNewItem(s => ({ ...s, [t.id]: { ...draft, qty: e.target.value } }))}
-                  />
-                  <Button size="sm" variant="outline" className="col-span-1 h-8 px-0" onClick={() => addItem(t.id, t.concept_id)}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
+                <div className="border-t border-border/30 pt-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">Add new item</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                    <AddItemCard
+                      trolleyId={t.id}
+                      defaultConceptId={t.concept_id}
+                      defaultCategory={CATEGORIES[0]}
+                      concepts={concepts}
+                      onAdd={(data) => addItemFromCard(t.id, data)}
+                    />
+                  </div>
                 </div>
               </Card>
             </div>

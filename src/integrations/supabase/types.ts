@@ -810,6 +810,7 @@ export type Database = {
           notes: string | null
           order_index: number
           photo_path: string | null
+          placed_quantity: number | null
           quantity: string | null
           status: string
           trolley_id: string
@@ -825,6 +826,7 @@ export type Database = {
           notes?: string | null
           order_index: number
           photo_path?: string | null
+          placed_quantity?: number | null
           quantity?: string | null
           status?: string
           trolley_id: string
@@ -840,6 +842,7 @@ export type Database = {
           notes?: string | null
           order_index?: number
           photo_path?: string | null
+          placed_quantity?: number | null
           quantity?: string | null
           status?: string
           trolley_id?: string
