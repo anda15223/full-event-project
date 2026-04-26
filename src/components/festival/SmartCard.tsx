@@ -575,9 +575,9 @@ export function SmartCard({
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
         toast.info(
-          ids.length
-            ? "Picked Brain docs didn't yield card-specific info — try different docs."
-            : "Brain has nothing for this card yet — fill it in and it'll learn.",
+          useSourceCard
+            ? `No ${cardKey} info found in ${sourceCardFilter}.`
+            : "Picked Brain docs didn't yield card-specific info — try different docs.",
         );
         return;
       }
@@ -596,7 +596,9 @@ export function SmartCard({
         }
       }
       toast.success(
-        `Grabbed ${suggestions.length} section(s) from ${ids.length || "all matching"} Brain doc(s)`,
+        useSourceCard
+          ? `Grabbed ${suggestions.length} section(s) from ${sourceCardFilter}`
+          : `Grabbed ${suggestions.length} section(s) from ${visibleSelectedIds.length} Brain doc(s)`,
       );
       reload();
     } catch (e: any) {
