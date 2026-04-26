@@ -1579,11 +1579,11 @@ export function SmartCard({
                   )}
                   {editMode ? (
                     sectionLines.map(line => {
-                      const canCopy = !conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
+                      const canCopy = !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(line.id);
                       const showAssigner = conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
                       const gridCols = showAssigner
-                        ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]"
+                        ? (canCopy ? "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px_24px]" : "grid-cols-[1fr_1fr_60px_1fr_120px_60px_24px]")
                         : (canCopy ? "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px_24px]" : "grid-cols-[1fr_1.4fr_70px_1fr_60px_24px]");
                       return (
                       <div key={line.id} className={cn("grid gap-1.5 items-center group", gridCols)}>
