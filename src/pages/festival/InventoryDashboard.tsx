@@ -64,9 +64,9 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
         .in("trolley_id", trolleyIds)
         .order("item_name");
 
-      const conceptById = new Map((concepts || []).map((c: any) => [c.id, c]));
-      const trolleyById = new Map((trolleys || []).map((t: any) => [t.id, t]));
-      const festivalById = new Map((festivals || []).map((f: any) => [f.id, f]));
+      const conceptById = new Map<string, any>((concepts || []).map((c: any) => [c.id, c]));
+      const trolleyById = new Map<string, any>((trolleys || []).map((t: any) => [t.id, t]));
+      const festivalById = new Map<string, any>((festivals || []).map((f: any) => [f.id, f]));
 
       const rows: Row[] = (items || []).map((it: any) => {
         const tr = trolleyById.get(it.trolley_id);
