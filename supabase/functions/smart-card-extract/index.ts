@@ -1360,9 +1360,7 @@ ${String(r.content).slice(0, 12000)}`,
   diagnostics.ai_source_docs = sourceDocs.length;
 
   if (sourceDocs.length) {
-    const cardPrompt =
-      CARD_PROMPTS[card_key] ||
-      "Extract logical sections and lines from this Brain knowledge.";
+    const cardPrompt = cardPromptForKey(card_key);
     try {
       const structured = await callAI(
         [
