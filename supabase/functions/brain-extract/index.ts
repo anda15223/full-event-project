@@ -14,6 +14,40 @@ function cleanBase64(base64String: string): string {
   return cleaned;
 }
 
+function detectImageMime(bytes: Uint8Array): string | null {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+    bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  if (
+    bytes.length >= 6 &&
+    bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38 &&
+    (bytes[4] === 0x37 || bytes[4] === 0x39) && bytes[5] === 0x61
+  ) {
+    return "image/gif";
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -45,23 +79,30 @@ Deno.serve(async (req) => {
 
       if (isImage) {
         // Binary image: send bytes as base64 to Gemini vision.
-        // Match the working SmartCard extractor payload shape: text first, image second.
         const r = await fetch(publicUrl);
         if (!r.ok) throw new Error(`Failed to fetch image: ${r.status}`);
         const buf = new Uint8Array(await r.arrayBuffer());
+        const detectedMime = detectImageMime(buf);
+
+        if (!detectedMime) {
+          const preview = new TextDecoder().decode(buf.slice(0, 120));
+          console.error("brain-extract invalid image bytes", {
+            filename,
+            storage_path,
+            mime_type,
+            response_content_type: r.headers.get("content-type"),
+            size: buf.length,
+            preview,
+          });
+          throw new Error("This file is not a readable JPG/PNG/WebP/GIF image. Please re-save it as a real JPG or PNG and upload again.");
+        }
+
         let binary = "";
         const chunk = 0x8000;
         for (let i = 0; i < buf.length; i += chunk) {
           binary += String.fromCharCode.apply(null, buf.subarray(i, i + chunk) as any);
         }
         const b64 = cleanBase64(btoa(binary));
-        if (b64.length % 4 !== 0) throw new Error("Invalid image base64 length");
-
-        const ctHeader = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-        let effectiveMime = "image/png";
-        if (isJpg) effectiveMime = "image/jpeg";
-        else if (ext === "webp" || ctHeader === "image/webp" || mt === "image/webp") effectiveMime = "image/webp";
-        else if (ext === "png" || ctHeader === "image/png" || mt === "image/png") effectiveMime = "image/png";
 
         userParts.push({
           type: "text",
@@ -70,7 +111,7 @@ Deno.serve(async (req) => {
         userParts.push({
           type: "image_url",
           image_url: {
-            url: `data:${effectiveMime};base64,${b64}`,
+            url: `data:${detectedMime};base64,${b64}`,
           },
         });
       } else if (isPdf) {
@@ -82,17 +123,16 @@ Deno.serve(async (req) => {
         let binary = "";
         const chunk = 0x8000;
         for (let i = 0; i < buf.length; i += chunk) {
-          binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+          binary += String.fromCharCode.apply(null, buf.subarray(i, i + chunk) as any);
         }
-        const b64 = btoa(binary);
-        const dataUrl = `data:application/pdf;base64,${b64}`;
-        userParts.push({
-          type: "image_url",
-          image_url: { url: dataUrl },
-        });
+        const b64 = cleanBase64(btoa(binary));
         userParts.push({
           type: "text",
           text: `Extract the full readable content from this PDF (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+        });
+        userParts.push({
+          type: "image_url",
+          image_url: { url: `data:application/pdf;base64,${b64}` },
         });
       } else {
         // Fallback: try to fetch as text
