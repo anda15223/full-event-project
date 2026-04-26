@@ -1741,9 +1741,9 @@ export function SmartCard({
                       return (
                       <div key={line.id} className="space-y-1">
                       <div className={cn("grid gap-1.5 items-center group", gridCols)}>
-                        <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Label" className="h-7 text-xs" />
-                        <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Value" className="h-7 text-xs" />
-                        <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Qty" className="h-7 text-xs" />
+                        <Input value={line.label ?? ""} onChange={(e) => updateLine(line.id, { label: e.target.value })} placeholder="Item" className="h-7 text-xs" />
+                        <Input value={line.value ?? ""} onChange={(e) => updateLine(line.id, { value: e.target.value })} placeholder="Note" className="h-7 text-xs" />
+                        <Input value={line.quantity ?? ""} onChange={(e) => updateLine(line.id, { quantity: e.target.value })} placeholder="Amount" className="h-7 text-xs" />
                         
                         {showAssigner && (
                           <select
