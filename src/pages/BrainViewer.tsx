@@ -261,6 +261,37 @@ export default function BrainViewer() {
           </Button>
         </div>
 
+        {(filtered.length > 0 || selectedIds.size > 0) && (
+          <div className="flex items-center gap-3 mb-2 px-1">
+            <Checkbox
+              checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
+              onCheckedChange={toggleSelectAll}
+              aria-label="Select all"
+            />
+            <span className="text-xs text-muted-foreground">
+              {selectedIds.size > 0
+                ? `${selectedIds.size} selected`
+                : `Select all (${filtered.length})`}
+            </span>
+            {selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="ml-auto h-7"
+                disabled={bulkDeleteMut.isPending}
+                onClick={() => {
+                  if (confirm(`Delete ${selectedIds.size} brain ${selectedIds.size === 1 ? "entry" : "entries"}? This cannot be undone.`)) {
+                    bulkDeleteMut.mutate(Array.from(selectedIds));
+                  }
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Delete selected
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto space-y-2 pr-1">
           {isLoading && <div className="text-sm text-muted-foreground p-4">Loading…</div>}
           {!isLoading && filtered.length === 0 && (
@@ -268,6 +299,7 @@ export default function BrainViewer() {
           )}
           {filtered.map(e => {
             const Icon = sourceIcon(e.source);
+            const isChecked = selectedIds.has(e.id);
             return (
               <Card
                 key={e.id}
@@ -275,6 +307,16 @@ export default function BrainViewer() {
                 className="p-3 cursor-pointer hover:bg-muted/30 transition-colors"
               >
                 <div className="flex items-start gap-3">
+                  <div
+                    className="pt-1"
+                    onClick={(ev) => ev.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleId(e.id)}
+                      aria-label="Select entry"
+                    />
+                  </div>
                   <div className="h-8 w-8 rounded-md bg-muted flex items-center justify-center shrink-0">
                     <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
