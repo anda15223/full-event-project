@@ -102,6 +102,11 @@ export function SmartCard({
   const [selectedBrainIds, setSelectedBrainIds] = useState<Set<string>>(new Set());
   const [includeOtherCards, setIncludeOtherCards] = useState(true);
   const [sourceCardFilter, setSourceCardFilter] = useState<string>("all");
+  const visibleBrainDocs = brainDocs.filter((d) => {
+    if (!includeOtherCards && !d.same_card) return false;
+    if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
+    return true;
+  });
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
@@ -544,17 +549,21 @@ export function SmartCard({
   // Step 2: actually grab from Brain, restricted to the docs the user picked.
   const confirmGrabFromBrain = async () => {
     if (!card) return;
+    const visibleIds = visibleBrainDocs.map((d) => d.id);
+    const explicitIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
+    const ids = explicitIds.length ? explicitIds : visibleIds;
+    if (!ids.length) return;
+
     setBrainPickerOpen(false);
     setGrabbing(true);
     try {
-      const ids = Array.from(selectedBrainIds);
       const { data, error } = await supabase.functions.invoke("smart-card-extract", {
         body: {
           action: "grab_brain",
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
-          brain_ids: ids.length ? ids : undefined,
+          brain_ids: ids,
         },
       });
       if (error) throw error;
@@ -601,6 +610,13 @@ export function SmartCard({
       return next;
     });
   };
+  useEffect(() => {
+    if (!brainPickerOpen || loadingBrainDocs || sourceCardFilter === "all") return;
+    const visibleIds = visibleBrainDocs.map((d) => d.id);
+    if (visibleIds.length === 0) return;
+    const selectedVisibleCount = visibleIds.filter((id) => selectedBrainIds.has(id)).length;
+    if (selectedVisibleCount === 0) setSelectedBrainIds(new Set(visibleIds));
+  }, [brainPickerOpen, loadingBrainDocs, sourceCardFilter, visibleBrainDocs, selectedBrainIds]);
 
 
   // File deletion is staged via the AlertDialog (see fileToDelete state).
@@ -1381,12 +1397,7 @@ export function SmartCard({
               </div>
             )}
             {(() => {
-              const visibleDocs = brainDocs.filter((d) => {
-                if (!includeOtherCards && !d.same_card) return false;
-                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
-                return true;
-              });
-              if (!loadingBrainDocs && visibleDocs.length === 0) {
+              if (!loadingBrainDocs && visibleBrainDocs.length === 0) {
                 return (
                   <div className="text-center text-sm text-muted-foreground py-10">
                     {brainDocs.length === 0
@@ -1400,14 +1411,9 @@ export function SmartCard({
               return null;
             })()}
             {!loadingBrainDocs && brainDocs.length > 0 && (() => {
-              const visibleDocs = brainDocs.filter((d) => {
-                if (!includeOtherCards && !d.same_card) return false;
-                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
-                return true;
-              });
-              if (visibleDocs.length === 0) return null;
-              const visibleSelected = visibleDocs.filter((d) => selectedBrainIds.has(d.id)).length;
-              const allChecked = visibleSelected === visibleDocs.length;
+              if (visibleBrainDocs.length === 0) return null;
+              const visibleSelected = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length;
+              const allChecked = visibleSelected === visibleBrainDocs.length;
               const someChecked = visibleSelected > 0 && !allChecked;
               return (
                 <label className="sticky top-0 z-10 -mx-6 px-6 py-2 bg-background/95 backdrop-blur border-b flex items-center gap-3 cursor-pointer">
@@ -1419,9 +1425,9 @@ export function SmartCard({
                       setSelectedBrainIds((prev) => {
                         const next = new Set(prev);
                         if (allChecked) {
-                          visibleDocs.forEach((d) => next.delete(d.id));
+                          visibleBrainDocs.forEach((d) => next.delete(d.id));
                         } else {
-                          visibleDocs.forEach((d) => next.add(d.id));
+                          visibleBrainDocs.forEach((d) => next.add(d.id));
                         }
                         return next;
                       });
@@ -1432,17 +1438,12 @@ export function SmartCard({
                     {allChecked ? "Uncheck all" : "Check all"}
                   </span>
                   <span className="text-[11px] text-muted-foreground ml-auto">
-                    {visibleSelected} / {visibleDocs.length} shown
+                    {visibleSelected} / {visibleBrainDocs.length} shown
                   </span>
                 </label>
               );
             })()}
-            {!loadingBrainDocs && brainDocs
-              .filter((d) => {
-                if (!includeOtherCards && !d.same_card) return false;
-                if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
-                return true;
-              })
+            {!loadingBrainDocs && visibleBrainDocs
               .map((d) => {
               const checked = selectedBrainIds.has(d.id);
               return (
@@ -1505,13 +1506,13 @@ export function SmartCard({
 
           <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 border-t pt-3">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{selectedBrainIds.size} of {brainDocs.length} selected</span>
+              <span>{visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length} of {visibleBrainDocs.length} shown selected</span>
               <Button
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs"
-                onClick={() => setSelectedBrainIds(new Set(brainDocs.map((d) => d.id)))}
-                disabled={!brainDocs.length}
+                onClick={() => setSelectedBrainIds(new Set(visibleBrainDocs.map((d) => d.id)))}
+                disabled={!visibleBrainDocs.length}
               >
                 Select all
               </Button>
@@ -1520,7 +1521,7 @@ export function SmartCard({
                 variant="ghost"
                 className="h-7 text-xs"
                 onClick={() => setSelectedBrainIds(new Set())}
-                disabled={!brainDocs.length}
+                disabled={!selectedBrainIds.size}
               >
                 Clear
               </Button>
@@ -1532,10 +1533,10 @@ export function SmartCard({
               <Button
                 size="sm"
                 onClick={confirmGrabFromBrain}
-                disabled={selectedBrainIds.size === 0 || grabbing}
+                disabled={!visibleBrainDocs.length || grabbing}
               >
                 {grabbing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-                Extract from {selectedBrainIds.size} doc(s)
+                Extract from {Math.max(visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).length, visibleBrainDocs.length && selectedBrainIds.size === 0 ? visibleBrainDocs.length : 0)} doc(s)
               </Button>
             </div>
           </DialogFooter>
