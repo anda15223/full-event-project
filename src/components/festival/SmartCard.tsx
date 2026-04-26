@@ -1361,17 +1361,11 @@ export function SmartCard({
                       onChange={(e) => {
                         const next = e.target.value;
                         setSourceCardFilter(next);
-                        if (next === "all") {
-                          // Re-select recommended docs across all visible
-                          setSelectedBrainIds(new Set(
-                            brainDocs.filter((d) => d.recommended).map((d) => d.id)
-                          ));
-                        } else {
-                          // Auto-select every doc from the chosen source card
-                          setSelectedBrainIds(new Set(
-                            brainDocs.filter((d) => d.category === next).map((d) => d.id)
-                          ));
-                        }
+                        setSelectedBrainIds(
+                          next === "all"
+                            ? new Set(brainDocs.filter((d) => d.recommended).map((d) => d.id))
+                            : new Set()
+                        );
                       }}
                       className="h-7 rounded-md border border-input bg-background px-2 text-xs"
                     >
