@@ -143,6 +143,43 @@ export default function BrainViewer() {
     onError: (e: any) => toast.error(`Delete failed: ${e.message}`),
   });
 
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("brain_entries").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, ids) => {
+      qc.invalidateQueries({ queryKey: ["brain-entries"] });
+      toast.success(`Deleted ${ids.length} ${ids.length === 1 ? "entry" : "entries"}`);
+      setSelectedIds(new Set());
+    },
+    onError: (e: any) => toast.error(`Bulk delete failed: ${e.message}`),
+  });
+
+  const toggleId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every(e => selectedIds.has(e.id));
+  const someFilteredSelected = filtered.some(e => selectedIds.has(e.id));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        filtered.forEach(e => next.delete(e.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach(e => next.add(e.id));
+      return next;
+    });
+  };
+
   const addMut = useMutation({
     mutationFn: async (payload: { content: string; category: string; display_name: string; festival_id: string | null }) => {
       const { error } = await supabase.from("brain_entries").insert({
