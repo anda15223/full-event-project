@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Trash2, Upload, FileText, File as FileIcon, Loader2, Sparkles, Brain,
-  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X, Copy,
+  ChevronDown, ChevronRight, GripVertical, Download, Pencil, Check, Eye, Save, X, Copy, Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -88,6 +88,8 @@ export function SmartCard({
 }: SmartCardProps) {
   // line.id -> target concept id chosen via dropdown (only used when conceptAssignerMode)
   const [lineConceptAssignment, setLineConceptAssignment] = useState<Record<string, string>>({});
+  const [wipeDialogOpen, setWipeDialogOpen] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [card, setCard] = useState<SCard | null>(null);
   const [sections, setSections] = useState<SSection[]>([]);
   const [lines, setLines] = useState<SLine[]>([]);
@@ -443,6 +445,46 @@ export function SmartCard({
     resetPending();
     setSnapshot(null);
     setEditMode(false);
+  };
+
+  /** Wipe ALL per-concept cards (concept_id IS NOT NULL) for this card_key + festival.
+   *  Used to reset legacy mixed data so the Common List becomes the single source of truth.
+   *  Only meaningful in conceptAssignerMode (the Common List card itself). */
+  const wipePerConceptCards = async () => {
+    if (!conceptAssignerMode || !festivalId) return;
+    setWiping(true);
+    try {
+      const { data: targetCards, error: cErr } = await (supabase as any)
+        .from("smart_cards")
+        .select("id")
+        .eq("festival_id", festivalId)
+        .eq("card_key", cardKey)
+        .not("concept_id", "is", null);
+      if (cErr) throw cErr;
+      const cardIds = (targetCards ?? []).map((c: any) => c.id);
+      if (!cardIds.length) {
+        toast.info("No per-concept cards to clear");
+        return;
+      }
+      const { data: secs, error: sErr } = await (supabase as any)
+        .from("smart_sections").select("id").in("card_id", cardIds);
+      if (sErr) throw sErr;
+      const secIds = (secs ?? []).map((s: any) => s.id);
+      if (secIds.length) {
+        const { error: lErr } = await (supabase as any)
+          .from("smart_lines").delete().in("section_id", secIds);
+        if (lErr) throw lErr;
+        const { error: dsErr } = await (supabase as any)
+          .from("smart_sections").delete().in("id", secIds);
+        if (dsErr) throw dsErr;
+      }
+      toast.success(`Cleared ${cardIds.length} concept card${cardIds.length === 1 ? "" : "s"}. Now assign concepts in the Common List and Save.`);
+    } catch (e: any) {
+      toast.error(`Reset failed: ${e.message || e}`);
+    } finally {
+      setWiping(false);
+      setWipeDialogOpen(false);
+    }
   };
 
   const saveChanges = async () => {
@@ -918,6 +960,19 @@ export function SmartCard({
           {editMode && (
             <Button size="sm" onClick={addSection} className="h-8">
               <Plus className="h-3.5 w-3.5 mr-1" /> Section
+            </Button>
+          )}
+          {conceptAssignerMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border-destructive/40 text-destructive hover:bg-destructive/10"
+              onClick={() => setWipeDialogOpen(true)}
+              disabled={wiping}
+              title="Clear all per-concept cards so the Common List becomes the single source of truth"
+            >
+              {wiping ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1" />}
+              Fix legacy mixed items
             </Button>
           )}
           {editMode ? (
@@ -1846,6 +1901,30 @@ export function SmartCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Wipe per-concept cards confirmation */}
+      <AlertDialog open={wipeDialogOpen} onOpenChange={setWipeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all per-concept cards?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes every section and line from the per-concept {title.split(" — ")[0].toLowerCase()} cards (Fish & Chips, Gyros, La Creperie, Chicks 'n' Buns, …) for this festival.
+              Uploaded files and the Common List are <strong>not</strong> touched. After this, assign concepts on each Common List row and press <strong>Save</strong> to repopulate the concept cards cleanly.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={wiping}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); wipePerConceptCards(); }}
+              disabled={wiping}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {wiping ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Clear concept cards
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
