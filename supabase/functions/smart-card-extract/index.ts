@@ -1123,16 +1123,27 @@ ${sourceDocs.join("\\n\\n---\\n\\n")}`,
         ],
         STRUCTURE_SCHEMA,
       );
-      const aiSections = structured.sections || [];
+      const rawAiSections = structured.sections || [];
+      const sanitised = sanitizeSections(card_key, rawAiSections);
+      const aiSections = sanitised.sections;
       diagnostics.ai_extraction = {
         attempted: true,
         succeeded: true,
-        sections_returned: aiSections.length,
+        sections_returned: rawAiSections.length,
+        sections_kept: aiSections.length,
+        sections_rejected: sanitised.rejected,
         summary: structured.summary || null,
       };
+      if (sanitised.rejected.length) {
+        diagnostics.notes.push(
+          `Rejected ${sanitised.rejected.length} dump-like section(s): ${sanitised.rejected.map((r) => `"${r.title}" (${r.reason})`).join(", ")}`,
+        );
+      }
       if (!aiSections.length) {
         diagnostics.notes.push(
-          "AI returned 0 sections — Brain sources may not contain card-specific info.",
+          rawAiSections.length
+            ? "All AI sections were rejected by the schema validator — Brain sources didn't contain card-specific structured info."
+            : "AI returned 0 sections — Brain sources may not contain card-specific info.",
         );
       }
       suggestions = [...aiSections, ...suggestions];
