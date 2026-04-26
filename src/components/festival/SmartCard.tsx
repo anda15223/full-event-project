@@ -88,6 +88,8 @@ export function SmartCard({
 }: SmartCardProps) {
   // line.id -> target concept id chosen via dropdown (only used when conceptAssignerMode)
   const [lineConceptAssignment, setLineConceptAssignment] = useState<Record<string, string>>({});
+  const [wipeDialogOpen, setWipeDialogOpen] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [card, setCard] = useState<SCard | null>(null);
   const [sections, setSections] = useState<SSection[]>([]);
   const [lines, setLines] = useState<SLine[]>([]);
