@@ -794,6 +794,73 @@ function validateExtraction(
   return warnings;
 }
 
+/* ---------------- Schema-based sanitiser ---------------- */
+// Allowed line-label patterns per card. Lines whose label doesn't match are dropped.
+const CARD_LINE_PATTERNS: Record<string, RegExp> = {
+  concepts:
+    /^(zone|location|tent.?size|tent|products?.?sold|menu|sales?.?hours?(.*?(thu|fri|sat|sun))?|opening.?hours?|wristbands?(.*?(normal|black|max|partout))?|power.?baseline|power|gas|gas.?supplier|notes?)$/i,
+  introduction:
+    /^(name|festival.?name|dates?|start.?date|end.?date|location|site.?address|address|organiser|organizer|contact.?(email|phone|name)?|email|phone|expected.?guests|guests|load.?[-_ ]?in|load.?[-_ ]?out|crew.?count|crew|notes?)$/i,
+};
+
+const DUMP_TITLE_PATTERNS: RegExp[] = [
+  /^(general|misc|miscellaneous|other|operations?|document.?content|content|info|information|overview|notes?|details?|extracted|raw|dump|summary)$/i,
+];
+
+function isDumpTitle(title: string): boolean {
+  const t = (title || "").trim();
+  if (!t) return true;
+  if (t.length > 80) return true;
+  return DUMP_TITLE_PATTERNS.some((re) => re.test(t));
+}
+
+function isDumpLine(line: any): boolean {
+  const label = String(line?.label || "").trim();
+  const value = String(line?.value || "").trim();
+  if (!label) return true;
+  if (label.length > 80) return true;
+  if (value.length > 400 && !line.quantity && !line.due_date) return true;
+  return false;
+}
+
+function sanitizeSections(
+  card_key: string,
+  sections: any[],
+): { sections: any[]; rejected: { title: string; reason: string }[] } {
+  const rejected: { title: string; reason: string }[] = [];
+  const labelRe = CARD_LINE_PATTERNS[card_key];
+  const cleaned: any[] = [];
+
+  for (const s of sections || []) {
+    const title = String(s?.title || "").trim();
+    if (isDumpTitle(title)) {
+      rejected.push({ title: title || "(empty)", reason: "dump-like section title" });
+      continue;
+    }
+
+    const keptLines: any[] = [];
+    for (const l of s.lines || []) {
+      if (isDumpLine(l)) continue;
+      if (labelRe && !labelRe.test(String(l.label).trim())) continue;
+      keptLines.push(l);
+    }
+
+    if (!keptLines.length) {
+      rejected.push({
+        title,
+        reason: labelRe
+          ? `no lines matched the ${card_key} schema`
+          : "all lines were dump-like",
+      });
+      continue;
+    }
+
+    cleaned.push({ ...s, lines: keptLines });
+  }
+
+  return { sections: cleaned, rejected };
+}
+
 const CARD_BRAIN_HINTS: Record<string, string[]> = {
   concepts_brain: [
     "concept",
