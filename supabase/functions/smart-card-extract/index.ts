@@ -990,9 +990,12 @@ ${JSON.stringify(row.structured_data || {})}`;
 async function listBrainDocs({ card_key, festival_id, concept_id }: any) {
   const queries: string[] = [];
   const select = "select=*&order=frequency.desc,last_seen_at.desc&limit=200";
+  // Primary scope: same card_key
   queries.push(
     `brain_entries?category=eq.${encodeURIComponent(card_key)}&${select}`,
   );
+  // Cross-card: ALL brain entries for this festival, regardless of category,
+  // so the user can pull info that lives on a different card.
   if (festival_id) {
     queries.push(
       `brain_entries?festival_id=eq.${encodeURIComponent(festival_id)}&${select}`,
@@ -1005,6 +1008,7 @@ async function listBrainDocs({ card_key, festival_id, concept_id }: any) {
     queries.push(
       `brain_entries?subject_id=eq.${encodeURIComponent(concept_id)}&${select}`,
     );
+  // Global, cross-festival knowledge
   queries.push(`brain_entries?scope=eq.global&${select}`);
 
   const fetched = await Promise.all(
@@ -1019,24 +1023,31 @@ async function listBrainDocs({ card_key, festival_id, concept_id }: any) {
       const score = scoreBrainRow(row, card_key, festival_id, concept_id);
       const hasStructured =
         row.structured_data?.section || row.structured_data?.label;
+      const sameCard = row.category === card_key;
       return {
         id: row.id,
         key_name: row.key_name,
         display_name: row.display_name || row.key_name,
         category: row.category,
+        same_card: sameCard,
         scope: row.scope,
         festival_id: row.festival_id,
         frequency: row.frequency || 0,
         last_seen_at: row.last_seen_at,
         score,
-        recommended: score > 0,
+        // Recommend by default only docs scored against this card.
+        // Cross-card docs are visible but unselected so the user opts in.
+        recommended: score > 0 && sameCard,
         role: hasStructured ? "structured_line" : "ai_source",
         content_preview: String(row.content || "").slice(0, 240),
         content_chars: String(row.content || "").length,
       };
     })
     .sort((a, b) =>
-      (b.score - a.score) || (b.frequency - a.frequency),
+      // Same-card first, then score, then frequency
+      (Number(b.same_card) - Number(a.same_card)) ||
+      (b.score - a.score) ||
+      (b.frequency - a.frequency),
     );
   return { ok: true, items };
 }

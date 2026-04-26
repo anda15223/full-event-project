@@ -1299,7 +1299,7 @@ export function SmartCard({
             </DialogTitle>
             <DialogDescription>
               Choose which documents the AI should read for <span className="font-medium text-foreground">{title}</span>.
-              Recommended ones are pre-selected. Pick fewer for tighter, more specific results.
+              Recommended ones (matching this card) are pre-selected. You can also pull info from <span className="font-medium text-foreground">other cards</span> by ticking them below.
             </DialogDescription>
           </DialogHeader>
 
@@ -1368,6 +1368,17 @@ export function SmartCard({
                       <Badge variant="outline" className="text-[10px] h-4 px-1">
                         {d.role === "structured_line" ? "structured" : "AI source"}
                       </Badge>
+                      {d.category && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-4 px-1",
+                            d.same_card ? "border-primary/40 text-primary" : "border-amber-400/50 text-amber-700 dark:text-amber-300"
+                          )}
+                        >
+                          {d.same_card ? d.category : `from: ${d.category}`}
+                        </Badge>
+                      )}
                       {d.scope && (
                         <Badge variant="outline" className="text-[10px] h-4 px-1 text-muted-foreground">
                           {d.scope}
