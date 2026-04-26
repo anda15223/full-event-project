@@ -82,7 +82,7 @@ const sourceLabel = (s: string) => {
 export function SmartCard({
   cardKey, festivalId, conceptId, title, subtitle,
   emptyStateWarning, acceptedFileTypes = ".pdf,.xlsx,.xls,.docx,.doc,.csv,.txt,.png,.jpg,.jpeg,.webp",
-  hideBrainButton,
+  hideBrainButton, siblingConcepts,
 }: SmartCardProps) {
   const [card, setCard] = useState<SCard | null>(null);
   const [sections, setSections] = useState<SSection[]>([]);
