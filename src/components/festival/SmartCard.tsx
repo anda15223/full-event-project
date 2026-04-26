@@ -512,16 +512,47 @@ export function SmartCard({
     }
   };
 
-  const grabFromBrain = async () => {
+  // Step 1: open the picker — load the available Brain documents for this card.
+  const openBrainPicker = async () => {
     if (!card) return;
+    setBrainPickerOpen(true);
+    setLoadingBrainDocs(true);
+    setBrainDocs([]);
+    try {
+      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+        body: {
+          action: "list_brain_docs",
+          card_key: cardKey,
+          festival_id: festivalId,
+          concept_id: conceptId || null,
+        },
+      });
+      if (error) throw error;
+      const items: any[] = data?.items || [];
+      setBrainDocs(items);
+      // Pre-select the recommended ones so the default behaviour matches the old "auto" flow.
+      setSelectedBrainIds(new Set(items.filter((d) => d.recommended).map((d) => d.id)));
+    } catch (e: any) {
+      toast.error(`Could not load Brain docs: ${e.message || e}`);
+    } finally {
+      setLoadingBrainDocs(false);
+    }
+  };
+
+  // Step 2: actually grab from Brain, restricted to the docs the user picked.
+  const confirmGrabFromBrain = async () => {
+    if (!card) return;
+    setBrainPickerOpen(false);
     setGrabbing(true);
     try {
+      const ids = Array.from(selectedBrainIds);
       const { data, error } = await supabase.functions.invoke("smart-card-extract", {
         body: {
           action: "grab_brain",
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
+          brain_ids: ids.length ? ids : undefined,
         },
       });
       if (error) throw error;
@@ -529,10 +560,13 @@ export function SmartCard({
       setBrainDiagnostics(data?.diagnostics || null);
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
-        toast.info("Brain has nothing for this card yet — fill it in and it'll learn.");
+        toast.info(
+          ids.length
+            ? "Picked Brain docs didn't yield card-specific info — try different docs."
+            : "Brain has nothing for this card yet — fill it in and it'll learn.",
+        );
         return;
       }
-      // Insert each suggestion as a section with brain source
       const baseOrder = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
       let order = baseOrder;
       for (const s of suggestions) {
@@ -547,7 +581,9 @@ export function SmartCard({
           })));
         }
       }
-      toast.success(`Grabbed ${suggestions.length} sections from Brain`);
+      toast.success(
+        `Grabbed ${suggestions.length} section(s) from ${ids.length || "all matching"} Brain doc(s)`,
+      );
       reload();
     } catch (e: any) {
       toast.error(`Brain grab failed: ${e.message || e}`);
@@ -555,6 +591,15 @@ export function SmartCard({
       setGrabbing(false);
     }
   };
+
+  const toggleBrainDoc = (id: string) => {
+    setSelectedBrainIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
 
   // File deletion is staged via the AlertDialog (see fileToDelete state).
   const performDeleteFile = async (f: SFile, alsoDeleteData: boolean) => {
