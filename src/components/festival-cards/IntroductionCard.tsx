@@ -23,7 +23,6 @@ import {
 import {
   ChevronDown,
   Plus,
-  Sparkles,
   Trash2,
   UserRound,
   Users,
