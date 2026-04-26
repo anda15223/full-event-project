@@ -102,6 +102,11 @@ export function SmartCard({
   const [selectedBrainIds, setSelectedBrainIds] = useState<Set<string>>(new Set());
   const [includeOtherCards, setIncludeOtherCards] = useState(true);
   const [sourceCardFilter, setSourceCardFilter] = useState<string>("all");
+  const visibleBrainDocs = brainDocs.filter((d) => {
+    if (!includeOtherCards && !d.same_card) return false;
+    if (sourceCardFilter !== "all" && d.category !== sourceCardFilter) return false;
+    return true;
+  });
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
