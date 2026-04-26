@@ -37,6 +37,8 @@ export type SmartCardProps = {
   acceptedFileTypes?: string;
   /** Hide the brain "Grab info" button (default false) */
   hideBrainButton?: boolean;
+  /** Other concepts in the same festival/section — enables "Copy item to other concepts" */
+  siblingConcepts?: { id: string; name: string }[];
 };
 
 type SCard = { id: string; title: string | null; meta: any };
