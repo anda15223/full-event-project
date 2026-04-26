@@ -919,18 +919,60 @@ async function grabBrain({ card_key, festival_id, concept_id }: any) {
     }),
   );
 
-  const rows = uniqRows(fetched.flat())
-    .map((row) => ({
-      row,
-      score: scoreBrainRow(row, card_key, festival_id, concept_id),
-    }))
+  const allUnique = uniqRows(fetched.flat());
+  const scored = allUnique.map((row) => ({
+    row,
+    score: scoreBrainRow(row, card_key, festival_id, concept_id),
+  }));
+  const ranked = scored
     .filter(({ score }) => score > 0)
     .sort(
       (a, b) =>
         b.score - a.score || (b.row.frequency || 0) - (a.row.frequency || 0),
     )
-    .slice(0, 40)
-    .map(({ row }) => row);
+    .slice(0, 40);
+  const rows = ranked.map(({ row }) => row);
+  const scoreById = new Map(ranked.map(({ row, score }) => [row.id, score]));
+
+  // Diagnostics: per-Brain-document decisions
+  const diagnostics: any = {
+    card_key,
+    festival_id: festival_id || null,
+    concept_id: concept_id || null,
+    queries_run: queries.length,
+    brain_rows_fetched: allUnique.length,
+    brain_rows_considered: scored.length,
+    brain_rows_selected: rows.length,
+    documents: [] as any[],
+    notes: [] as string[],
+  };
+  for (const r of rows) {
+    diagnostics.documents.push({
+      id: r.id,
+      key_name: r.key_name,
+      display_name: r.display_name,
+      category: r.category,
+      scope: r.scope,
+      festival_id: r.festival_id,
+      score: scoreById.get(r.id) ?? 0,
+      role:
+        r.structured_data?.section || r.structured_data?.label
+          ? "structured_line"
+          : "ai_source",
+      content_chars: String(r.content || "").length,
+    });
+  }
+  // Also surface top rejected rows so the user knows what was almost picked
+  const rejected = scored
+    .filter(({ score }) => score === 0)
+    .slice(0, 5)
+    .map(({ row }) => ({
+      id: row.id,
+      key_name: row.key_name,
+      category: row.category,
+      reason: "no card-specific signal (category/keyword/scope mismatch)",
+    }));
+  diagnostics.rejected_examples = rejected;
 
   const bySection: Record<string, any[]> = {};
   const sourceDocs: string[] = [];
@@ -960,35 +1002,72 @@ ${String(r.content).slice(0, 12000)}`,
     title,
     lines,
   }));
+  diagnostics.structured_sections = suggestions.length;
+  diagnostics.ai_source_docs = sourceDocs.length;
 
   if (sourceDocs.length) {
     const cardPrompt =
       CARD_PROMPTS[card_key] ||
       "Extract logical sections and lines from this Brain knowledge.";
-    const structured = await callAI(
-      [
-        {
-          role: "system",
-          content:
-            "You convert stored Brain knowledge into editable card sections for a festival operations app. Use only information relevant to the requested card. If the Brain sources include a broad operations plan, extract the matching details instead of saying there is no data.",
-        },
-        {
-          role: "user",
-          content: `${cardPrompt}
+    try {
+      const structured = await callAI(
+        [
+          {
+            role: "system",
+            content:
+              "You convert stored Brain knowledge into editable card sections for a festival operations app. Use only information relevant to the requested card. If the Brain sources include a broad operations plan, extract the matching details instead of saying there is no data.",
+          },
+          {
+            role: "user",
+            content: `${cardPrompt}
 
 Requested card key: ${card_key}
 
 Brain sources:
 
 ${sourceDocs.join("\\n\\n---\\n\\n")}`,
-        },
-      ],
-      STRUCTURE_SCHEMA,
-    );
-    suggestions = [...(structured.sections || []), ...suggestions];
+          },
+        ],
+        STRUCTURE_SCHEMA,
+      );
+      const aiSections = structured.sections || [];
+      diagnostics.ai_extraction = {
+        attempted: true,
+        succeeded: true,
+        sections_returned: aiSections.length,
+        summary: structured.summary || null,
+      };
+      if (!aiSections.length) {
+        diagnostics.notes.push(
+          "AI returned 0 sections — Brain sources may not contain card-specific info.",
+        );
+      }
+      suggestions = [...aiSections, ...suggestions];
+    } catch (e) {
+      diagnostics.ai_extraction = {
+        attempted: true,
+        succeeded: false,
+        error: String((e as Error).message || e),
+      };
+      diagnostics.notes.push(`AI extraction failed: ${(e as Error).message || e}`);
+    }
+  } else {
+    diagnostics.ai_extraction = {
+      attempted: false,
+      reason:
+        rows.length === 0
+          ? "No Brain documents matched this card."
+          : "All matched Brain rows were already structured lines (no free-text source to extract from).",
+    };
   }
 
-  return { ok: true, suggestions };
+  if (!suggestions.length) {
+    diagnostics.notes.push(
+      "No suggestions produced. Check the rejected examples or upload a card-specific document.",
+    );
+  }
+
+  return { ok: true, suggestions, diagnostics };
 }
 
 async function remember(payload: any) {
