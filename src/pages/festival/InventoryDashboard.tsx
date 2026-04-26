@@ -96,10 +96,21 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
     return Array.from(set.keys()).sort();
   }, [rows, festivalFilter]);
 
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      if (festivalFilter !== "__all__" && r.festival_slug !== festivalFilter) return;
+      if (conceptFilter !== "__all__" && r.concept_name !== conceptFilter) return;
+      if (r.category) set.add(r.category);
+    });
+    return Array.from(set).sort();
+  }, [rows, festivalFilter, conceptFilter]);
+
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (festivalFilter !== "__all__" && r.festival_slug !== festivalFilter) return false;
       if (conceptFilter !== "__all__" && r.concept_name !== conceptFilter) return false;
+      if (categoryFilter !== "__all__" && r.category !== categoryFilter) return false;
       if (search && !r.item_name.toLowerCase().includes(search.toLowerCase())) return false;
       const need = r.needed_quantity;
       const counted = r.counted_quantity;
@@ -111,7 +122,7 @@ export default function InventoryDashboard({ scope }: { scope: "global" | "festi
       if (statusFilter === "matched" && !matched) return false;
       return true;
     });
-  }, [rows, festivalFilter, conceptFilter, search, statusFilter]);
+  }, [rows, festivalFilter, conceptFilter, categoryFilter, search, statusFilter]);
 
   const stats = useMemo(() => {
     const total = filtered.length;
