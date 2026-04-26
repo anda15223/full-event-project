@@ -1606,7 +1606,7 @@ export function SmartCard({
                             title="Assign to concept (moves on Save)"
                           >
                             <option value="">— concept —</option>
-                            {siblingConcepts!.map(c => (
+                            {siblingConcepts!.filter(c => c.id !== conceptId).map(c => (
                               <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                           </select>
