@@ -275,25 +275,32 @@ export default function TrolleysEditor() {
   const conceptName = (cid: string | null | undefined) =>
     concepts.find(c => c.id === cid)?.name || "Unassigned";
 
-  const addItem = async (trolleyId: string, defaultConceptId: string | null) => {
-    const draft = newItem[trolleyId];
-    if (!draft?.name || !draft?.cat) { toast.error("Name and category required"); return; }
+  const addItemFromCard = async (
+    trolleyId: string,
+    data: { name: string; needed: number | null; placed: number | null; counted: number | null; conceptId: string | null; category: string; photoFile: File | null }
+  ) => {
     const existing = items.filter(i => i.trolley_id === trolleyId);
     const orderIndex = existing.length;
-    const conceptId =
-      draft.concept_id && draft.concept_id !== NO_CONCEPT
-        ? draft.concept_id
-        : defaultConceptId;
+    let photo_path: string | null = null;
+    if (data.photoFile) {
+      const path = `trolley-items/${trolleyId}-${Date.now()}-${data.photoFile.name}`;
+      const { error: upErr } = await supabase.storage.from("festival-photos").upload(path, data.photoFile, { upsert: true });
+      if (upErr) { toast.error("Photo upload failed"); }
+      else photo_path = path;
+    }
     const { error } = await supabase.from("festival_bc_trolley_items").insert({
       trolley_id: trolleyId,
-      category: draft.cat,
-      item_name: draft.name,
-      quantity: draft.qty || null,
+      category: data.category,
+      item_name: data.name,
+      quantity: data.needed != null ? String(data.needed) : null,
+      needed_quantity: data.needed,
+      placed_quantity: data.placed,
+      counted_quantity: data.counted,
       order_index: orderIndex,
-      concept_id: conceptId,
-    });
+      concept_id: data.conceptId,
+      photo_path,
+    } as any);
     if (error) { toast.error("Failed to add"); return; }
-    setNewItem(s => ({ ...s, [trolleyId]: { name: "", qty: "", cat: draft.cat, concept_id: draft.concept_id } }));
     qc.invalidateQueries({ queryKey: ["festival_trolleys", festival.id] });
   };
 
