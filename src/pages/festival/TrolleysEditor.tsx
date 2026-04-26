@@ -267,7 +267,7 @@ export default function TrolleysEditor() {
   const qc = useQueryClient();
   const { data: festival } = useFestival(slug);
   const trolleysQ = useTrolleys(festival?.id);
-  const [newItem, setNewItem] = useState<Record<string, { name: string; qty: string; cat: string; concept_id: string }>>({});
+  
 
   if (!festival) return <div className="text-sm text-muted-foreground">Loading…</div>;
   const { trolleys = [], items = [], concepts = [] } = trolleysQ.data || {};
