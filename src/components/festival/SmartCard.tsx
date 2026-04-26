@@ -1554,6 +1554,18 @@ export function SmartCard({
                 <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] shrink-0", sourceColor(section.source))}>
                   {sourceLabel(section.source)}
                 </Badge>
+                {editMode && !conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(section.id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Duplicate this section to other concepts"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => openDuplicateSection(section.id)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Duplicate
+                  </Button>
+                )}
                 {editMode && (
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteSection(section.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
