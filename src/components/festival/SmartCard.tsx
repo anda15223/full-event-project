@@ -100,6 +100,7 @@ export function SmartCard({
   const [brainDocs, setBrainDocs] = useState<any[]>([]);
   const [loadingBrainDocs, setLoadingBrainDocs] = useState(false);
   const [selectedBrainIds, setSelectedBrainIds] = useState<Set<string>>(new Set());
+  const [includeOtherCards, setIncludeOtherCards] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<SFile | null>(null);
   const [cascadeDeleteData, setCascadeDeleteData] = useState(true);
