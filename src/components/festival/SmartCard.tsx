@@ -294,6 +294,122 @@ export function SmartCard({
   const [copyTargets, setCopyTargets] = useState<Record<string, boolean>>({});
   const [copying, setCopying] = useState(false);
 
+  // ---- Duplicate an entire section (with its lines) into other concept cards ----
+  const [dupSectionId, setDupSectionId] = useState<string | null>(null);
+  const [dupTargets, setDupTargets] = useState<Record<string, boolean>>({});
+  const [duplicating, setDuplicating] = useState(false);
+
+  const openDuplicateSection = (sectionId: string) => {
+    setDupTargets({});
+    setDupSectionId(sectionId);
+  };
+
+  const duplicateSectionToConcepts = async () => {
+    if (!dupSectionId) return;
+    const section = sections.find(s => s.id === dupSectionId);
+    if (!section) { toast.error("Section not found"); return; }
+    if (isDraftId(section.id)) { toast.error("Save the section first, then duplicate."); return; }
+    const targets = Object.entries(dupTargets).filter(([, v]) => v).map(([k]) => k);
+    if (!targets.length) { toast.error("Pick at least one concept"); return; }
+    const sectionLines = lines.filter(l => l.section_id === section.id && !isDraftId(l.id));
+
+    setDuplicating(true);
+    try {
+      for (const targetConceptId of targets) {
+        // 1. Find/create target SmartCard
+        let { data: targetCard } = await (supabase as any)
+          .from("smart_cards")
+          .select("id")
+          .eq("festival_id", festivalId)
+          .eq("card_key", cardKey)
+          .eq("concept_id", targetConceptId)
+          .maybeSingle();
+
+        if (!targetCard) {
+          const conceptName = siblingConcepts?.find(c => c.id === targetConceptId)?.name ?? "Concept";
+          const { data: created, error: cErr } = await (supabase as any)
+            .from("smart_cards")
+            .insert({
+              festival_id: festivalId,
+              card_key: cardKey,
+              concept_id: targetConceptId,
+              title: `${title.split(" — ")[0]} — ${conceptName}`,
+              meta: {},
+            })
+            .select("id")
+            .single();
+          if (cErr) throw cErr;
+          targetCard = created;
+        }
+
+        // 2. Find/create section by title
+        let { data: targetSection } = await (supabase as any)
+          .from("smart_sections")
+          .select("id")
+          .eq("card_id", targetCard.id)
+          .eq("title", section.title)
+          .maybeSingle();
+
+        if (!targetSection) {
+          const { data: maxRow } = await (supabase as any)
+            .from("smart_sections")
+            .select("order_index")
+            .eq("card_id", targetCard.id)
+            .order("order_index", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const nextOrder = (maxRow?.order_index ?? -1) + 1;
+          const { data: createdSec, error: sErr } = await (supabase as any)
+            .from("smart_sections")
+            .insert({
+              card_id: targetCard.id,
+              title: section.title,
+              description: section.description,
+              order_index: nextOrder,
+              source: "manual",
+            })
+            .select("id")
+            .single();
+          if (sErr) throw sErr;
+          targetSection = createdSec;
+        }
+
+        // 3. Insert all lines
+        if (sectionLines.length > 0) {
+          const { data: maxLine } = await (supabase as any)
+            .from("smart_lines")
+            .select("order_index")
+            .eq("section_id", targetSection.id)
+            .order("order_index", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          let next = (maxLine?.order_index ?? -1) + 1;
+          const payload = sectionLines.map(l => ({
+            section_id: targetSection.id,
+            label: l.label,
+            value: l.value,
+            quantity: l.quantity,
+            notes: l.notes,
+            status: l.status,
+            owner: l.owner,
+            due_date: l.due_date,
+            order_index: next++,
+            source: "manual",
+          }));
+          const { error: lErr } = await (supabase as any).from("smart_lines").insert(payload);
+          if (lErr) throw lErr;
+        }
+      }
+      toast.success(`Section duplicated to ${targets.length} concept${targets.length > 1 ? "s" : ""}`);
+      setDupSectionId(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Duplicate failed: ${e.message ?? "unknown"}`);
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const openCopyDialog = (lineId: string) => {
     setCopyTargets({});
     setCopyOpenForLine(lineId);
@@ -1438,6 +1554,18 @@ export function SmartCard({
                 <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] shrink-0", sourceColor(section.source))}>
                   {sourceLabel(section.source)}
                 </Badge>
+                {editMode && !conceptAssignerMode && !!siblingConcepts && siblingConcepts.length > 0 && !isDraftId(section.id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    title="Duplicate this section to other concepts"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => openDuplicateSection(section.id)}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Duplicate
+                  </Button>
+                )}
                 {editMode && (
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10" onClick={() => deleteSection(section.id)}>
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1898,6 +2026,43 @@ export function SmartCard({
             <Button size="sm" onClick={copyLineToConcepts} disabled={copying}>
               {copying ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
               Copy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate entire section to other concepts */}
+      <Dialog open={!!dupSectionId} onOpenChange={(o) => !o && setDupSectionId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicate section to other concepts</DialogTitle>
+            <DialogDescription>
+              The section and all its lines will be copied into each selected concept's card.
+              If a section with the same title already exists, the lines will be appended.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2 max-h-72 overflow-y-auto">
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).map(c => (
+              <label key={c.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!dupTargets[c.id]}
+                  onChange={(e) => setDupTargets(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                />
+                <span className="text-sm">{c.name}</span>
+              </label>
+            ))}
+            {(siblingConcepts ?? []).filter(c => c.id !== conceptId).length === 0 && (
+              <p className="text-xs text-muted-foreground">No other concepts available.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDupSectionId(null)} disabled={duplicating}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={duplicateSectionToConcepts} disabled={duplicating}>
+              {duplicating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+              Duplicate
             </Button>
           </DialogFooter>
         </DialogContent>
