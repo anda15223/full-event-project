@@ -1096,18 +1096,42 @@ export function SmartCard({
     setLoadingBrainDocs(true);
     setBrainDocs([]);
     try {
-      const { data, error } = await supabase.functions.invoke("smart-card-extract", {
-        body: {
-          action: "list_brain_docs",
-          card_key: cardKey,
-          festival_id: festivalId,
-          concept_id: conceptId || null,
-        },
-      });
-      if (error) throw error;
-      const items: any[] = data?.items || [];
+      let items: any[] = [];
+      let edgeError: any = null;
+
+      try {
+        const { data, error } = await supabase.functions.invoke("smart-card-extract", {
+          body: {
+            action: "list_brain_docs",
+            card_key: cardKey,
+            festival_id: festivalId,
+            concept_id: conceptId || null,
+          },
+        });
+        if (error) throw error;
+        items = data?.items || [];
+      } catch (e: any) {
+        edgeError = e;
+        const { data: rows, error: dbError } = await (supabase as any)
+          .from("brain_entries")
+          .select("*")
+          .or(`festival_id.eq.${festivalId},last_seen_festival_id.eq.${festivalId},category.eq.${cardKey}${conceptId ? `,subject_id.eq.${conceptId}` : ""}`)
+          .order("last_seen_at", { ascending: false })
+          .limit(300);
+        if (dbError) throw edgeError || dbError;
+        items = (rows || [])
+          .map((row: any) => toBrainPickerItem(row, cardKey, festivalId, conceptId, title))
+          .filter((item: any) => item.score > 0 || item.same_card)
+          .sort((a: any, b: any) =>
+            (Number(b.same_card) - Number(a.same_card)) ||
+            (Number(b.recommended) - Number(a.recommended)) ||
+            (b.score - a.score) ||
+            (b.frequency - a.frequency)
+          );
+        if (items.length) toast.info("Loaded Brain docs directly");
+      }
+
       setBrainDocs(items);
-      // Pre-select the recommended ones so the default behaviour matches the old "auto" flow.
       setSelectedBrainIds(new Set(items.filter((d) => d.recommended).map((d) => d.id)));
     } catch (e: any) {
       toast.error(`Could not load Brain docs: ${e.message || e}`);
