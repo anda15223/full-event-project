@@ -1014,8 +1014,7 @@ export function SmartCard({
   const confirmGrabFromBrain = async () => {
     if (!card) return;
     const visibleSelectedIds = visibleBrainDocs.filter((d) => selectedBrainIds.has(d.id)).map((d) => d.id);
-    const useSourceCard = sourceCardFilter !== "all";
-    if (!useSourceCard && visibleSelectedIds.length === 0) {
+    if (visibleSelectedIds.length === 0) {
       toast.error("Select the Brain documents you want to extract from.");
       return;
     }
@@ -1029,8 +1028,7 @@ export function SmartCard({
           card_key: cardKey,
           festival_id: festivalId,
           concept_id: conceptId || null,
-          source_card_key: useSourceCard ? sourceCardFilter : undefined,
-          brain_ids: useSourceCard ? undefined : visibleSelectedIds,
+          brain_ids: visibleSelectedIds,
         },
       });
       if (error) throw error;
@@ -1038,11 +1036,7 @@ export function SmartCard({
       setBrainDiagnostics(data?.diagnostics || null);
       if (data?.diagnostics) setShowDiagnostics(true);
       if (!suggestions.length) {
-        toast.info(
-          useSourceCard
-            ? `No ${cardKey} info found in ${sourceCardFilter}.`
-            : "Picked Brain docs didn't yield card-specific info — try different docs.",
-        );
+        toast.info("Picked Brain docs didn't yield card-specific info — try different docs.");
         return;
       }
       const baseOrder = sections.length ? Math.max(...sections.map(s => s.order_index)) + 1 : 0;
