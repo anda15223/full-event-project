@@ -699,16 +699,20 @@ export function SmartCard({
       // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
       const movedLineIds: string[] = [];
       if (Object.keys(lineConceptAssignment).length) {
-        // group by concept
+        // group by concept (translate draft line ids -> real ids inserted in step 4)
         const byConcept: Record<string, string[]> = {};
         for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
-          if (!targetConceptId || isDraftId(lineId)) continue;
+          if (!targetConceptId) continue;
+          const realId = isDraftId(lineId) ? lineIdMap[lineId] : lineId;
+          if (!realId) continue;
           if (targetConceptId === conceptId) continue; // same card, no-op
-          (byConcept[targetConceptId] ||= []).push(lineId);
+          (byConcept[targetConceptId] ||= []).push(realId);
         }
         for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
-          const linesToMove = lines.filter(l => lineIds.includes(l.id));
-          if (!linesToMove.length) continue;
+          // Fetch moved lines fresh from DB so we have real section_ids + values
+          const { data: linesToMove } = await (supabase as any)
+            .from("smart_lines").select("*").in("id", lineIds);
+          if (!linesToMove?.length) continue;
 
           // Get-or-create target SmartCard
           let { data: tCard } = await (supabase as any)
