@@ -678,7 +678,8 @@ export function SmartCard({
         const { error } = await (supabase as any).from("smart_sections").delete().in("id", pending.sectionDeletes);
         if (error) throw error;
       }
-      // 4. Insert new lines (resolve draft section ids)
+      // 4. Insert new lines (resolve draft section ids) — keep draft->real id map for assigner
+      const lineIdMap: Record<string, string> = {};
       if (pending.lineInserts.length) {
         const rows = pending.lineInserts.map(l => ({
           section_id: sectionIdMap[l.section_id] || l.section_id,
@@ -686,8 +687,9 @@ export function SmartCard({
           status: l.status, owner: l.owner, due_date: l.due_date,
           order_index: l.order_index, source: l.source,
         }));
-        const { error } = await (supabase as any).from("smart_lines").insert(rows);
+        const { data, error } = await (supabase as any).from("smart_lines").insert(rows).select();
         if (error) throw error;
+        pending.lineInserts.forEach((draft, i) => { lineIdMap[draft.id] = data[i].id; });
       }
       // 5. Update existing lines
       for (const [id, patch] of Object.entries(pending.lineUpdates)) {
@@ -697,16 +699,20 @@ export function SmartCard({
       // 5b. Concept assigner: move lines into per-concept cards, then delete from this common card
       const movedLineIds: string[] = [];
       if (Object.keys(lineConceptAssignment).length) {
-        // group by concept
+        // group by concept (translate draft line ids -> real ids inserted in step 4)
         const byConcept: Record<string, string[]> = {};
         for (const [lineId, targetConceptId] of Object.entries(lineConceptAssignment)) {
-          if (!targetConceptId || isDraftId(lineId)) continue;
+          if (!targetConceptId) continue;
+          const realId = isDraftId(lineId) ? lineIdMap[lineId] : lineId;
+          if (!realId) continue;
           if (targetConceptId === conceptId) continue; // same card, no-op
-          (byConcept[targetConceptId] ||= []).push(lineId);
+          (byConcept[targetConceptId] ||= []).push(realId);
         }
         for (const [targetConceptId, lineIds] of Object.entries(byConcept)) {
-          const linesToMove = lines.filter(l => lineIds.includes(l.id));
-          if (!linesToMove.length) continue;
+          // Fetch moved lines fresh from DB so we have real section_ids + values
+          const { data: linesToMove } = await (supabase as any)
+            .from("smart_lines").select("*").in("id", lineIds);
+          if (!linesToMove?.length) continue;
 
           // Get-or-create target SmartCard
           let { data: tCard } = await (supabase as any)
@@ -729,7 +735,17 @@ export function SmartCard({
           // For each source section, get-or-create matching section in target card and insert lines
           const sectionsTouched = Array.from(new Set(linesToMove.map(l => l.section_id)));
           for (const srcSecId of sectionsTouched) {
-            const srcSec = sections.find(s => s.id === srcSecId);
+            // Try in-memory first; if section was just inserted, look up via reverse sectionIdMap; else fetch from DB
+            let srcSec: any = sections.find(s => s.id === srcSecId);
+            if (!srcSec) {
+              const draftId = Object.keys(sectionIdMap).find(k => sectionIdMap[k] === srcSecId);
+              if (draftId) srcSec = sections.find(s => s.id === draftId);
+            }
+            if (!srcSec) {
+              const { data: fetched } = await (supabase as any)
+                .from("smart_sections").select("id, title, description").eq("id", srcSecId).maybeSingle();
+              srcSec = fetched;
+            }
             if (!srcSec) continue;
             let { data: tSec } = await (supabase as any)
               .from("smart_sections").select("id, order_index")
