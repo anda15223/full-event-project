@@ -1721,11 +1721,12 @@ export function SmartCard({
                       // On per-concept cards it MOVES the line to the chosen concept on Save.
                       const showAssigner = !!siblingConcepts && siblingConcepts.length > 0;
                       const assigned = lineConceptAssignment[line.id] || "";
-                      const gridCols = showAssigner
-                        ? (canCopy ? "grid-cols-[1fr_2.4fr_70px_120px_60px_24px_24px]" : "grid-cols-[1fr_2.4fr_70px_120px_60px_24px]")
-                        : (canCopy ? "grid-cols-[1fr_2.8fr_80px_60px_24px_24px]" : "grid-cols-[1fr_2.8fr_80px_60px_24px]");
                       const showInlineConcept = enableInlineConceptAllocator && !!siblingConcepts && siblingConcepts.length > 0;
                       const showInventory = !!inventoryCategories && inventoryCategories.length > 0;
+                      const extraCol = showInventory ? "_130px" : "";
+                      const gridCols = showAssigner
+                        ? (canCopy ? `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px_24px]` : `grid-cols-[1fr_1.6fr_70px_120px${extraCol}_60px_24px]`)
+                        : (canCopy ? `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px_24px]` : `grid-cols-[1fr_2fr_80px${extraCol}_60px_24px]`);
                       const inlineConceptVal = (line.meta as any)?.allocated_concept_id ?? "";
                       const inventoryVal = (line.meta as any)?.inventory_category ?? "";
                       const persistMeta = async (patch: Record<string, any>) => {
@@ -1760,6 +1761,22 @@ export function SmartCard({
                             ))}
                           </select>
                         )}
+                        {showInventory && (
+                          <select
+                            value={inventoryVal}
+                            onChange={(e) => persistMeta({ inventory_category: e.target.value || null })}
+                            className={cn(
+                              "h-7 text-[11px] rounded border bg-background px-1",
+                              inventoryVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                            )}
+                            title="Inventory category"
+                          >
+                            <option value="">— inventory —</option>
+                            {inventoryCategories!.map(c => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        )}
                         <Badge variant="outline" className={cn("h-5 px-1 text-[9px] justify-center", sourceColor(line.source))}>
                           {sourceLabel(line.source)}
                         </Badge>
@@ -1772,40 +1789,22 @@ export function SmartCard({
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                      {(showInlineConcept || showInventory) && (
+                      {showInlineConcept && (
                         <div className="flex gap-1.5 pl-1 items-center">
-                          {showInlineConcept && (
-                            <select
-                              value={inlineConceptVal}
-                              onChange={(e) => persistMeta({ allocated_concept_id: e.target.value || null })}
-                              className={cn(
-                                "h-6 text-[11px] rounded border bg-background px-1.5 min-w-[120px]",
-                                inlineConceptVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
-                              )}
-                              title="Allocate to station/concept"
-                            >
-                              <option value="">— allocate to —</option>
-                              {siblingConcepts!.map(c => (
-                                <option key={c.id} value={c.id}>{c.name}</option>
-                              ))}
-                            </select>
-                          )}
-                          {showInventory && (
-                            <select
-                              value={inventoryVal}
-                              onChange={(e) => persistMeta({ inventory_category: e.target.value || null })}
-                              className={cn(
-                                "h-6 text-[11px] rounded border bg-background px-1.5 min-w-[140px]",
-                                inventoryVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
-                              )}
-                              title="Inventory category"
-                            >
-                              <option value="">— inventory —</option>
-                              {inventoryCategories!.map(c => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                          )}
+                          <select
+                            value={inlineConceptVal}
+                            onChange={(e) => persistMeta({ allocated_concept_id: e.target.value || null })}
+                            className={cn(
+                              "h-6 text-[11px] rounded border bg-background px-1.5 min-w-[120px]",
+                              inlineConceptVal ? "border-primary text-primary font-medium" : "border-border text-muted-foreground"
+                            )}
+                            title="Allocate to station/concept"
+                          >
+                            <option value="">— allocate to —</option>
+                            {siblingConcepts!.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
                         </div>
                       )}
                       </div>
