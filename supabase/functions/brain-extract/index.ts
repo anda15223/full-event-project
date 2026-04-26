@@ -34,10 +34,22 @@ Deno.serve(async (req) => {
       const isPdf = mt.includes("pdf");
 
       if (isImage) {
-        // Images: Gemini accepts public URLs for PNG/JPEG/WebP/GIF
+        // Fetch image server-side and inline as base64 data URL
+        // (Google AI Studio sometimes can't reach Supabase storage URLs directly)
+        const r = await fetch(publicUrl);
+        if (!r.ok) throw new Error(`Failed to fetch image: ${r.status}`);
+        const buf = new Uint8Array(await r.arrayBuffer());
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < buf.length; i += chunk) {
+          binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+        }
+        const b64 = btoa(binary);
+        const imgMime = mt || "image/png";
+        const dataUrl = `data:${imgMime};base64,${b64}`;
         userParts.push({
           type: "image_url",
-          image_url: { url: publicUrl },
+          image_url: { url: dataUrl },
         });
         userParts.push({
           type: "text",
