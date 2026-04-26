@@ -29,19 +29,40 @@ Deno.serve(async (req) => {
       sourceLabel = "pasted text";
     } else if (storage_path) {
       const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/festival-photos/${storage_path}`;
-      const isImage = (mime_type || "").startsWith("image/");
-      const isPdf = (mime_type || "").includes("pdf");
+      const mt = (mime_type || "").toLowerCase();
+      const isImage = mt.startsWith("image/");
+      const isPdf = mt.includes("pdf");
 
-      if (isImage || isPdf) {
+      if (isImage) {
+        // Images: Gemini accepts public URLs for PNG/JPEG/WebP/GIF
         userParts.push({
           type: "image_url",
           image_url: { url: publicUrl },
         });
         userParts.push({
           type: "text",
-          text: `Extract the full readable content from this ${
-            isPdf ? "PDF" : "image"
-          } (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+          text: `Extract the full readable content from this image (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
+        });
+      } else if (isPdf) {
+        // PDFs: must be sent as base64 data URL with application/pdf MIME type
+        const r = await fetch(publicUrl);
+        if (!r.ok) throw new Error(`Failed to fetch PDF: ${r.status}`);
+        const buf = new Uint8Array(await r.arrayBuffer());
+        // Base64 encode in chunks to avoid call-stack limits on large PDFs
+        let binary = "";
+        const chunk = 0x8000;
+        for (let i = 0; i < buf.length; i += chunk) {
+          binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+        }
+        const b64 = btoa(binary);
+        const dataUrl = `data:application/pdf;base64,${b64}`;
+        userParts.push({
+          type: "image_url",
+          image_url: { url: dataUrl },
+        });
+        userParts.push({
+          type: "text",
+          text: `Extract the full readable content from this PDF (filename: ${filename}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.`,
         });
       } else {
         // Fallback: try to fetch as text
