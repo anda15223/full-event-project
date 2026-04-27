@@ -1022,9 +1022,9 @@ export default function ConceptsEditor() {
           <Button onClick={addConcept} size="sm" className="h-8">
             <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
           </Button>
-        </div>
+        <PreviewDiagnosticsBanner />
 
-        <SmartCard
+
           cardKey="concepts_brain"
           festivalId={festival.id}
           title="Concepts AI Brain"
