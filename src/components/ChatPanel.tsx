@@ -146,7 +146,7 @@ export default function ChatPanel() {
                   <div className="h-14 w-14 rounded-2xl bg-primary/6 flex items-center justify-center mb-4">
                     <Bot className="h-7 w-7 text-primary" />
                   </div>
-                  <h4 className="font-heading font-semibold text-sm mb-1.5">AI Operations Assistant</h4>
+                  <h4 className="font-heading font-semibold text-sm mb-1.5">AI Suite Assistant</h4>
                   <p className="text-xs text-muted-foreground mb-6 max-w-[260px] leading-relaxed">
                     Ask me about your emails, invoices, tasks, or give commands to agents.
                   </p>
