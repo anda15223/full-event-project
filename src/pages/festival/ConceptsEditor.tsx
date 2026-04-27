@@ -28,37 +28,39 @@ import { SmartCard } from "@/components/festival/SmartCard";
 
 type PreviewTarget = { url: string; name?: string; mime_type?: string } | null;
 
+function guessMimeFromName(name?: string): string | null {
+  if (!name) return null;
+  const ext = name.toLowerCase().split(".").pop() || "";
+  if (ext === "pdf") return "application/pdf";
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "avif"].includes(ext)) return `image/${ext === "jpg" ? "jpeg" : ext}`;
+  return null;
+}
+
 function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose: () => void }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [resolvedType, setResolvedType] = useState<string | null>(null);
+  const [loadingBlob, setLoadingBlob] = useState(false);
 
+  // Try to fetch a blob copy in the background so Download works even when
+  // direct link clicks are blocked. Preview itself uses the direct URL, which
+  // works for images/iframes even when fetch() is blocked by ad-blockers.
   useEffect(() => {
     let cancelled = false;
     let createdUrl: string | null = null;
     setBlobUrl(null);
-    setError(null);
-    setResolvedType(null);
     if (!target) return;
-    setLoading(true);
+    setLoadingBlob(true);
     (async () => {
       try {
         const res = await fetch(target.url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         if (cancelled) return;
-        const type = target.mime_type || blob.type || "application/octet-stream";
-        const typed = type === "application/octet-stream" && /\.pdf$/i.test(target.name || "")
-          ? new Blob([blob], { type: "application/pdf" })
-          : blob;
-        createdUrl = URL.createObjectURL(typed);
-        setResolvedType(typed.type || type);
+        createdUrl = URL.createObjectURL(blob);
         setBlobUrl(createdUrl);
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || "Failed to load file");
+      } catch {
+        // ignore — preview still works via direct URL, Download button falls back to opening URL
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingBlob(false);
       }
     })();
     return () => {
@@ -69,8 +71,10 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
 
   const open = !!target;
   const name = target?.name || "File";
-  const isImg = (resolvedType || "").startsWith("image/");
-  const isPdfType = (resolvedType || "") === "application/pdf";
+  const resolvedType = target?.mime_type || guessMimeFromName(target?.name) || "";
+  const isImg = resolvedType.startsWith("image/");
+  const isPdfType = resolvedType === "application/pdf";
+  const directUrl = target?.url || "";
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
