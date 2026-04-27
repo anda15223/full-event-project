@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 
 type Status = "idle" | "running" | "ok" | "fail";
+type ProbeFile = { url?: string; path?: string; name?: string; mime_type?: string };
 
 /**
  * Quick diagnostic for file previews on this page.
@@ -15,7 +16,7 @@ type Status = "idle" | "running" | "ok" | "fail";
  * Probes the most recently uploaded object in the `festival-photos` bucket so the
  * test reflects real data this page would render.
  */
-export function PreviewDiagnosticsBanner() {
+export function PreviewDiagnosticsBanner({ files = [] }: { files?: ProbeFile[] }) {
   const [probeUrl, setProbeUrl] = useState<string | null>(null);
   const [directStatus, setDirectStatus] = useState<Status>("idle");
   const [directMsg, setDirectMsg] = useState<string>("");
@@ -23,6 +24,11 @@ export function PreviewDiagnosticsBanner() {
   const [blobMsg, setBlobMsg] = useState<string>("");
 
   const pickProbe = useCallback(async () => {
+    const realFile = files.find((f) => f.url && f.path && (f.mime_type === "application/pdf" || /\.pdf$/i.test(f.name || f.path || "")))
+      || files.find((f) => f.url && f.path)
+      || files.find((f) => f.url);
+    if (realFile?.url) return realFile;
+
     // List a few recent objects from festival-photos so we have a real URL to test.
     const { data, error } = await supabase.storage
       .from("festival-photos")
@@ -31,8 +37,8 @@ export function PreviewDiagnosticsBanner() {
     // Skip folder placeholders (Supabase returns dirs without metadata)
     const file = data.find((d: any) => d.name && d.metadata) || data[0];
     const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(file.name);
-    return pub?.publicUrl || null;
-  }, []);
+    return pub?.publicUrl ? { url: pub.publicUrl, path: file.name, name: file.name, mime_type: file.metadata?.mimetype } : null;
+  }, [files]);
 
   const runDirectTest = useCallback((url: string) => {
     return new Promise<void>((resolve) => {
@@ -61,13 +67,25 @@ export function PreviewDiagnosticsBanner() {
     });
   }, []);
 
-  const runBlobTest = useCallback(async (url: string) => {
+  const runBlobTest = useCallback(async (file: ProbeFile) => {
     setBlobStatus("running");
-    setBlobMsg("Fetching as blob…");
+    setBlobMsg(file.path ? "Fetching through in-app proxy…" : "Fetching direct URL as blob…");
     try {
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const blob = await res.blob();
+      let blob: Blob;
+      if (file.path) {
+        const { data, error } = await supabase.functions.invoke("serve-attachment", {
+          body: { bucket: "festival-photos", storagePath: file.path, filename: file.name, mimeType: file.mime_type },
+        });
+        if (error || !data?.base64) throw new Error(error?.message || data?.error || "Proxy failed");
+        const binary = atob(data.base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        blob = new Blob([bytes], { type: data.mimeType || file.mime_type || "application/octet-stream" });
+      } else {
+        const res = await fetch(file.url!, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        blob = await res.blob();
+      }
       const obj = URL.createObjectURL(blob);
       URL.revokeObjectURL(obj);
       setBlobStatus("ok");
@@ -81,17 +99,17 @@ export function PreviewDiagnosticsBanner() {
   const runAll = useCallback(async () => {
     setDirectStatus("running"); setBlobStatus("running");
     setDirectMsg(""); setBlobMsg("");
-    const url = await pickProbe();
-    if (!url) {
+    const file = await pickProbe();
+    if (!file?.url) {
       setDirectStatus("fail"); setBlobStatus("fail");
       setDirectMsg("No files in storage to probe");
       setBlobMsg("Upload a file first, then re-run");
       setProbeUrl(null);
       return;
     }
-    setProbeUrl(url);
+    setProbeUrl(file.url);
     // Run in parallel
-    await Promise.all([runDirectTest(url), runBlobTest(url)]);
+    await Promise.all([runDirectTest(file.url), runBlobTest(file)]);
   }, [pickProbe, runDirectTest, runBlobTest]);
 
   useEffect(() => { runAll(); }, [runAll]);
@@ -128,7 +146,7 @@ export function PreviewDiagnosticsBanner() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Row label="Direct URL preview (images & iframes)" status={directStatus} msg={directMsg} />
-        <Row label="Blob fallback (PDF in-iframe)" status={blobStatus} msg={blobMsg} />
+        <Row label="PDF blob fallback (in-app proxy)" status={blobStatus} msg={blobMsg} />
       </div>
       {probeUrl && (
         <div className="mt-2 text-xs text-muted-foreground truncate">
