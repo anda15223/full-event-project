@@ -102,7 +102,7 @@ export default function Home() {
 
       <footer className="border-t border-border/30 py-10">
         <div className="max-w-6xl mx-auto px-6 text-center text-xs text-muted-foreground">
-          AI Operations — Business Command Center
+          AI Suite — Business Command Center
         </div>
       </footer>
     </div>
