@@ -21,13 +21,13 @@ import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upl
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SmartCard } from "@/components/festival/SmartCard";
 import { PreviewDiagnosticsBanner } from "@/components/festival/PreviewDiagnosticsBanner";
 
 /* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
 
-type PreviewTarget = { url: string; name?: string; mime_type?: string } | null;
+type PreviewTarget = { url: string; path?: string; name?: string; mime_type?: string } | null;
 
 function guessMimeFromName(name?: string): string | null {
   if (!name) return null;
@@ -40,6 +40,7 @@ function guessMimeFromName(name?: string): string | null {
 function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose: () => void }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loadingBlob, setLoadingBlob] = useState(false);
+  const [proxyFailed, setProxyFailed] = useState(false);
 
   // Try to fetch a blob copy in the background so Download works even when
   // direct link clicks are blocked. Preview itself uses the direct URL, which
@@ -48,18 +49,36 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
     let cancelled = false;
     let createdUrl: string | null = null;
     setBlobUrl(null);
+    setProxyFailed(false);
     if (!target) return;
     setLoadingBlob(true);
     (async () => {
       try {
-        const res = await fetch(target.url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
+        let blob: Blob;
+        if (target.path) {
+          const { data, error } = await supabase.functions.invoke("serve-attachment", {
+            body: {
+              bucket: "festival-photos",
+              storagePath: target.path,
+              filename: target.name,
+              mimeType: target.mime_type || guessMimeFromName(target.name) || "application/octet-stream",
+            },
+          });
+          if (error || !data?.base64) throw new Error(error?.message || "Proxy preview failed");
+          const binary = atob(data.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          blob = new Blob([bytes], { type: data.mimeType || target.mime_type || "application/octet-stream" });
+        } else {
+          const res = await fetch(target.url, { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          blob = await res.blob();
+        }
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setBlobUrl(createdUrl);
       } catch {
-        // ignore — preview still works via direct URL, Download button falls back to opening URL
+        if (!cancelled) setProxyFailed(true);
       } finally {
         if (!cancelled) setLoadingBlob(false);
       }
@@ -80,6 +99,8 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">Preview {name}</DialogTitle>
+        <DialogDescription className="sr-only">Inline file preview with download fallback.</DialogDescription>
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
           <p className="text-sm font-medium truncate">{name}</p>
           <div className="flex items-center gap-1">
@@ -124,7 +145,7 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
             ) : (
               <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
                 <FileIcon className="h-10 w-10" />
-                <p>Your browser blocked the inline PDF preview.</p>
+                <p>{proxyFailed ? "The in-app PDF proxy could not load this file." : "Your browser blocked the inline PDF preview."}</p>
                 <Button size="sm" onClick={() => window.open(directUrl, "_blank", "noopener,noreferrer")}>
                   Open PDF in new tab
                 </Button>
