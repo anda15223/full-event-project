@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are the AI Operations Assistant — an intelligent command center for a business email management system.
+const SYSTEM_PROMPT = `You are the AI Suite Assistant — an intelligent command center for a business email management system.
 
 You have access to these agents:
 1. EMAIL MEMORY AGENT (blue) — knows all stored emails, senders, companies, languages

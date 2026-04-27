@@ -60,7 +60,7 @@ export default function Dashboard() {
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <Zap className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">AI Operations Dashboard</span>
+            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">AI Suite Dashboard</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-heading font-bold mb-2">Your business is under control.</h1>
           <p className="text-sm opacity-75 mb-6 max-w-lg">

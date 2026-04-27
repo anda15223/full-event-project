@@ -25,7 +25,7 @@ export default function Home() {
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
               <Sparkles className="h-4.5 w-4.5 text-primary" />
             </div>
-            <span className="font-heading font-bold text-base tracking-tight">AI Operations</span>
+            <span className="font-heading font-bold text-base tracking-tight">AI Suite</span>
           </div>
           <Button onClick={() => navigate("/dashboard")} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10 h-9 px-5 text-sm rounded-xl">
             Open Dashboard <ArrowRight className="h-3.5 w-3.5 ml-2" />
@@ -102,7 +102,7 @@ export default function Home() {
 
       <footer className="border-t border-border/30 py-10">
         <div className="max-w-6xl mx-auto px-6 text-center text-xs text-muted-foreground">
-          AI Operations — Business Command Center
+          AI Suite — Business Command Center
         </div>
       </footer>
     </div>
