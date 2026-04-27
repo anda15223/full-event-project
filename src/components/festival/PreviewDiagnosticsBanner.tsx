@@ -40,30 +40,38 @@ export function PreviewDiagnosticsBanner({ files = [] }: { files?: ProbeFile[] }
     return pub?.publicUrl ? { url: pub.publicUrl, path: file.name, name: file.name, mime_type: file.metadata?.mimetype } : null;
   }, [files]);
 
-  const runDirectTest = useCallback((url: string) => {
+  const runDirectTest = useCallback((file: ProbeFile) => {
     return new Promise<void>((resolve) => {
       setDirectStatus("running");
       setDirectMsg("Loading direct URL…");
-      const img = new Image();
+      const url = file.url! + (file.url!.includes("?") ? "&" : "?") + "diag=" + Date.now();
+      const isImage = file.mime_type?.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(file.name || file.path || "");
+      const el = isImage ? new Image() : document.createElement("iframe");
       const t = setTimeout(() => {
         setDirectStatus("fail");
         setDirectMsg("Timed out (likely blocked by browser/extension)");
+        if (!isImage) el.remove();
         resolve();
       }, 8000);
-      img.onload = () => {
+      el.onload = () => {
         clearTimeout(t);
         setDirectStatus("ok");
         setDirectMsg("Direct URL loads in this browser");
+        if (!isImage) el.remove();
         resolve();
       };
-      img.onerror = () => {
+      el.onerror = () => {
         clearTimeout(t);
         setDirectStatus("fail");
         setDirectMsg("Browser blocked the direct URL (ad-blocker, Chrome, or CORS)");
+        if (!isImage) el.remove();
         resolve();
       };
-      // cache-bust so a previously failed load isn't reused
-      img.src = url + (url.includes("?") ? "&" : "?") + "diag=" + Date.now();
+      if (!isImage) {
+        (el as HTMLIFrameElement).className = "fixed -left-[9999px] top-0 h-px w-px opacity-0 pointer-events-none";
+        document.body.appendChild(el);
+      }
+      el.src = url;
     });
   }, []);
 
@@ -109,7 +117,7 @@ export function PreviewDiagnosticsBanner({ files = [] }: { files?: ProbeFile[] }
     }
     setProbeUrl(file.url);
     // Run in parallel
-    await Promise.all([runDirectTest(file.url), runBlobTest(file)]);
+    await Promise.all([runDirectTest(file), runBlobTest(file)]);
   }, [pickProbe, runDirectTest, runBlobTest]);
 
   useEffect(() => { runAll(); }, [runAll]);
