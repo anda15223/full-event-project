@@ -82,46 +82,40 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
           <p className="text-sm font-medium truncate">{name}</p>
           <div className="flex items-center gap-1">
-            {blobUrl && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = blobUrl;
-                  a.download = name;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                }}
-              >
-                <Download className="h-3.5 w-3.5 mr-1" /> Download
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={loadingBlob && !blobUrl}
+              onClick={() => {
+                const href = blobUrl || directUrl;
+                if (!href) return;
+                const a = document.createElement("a");
+                a.href = href;
+                a.download = name;
+                if (!blobUrl) a.target = "_blank";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+              }}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" /> Download
+            </Button>
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
         <div className="flex-1 min-h-0 bg-muted/20 flex items-center justify-center overflow-auto">
-          {loading && (
+          {!directUrl ? (
             <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm">
               <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
             </div>
-          )}
-          {error && !loading && (
-            <div className="text-sm text-destructive p-4 text-center">
-              Could not load file: {error}
-            </div>
-          )}
-          {!loading && !error && blobUrl && isImg && (
-            <img src={blobUrl} alt={name} className="max-w-full max-h-full object-contain" />
-          )}
-          {!loading && !error && blobUrl && isPdfType && (
-            <iframe src={blobUrl} title={name} className="w-full h-full border-0" />
-          )}
-          {!loading && !error && blobUrl && !isImg && !isPdfType && (
+          ) : isImg ? (
+            <img src={directUrl} alt={name} className="max-w-full max-h-full object-contain" />
+          ) : isPdfType ? (
+            <iframe src={directUrl} title={name} className="w-full h-full border-0" />
+          ) : (
             <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
               <FileIcon className="h-10 w-10" />
               <p>No inline preview available for this file type.</p>
@@ -129,8 +123,9 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
                 size="sm"
                 onClick={() => {
                   const a = document.createElement("a");
-                  a.href = blobUrl;
+                  a.href = blobUrl || directUrl;
                   a.download = name;
+                  if (!blobUrl) a.target = "_blank";
                   document.body.appendChild(a);
                   a.click();
                   a.remove();
