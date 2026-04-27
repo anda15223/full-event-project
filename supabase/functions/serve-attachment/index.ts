@@ -3,8 +3,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const allowedBuckets = new Set(["email-attachments", "festival-photos", "invoice-pdfs"]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,7 +14,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { attachmentId, storagePath } = await req.json();
+    const { attachmentId, storagePath, bucket, mimeType: providedMimeType, filename: providedFilename } = await req.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -20,8 +22,9 @@ Deno.serve(async (req) => {
     );
 
     let path = storagePath;
-    let mimeType = "application/pdf";
-    let filename = "attachment.pdf";
+    let storageBucket = bucket || "email-attachments";
+    let mimeType = providedMimeType || "application/pdf";
+    let filename = providedFilename || "attachment.pdf";
 
     // If attachmentId provided, look up the record
     if (attachmentId && !path) {
@@ -38,8 +41,16 @@ Deno.serve(async (req) => {
         );
       }
       path = att.storage_path;
+      storageBucket = "email-attachments";
       mimeType = att.mime_type || mimeType;
       filename = att.filename || filename;
+    }
+
+    if (!allowedBuckets.has(storageBucket)) {
+      return new Response(
+        JSON.stringify({ error: "Bucket not allowed" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     if (!path) {
@@ -51,7 +62,7 @@ Deno.serve(async (req) => {
 
     // Download from storage server-side
     const { data: fileData, error: dlError } = await supabase.storage
-      .from("email-attachments")
+      .from(storageBucket)
       .download(path);
 
     if (dlError || !fileData) {
