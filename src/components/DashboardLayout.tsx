@@ -39,7 +39,7 @@ function SidebarNav() {
               <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                 <Zap className="h-4 w-4 text-white" />
               </div>
-              <span className="font-heading font-bold tracking-tight text-foreground text-[15px]">AI Ops</span>
+              <span className="font-heading font-bold tracking-tight text-foreground text-[15px]">AI Suite</span>
             </div>
           )}
         </div>
