@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SmartCard } from "@/components/festival/SmartCard";
+import { PreviewDiagnosticsBanner } from "@/components/festival/PreviewDiagnosticsBanner";
 
 /* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
 
@@ -1022,6 +1023,8 @@ export default function ConceptsEditor() {
             <Plus className="h-3.5 w-3.5 mr-1" /> Add concept
           </Button>
         </div>
+
+        <PreviewDiagnosticsBanner />
 
         <SmartCard
           cardKey="concepts_brain"
