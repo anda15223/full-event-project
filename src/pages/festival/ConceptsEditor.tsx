@@ -24,6 +24,7 @@ import { useFestival, useConcepts } from "@/hooks/useFestival";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SmartCard } from "@/components/festival/SmartCard";
 import { PreviewDiagnosticsBanner } from "@/components/festival/PreviewDiagnosticsBanner";
+import PdfViewer from "@/components/invoices/PdfViewer";
 
 /* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
 
@@ -136,21 +137,7 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
           ) : isImg ? (
             <img src={blobUrl || directUrl} alt={name} className="max-w-full max-h-full object-contain" />
           ) : isPdfType ? (
-            blobUrl ? (
-              <iframe src={blobUrl} title={name} className="w-full h-full border-0" />
-            ) : loadingBlob ? (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
-                <FileIcon className="h-10 w-10" />
-                <p>{proxyFailed ? "The in-app PDF proxy could not load this file." : "Your browser blocked the inline PDF preview."}</p>
-                <Button size="sm" onClick={() => window.open(directUrl, "_blank", "noopener,noreferrer")}>
-                  Open PDF in new tab
-                </Button>
-              </div>
-            )
+            <PdfViewer pdfUrl={blobUrl || undefined} storagePath={target?.path} bucket="festival-photos" />
           ) : (
             <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
               <FileIcon className="h-10 w-10" />
