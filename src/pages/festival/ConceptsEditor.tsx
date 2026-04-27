@@ -177,12 +177,12 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
   );
 }
 
-const FilePreviewContext = createContext<(t: { url: string; name?: string; mime_type?: string }) => void>(() => {});
+const FilePreviewContext = createContext<(t: { url: string; path?: string; name?: string; mime_type?: string }) => void>(() => {});
 const useFilePreview = () => useContext(FilePreviewContext);
 
 function FilePreviewProvider({ children }: { children: React.ReactNode }) {
   const [target, setTarget] = useState<PreviewTarget>(null);
-  const open = useCallback((t: { url: string; name?: string; mime_type?: string }) => setTarget(t), []);
+  const open = useCallback((t: { url: string; path?: string; name?: string; mime_type?: string }) => setTarget(t), []);
   return (
     <FilePreviewContext.Provider value={open}>
       {children}
