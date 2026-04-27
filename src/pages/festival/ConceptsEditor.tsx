@@ -997,6 +997,7 @@ export default function ConceptsEditor() {
   const qc = useQueryClient();
   const { data: festival } = useFestival(slug);
   const { data: concepts = [] } = useConcepts(festival?.id);
+  const diagnosticFiles: Photo[] = concepts.flatMap((c: any) => Array.isArray(c.photos) ? c.photos : []);
 
   if (!festival) return <div className="text-base text-muted-foreground">Loading…</div>;
 
@@ -1033,7 +1034,7 @@ export default function ConceptsEditor() {
           </Button>
         </div>
 
-        <PreviewDiagnosticsBanner />
+        <PreviewDiagnosticsBanner files={diagnosticFiles} />
 
         <SmartCard
           cardKey="concepts_brain"
