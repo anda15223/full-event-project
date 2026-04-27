@@ -41,7 +41,6 @@ function guessMimeFromName(name?: string): string | null {
 function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose: () => void }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loadingBlob, setLoadingBlob] = useState(false);
-  const [proxyFailed, setProxyFailed] = useState(false);
 
   // Try to fetch a blob copy in the background so Download works even when
   // direct link clicks are blocked. Preview itself uses the direct URL, which
@@ -50,8 +49,9 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
     let cancelled = false;
     let createdUrl: string | null = null;
     setBlobUrl(null);
-    setProxyFailed(false);
     if (!target) return;
+    const targetType = target.mime_type || guessMimeFromName(target.name) || "";
+    if (targetType === "application/pdf" && target.path) return;
     setLoadingBlob(true);
     (async () => {
       try {
@@ -79,7 +79,7 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
         createdUrl = URL.createObjectURL(blob);
         setBlobUrl(createdUrl);
       } catch {
-        if (!cancelled) setProxyFailed(true);
+        // ignore — the direct URL / PDF viewer remains available as fallback
       } finally {
         if (!cancelled) setLoadingBlob(false);
       }
