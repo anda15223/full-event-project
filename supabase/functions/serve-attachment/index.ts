@@ -66,9 +66,10 @@ Deno.serve(async (req) => {
       .download(path);
 
     if (dlError || !fileData) {
+      const detail = dlError ? (dlError.message || JSON.stringify(dlError)) : "no file returned";
       return new Response(
-        JSON.stringify({ error: "Failed to download file", detail: dlError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Failed to download file", detail, bucket: storageBucket, path }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
