@@ -29,15 +29,27 @@ export function PreviewDiagnosticsBanner({ files = [] }: { files?: ProbeFile[] }
       || files.find((f) => f.url);
     if (realFile?.url) return realFile;
 
-    // List a few recent objects from festival-photos so we have a real URL to test.
-    const { data, error } = await supabase.storage
-      .from("festival-photos")
-      .list("", { limit: 20, sortBy: { column: "updated_at", order: "desc" } });
-    if (error || !data?.length) return null;
-    // Skip folder placeholders (Supabase returns dirs without metadata)
-    const file = data.find((d: any) => d.name && d.metadata) || data[0];
-    const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(file.name);
-    return pub?.publicUrl ? { url: pub.publicUrl, path: file.name, name: file.name, mime_type: file.metadata?.mimetype } : null;
+    // Recursively scan a couple levels deep to find a real file (not a folder placeholder).
+    const findFile = async (prefix: string, depth: number): Promise<{ path: string; meta: any } | null> => {
+      const { data, error } = await supabase.storage
+        .from("festival-photos")
+        .list(prefix, { limit: 50, sortBy: { column: "updated_at", order: "desc" } });
+      if (error || !data?.length) return null;
+      const realFile = data.find((d: any) => d.metadata && d.metadata.size > 0);
+      if (realFile) return { path: prefix ? `${prefix}/${realFile.name}` : realFile.name, meta: realFile.metadata };
+      if (depth <= 0) return null;
+      for (const entry of data) {
+        if (!entry.metadata) {
+          const found = await findFile(prefix ? `${prefix}/${entry.name}` : entry.name, depth - 1);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    const found = await findFile("", 3);
+    if (!found) return null;
+    const { data: pub } = supabase.storage.from("festival-photos").getPublicUrl(found.path);
+    return pub?.publicUrl ? { url: pub.publicUrl, path: found.path, name: found.path.split("/").pop(), mime_type: found.meta?.mimetype } : null;
   }, [files]);
 
   const runDirectTest = useCallback((file: ProbeFile) => {
