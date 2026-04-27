@@ -12,11 +12,13 @@ interface Props {
   pdfUrl?: string;
   /** Supabase storage path — will be fetched via edge function */
   storagePath?: string;
+  /** Storage bucket for storagePath */
+  bucket?: string;
   /** Attachment ID — will be fetched via edge function */
   attachmentId?: string;
 }
 
-export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) {
+export default function PdfViewer({ pdfUrl, storagePath, bucket, attachmentId }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pdfDocRef = useRef<any>(null);
@@ -48,7 +50,7 @@ export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) 
         setError(null);
 
         const { data, error: fnError } = await supabase.functions.invoke("serve-attachment", {
-          body: { storagePath, attachmentId },
+          body: { storagePath, bucket, attachmentId },
         });
 
         if (cancelled) return;
@@ -82,7 +84,7 @@ export default function PdfViewer({ pdfUrl, storagePath, attachmentId }: Props) 
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [pdfUrl, storagePath, attachmentId]);
+  }, [pdfUrl, storagePath, bucket, attachmentId]);
 
   // Render a page to canvas
   const renderPage = useCallback(async (pdf: any, num: number) => {
