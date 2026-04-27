@@ -306,7 +306,7 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
             <button
               key={i}
               type="button"
-              onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+              onClick={() => openPreview({ url: p.url, path: p.path, name: p.name, mime_type: p.mime_type })}
               className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted text-left"
               title="Preview"
             >
@@ -464,7 +464,7 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
                 )}
                 <button
                   type="button"
-                  onClick={() => openPreview({ url: f.url, name: f.name, mime_type: f.mime_type })}
+                  onClick={() => openPreview({ url: f.url, path: f.path, name: f.name, mime_type: f.mime_type })}
                   className="text-base text-foreground hover:text-primary truncate flex-1 min-w-0 text-left"
                   title={f.description || f.caption || f.name}
                 >
@@ -839,7 +839,7 @@ function EditSheet({
                     <div key={i} className="space-y-1.5 bg-muted/40 rounded-lg p-2 border border-border/40">
                       <button
                         type="button"
-                        onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+                        onClick={() => openPreview({ url: p.url, path: p.path, name: p.name, mime_type: p.mime_type })}
                         className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background w-full text-left"
                         title="Preview"
                       >
@@ -874,7 +874,7 @@ function EditSheet({
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-sm flex-1"
-                          onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+                          onClick={() => openPreview({ url: p.url, path: p.path, name: p.name, mime_type: p.mime_type })}
                           title="Open / preview"
                         >
                           <Eye className="h-3 w-3 mr-1" /> Open
