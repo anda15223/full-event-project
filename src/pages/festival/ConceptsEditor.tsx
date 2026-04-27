@@ -112,9 +112,23 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
               <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
             </div>
           ) : isImg ? (
-            <img src={directUrl} alt={name} className="max-w-full max-h-full object-contain" />
+            <img src={blobUrl || directUrl} alt={name} className="max-w-full max-h-full object-contain" />
           ) : isPdfType ? (
-            <iframe src={directUrl} title={name} className="w-full h-full border-0" />
+            blobUrl ? (
+              <iframe src={blobUrl} title={name} className="w-full h-full border-0" />
+            ) : loadingBlob ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
+                <FileIcon className="h-10 w-10" />
+                <p>Your browser blocked the inline PDF preview.</p>
+                <Button size="sm" onClick={() => window.open(directUrl, "_blank", "noopener,noreferrer")}>
+                  Open PDF in new tab
+                </Button>
+              </div>
+            )
           ) : (
             <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
               <FileIcon className="h-10 w-10" />
