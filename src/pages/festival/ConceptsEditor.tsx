@@ -21,13 +21,14 @@ import { ArrowLeft, Plus, Trash2, Pencil, Zap, Image as ImageIcon, Download, Upl
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useFestival, useConcepts } from "@/hooks/useFestival";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SmartCard } from "@/components/festival/SmartCard";
 import { PreviewDiagnosticsBanner } from "@/components/festival/PreviewDiagnosticsBanner";
+import PdfViewer from "@/components/invoices/PdfViewer";
 
 /* -------------------- In-app blob file preview (bypasses ad-blockers blocking *.supabase.co) -------------------- */
 
-type PreviewTarget = { url: string; name?: string; mime_type?: string } | null;
+type PreviewTarget = { url: string; path?: string; name?: string; mime_type?: string } | null;
 
 function guessMimeFromName(name?: string): string | null {
   if (!name) return null;
@@ -48,18 +49,38 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
     let cancelled = false;
     let createdUrl: string | null = null;
     setBlobUrl(null);
+    setLoadingBlob(false);
     if (!target) return;
+    const targetType = target.mime_type || guessMimeFromName(target.name) || "";
+    if (targetType === "application/pdf" && target.path) return;
     setLoadingBlob(true);
     (async () => {
       try {
-        const res = await fetch(target.url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
+        let blob: Blob;
+        if (target.path) {
+          const { data, error } = await supabase.functions.invoke("serve-attachment", {
+            body: {
+              bucket: "festival-photos",
+              storagePath: target.path,
+              filename: target.name,
+              mimeType: target.mime_type || guessMimeFromName(target.name) || "application/octet-stream",
+            },
+          });
+          if (error || !data?.base64) throw new Error(error?.message || "Proxy preview failed");
+          const binary = atob(data.base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          blob = new Blob([bytes], { type: data.mimeType || target.mime_type || "application/octet-stream" });
+        } else {
+          const res = await fetch(target.url, { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          blob = await res.blob();
+        }
         if (cancelled) return;
         createdUrl = URL.createObjectURL(blob);
         setBlobUrl(createdUrl);
       } catch {
-        // ignore — preview still works via direct URL, Download button falls back to opening URL
+        // ignore — the direct URL / PDF viewer remains available as fallback
       } finally {
         if (!cancelled) setLoadingBlob(false);
       }
@@ -80,6 +101,8 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-5xl w-[95vw] h-[90vh] p-0 overflow-hidden flex flex-col">
+        <DialogTitle className="sr-only">Preview {name}</DialogTitle>
+        <DialogDescription className="sr-only">Inline file preview with download fallback.</DialogDescription>
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
           <p className="text-sm font-medium truncate">{name}</p>
           <div className="flex items-center gap-1">
@@ -115,21 +138,7 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
           ) : isImg ? (
             <img src={blobUrl || directUrl} alt={name} className="max-w-full max-h-full object-contain" />
           ) : isPdfType ? (
-            blobUrl ? (
-              <iframe src={blobUrl} title={name} className="w-full h-full border-0" />
-            ) : loadingBlob ? (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="h-5 w-5 animate-spin" /> Loading preview…
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
-                <FileIcon className="h-10 w-10" />
-                <p>Your browser blocked the inline PDF preview.</p>
-                <Button size="sm" onClick={() => window.open(directUrl, "_blank", "noopener,noreferrer")}>
-                  Open PDF in new tab
-                </Button>
-              </div>
-            )
+            <PdfViewer pdfUrl={blobUrl || (!target?.path ? directUrl : undefined)} storagePath={target?.path} bucket="festival-photos" />
           ) : (
             <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
               <FileIcon className="h-10 w-10" />
@@ -156,12 +165,12 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
   );
 }
 
-const FilePreviewContext = createContext<(t: { url: string; name?: string; mime_type?: string }) => void>(() => {});
+const FilePreviewContext = createContext<(t: { url: string; path?: string; name?: string; mime_type?: string }) => void>(() => {});
 const useFilePreview = () => useContext(FilePreviewContext);
 
 function FilePreviewProvider({ children }: { children: React.ReactNode }) {
   const [target, setTarget] = useState<PreviewTarget>(null);
-  const open = useCallback((t: { url: string; name?: string; mime_type?: string }) => setTarget(t), []);
+  const open = useCallback((t: { url: string; path?: string; name?: string; mime_type?: string }) => setTarget(t), []);
   return (
     <FilePreviewContext.Provider value={open}>
       {children}
@@ -285,7 +294,7 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
             <button
               key={i}
               type="button"
-              onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+              onClick={() => openPreview({ url: p.url, path: p.path, name: p.name, mime_type: p.mime_type })}
               className="relative group rounded-md overflow-hidden border border-border/40 aspect-video bg-muted text-left"
               title="Preview"
             >
@@ -443,7 +452,7 @@ function ReadOnlyCard({ c, onEdit, onChanged }: { c: any; onEdit: () => void; on
                 )}
                 <button
                   type="button"
-                  onClick={() => openPreview({ url: f.url, name: f.name, mime_type: f.mime_type })}
+                  onClick={() => openPreview({ url: f.url, path: f.path, name: f.name, mime_type: f.mime_type })}
                   className="text-base text-foreground hover:text-primary truncate flex-1 min-w-0 text-left"
                   title={f.description || f.caption || f.name}
                 >
@@ -818,7 +827,7 @@ function EditSheet({
                     <div key={i} className="space-y-1.5 bg-muted/40 rounded-lg p-2 border border-border/40">
                       <button
                         type="button"
-                        onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+                        onClick={() => openPreview({ url: p.url, path: p.path, name: p.name, mime_type: p.mime_type })}
                         className="relative rounded overflow-hidden border border-border/40 aspect-video bg-background w-full text-left"
                         title="Preview"
                       >
@@ -853,7 +862,7 @@ function EditSheet({
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-sm flex-1"
-                          onClick={() => openPreview({ url: p.url, name: p.name, mime_type: p.mime_type })}
+                          onClick={() => openPreview({ url: p.url, path: p.path, name: p.name, mime_type: p.mime_type })}
                           title="Open / preview"
                         >
                           <Eye className="h-3 w-3 mr-1" /> Open
@@ -988,6 +997,7 @@ export default function ConceptsEditor() {
   const qc = useQueryClient();
   const { data: festival } = useFestival(slug);
   const { data: concepts = [] } = useConcepts(festival?.id);
+  const diagnosticFiles: Photo[] = concepts.flatMap((c: any) => Array.isArray(c.photos) ? c.photos : []);
 
   if (!festival) return <div className="text-base text-muted-foreground">Loading…</div>;
 
@@ -1024,7 +1034,7 @@ export default function ConceptsEditor() {
           </Button>
         </div>
 
-        <PreviewDiagnosticsBanner />
+        <PreviewDiagnosticsBanner files={diagnosticFiles} />
 
         <SmartCard
           cardKey="concepts_brain"
