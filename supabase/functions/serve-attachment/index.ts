@@ -60,15 +60,57 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Normalize path: strip leading slashes, decode, and remove bucket prefix / full URL if accidentally included
+    let normalizedPath = String(path).trim();
+    try { normalizedPath = decodeURIComponent(normalizedPath); } catch { /* noop */ }
+    // If a full public/sign URL was passed, extract the object path after the bucket
+    const urlMarker = `/object/public/${storageBucket}/`;
+    const signMarker = `/object/sign/${storageBucket}/`;
+    if (normalizedPath.includes(urlMarker)) {
+      normalizedPath = normalizedPath.split(urlMarker)[1].split("?")[0];
+    } else if (normalizedPath.includes(signMarker)) {
+      normalizedPath = normalizedPath.split(signMarker)[1].split("?")[0];
+    }
+    normalizedPath = normalizedPath.replace(/^\/+/, "");
+    if (normalizedPath.startsWith(`${storageBucket}/`)) {
+      normalizedPath = normalizedPath.slice(storageBucket.length + 1);
+    }
+
+    console.log("[serve-attachment] downloading", { bucket: storageBucket, path: normalizedPath });
+
     // Download from storage server-side
-    const { data: fileData, error: dlError } = await supabase.storage
-      .from(storageBucket)
-      .download(path);
+    let fileData: Blob | null = null;
+    let dlError: any = null;
+    try {
+      const res = await supabase.storage.from(storageBucket).download(normalizedPath);
+      fileData = res.data;
+      dlError = res.error;
+    } catch (e) {
+      dlError = e;
+    }
 
     if (dlError || !fileData) {
-      const detail = dlError ? (dlError.message || JSON.stringify(dlError)) : "no file returned";
+      // Probe whether the object exists by listing its parent folder
+      const lastSlash = normalizedPath.lastIndexOf("/");
+      const parent = lastSlash >= 0 ? normalizedPath.slice(0, lastSlash) : "";
+      const name = lastSlash >= 0 ? normalizedPath.slice(lastSlash + 1) : normalizedPath;
+      let exists: boolean | null = null;
+      let siblings: string[] | undefined;
+      try {
+        const { data: listed } = await supabase.storage.from(storageBucket).list(parent, { limit: 100, search: name });
+        exists = !!listed?.some((e: any) => e.name === name);
+        if (!exists) siblings = listed?.slice(0, 10).map((e: any) => e.name);
+      } catch { /* noop */ }
+
+      const detail =
+        dlError instanceof Error ? dlError.message :
+        dlError && typeof dlError === "object" ? (dlError.message || dlError.error || JSON.stringify(Object.fromEntries(Object.entries(dlError)))) :
+        "no file returned";
+
+      console.error("[serve-attachment] download failed", { bucket: storageBucket, path: normalizedPath, detail, exists, siblings });
+
       return new Response(
-        JSON.stringify({ error: "Failed to download file", detail, bucket: storageBucket, path }),
+        JSON.stringify({ error: "Failed to download file", detail, bucket: storageBucket, path: normalizedPath, exists, siblings }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
