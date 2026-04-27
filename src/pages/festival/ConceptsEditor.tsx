@@ -49,6 +49,7 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
     let cancelled = false;
     let createdUrl: string | null = null;
     setBlobUrl(null);
+    setLoadingBlob(false);
     if (!target) return;
     const targetType = target.mime_type || guessMimeFromName(target.name) || "";
     if (targetType === "application/pdf" && target.path) return;
@@ -137,7 +138,7 @@ function FilePreviewModal({ target, onClose }: { target: PreviewTarget; onClose:
           ) : isImg ? (
             <img src={blobUrl || directUrl} alt={name} className="max-w-full max-h-full object-contain" />
           ) : isPdfType ? (
-            <PdfViewer pdfUrl={blobUrl || undefined} storagePath={target?.path} bucket="festival-photos" />
+            <PdfViewer pdfUrl={blobUrl || (!target?.path ? directUrl : undefined)} storagePath={target?.path} bucket="festival-photos" />
           ) : (
             <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground p-6 text-center">
               <FileIcon className="h-10 w-10" />
