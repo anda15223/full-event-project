@@ -31,6 +31,14 @@ function styleFor(slug: string, idx: number) {
   return { emoji: FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length], hue };
 }
 
+function formatRange(start: string, end: string) {
+  const s = new Date(start);
+  const e = new Date(end);
+  const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const fmt = (d: Date) => `${d.getDate()} ${months[d.getMonth()]}`;
+  return `${fmt(s)} – ${fmt(e)} ${e.getFullYear()}`;
+}
+
 export default function FestivalsList() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
