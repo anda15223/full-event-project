@@ -14,737 +14,232 @@ export type Database = {
   }
   public: {
     Tables: {
-      brain_entries: {
+      bc_trolley_templates: {
         Row: {
-          category: string | null
-          confidence: number
-          content: string
-          created_at: string
-          display_name: string | null
-          festival_id: string | null
-          frequency: number
+          category: string
+          concept_id: string
+          created_at: string | null
+          id: string
+          item_name: string
+          notes: string | null
+          qty: number | null
+          trolley_number: number
+          unit: string | null
+        }
+        Insert: {
+          category: string
+          concept_id: string
+          created_at?: string | null
+          id?: string
+          item_name: string
+          notes?: string | null
+          qty?: number | null
+          trolley_number: number
+          unit?: string | null
+        }
+        Update: {
+          category?: string
+          concept_id?: string
+          created_at?: string | null
+          id?: string
+          item_name?: string
+          notes?: string | null
+          qty?: number | null
+          trolley_number?: number
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bc_trolley_templates_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concepts: {
+        Row: {
+          color_hex: string | null
+          created_at: string | null
+          description: string | null
           id: string
           is_active: boolean | null
-          key_name: string
-          last_seen_at: string
-          last_seen_festival_id: string | null
-          scope: string
-          source: string | null
-          structured_data: Json | null
-          subject_id: string | null
-          subject_type: string | null
-          tags: string[] | null
-          updated_at: string
+          name: string
+          short_name: string | null
+          slug: string
+          updated_at: string | null
         }
         Insert: {
-          category?: string | null
-          confidence?: number
-          content: string
-          created_at?: string
-          display_name?: string | null
-          festival_id?: string | null
-          frequency?: number
+          color_hex?: string | null
+          created_at?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
-          key_name: string
-          last_seen_at?: string
-          last_seen_festival_id?: string | null
-          scope?: string
-          source?: string | null
-          structured_data?: Json | null
-          subject_id?: string | null
-          subject_type?: string | null
-          tags?: string[] | null
-          updated_at?: string
+          name: string
+          short_name?: string | null
+          slug: string
+          updated_at?: string | null
         }
         Update: {
-          category?: string | null
-          confidence?: number
-          content?: string
-          created_at?: string
-          display_name?: string | null
-          festival_id?: string | null
-          frequency?: number
+          color_hex?: string | null
+          created_at?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
-          key_name?: string
-          last_seen_at?: string
-          last_seen_festival_id?: string | null
-          scope?: string
-          source?: string | null
-          structured_data?: Json | null
-          subject_id?: string | null
-          subject_type?: string | null
-          tags?: string[] | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      cashflow_entries: {
-        Row: {
-          amount: number | null
-          bc_catering_branch: string | null
-          company: string | null
-          created_at: string
-          currency: string | null
-          description: string | null
-          direction: string
-          email_id: string | null
-          entry_date: string | null
-          entry_type: string
-          id: string
-          location: string | null
-          reference: string | null
-          relates_to_invoice_id: string | null
-          source_email_sender: string | null
-          status: string | null
-          supplier_name: string | null
-        }
-        Insert: {
-          amount?: number | null
-          bc_catering_branch?: string | null
-          company?: string | null
-          created_at?: string
-          currency?: string | null
-          description?: string | null
-          direction?: string
-          email_id?: string | null
-          entry_date?: string | null
-          entry_type?: string
-          id?: string
-          location?: string | null
-          reference?: string | null
-          relates_to_invoice_id?: string | null
-          source_email_sender?: string | null
-          status?: string | null
-          supplier_name?: string | null
-        }
-        Update: {
-          amount?: number | null
-          bc_catering_branch?: string | null
-          company?: string | null
-          created_at?: string
-          currency?: string | null
-          description?: string | null
-          direction?: string
-          email_id?: string | null
-          entry_date?: string | null
-          entry_type?: string
-          id?: string
-          location?: string | null
-          reference?: string | null
-          relates_to_invoice_id?: string | null
-          source_email_sender?: string | null
-          status?: string | null
-          supplier_name?: string | null
-        }
-        Relationships: []
-      }
-      companies: {
-        Row: {
-          active: boolean
-          country_group: string
-          created_at: string
-          id: string
-          name: string
-        }
-        Insert: {
-          active?: boolean
-          country_group?: string
-          created_at?: string
-          id?: string
-          name: string
-        }
-        Update: {
-          active?: boolean
-          country_group?: string
-          created_at?: string
-          id?: string
           name?: string
+          short_name?: string | null
+          slug?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
-      cost_table: {
+      dishes: {
         Row: {
-          amount: number | null
-          card_origin: string | null
-          created_at: string
-          currency: string
-          description: string
-          festival_id: string
+          concept_id: string
+          created_at: string | null
+          description: string | null
           id: string
-          invoice_url: string | null
+          is_active: boolean | null
+          name: string
+          sale_price_dkk: number | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sale_price_dkk?: number | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sale_price_dkk?: number | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dishes_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment_catalog: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          default_supplier_id: string | null
+          id: string
+          is_active: boolean | null
+          name: string
           notes: string | null
-          updated_at: string
+          power_amps: number | null
+          power_type: string | null
+          slug: string
+          updated_at: string | null
         }
         Insert: {
-          amount?: number | null
-          card_origin?: string | null
-          created_at?: string
-          currency?: string
-          description: string
-          festival_id: string
+          category?: string | null
+          created_at?: string | null
+          default_supplier_id?: string | null
           id?: string
-          invoice_url?: string | null
+          is_active?: boolean | null
+          name: string
           notes?: string | null
-          updated_at?: string
+          power_amps?: number | null
+          power_type?: string | null
+          slug: string
+          updated_at?: string | null
         }
         Update: {
-          amount?: number | null
-          card_origin?: string | null
-          created_at?: string
-          currency?: string
-          description?: string
-          festival_id?: string
+          category?: string | null
+          created_at?: string | null
+          default_supplier_id?: string | null
           id?: string
-          invoice_url?: string | null
+          is_active?: boolean | null
+          name?: string
           notes?: string | null
-          updated_at?: string
+          power_amps?: number | null
+          power_type?: string | null
+          slug?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "cost_table_festival_id_fkey"
-            columns: ["festival_id"]
+            foreignKeyName: "equipment_catalog_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
             isOneToOne: false
-            referencedRelation: "festivals"
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      email_attachments: {
-        Row: {
-          cid: string | null
-          content_disposition: string | null
-          created_at: string
-          document_type: string | null
-          email_id: string
-          extracted_summary: string | null
-          extracted_text: string | null
-          filename: string | null
-          id: string
-          is_inline: boolean | null
-          mime_type: string | null
-          parse_error: string | null
-          parse_status: string | null
-          part_number: string | null
-          size: number | null
-          storage_path: string | null
-        }
-        Insert: {
-          cid?: string | null
-          content_disposition?: string | null
-          created_at?: string
-          document_type?: string | null
-          email_id: string
-          extracted_summary?: string | null
-          extracted_text?: string | null
-          filename?: string | null
-          id?: string
-          is_inline?: boolean | null
-          mime_type?: string | null
-          parse_error?: string | null
-          parse_status?: string | null
-          part_number?: string | null
-          size?: number | null
-          storage_path?: string | null
-        }
-        Update: {
-          cid?: string | null
-          content_disposition?: string | null
-          created_at?: string
-          document_type?: string | null
-          email_id?: string
-          extracted_summary?: string | null
-          extracted_text?: string | null
-          filename?: string | null
-          id?: string
-          is_inline?: boolean | null
-          mime_type?: string | null
-          parse_error?: string | null
-          parse_status?: string | null
-          part_number?: string | null
-          size?: number | null
-          storage_path?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "email_attachments_email_id_fkey"
-            columns: ["email_id"]
+            foreignKeyName: "equipment_catalog_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
             isOneToOne: false
-            referencedRelation: "emails"
-            referencedColumns: ["id"]
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
-      email_invoices: {
+      festival_action_items: {
         Row: {
-          amount: number | null
-          attachment_present: boolean | null
-          company: string | null
-          created_at: string
-          currency: string | null
-          due_date: string | null
-          email_id: string | null
-          id: string
-          invoice_date: string | null
-          invoice_number: string | null
-          supplier_name: string | null
-          vat: number | null
-        }
-        Insert: {
-          amount?: number | null
-          attachment_present?: boolean | null
-          company?: string | null
-          created_at?: string
-          currency?: string | null
-          due_date?: string | null
-          email_id?: string | null
-          id?: string
-          invoice_date?: string | null
-          invoice_number?: string | null
-          supplier_name?: string | null
-          vat?: number | null
-        }
-        Update: {
-          amount?: number | null
-          attachment_present?: boolean | null
-          company?: string | null
-          created_at?: string
-          currency?: string | null
-          due_date?: string | null
-          email_id?: string | null
-          id?: string
-          invoice_date?: string | null
-          invoice_number?: string | null
-          supplier_name?: string | null
-          vat?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_invoices_email_id_fkey"
-            columns: ["email_id"]
-            isOneToOne: false
-            referencedRelation: "emails"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      email_sync_jobs: {
-        Row: {
+          category: string | null
           completed_at: string | null
-          created_at: string
-          current_batch: number | null
-          current_subject: string | null
-          error_log: Json | null
-          id: string
-          last_uid_processed: string | null
-          started_at: string | null
-          status: string
-          sync_from: string | null
-          sync_to: string | null
-          total_batches: number | null
-          total_emails_found: number | null
-          total_invoices_extracted: number | null
-          total_processed: number | null
-          total_skipped: number | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          current_batch?: number | null
-          current_subject?: string | null
-          error_log?: Json | null
-          id?: string
-          last_uid_processed?: string | null
-          started_at?: string | null
-          status?: string
-          sync_from?: string | null
-          sync_to?: string | null
-          total_batches?: number | null
-          total_emails_found?: number | null
-          total_invoices_extracted?: number | null
-          total_processed?: number | null
-          total_skipped?: number | null
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          current_batch?: number | null
-          current_subject?: string | null
-          error_log?: Json | null
-          id?: string
-          last_uid_processed?: string | null
-          started_at?: string | null
-          status?: string
-          sync_from?: string | null
-          sync_to?: string | null
-          total_batches?: number | null
-          total_emails_found?: number | null
-          total_invoices_extracted?: number | null
-          total_processed?: number | null
-          total_skipped?: number | null
-        }
-        Relationships: []
-      }
-      email_tasks: {
-        Row: {
-          company: string | null
-          created_at: string
+          created_at: string | null
+          description: string | null
           due_date: string | null
-          email_id: string | null
+          festival_id: string
           id: string
           notes: string | null
           owner: string | null
           priority: string | null
           status: string | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          company?: string | null
-          created_at?: string
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
           due_date?: string | null
-          email_id?: string | null
+          festival_id: string
           id?: string
           notes?: string | null
           owner?: string | null
           priority?: string | null
           status?: string | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          company?: string | null
-          created_at?: string
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
           due_date?: string | null
-          email_id?: string | null
+          festival_id?: string
           id?: string
           notes?: string | null
           owner?: string | null
           priority?: string | null
           status?: string | null
           title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "email_tasks_email_id_fkey"
-            columns: ["email_id"]
-            isOneToOne: false
-            referencedRelation: "emails"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      emails: {
-        Row: {
-          action_required: boolean | null
-          assigned_agent: string | null
-          body_clean_text: string | null
-          body_html: string | null
-          body_text: string | null
-          charset: string | null
-          classification: string | null
-          company: string | null
-          confidence: number | null
-          created_at: string
-          folder: string
-          has_attachments: boolean | null
-          id: string
-          language: string | null
-          message_id: string | null
-          model_used: string | null
-          needs_review: boolean | null
-          parse_error: string | null
-          parse_status: string | null
-          processed: boolean | null
-          reader_status: string | null
-          received_at: string | null
-          review_reason: string | null
-          router_status: string | null
-          sender: string | null
-          subject: string | null
-          summary: string | null
-        }
-        Insert: {
-          action_required?: boolean | null
-          assigned_agent?: string | null
-          body_clean_text?: string | null
-          body_html?: string | null
-          body_text?: string | null
-          charset?: string | null
-          classification?: string | null
-          company?: string | null
-          confidence?: number | null
-          created_at?: string
-          folder?: string
-          has_attachments?: boolean | null
-          id?: string
-          language?: string | null
-          message_id?: string | null
-          model_used?: string | null
-          needs_review?: boolean | null
-          parse_error?: string | null
-          parse_status?: string | null
-          processed?: boolean | null
-          reader_status?: string | null
-          received_at?: string | null
-          review_reason?: string | null
-          router_status?: string | null
-          sender?: string | null
-          subject?: string | null
-          summary?: string | null
-        }
-        Update: {
-          action_required?: boolean | null
-          assigned_agent?: string | null
-          body_clean_text?: string | null
-          body_html?: string | null
-          body_text?: string | null
-          charset?: string | null
-          classification?: string | null
-          company?: string | null
-          confidence?: number | null
-          created_at?: string
-          folder?: string
-          has_attachments?: boolean | null
-          id?: string
-          language?: string | null
-          message_id?: string | null
-          model_used?: string | null
-          needs_review?: boolean | null
-          parse_error?: string | null
-          parse_status?: string | null
-          processed?: boolean | null
-          reader_status?: string | null
-          received_at?: string | null
-          review_reason?: string | null
-          router_status?: string | null
-          sender?: string | null
-          subject?: string | null
-          summary?: string | null
-        }
-        Relationships: []
-      }
-      equipment_db: {
-        Row: {
-          card_origin: string | null
-          created_at: string
-          festival_id: string
-          id: string
-          item_name: string
-          notes: string | null
-          quantity: string | null
-          source: Database["public"]["Enums"]["equipment_source"]
-          status: Database["public"]["Enums"]["equipment_status"]
-          updated_at: string
-        }
-        Insert: {
-          card_origin?: string | null
-          created_at?: string
-          festival_id: string
-          id?: string
-          item_name: string
-          notes?: string | null
-          quantity?: string | null
-          source?: Database["public"]["Enums"]["equipment_source"]
-          status?: Database["public"]["Enums"]["equipment_status"]
-          updated_at?: string
-        }
-        Update: {
-          card_origin?: string | null
-          created_at?: string
-          festival_id?: string
-          id?: string
-          item_name?: string
-          notes?: string | null
-          quantity?: string | null
-          source?: Database["public"]["Enums"]["equipment_source"]
-          status?: Database["public"]["Enums"]["equipment_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "equipment_db_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "festivals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      extracted_documents: {
-        Row: {
-          ai_summary: string | null
-          amount: number | null
-          category: Database["public"]["Enums"]["document_category"]
-          created_at: string
-          currency: string | null
-          email_id: string | null
-          extracted_text: string | null
-          festival_slug: string | null
-          filename: string
-          folder: string
-          id: string
-          manual_override: boolean
-          mime_type: string | null
-          parse_error: string | null
-          parse_status: string
-          processed_at: string | null
-          received_at: string | null
-          sender: string | null
-          size_bytes: number | null
-          storage_path: string
-          subcategory: string | null
-          subject: string | null
-          updated_at: string
-        }
-        Insert: {
-          ai_summary?: string | null
-          amount?: number | null
-          category?: Database["public"]["Enums"]["document_category"]
-          created_at?: string
-          currency?: string | null
-          email_id?: string | null
-          extracted_text?: string | null
-          festival_slug?: string | null
-          filename: string
-          folder?: string
-          id?: string
-          manual_override?: boolean
-          mime_type?: string | null
-          parse_error?: string | null
-          parse_status?: string
-          processed_at?: string | null
-          received_at?: string | null
-          sender?: string | null
-          size_bytes?: number | null
-          storage_path: string
-          subcategory?: string | null
-          subject?: string | null
-          updated_at?: string
-        }
-        Update: {
-          ai_summary?: string | null
-          amount?: number | null
-          category?: Database["public"]["Enums"]["document_category"]
-          created_at?: string
-          currency?: string | null
-          email_id?: string | null
-          extracted_text?: string | null
-          festival_slug?: string | null
-          filename?: string
-          folder?: string
-          id?: string
-          manual_override?: boolean
-          mime_type?: string | null
-          parse_error?: string | null
-          parse_status?: string
-          processed_at?: string | null
-          received_at?: string | null
-          sender?: string | null
-          size_bytes?: number | null
-          storage_path?: string
-          subcategory?: string | null
-          subject?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "extracted_documents_email_id_fkey"
-            columns: ["email_id"]
-            isOneToOne: false
-            referencedRelation: "emails"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      festival_accommodation: {
-        Row: {
-          check_in: string | null
-          check_out: string | null
-          created_at: string
-          festival_id: string
-          id: string
-          label: string
-          notes: string | null
-          people_count: number | null
-          room_config: string | null
-          status: string
-        }
-        Insert: {
-          check_in?: string | null
-          check_out?: string | null
-          created_at?: string
-          festival_id: string
-          id?: string
-          label: string
-          notes?: string | null
-          people_count?: number | null
-          room_config?: string | null
-          status: string
-        }
-        Update: {
-          check_in?: string | null
-          check_out?: string | null
-          created_at?: string
-          festival_id?: string
-          id?: string
-          label?: string
-          notes?: string | null
-          people_count?: number | null
-          room_config?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "festival_accommodation_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "festivals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      festival_action_items: {
-        Row: {
-          card_origin: string | null
-          created_at: string
-          deadline: string | null
-          festival_id: string
-          id: string
-          notes: string | null
-          owner: string | null
-          priority: string
-          section_key: string | null
-          status: string
-          title: string
-        }
-        Insert: {
-          card_origin?: string | null
-          created_at?: string
-          deadline?: string | null
-          festival_id: string
-          id?: string
-          notes?: string | null
-          owner?: string | null
-          priority?: string
-          section_key?: string | null
-          status?: string
-          title: string
-        }
-        Update: {
-          card_origin?: string | null
-          created_at?: string
-          deadline?: string | null
-          festival_id?: string
-          id?: string
-          notes?: string | null
-          owner?: string | null
-          priority?: string
-          section_key?: string | null
-          status?: string
-          title?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -754,142 +249,48 @@ export type Database = {
             referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      festival_answers: {
-        Row: {
-          festival_id: string
-          id: string
-          question_id: string
-          updated_at: string
-          value: Json
-          value_type: string
-        }
-        Insert: {
-          festival_id: string
-          id?: string
-          question_id: string
-          updated_at?: string
-          value: Json
-          value_type: string
-        }
-        Update: {
-          festival_id?: string
-          id?: string
-          question_id?: string
-          updated_at?: string
-          value?: Json
-          value_type?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "festival_answers_festival_id_fkey"
+            foreignKeyName: "festival_action_items_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
-            referencedRelation: "festivals"
-            referencedColumns: ["id"]
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
           },
           {
-            foreignKeyName: "festival_answers_question_id_fkey"
-            columns: ["question_id"]
+            foreignKeyName: "festival_action_items_festival_id_fkey"
+            columns: ["festival_id"]
             isOneToOne: false
-            referencedRelation: "festival_questions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      festival_bc_trolley_items: {
-        Row: {
-          category: string
-          concept_id: string | null
-          counted_quantity: number | null
-          created_at: string
-          id: string
-          item_name: string
-          needed_quantity: number | null
-          notes: string | null
-          order_index: number
-          photo_path: string | null
-          placed_quantity: number | null
-          quantity: string | null
-          status: string
-          trolley_id: string
-        }
-        Insert: {
-          category: string
-          concept_id?: string | null
-          counted_quantity?: number | null
-          created_at?: string
-          id?: string
-          item_name: string
-          needed_quantity?: number | null
-          notes?: string | null
-          order_index: number
-          photo_path?: string | null
-          placed_quantity?: number | null
-          quantity?: string | null
-          status?: string
-          trolley_id: string
-        }
-        Update: {
-          category?: string
-          concept_id?: string | null
-          counted_quantity?: number | null
-          created_at?: string
-          id?: string
-          item_name?: string
-          needed_quantity?: number | null
-          notes?: string | null
-          order_index?: number
-          photo_path?: string | null
-          placed_quantity?: number | null
-          quantity?: string | null
-          status?: string
-          trolley_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "festival_bc_trolley_items_concept_id_fkey"
-            columns: ["concept_id"]
-            isOneToOne: false
-            referencedRelation: "festival_concepts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "festival_bc_trolley_items_trolley_id_fkey"
-            columns: ["trolley_id"]
-            isOneToOne: false
-            referencedRelation: "festival_bc_trolleys"
-            referencedColumns: ["id"]
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
           },
         ]
       }
       festival_bc_trolleys: {
         Row: {
           concept_id: string
-          cost: number | null
-          created_at: string
-          currency: string
+          created_at: string | null
+          festival_id: string
           id: string
-          label: string
+          notes: string | null
+          status: string | null
           trolley_number: number
         }
         Insert: {
           concept_id: string
-          cost?: number | null
-          created_at?: string
-          currency?: string
+          created_at?: string | null
+          festival_id: string
           id?: string
-          label: string
+          notes?: string | null
+          status?: string | null
           trolley_number: number
         }
         Update: {
           concept_id?: string
-          cost?: number | null
-          created_at?: string
-          currency?: string
+          created_at?: string | null
+          festival_id?: string
           id?: string
-          label?: string
+          notes?: string | null
+          status?: string | null
           trolley_number?: number
         }
         Relationships: [
@@ -897,158 +298,68 @@ export type Database = {
             foreignKeyName: "festival_bc_trolleys_concept_id_fkey"
             columns: ["concept_id"]
             isOneToOne: false
-            referencedRelation: "festival_concepts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      festival_cars: {
-        Row: {
-          concept_id: string | null
-          created_at: string
-          currency: string
-          driver_id: string | null
-          festival_id: string
-          id: string
-          is_rental: boolean
-          label: string | null
-          license_plate: string | null
-          make_model: string | null
-          notes: string | null
-          rental_cost: number | null
-          updated_at: string
-        }
-        Insert: {
-          concept_id?: string | null
-          created_at?: string
-          currency?: string
-          driver_id?: string | null
-          festival_id: string
-          id?: string
-          is_rental?: boolean
-          label?: string | null
-          license_plate?: string | null
-          make_model?: string | null
-          notes?: string | null
-          rental_cost?: number | null
-          updated_at?: string
-        }
-        Update: {
-          concept_id?: string | null
-          created_at?: string
-          currency?: string
-          driver_id?: string | null
-          festival_id?: string
-          id?: string
-          is_rental?: boolean
-          label?: string | null
-          license_plate?: string | null
-          make_model?: string | null
-          notes?: string | null
-          rental_cost?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "festival_cars_concept_id_fkey"
-            columns: ["concept_id"]
-            isOneToOne: false
-            referencedRelation: "festival_concepts"
+            referencedRelation: "concepts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "festival_cars_driver_id_fkey"
-            columns: ["driver_id"]
-            isOneToOne: false
-            referencedRelation: "personal_festival_db"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "festival_cars_festival_id_fkey"
+            foreignKeyName: "festival_bc_trolleys_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "festival_bc_trolleys_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_bc_trolleys_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
         ]
       }
       festival_concepts: {
         Row: {
-          created_at: string
-          details: Json
+          concept_id: string
+          created_at: string | null
           festival_id: string
-          gas_required: boolean
-          gas_supplier: string | null
           id: string
-          name: string
-          order_index: number
-          photos: Json
-          power_baseline: string | null
-          power_extras: Json | null
-          products_sold: string | null
-          sales_hours_fri: string | null
-          sales_hours_sat: string | null
-          sales_hours_sun: string | null
-          sales_hours_thu: string | null
-          subsections: Json
-          tent_size: string | null
-          updated_at: string
-          wristband_black_partout: number | null
-          wristband_max: number | null
-          wristband_normal_partout: number | null
-          zone: string
+          notes: string | null
+          stall_name: string | null
+          zone: string | null
         }
         Insert: {
-          created_at?: string
-          details?: Json
+          concept_id: string
+          created_at?: string | null
           festival_id: string
-          gas_required?: boolean
-          gas_supplier?: string | null
           id?: string
-          name: string
-          order_index: number
-          photos?: Json
-          power_baseline?: string | null
-          power_extras?: Json | null
-          products_sold?: string | null
-          sales_hours_fri?: string | null
-          sales_hours_sat?: string | null
-          sales_hours_sun?: string | null
-          sales_hours_thu?: string | null
-          subsections?: Json
-          tent_size?: string | null
-          updated_at?: string
-          wristband_black_partout?: number | null
-          wristband_max?: number | null
-          wristband_normal_partout?: number | null
-          zone: string
+          notes?: string | null
+          stall_name?: string | null
+          zone?: string | null
         }
         Update: {
-          created_at?: string
-          details?: Json
+          concept_id?: string
+          created_at?: string | null
           festival_id?: string
-          gas_required?: boolean
-          gas_supplier?: string | null
           id?: string
-          name?: string
-          order_index?: number
-          photos?: Json
-          power_baseline?: string | null
-          power_extras?: Json | null
-          products_sold?: string | null
-          sales_hours_fri?: string | null
-          sales_hours_sat?: string | null
-          sales_hours_sun?: string | null
-          sales_hours_thu?: string | null
-          subsections?: Json
-          tent_size?: string | null
-          updated_at?: string
-          wristband_black_partout?: number | null
-          wristband_max?: number | null
-          wristband_normal_partout?: number | null
-          zone?: string
+          notes?: string | null
+          stall_name?: string | null
+          zone?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_concepts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_concepts_festival_id_fkey"
             columns: ["festival_id"]
@@ -1056,760 +367,683 @@ export type Database = {
             referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "festival_concepts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concepts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
         ]
       }
-      festival_contacts: {
+      festival_cooling: {
         Row: {
-          created_at: string
-          email: string | null
+          cost_dkk: number | null
+          created_at: string | null
+          delivery_date: string | null
+          festival_id: string
+          id: string
+          notes: string | null
+          payment_due: string | null
+          payment_status: string | null
+          pickup_date: string | null
+          supplier_id: string | null
+          supplier_ref: string | null
+          unit_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          cost_dkk?: number | null
+          created_at?: string | null
+          delivery_date?: string | null
+          festival_id: string
+          id?: string
+          notes?: string | null
+          payment_due?: string | null
+          payment_status?: string | null
+          pickup_date?: string | null
+          supplier_id?: string | null
+          supplier_ref?: string | null
+          unit_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          cost_dkk?: number | null
+          created_at?: string | null
+          delivery_date?: string | null
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          payment_due?: string | null
+          payment_status?: string | null
+          pickup_date?: string | null
+          supplier_id?: string | null
+          supplier_ref?: string | null
+          unit_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_cooling_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
+      festival_deadlines: {
+        Row: {
+          consequence: string | null
+          created_at: string | null
+          deadline_at: string
+          description: string | null
+          festival_id: string
+          id: string
+          is_hard: boolean | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          consequence?: string | null
+          created_at?: string | null
+          deadline_at: string
+          description?: string | null
+          festival_id: string
+          id?: string
+          is_hard?: boolean | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          consequence?: string | null
+          created_at?: string | null
+          deadline_at?: string
+          description?: string | null
+          festival_id?: string
+          id?: string
+          is_hard?: boolean | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_equipment: {
+        Row: {
+          concept_id: string | null
+          created_at: string | null
+          equipment_id: string
+          festival_id: string
+          id: string
+          notes: string | null
+          qty: number
+          zone: string | null
+        }
+        Insert: {
+          concept_id?: string | null
+          created_at?: string | null
+          equipment_id: string
+          festival_id: string
+          id?: string
+          notes?: string | null
+          qty?: number
+          zone?: string | null
+        }
+        Update: {
+          concept_id?: string | null
+          created_at?: string | null
+          equipment_id?: string
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          qty?: number
+          zone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_equipment_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_facade: {
+        Row: {
+          concept_id: string
+          created_at: string | null
+          festival_id: string
+          id: string
+          notes: string | null
+          print_deadline: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string | null
+          festival_id: string
+          id?: string
+          notes?: string | null
+          print_deadline?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string | null
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          print_deadline?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_facade_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_facade_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_facade_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_facade_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_forecasts: {
+        Row: {
+          created_at: string | null
+          day_date: string
+          dish_id: string
+          expected_portions: number
+          festival_id: string
+          id: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_date: string
+          dish_id: string
+          expected_portions?: number
+          festival_id: string
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_date?: string
+          dish_id?: string
+          expected_portions?: number
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_forecasts_dish_id_fkey"
+            columns: ["dish_id"]
+            isOneToOne: false
+            referencedRelation: "dishes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_forecasts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_forecasts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_forecasts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_logistics: {
+        Row: {
+          cost_dkk: number | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
           festival_id: string
           id: string
           name: string
           notes: string | null
-          order_index: number
-          phone: string | null
-          role: string | null
-          updated_at: string
+          start_date: string | null
+          status: string | null
+          type: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
-          email?: string | null
+          cost_dkk?: number | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
           festival_id: string
           id?: string
           name: string
           notes?: string | null
-          order_index?: number
-          phone?: string | null
-          role?: string | null
-          updated_at?: string
+          start_date?: string | null
+          status?: string | null
+          type: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
-          email?: string | null
+          cost_dkk?: number | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
           festival_id?: string
           id?: string
           name?: string
           notes?: string | null
-          order_index?: number
-          phone?: string | null
-          role?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      festival_extra_details: {
-        Row: {
-          created_at: string
-          festival_id: string
-          id: string
-          label: string
-          notes: string | null
-          order_index: number
-          updated_at: string
-          value: string | null
-        }
-        Insert: {
-          created_at?: string
-          festival_id: string
-          id?: string
-          label?: string
-          notes?: string | null
-          order_index?: number
-          updated_at?: string
-          value?: string | null
-        }
-        Update: {
-          created_at?: string
-          festival_id?: string
-          id?: string
-          label?: string
-          notes?: string | null
-          order_index?: number
-          updated_at?: string
-          value?: string | null
-        }
-        Relationships: []
-      }
-      festival_hotels: {
-        Row: {
-          address: string | null
-          contact: string | null
-          cost_per_night: number | null
-          created_at: string
-          currency: string
-          festival_id: string
-          id: string
-          name: string | null
-          notes: string | null
-          rooms_count: number | null
-          total_cost: number | null
-          total_nights: number | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          contact?: string | null
-          cost_per_night?: number | null
-          created_at?: string
-          currency?: string
-          festival_id: string
-          id?: string
-          name?: string | null
-          notes?: string | null
-          rooms_count?: number | null
-          total_cost?: number | null
-          total_nights?: number | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          contact?: string | null
-          cost_per_night?: number | null
-          created_at?: string
-          currency?: string
-          festival_id?: string
-          id?: string
-          name?: string | null
-          notes?: string | null
-          rooms_count?: number | null
-          total_cost?: number | null
-          total_nights?: number | null
-          updated_at?: string
+          start_date?: string | null
+          status?: string | null
+          type?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "festival_hotels_festival_id_fkey"
+            foreignKeyName: "festival_logistics_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      festival_questions: {
-        Row: {
-          created_at: string
-          default_value: Json | null
-          help_text: string | null
-          id: string
-          key: string
-          kind: string
-          options: Json | null
-          order_index: number
-          prompt: string
-          required: boolean
-          section_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          default_value?: Json | null
-          help_text?: string | null
-          id?: string
-          key: string
-          kind: string
-          options?: Json | null
-          order_index: number
-          prompt: string
-          required?: boolean
-          section_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          default_value?: Json | null
-          help_text?: string | null
-          id?: string
-          key?: string
-          kind?: string
-          options?: Json | null
-          order_index?: number
-          prompt?: string
-          required?: boolean
-          section_id?: string
-          updated_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "festival_questions_section_id_fkey"
-            columns: ["section_id"]
+            foreignKeyName: "festival_logistics_festival_id_fkey"
+            columns: ["festival_id"]
             isOneToOne: false
-            referencedRelation: "festival_sections"
-            referencedColumns: ["id"]
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_logistics_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
           },
         ]
       }
-      festival_recipes: {
+      festival_safety: {
         Row: {
-          allergen_notes: string | null
-          allergens: string[]
-          concept_id: string | null
-          concept_name: string
-          created_at: string
+          created_at: string | null
           festival_id: string
-          gramaj: number | null
           id: string
-          ingredients: Json
-          order_index: number
-          product_name: string
-          recipe_text: string | null
-          source_file_path: string | null
-          updated_at: string
+          item_class: string | null
+          item_type: string
+          location: string | null
+          notes: string | null
+          qty: number
         }
         Insert: {
-          allergen_notes?: string | null
-          allergens?: string[]
-          concept_id?: string | null
-          concept_name: string
-          created_at?: string
+          created_at?: string | null
           festival_id: string
-          gramaj?: number | null
           id?: string
-          ingredients?: Json
-          order_index?: number
-          product_name: string
-          recipe_text?: string | null
-          source_file_path?: string | null
-          updated_at?: string
+          item_class?: string | null
+          item_type: string
+          location?: string | null
+          notes?: string | null
+          qty?: number
         }
         Update: {
-          allergen_notes?: string | null
-          allergens?: string[]
-          concept_id?: string | null
-          concept_name?: string
-          created_at?: string
+          created_at?: string | null
           festival_id?: string
-          gramaj?: number | null
           id?: string
-          ingredients?: Json
-          order_index?: number
-          product_name?: string
-          recipe_text?: string | null
-          source_file_path?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      festival_reports: {
-        Row: {
-          festival_id: string
-          generated_at: string
-          id: string
-          schema_snapshot: Json
-          storage_key: string | null
-          version: number
-        }
-        Insert: {
-          festival_id: string
-          generated_at?: string
-          id?: string
-          schema_snapshot: Json
-          storage_key?: string | null
-          version: number
-        }
-        Update: {
-          festival_id?: string
-          generated_at?: string
-          id?: string
-          schema_snapshot?: Json
-          storage_key?: string | null
-          version?: number
+          item_class?: string | null
+          item_type?: string
+          location?: string | null
+          notes?: string | null
+          qty?: number
         }
         Relationships: [
           {
-            foreignKeyName: "festival_reports_festival_id_fkey"
+            foreignKeyName: "festival_safety_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "festival_safety_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
         ]
       }
-      festival_sections: {
-        Row: {
-          category: string
-          created_at: string
-          description: string | null
-          id: string
-          key: string
-          order_index: number
-          sub_editor_route: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          key: string
-          order_index: number
-          sub_editor_route?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          key?: string
-          order_index?: number
-          sub_editor_route?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      festival_staff: {
+      festival_shifts: {
         Row: {
           concept_id: string | null
-          created_at: string
-          external_key: string | null
+          created_at: string | null
+          end_time: string
           festival_id: string
+          hours: number | null
           id: string
-          is_manager: boolean
-          is_setup_crew: boolean
-          name: string | null
+          notes: string | null
           role: string | null
-          source: string
-          wristband_type: string | null
-        }
-        Insert: {
-          concept_id?: string | null
-          created_at?: string
-          external_key?: string | null
-          festival_id: string
-          id?: string
-          is_manager?: boolean
-          is_setup_crew?: boolean
-          name?: string | null
-          role?: string | null
-          source: string
-          wristband_type?: string | null
-        }
-        Update: {
-          concept_id?: string | null
-          created_at?: string
-          external_key?: string | null
-          festival_id?: string
-          id?: string
-          is_manager?: boolean
-          is_setup_crew?: boolean
-          name?: string | null
-          role?: string | null
-          source?: string
-          wristband_type?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "festival_staff_concept_id_fkey"
-            columns: ["concept_id"]
-            isOneToOne: false
-            referencedRelation: "festival_concepts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "festival_staff_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "festivals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      festival_vagtplan_shifts: {
-        Row: {
-          concept_id: string
-          created_at: string
-          day: string
-          end_time: string
-          id: string
-          notes: string | null
-          order_index: number
-          people_count: number
-          shift_name: string
+          shift_date: string
+          staff_id: string
           start_time: string
+          updated_at: string | null
         }
         Insert: {
-          concept_id: string
-          created_at?: string
-          day: string
+          concept_id?: string | null
+          created_at?: string | null
           end_time: string
+          festival_id: string
+          hours?: number | null
           id?: string
           notes?: string | null
-          order_index: number
-          people_count: number
-          shift_name: string
+          role?: string | null
+          shift_date: string
+          staff_id: string
           start_time: string
+          updated_at?: string | null
         }
         Update: {
-          concept_id?: string
-          created_at?: string
-          day?: string
+          concept_id?: string | null
+          created_at?: string | null
           end_time?: string
+          festival_id?: string
+          hours?: number | null
           id?: string
           notes?: string | null
-          order_index?: number
-          people_count?: number
-          shift_name?: string
+          role?: string | null
+          shift_date?: string
+          staff_id?: string
           start_time?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "festival_vagtplan_shifts_concept_id_fkey"
+            foreignKeyName: "festival_shifts_concept_id_fkey"
             columns: ["concept_id"]
             isOneToOne: false
-            referencedRelation: "festival_concepts"
+            referencedRelation: "concepts"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      festival_vehicles: {
-        Row: {
-          created_at: string
-          driver: string | null
-          festival_id: string
-          id: string
-          label: string
-          purpose: string | null
-          seats: number | null
-          status: string
-          travel_date: string | null
-          vehicle_type: string
-        }
-        Insert: {
-          created_at?: string
-          driver?: string | null
-          festival_id: string
-          id?: string
-          label: string
-          purpose?: string | null
-          seats?: number | null
-          status: string
-          travel_date?: string | null
-          vehicle_type: string
-        }
-        Update: {
-          created_at?: string
-          driver?: string | null
-          festival_id?: string
-          id?: string
-          label?: string
-          purpose?: string | null
-          seats?: number | null
-          status?: string
-          travel_date?: string | null
-          vehicle_type?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "festival_vehicles_festival_id_fkey"
+            foreignKeyName: "festival_shifts_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_shifts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_shifts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
       }
       festivals: {
         Row: {
-          created_at: string
-          drive_folder_id: string | null
+          address: string | null
+          breakdown_date: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
           end_date: string
           id: string
-          location: string | null
+          is_active: boolean | null
           name: string
+          notes: string | null
           organiser_email: string | null
           organiser_name: string | null
           organiser_phone: string | null
+          setup_date: string | null
           slug: string
           start_date: string
-          status: string
-          updated_at: string
+          updated_at: string | null
           year: number
         }
         Insert: {
-          created_at?: string
-          drive_folder_id?: string | null
+          address?: string | null
+          breakdown_date?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
           end_date: string
           id?: string
-          location?: string | null
+          is_active?: boolean | null
           name: string
+          notes?: string | null
           organiser_email?: string | null
           organiser_name?: string | null
           organiser_phone?: string | null
+          setup_date?: string | null
           slug: string
           start_date: string
-          status?: string
-          updated_at?: string
+          updated_at?: string | null
           year: number
         }
         Update: {
-          created_at?: string
-          drive_folder_id?: string | null
+          address?: string | null
+          breakdown_date?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
           end_date?: string
           id?: string
-          location?: string | null
+          is_active?: boolean | null
           name?: string
+          notes?: string | null
           organiser_email?: string | null
           organiser_name?: string | null
           organiser_phone?: string | null
+          setup_date?: string | null
           slug?: string
           start_date?: string
-          status?: string
-          updated_at?: string
+          updated_at?: string | null
           year?: number
         }
         Relationships: []
       }
-      invoices: {
+      ingredients: {
         Row: {
-          amount: number | null
           category: string | null
-          company: string | null
-          confidence: number | null
-          created_at: string
-          currency: string | null
-          due_date: string | null
-          email_id: string | null
+          created_at: string | null
+          default_supplier_id: string | null
           id: string
-          invoice_date: string | null
-          invoice_number: string | null
-          location: string | null
+          is_active: boolean | null
+          name: string
           notes: string | null
-          overdue_flag: boolean | null
-          payment_account: string | null
-          payment_reference: string | null
-          pdf_url: string | null
-          source_type: string | null
-          status: string | null
-          supplier_name: string | null
-          total_with_vat: number | null
-          vat_amount: number | null
-          what_was_bought: string | null
+          pack_size: number | null
+          pack_unit: string | null
+          slug: string
+          unit: string
+          updated_at: string | null
         }
         Insert: {
-          amount?: number | null
           category?: string | null
-          company?: string | null
-          confidence?: number | null
-          created_at?: string
-          currency?: string | null
-          due_date?: string | null
-          email_id?: string | null
+          created_at?: string | null
+          default_supplier_id?: string | null
           id?: string
-          invoice_date?: string | null
-          invoice_number?: string | null
-          location?: string | null
+          is_active?: boolean | null
+          name: string
           notes?: string | null
-          overdue_flag?: boolean | null
-          payment_account?: string | null
-          payment_reference?: string | null
-          pdf_url?: string | null
-          source_type?: string | null
-          status?: string | null
-          supplier_name?: string | null
-          total_with_vat?: number | null
-          vat_amount?: number | null
-          what_was_bought?: string | null
+          pack_size?: number | null
+          pack_unit?: string | null
+          slug: string
+          unit: string
+          updated_at?: string | null
         }
         Update: {
-          amount?: number | null
           category?: string | null
-          company?: string | null
-          confidence?: number | null
-          created_at?: string
-          currency?: string | null
-          due_date?: string | null
-          email_id?: string | null
+          created_at?: string | null
+          default_supplier_id?: string | null
           id?: string
-          invoice_date?: string | null
-          invoice_number?: string | null
-          location?: string | null
+          is_active?: boolean | null
+          name?: string
           notes?: string | null
-          overdue_flag?: boolean | null
-          payment_account?: string | null
-          payment_reference?: string | null
-          pdf_url?: string | null
-          source_type?: string | null
-          status?: string | null
-          supplier_name?: string | null
-          total_with_vat?: number | null
-          vat_amount?: number | null
-          what_was_bought?: string | null
-        }
-        Relationships: []
-      }
-      kpi_ledger: {
-        Row: {
-          company: string | null
-          confidence: number | null
-          created_at: string
-          currency: string | null
-          date: string | null
-          email_id: string | null
-          id: string
-          invoice_date: string | null
-          invoice_number: string | null
-          location: string | null
-          notes: string | null
-          period_from: string | null
-          period_to: string | null
-          platform: string
-          source_type: string | null
-          total_amount: number | null
-          verified: boolean | null
-        }
-        Insert: {
-          company?: string | null
-          confidence?: number | null
-          created_at?: string
-          currency?: string | null
-          date?: string | null
-          email_id?: string | null
-          id?: string
-          invoice_date?: string | null
-          invoice_number?: string | null
-          location?: string | null
-          notes?: string | null
-          period_from?: string | null
-          period_to?: string | null
-          platform: string
-          source_type?: string | null
-          total_amount?: number | null
-          verified?: boolean | null
-        }
-        Update: {
-          company?: string | null
-          confidence?: number | null
-          created_at?: string
-          currency?: string | null
-          date?: string | null
-          email_id?: string | null
-          id?: string
-          invoice_date?: string | null
-          invoice_number?: string | null
-          location?: string | null
-          notes?: string | null
-          period_from?: string | null
-          period_to?: string | null
-          platform?: string
-          source_type?: string | null
-          total_amount?: number | null
-          verified?: boolean | null
-        }
-        Relationships: []
-      }
-      ledger: {
-        Row: {
-          amount: number | null
-          company: string | null
-          created_at: string
-          id: string
-          invoice_id: string | null
-          invoice_number: string | null
-          location: string | null
-          paid_date: string | null
-          payment_reference: string | null
-          supplier_name: string | null
-          total_with_vat: number | null
-          vat_amount: number | null
-          what_was_bought: string | null
-        }
-        Insert: {
-          amount?: number | null
-          company?: string | null
-          created_at?: string
-          id?: string
-          invoice_id?: string | null
-          invoice_number?: string | null
-          location?: string | null
-          paid_date?: string | null
-          payment_reference?: string | null
-          supplier_name?: string | null
-          total_with_vat?: number | null
-          vat_amount?: number | null
-          what_was_bought?: string | null
-        }
-        Update: {
-          amount?: number | null
-          company?: string | null
-          created_at?: string
-          id?: string
-          invoice_id?: string | null
-          invoice_number?: string | null
-          location?: string | null
-          paid_date?: string | null
-          payment_reference?: string | null
-          supplier_name?: string | null
-          total_with_vat?: number | null
-          vat_amount?: number | null
-          what_was_bought?: string | null
+          pack_size?: number | null
+          pack_unit?: string | null
+          slug?: string
+          unit?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "ledger_invoice_id_fkey"
-            columns: ["invoice_id"]
+            foreignKeyName: "ingredients_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
             isOneToOne: false
-            referencedRelation: "invoices"
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      personal_festival_db: {
-        Row: {
-          created_at: string
-          email: string | null
-          festival_id: string
-          id: string
-          is_crew: boolean
-          is_driver: boolean
-          name: string
-          needs_accommodation: boolean
-          notes: string | null
-          order_index: number
-          phone: string | null
-          role: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          festival_id: string
-          id?: string
-          is_crew?: boolean
-          is_driver?: boolean
-          name: string
-          needs_accommodation?: boolean
-          notes?: string | null
-          order_index?: number
-          phone?: string | null
-          role?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          festival_id?: string
-          id?: string
-          is_crew?: boolean
-          is_driver?: boolean
-          name?: string
-          needs_accommodation?: boolean
-          notes?: string | null
-          order_index?: number
-          phone?: string | null
-          role?: string | null
-          updated_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "personal_festival_db_festival_id_fkey"
-            columns: ["festival_id"]
+            foreignKeyName: "ingredients_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
             isOneToOne: false
-            referencedRelation: "festivals"
-            referencedColumns: ["id"]
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
         ]
       }
@@ -1843,486 +1077,147 @@ export type Database = {
         }
         Relationships: []
       }
-      smart_cards: {
+      recipe_ingredients: {
         Row: {
-          card_key: string
-          concept_id: string | null
-          created_at: string
-          festival_id: string
+          created_at: string | null
+          dish_id: string
           id: string
-          meta: Json
-          title: string | null
-          updated_at: string
+          ingredient_id: string
+          notes: string | null
+          qty_per_portion: number
+          unit: string
         }
         Insert: {
-          card_key: string
-          concept_id?: string | null
-          created_at?: string
-          festival_id: string
+          created_at?: string | null
+          dish_id: string
           id?: string
-          meta?: Json
-          title?: string | null
-          updated_at?: string
+          ingredient_id: string
+          notes?: string | null
+          qty_per_portion: number
+          unit: string
         }
         Update: {
-          card_key?: string
-          concept_id?: string | null
-          created_at?: string
-          festival_id?: string
+          created_at?: string | null
+          dish_id?: string
           id?: string
-          meta?: Json
-          title?: string | null
-          updated_at?: string
+          ingredient_id?: string
+          notes?: string | null
+          qty_per_portion?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_dish_id_fkey"
+            columns: ["dish_id"]
+            isOneToOne: false
+            referencedRelation: "dishes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["ingredient_id"]
+          },
+        ]
+      }
+      staff: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          origin: string | null
+          phone: string | null
+          role_default: string | null
+          short_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          origin?: string | null
+          phone?: string | null
+          role_default?: string | null
+          short_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          origin?: string | null
+          phone?: string | null
+          role_default?: string | null
+          short_name?: string | null
+          updated_at?: string | null
         }
         Relationships: []
-      }
-      smart_chat_messages: {
-        Row: {
-          card_id: string
-          content: string
-          created_at: string
-          id: string
-          role: string
-          tool_calls: Json | null
-        }
-        Insert: {
-          card_id: string
-          content: string
-          created_at?: string
-          id?: string
-          role: string
-          tool_calls?: Json | null
-        }
-        Update: {
-          card_id?: string
-          content?: string
-          created_at?: string
-          id?: string
-          role?: string
-          tool_calls?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "smart_chat_messages_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "smart_cards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      smart_files: {
-        Row: {
-          ai_summary: string | null
-          card_id: string
-          extracted_text: string | null
-          filename: string | null
-          id: string
-          meta: Json
-          mime_type: string | null
-          parse_error: string | null
-          parse_status: string
-          size: number | null
-          storage_path: string
-          uploaded_at: string
-          url: string | null
-          warnings: Json
-        }
-        Insert: {
-          ai_summary?: string | null
-          card_id: string
-          extracted_text?: string | null
-          filename?: string | null
-          id?: string
-          meta?: Json
-          mime_type?: string | null
-          parse_error?: string | null
-          parse_status?: string
-          size?: number | null
-          storage_path: string
-          uploaded_at?: string
-          url?: string | null
-          warnings?: Json
-        }
-        Update: {
-          ai_summary?: string | null
-          card_id?: string
-          extracted_text?: string | null
-          filename?: string | null
-          id?: string
-          meta?: Json
-          mime_type?: string | null
-          parse_error?: string | null
-          parse_status?: string
-          size?: number | null
-          storage_path?: string
-          uploaded_at?: string
-          url?: string | null
-          warnings?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "smart_files_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "smart_cards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      smart_lines: {
-        Row: {
-          ai_confidence: number | null
-          created_at: string
-          due_date: string | null
-          id: string
-          label: string | null
-          meta: Json
-          notes: string | null
-          order_index: number
-          owner: string | null
-          quantity: string | null
-          section_id: string
-          source: string
-          source_file_id: string | null
-          status: string | null
-          updated_at: string
-          value: string | null
-        }
-        Insert: {
-          ai_confidence?: number | null
-          created_at?: string
-          due_date?: string | null
-          id?: string
-          label?: string | null
-          meta?: Json
-          notes?: string | null
-          order_index?: number
-          owner?: string | null
-          quantity?: string | null
-          section_id: string
-          source?: string
-          source_file_id?: string | null
-          status?: string | null
-          updated_at?: string
-          value?: string | null
-        }
-        Update: {
-          ai_confidence?: number | null
-          created_at?: string
-          due_date?: string | null
-          id?: string
-          label?: string | null
-          meta?: Json
-          notes?: string | null
-          order_index?: number
-          owner?: string | null
-          quantity?: string | null
-          section_id?: string
-          source?: string
-          source_file_id?: string | null
-          status?: string | null
-          updated_at?: string
-          value?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "smart_lines_section_id_fkey"
-            columns: ["section_id"]
-            isOneToOne: false
-            referencedRelation: "smart_sections"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      smart_sections: {
-        Row: {
-          card_id: string
-          created_at: string
-          description: string | null
-          id: string
-          meta: Json
-          order_index: number
-          source: string
-          source_file_id: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          card_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          meta?: Json
-          order_index?: number
-          source?: string
-          source_file_id?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          card_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          meta?: Json
-          order_index?: number
-          source?: string
-          source_file_id?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "smart_sections_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "smart_cards"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      smart_todos: {
-        Row: {
-          card_id: string
-          created_at: string
-          description: string | null
-          due_date: string | null
-          id: string
-          meta: Json
-          order_index: number
-          owner: string | null
-          related_line_id: string | null
-          related_section_id: string | null
-          source: string
-          status: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          card_id: string
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          meta?: Json
-          order_index?: number
-          owner?: string | null
-          related_line_id?: string | null
-          related_section_id?: string | null
-          source?: string
-          status?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          card_id?: string
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          meta?: Json
-          order_index?: number
-          owner?: string | null
-          related_line_id?: string | null
-          related_section_id?: string | null
-          source?: string
-          status?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "smart_todos_card_id_fkey"
-            columns: ["card_id"]
-            isOneToOne: false
-            referencedRelation: "smart_cards"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "smart_todos_related_line_id_fkey"
-            columns: ["related_line_id"]
-            isOneToOne: false
-            referencedRelation: "smart_lines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "smart_todos_related_section_id_fkey"
-            columns: ["related_section_id"]
-            isOneToOne: false
-            referencedRelation: "smart_sections"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      supplier_corrections: {
-        Row: {
-          created_at: string
-          field_corrected: string | null
-          id: string
-          invoice_id: string | null
-          new_value: string | null
-          old_value: string | null
-          supplier_name: string | null
-        }
-        Insert: {
-          created_at?: string
-          field_corrected?: string | null
-          id?: string
-          invoice_id?: string | null
-          new_value?: string | null
-          old_value?: string | null
-          supplier_name?: string | null
-        }
-        Update: {
-          created_at?: string
-          field_corrected?: string | null
-          id?: string
-          invoice_id?: string | null
-          new_value?: string | null
-          old_value?: string | null
-          supplier_name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "supplier_corrections_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       suppliers: {
         Row: {
-          correction_count: number | null
-          created_at: string
-          email_domain: string | null
+          category: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
           id: string
-          is_web_order_supplier: boolean | null
-          known_companies: string[] | null
-          known_locations: string[] | null
+          invoiced_to: string | null
+          is_active: boolean | null
           name: string
           notes: string | null
-          payment_account: string | null
           payment_terms: string | null
-          reconcile_with: string | null
-          vat_included: boolean | null
+          slug: string
+          updated_at: string | null
         }
         Insert: {
-          correction_count?: number | null
-          created_at?: string
-          email_domain?: string | null
+          category?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
           id?: string
-          is_web_order_supplier?: boolean | null
-          known_companies?: string[] | null
-          known_locations?: string[] | null
+          invoiced_to?: string | null
+          is_active?: boolean | null
           name: string
           notes?: string | null
-          payment_account?: string | null
           payment_terms?: string | null
-          reconcile_with?: string | null
-          vat_included?: boolean | null
+          slug: string
+          updated_at?: string | null
         }
         Update: {
-          correction_count?: number | null
-          created_at?: string
-          email_domain?: string | null
+          category?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
           id?: string
-          is_web_order_supplier?: boolean | null
-          known_companies?: string[] | null
-          known_locations?: string[] | null
+          invoiced_to?: string | null
+          is_active?: boolean | null
           name?: string
           notes?: string | null
-          payment_account?: string | null
           payment_terms?: string | null
-          reconcile_with?: string | null
-          vat_included?: boolean | null
+          slug?: string
+          updated_at?: string | null
         }
         Relationships: []
-      }
-      suppliers_db: {
-        Row: {
-          contact_person: string | null
-          created_at: string
-          email: string | null
-          id: string
-          name: string
-          notes: string | null
-          phone: string | null
-          product_categories: string[]
-          updated_at: string
-        }
-        Insert: {
-          contact_person?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name: string
-          notes?: string | null
-          phone?: string | null
-          product_categories?: string[]
-          updated_at?: string
-        }
-        Update: {
-          contact_person?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name?: string
-          notes?: string | null
-          phone?: string | null
-          product_categories?: string[]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tasks_deadlines: {
-        Row: {
-          card_origin: string | null
-          created_at: string
-          deadline: string | null
-          festival_id: string
-          id: string
-          notes: string | null
-          priority: Database["public"]["Enums"]["task_priority"]
-          status: Database["public"]["Enums"]["task_status"]
-          task: string
-          updated_at: string
-        }
-        Insert: {
-          card_origin?: string | null
-          created_at?: string
-          deadline?: string | null
-          festival_id: string
-          id?: string
-          notes?: string | null
-          priority?: Database["public"]["Enums"]["task_priority"]
-          status?: Database["public"]["Enums"]["task_status"]
-          task: string
-          updated_at?: string
-        }
-        Update: {
-          card_origin?: string | null
-          created_at?: string
-          deadline?: string | null
-          festival_id?: string
-          id?: string
-          notes?: string | null
-          priority?: Database["public"]["Enums"]["task_priority"]
-          status?: Database["public"]["Enums"]["task_status"]
-          task?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_deadlines_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "festivals"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_roles: {
         Row: {
@@ -2347,7 +1242,90 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_festival_kpis: {
+        Row: {
+          action_items_open: number | null
+          action_items_overdue: number | null
+          action_items_total: number | null
+          concepts_count: number | null
+          festival_id: string | null
+          festival_name: string | null
+          total_person_hours: number | null
+          total_shifts: number | null
+          workforce_count: number | null
+        }
+        Insert: {
+          action_items_open?: never
+          action_items_overdue?: never
+          action_items_total?: never
+          concepts_count?: never
+          festival_id?: string | null
+          festival_name?: string | null
+          total_person_hours?: never
+          total_shifts?: never
+          workforce_count?: never
+        }
+        Update: {
+          action_items_open?: never
+          action_items_overdue?: never
+          action_items_total?: never
+          concepts_count?: never
+          festival_id?: string | null
+          festival_name?: string | null
+          total_person_hours?: never
+          total_shifts?: never
+          workforce_count?: never
+        }
+        Relationships: []
+      }
+      v_festival_next_deadline: {
+        Row: {
+          consequence: string | null
+          deadline_at: string | null
+          festival_id: string | null
+          is_hard: boolean | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      v_grocery_list_by_supplier: {
+        Row: {
+          festival_id: string | null
+          festival_name: string | null
+          ingredient_id: string | null
+          ingredient_name: string | null
+          ingredient_unit: string | null
+          pack_size: number | null
+          pack_unit: string | null
+          supplier_id: string | null
+          supplier_name: string | null
+          total_portions: number | null
+          total_qty_needed: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
