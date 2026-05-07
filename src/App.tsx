@@ -13,6 +13,8 @@ import Dashboard from "./pages/Dashboard";
 import SettingsPage from "./pages/SettingsPage";
 import FestivalsList from "./pages/festival/FestivalsList";
 import FestivalOverview from "./pages/festival/FestivalOverview";
+import FestivalAttention from "./pages/festival/FestivalAttention";
+import GlobalAttention from "./pages/GlobalAttention";
 
 const queryClient = new QueryClient();
 
