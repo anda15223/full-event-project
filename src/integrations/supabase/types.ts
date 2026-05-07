@@ -169,6 +169,13 @@ export type Database = {
             foreignKeyName: "equipment_catalog_default_supplier_id_fkey"
             columns: ["default_supplier_id"]
             isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "equipment_catalog_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
             referencedColumns: ["supplier_id"]
           },
@@ -191,6 +198,13 @@ export type Database = {
             columns: ["rental_supplier_id"]
             isOneToOne: false
             referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "equipment_catalog_rental_supplier_id_fkey"
+            columns: ["rental_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
             referencedColumns: ["supplier_id"]
           },
           {
@@ -357,6 +371,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "festival_accommodations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
             referencedColumns: ["supplier_id"]
           },
           {
@@ -632,6 +653,13 @@ export type Database = {
             foreignKeyName: "festival_cooling_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
             referencedColumns: ["supplier_id"]
           },
@@ -821,6 +849,13 @@ export type Database = {
             columns: ["rental_supplier_id"]
             isOneToOne: false
             referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_rental_supplier_id_fkey"
+            columns: ["rental_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
             referencedColumns: ["supplier_id"]
           },
           {
@@ -1524,6 +1559,13 @@ export type Database = {
             foreignKeyName: "festival_staff_vehicles_rental_supplier_id_fkey"
             columns: ["rental_supplier_id"]
             isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "festival_staff_vehicles_rental_supplier_id_fkey"
+            columns: ["rental_supplier_id"]
+            isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
             referencedColumns: ["supplier_id"]
           },
@@ -1685,6 +1727,200 @@ export type Database = {
         }
         Relationships: []
       }
+      ingredient_storage: {
+        Row: {
+          created_at: string | null
+          current_qty: number | null
+          current_qty_unit: string | null
+          id: string
+          ingredient_id: string
+          is_primary: boolean | null
+          last_stock_check: string | null
+          notes: string | null
+          storage_location_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_qty?: number | null
+          current_qty_unit?: string | null
+          id?: string
+          ingredient_id: string
+          is_primary?: boolean | null
+          last_stock_check?: string | null
+          notes?: string | null
+          storage_location_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_qty?: number | null
+          current_qty_unit?: string | null
+          id?: string
+          ingredient_id?: string
+          is_primary?: boolean | null
+          last_stock_check?: string | null
+          notes?: string | null
+          storage_location_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_storage_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_storage_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "ingredient_storage_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_storage_options"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "ingredient_storage_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "ingredient_storage_storage_location_id_fkey"
+            columns: ["storage_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_storage_storage_location_id_fkey"
+            columns: ["storage_location_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_storage_options"
+            referencedColumns: ["storage_id"]
+          },
+        ]
+      }
+      ingredient_suppliers: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          id: string
+          ingredient_id: string
+          is_default: boolean | null
+          last_price_update: string | null
+          notes: string | null
+          pack_size: number | null
+          pack_unit: string | null
+          supplier_id: string
+          supplier_sku: string | null
+          unit_price_dkk: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          ingredient_id: string
+          is_default?: boolean | null
+          last_price_update?: string | null
+          notes?: string | null
+          pack_size?: number | null
+          pack_unit?: string | null
+          supplier_id: string
+          supplier_sku?: string | null
+          unit_price_dkk?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          ingredient_id?: string
+          is_default?: boolean | null
+          last_price_update?: string | null
+          notes?: string | null
+          pack_size?: number | null
+          pack_unit?: string | null
+          supplier_id?: string
+          supplier_sku?: string | null
+          unit_price_dkk?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_storage_options"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["rental_supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           category: string | null
@@ -1748,6 +1984,13 @@ export type Database = {
             columns: ["default_supplier_id"]
             isOneToOne: false
             referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredients_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
             referencedColumns: ["supplier_id"]
           },
           {
@@ -1839,6 +2082,20 @@ export type Database = {
             referencedRelation: "v_grocery_list_by_supplier"
             referencedColumns: ["ingredient_id"]
           },
+          {
+            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_storage_options"
+            referencedColumns: ["ingredient_id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["ingredient_id"]
+          },
         ]
       }
       staff: {
@@ -1879,6 +2136,57 @@ export type Database = {
           phone?: string | null
           role_default?: string | null
           short_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      storage_locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string | null
+          delivery_notes: string | null
+          id: string
+          is_active: boolean | null
+          location_type: string | null
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string | null
+          delivery_notes?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_type?: string | null
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string | null
+          delivery_notes?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_type?: string | null
+          name?: string
+          slug?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -1994,6 +2302,13 @@ export type Database = {
             columns: ["default_supplier_id"]
             isOneToOne: false
             referencedRelation: "v_grocery_list_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "trolley_items_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
             referencedColumns: ["supplier_id"]
           },
           {
@@ -2129,17 +2444,46 @@ export type Database = {
       }
       v_grocery_list_by_supplier: {
         Row: {
+          estimated_cost_dkk: number | null
           festival_id: string | null
           festival_name: string | null
           ingredient_id: string | null
           ingredient_name: string | null
-          ingredient_unit: string | null
           pack_size: number | null
           pack_unit: string | null
           supplier_id: string | null
           supplier_name: string | null
           total_portions: number | null
           total_qty_needed: number | null
+          unit_price_dkk: number | null
+        }
+        Relationships: []
+      }
+      v_ingredient_storage_options: {
+        Row: {
+          current_qty: number | null
+          current_qty_unit: string | null
+          ingredient_id: string | null
+          ingredient_name: string | null
+          is_primary: boolean | null
+          last_stock_check: string | null
+          notes: string | null
+          storage_id: string | null
+          storage_name: string | null
+        }
+        Relationships: []
+      }
+      v_ingredient_supplier_options: {
+        Row: {
+          ingredient_id: string | null
+          ingredient_name: string | null
+          is_default: boolean | null
+          notes: string | null
+          pack_size: number | null
+          pack_unit: string | null
+          supplier_id: string | null
+          supplier_name: string | null
+          unit_price_dkk: number | null
         }
         Relationships: []
       }
