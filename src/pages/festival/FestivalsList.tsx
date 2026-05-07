@@ -73,8 +73,8 @@ export default function FestivalsList() {
                   <span aria-hidden>{emoji}</span>
                 </div>
                 <h3 className="relative font-semibold text-foreground tracking-tight">{f.name}</h3>
-                <p className="relative text-xs text-muted-foreground mt-1 font-mono">
-                  {f.year} · {f.start_date} → {f.end_date}
+                <p className="relative text-xs text-muted-foreground mt-1">
+                  {formatRange(f.start_date, f.end_date)}
                 </p>
               </Link>
             );
