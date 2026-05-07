@@ -23,7 +23,7 @@ export function AttentionSummaryWidget({ festivalSlug, className }: { festivalSl
     return <div className={cn("h-20 rounded-xl border bg-muted/30 animate-pulse", className)} />;
   }
 
-  const total = data?.total_attention_items ?? 0;
+  const total = data?.total_count ?? 0;
   if (total === 0) {
     return (
       <div
@@ -38,10 +38,10 @@ export function AttentionSummaryWidget({ festivalSlug, className }: { festivalSl
   }
 
   const counts: Record<Bucket, number> = {
-    overdue: data?.count_overdue ?? 0,
-    today: data?.count_today ?? 0,
-    "this-week": data?.count_this_week ?? 0,
-    later: data?.count_later ?? 0,
+    overdue: data?.overdue_count ?? 0,
+    today: data?.today_count ?? 0,
+    "this-week": data?.this_week_count ?? 0,
+    later: data?.later_count ?? 0,
   };
 
   return (

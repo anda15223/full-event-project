@@ -29,9 +29,9 @@ function SidebarNav() {
   const { data: attentionTotal = 0 } = useQuery({
     queryKey: ["attention-global-total"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("v_attention_summary").select("total_attention_items");
+      const { data, error } = await (supabase as any).from("v_attention_summary").select("total_count");
       if (error) return 0;
-      return ((data ?? []) as AttentionSummary[]).reduce((s, r) => s + (r.total_attention_items ?? 0), 0);
+      return ((data ?? []) as AttentionSummary[]).reduce((s, r) => s + (r.total_count ?? 0), 0);
     },
     refetchOnWindowFocus: true,
   });
