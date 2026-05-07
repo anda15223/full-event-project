@@ -26,6 +26,16 @@ function SidebarNav() {
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
 
+  const { data: attentionTotal = 0 } = useQuery({
+    queryKey: ["attention-global-total"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("v_attention_summary").select("total_attention_items");
+      if (error) return 0;
+      return ((data ?? []) as AttentionSummary[]).reduce((s, r) => s + (r.total_attention_items ?? 0), 0);
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
