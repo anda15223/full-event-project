@@ -5,13 +5,12 @@ export interface AttentionSummary {
   festival_name: string;
   festival_slug: string;
   festival_start_date: string;
-  count_overdue: number;
-  count_today: number;
-  count_this_week: number;
-  count_later: number;
-  count_critical: number;
-  total_attention_items: number;
-  worst_bucket: Bucket | "clear";
+  overdue_count: number;
+  today_count: number;
+  this_week_count: number;
+  later_count: number;
+  total_count: number;
+  worst_bucket: Bucket | null;
 }
 
 export interface AttentionItem {
