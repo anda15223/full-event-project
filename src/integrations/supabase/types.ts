@@ -2678,42 +2678,54 @@ export type Database = {
         Row: {
           concept_id: string | null
           created_at: string | null
+          crosses_midnight: boolean | null
           end_time: string
           festival_id: string
           hours: number | null
           id: string
           notes: string | null
+          planned_crew_size: number | null
           role: string | null
           shift_date: string
-          staff_id: string
+          shift_name: string | null
+          shift_type: string | null
+          staff_id: string | null
           start_time: string
           updated_at: string | null
         }
         Insert: {
           concept_id?: string | null
           created_at?: string | null
+          crosses_midnight?: boolean | null
           end_time: string
           festival_id: string
           hours?: number | null
           id?: string
           notes?: string | null
+          planned_crew_size?: number | null
           role?: string | null
           shift_date: string
-          staff_id: string
+          shift_name?: string | null
+          shift_type?: string | null
+          staff_id?: string | null
           start_time: string
           updated_at?: string | null
         }
         Update: {
           concept_id?: string | null
           created_at?: string | null
+          crosses_midnight?: boolean | null
           end_time?: string
           festival_id?: string
           hours?: number | null
           id?: string
           notes?: string | null
+          planned_crew_size?: number | null
           role?: string | null
           shift_date?: string
-          staff_id?: string
+          shift_name?: string | null
+          shift_type?: string | null
+          staff_id?: string | null
           start_time?: string
           updated_at?: string | null
         }
