@@ -6,15 +6,19 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AttentionSummary } from "@/lib/attention";
 
 const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
+  { icon: AlertTriangle, label: "Attention", path: "/attention" },
 ];
 
 function SidebarNav() {
