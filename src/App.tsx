@@ -13,6 +13,8 @@ import Dashboard from "./pages/Dashboard";
 import SettingsPage from "./pages/SettingsPage";
 import FestivalsList from "./pages/festival/FestivalsList";
 import FestivalOverview from "./pages/festival/FestivalOverview";
+import FestivalAttention from "./pages/festival/FestivalAttention";
+import GlobalAttention from "./pages/GlobalAttention";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ const App = () => (
             <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
             <Route path="/festivals" element={<Protected><FestivalsList /></Protected>} />
             <Route path="/festivals/:slug" element={<Protected><FestivalOverview /></Protected>} />
+            <Route path="/festivals/:slug/attention" element={<Protected><FestivalAttention /></Protected>} />
+            <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

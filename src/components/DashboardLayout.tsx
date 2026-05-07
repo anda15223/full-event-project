@@ -6,21 +6,35 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AttentionSummary } from "@/lib/attention";
 
 const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
+  { icon: AlertTriangle, label: "Attention", path: "/attention" },
 ];
 
 function SidebarNav() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
+
+  const { data: attentionTotal = 0 } = useQuery({
+    queryKey: ["attention-global-total"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("v_attention_summary").select("total_attention_items");
+      if (error) return 0;
+      return ((data ?? []) as AttentionSummary[]).reduce((s, r) => s + (r.total_attention_items ?? 0), 0);
+    },
+    refetchOnWindowFocus: true,
+  });
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
@@ -45,6 +59,7 @@ function SidebarNav() {
         <SidebarMenu>
           {navItems.map(item => {
             const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
+            const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -56,8 +71,18 @@ function SidebarNav() {
                     <div className="relative">
                       <item.icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
                       {item.color && <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${item.color} border-2 border-white`} />}
+                      {showAttentionDot && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                     </div>
-                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && (
+                      <span className="flex-1 flex items-center justify-between">
+                        <span>{item.label}</span>
+                        {item.path === "/attention" && attentionTotal > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                            {attentionTotal}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
