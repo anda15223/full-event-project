@@ -1,9 +1,35 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Tent } from "lucide-react";
 
 type Festival = { id: string; slug: string; name: string; year: number; start_date: string; end_date: string };
+
+// Per-festival visual identity: emoji + HSL accent color
+const FESTIVAL_STYLES: Record<string, { emoji: string; hue: number }> = {
+  "jelling-2026":          { emoji: "⚔️",  hue: 220 },
+  "heartland-2026":        { emoji: "🌳",  hue: 145 },
+  "syd-for-solen-2026":    { emoji: "☀️",  hue: 38  },
+  "northside-2026":        { emoji: "🎸",  hue: 200 },
+  "tinderbox-2026":        { emoji: "🔥",  hue: 12  },
+  "smukfest-2026":         { emoji: "🌲",  hue: 160 },
+  "roskilde-2026":         { emoji: "🎪",  hue: 340 },
+  "copenhell-2026":        { emoji: "🤘",  hue: 0   },
+  "grøn-2026":             { emoji: "🍀",  hue: 110 },
+  "gron-2026":             { emoji: "🍀",  hue: 110 },
+  "nibe-2026":             { emoji: "🎶",  hue: 260 },
+  "skanderborg-2026":      { emoji: "🌊",  hue: 195 },
+  "vig-2026":              { emoji: "🎡",  hue: 290 },
+  "musik-i-lejet-2026":    { emoji: "🏖️",  hue: 50  },
+};
+
+const FALLBACK_EMOJIS = ["🎤", "🎫", "🎺", "🥁", "🎷", "🪗", "🎹"];
+
+function styleFor(slug: string, idx: number) {
+  if (FESTIVAL_STYLES[slug]) return FESTIVAL_STYLES[slug];
+  // Deterministic fallback: spread hues around the wheel
+  const hue = (idx * 47) % 360;
+  return { emoji: FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length], hue };
+}
 
 export default function FestivalsList() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
@@ -18,20 +44,41 @@ export default function FestivalsList() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-heading font-bold text-foreground">Festivals</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">Festivals</h1>
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : festivals.length === 0 ? (
         <p className="text-sm text-muted-foreground">No festivals yet. Add one via the database.</p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {festivals.map(f => (
-            <Link key={f.id} to={`/festivals/${f.slug}`} className="rounded-2xl border border-border/50 p-5 bg-card hover:shadow-md transition">
-              <Tent className="h-5 w-5 text-primary mb-3" />
-              <h3 className="font-semibold text-foreground">{f.name}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{f.year} · {f.start_date} → {f.end_date}</p>
-            </Link>
-          ))}
+          {festivals.map((f, i) => {
+            const { emoji, hue } = styleFor(f.slug, i);
+            const accent = `hsl(${hue} 70% 50%)`;
+            const tint = `hsl(${hue} 70% 96%)`;
+            return (
+              <Link
+                key={f.id}
+                to={`/festivals/${f.slug}`}
+                className="group relative rounded-2xl border border-border/50 p-5 bg-card hover:shadow-md transition overflow-hidden"
+                style={{ borderTop: `3px solid ${accent}` }}
+              >
+                <div
+                  className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-60 group-hover:opacity-90 transition"
+                  style={{ background: tint }}
+                />
+                <div
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl text-xl mb-3"
+                  style={{ background: tint, color: accent }}
+                >
+                  <span aria-hidden>{emoji}</span>
+                </div>
+                <h3 className="relative font-semibold text-foreground tracking-tight">{f.name}</h3>
+                <p className="relative text-xs text-muted-foreground mt-1 font-mono">
+                  {f.year} · {f.start_date} → {f.end_date}
+                </p>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
