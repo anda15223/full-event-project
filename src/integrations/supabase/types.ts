@@ -4133,6 +4133,45 @@ export type Database = {
       }
     }
     Views: {
+      v_attention_items: {
+        Row: {
+          concept_id: string | null
+          concept_name: string | null
+          description: string | null
+          due_at: string | null
+          due_date: string | null
+          due_time: string | null
+          festival_id: string | null
+          festival_name: string | null
+          festival_slug: string | null
+          festival_start_date: string | null
+          owner_name: string | null
+          priority: string | null
+          source_card_label: string | null
+          source_id: string | null
+          source_table: string | null
+          status: string | null
+          title: string | null
+          urgency_bucket: string | null
+        }
+        Relationships: []
+      }
+      v_attention_summary: {
+        Row: {
+          count_critical: number | null
+          count_later: number | null
+          count_overdue: number | null
+          count_this_week: number | null
+          count_today: number | null
+          festival_id: string | null
+          festival_name: string | null
+          festival_slug: string | null
+          festival_start_date: string | null
+          total_attention_items: number | null
+          worst_bucket: string | null
+        }
+        Relationships: []
+      }
       v_consumables_order_by_supplier: {
         Row: {
           festival_id: string | null
@@ -4361,6 +4400,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      mark_attention_done: {
+        Args: { p_source_id: string; p_source_table: string }
+        Returns: string
       }
       recalculate_invoice_statuses: { Args: never; Returns: undefined }
     }
