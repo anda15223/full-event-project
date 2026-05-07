@@ -5,21 +5,16 @@ import {
   SidebarInset, SidebarTrigger, useSidebar,
 } from "@/components/ui/sidebar";
 import {
-  LayoutDashboard, Mail, FileText, Tent,
-  Settings, PanelLeft, Zap, LogOut, Brain, Package,
+  LayoutDashboard, Tent,
+  Settings, PanelLeft, Zap, LogOut,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import ChatPanel from "@/components/ChatPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
+const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Mail, label: "Emails", path: "/emails", color: "bg-agent-blue" },
-  { icon: FileText, label: "Documents", path: "/documents", color: "bg-agent-green" },
-  { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-agent-purple" },
-  { icon: Package, label: "Inventory", path: "/inventory", color: "bg-destructive" },
-  { icon: Brain, label: "Brain", path: "/brain", color: "bg-agent-orange" },
+  { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
 ];
 
 function SidebarNav() {
@@ -116,7 +111,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </main>
         </SidebarInset>
-        <ChatPanel />
       </div>
     </SidebarProvider>
   );
