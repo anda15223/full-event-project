@@ -50,44 +50,73 @@ export default function FestivalsList() {
     });
   }, []);
 
+  // Group festivals by month (using start_date)
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const groups = festivals.reduce<Record<string, { key: string; label: string; items: Festival[] }>>((acc, f) => {
+    const d = new Date(f.start_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}`;
+    const label = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+    if (!acc[key]) acc[key] = { key, label, items: [] };
+    acc[key].items.push(f);
+    return acc;
+  }, {});
+  const groupedList = Object.values(groups).sort((a, b) => a.key.localeCompare(b.key));
+
+  // Stable index across all festivals for fallback styling
+  const indexOf = new Map(festivals.map((f, i) => [f.id, i]));
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight text-foreground">Festivals</h1>
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : festivals.length === 0 ? (
         <p className="text-sm text-muted-foreground">No festivals yet. Add one via the database.</p>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {festivals.map((f, i) => {
-            const { emoji, hue } = styleFor(f.slug, i);
-            const accent = `hsl(${hue} 70% 50%)`;
-            const tint = `hsl(${hue} 70% 96%)`;
-            return (
-              <Link
-                key={f.id}
-                to={`/festivals/${f.slug}`}
-                className="group relative rounded-2xl border border-border/50 p-5 bg-card hover:shadow-md transition overflow-hidden"
-                style={{ borderTop: `3px solid ${accent}` }}
-              >
-                <div
-                  className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-60 group-hover:opacity-90 transition"
-                  style={{ background: tint }}
-                />
-                <div
-                  className="relative flex h-10 w-10 items-center justify-center rounded-xl text-xl mb-3"
-                  style={{ background: tint, color: accent }}
-                >
-                  <span aria-hidden>{emoji}</span>
-                </div>
-                <h3 className="relative font-semibold text-foreground tracking-tight">{f.name}</h3>
-                <p className="relative text-xs text-muted-foreground mt-1">
-                  {formatRange(f.start_date, f.end_date)}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
+        groupedList.map((group) => (
+          <section key={group.key} className="space-y-3">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.label}
+              </h2>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {group.items.length} festival{group.items.length === 1 ? "" : "s"}
+              </span>
+              <div className="flex-1 h-px bg-border/60" />
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {group.items.map((f) => {
+                const i = indexOf.get(f.id) ?? 0;
+                const { emoji, hue } = styleFor(f.slug, i);
+                const accent = `hsl(${hue} 70% 50%)`;
+                const tint = `hsl(${hue} 70% 96%)`;
+                return (
+                  <Link
+                    key={f.id}
+                    to={`/festivals/${f.slug}`}
+                    className="group relative rounded-2xl border border-border/50 p-5 bg-card hover:shadow-md transition overflow-hidden"
+                    style={{ borderTop: `3px solid ${accent}` }}
+                  >
+                    <div
+                      className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-60 group-hover:opacity-90 transition"
+                      style={{ background: tint }}
+                    />
+                    <div
+                      className="relative flex h-10 w-10 items-center justify-center rounded-xl text-xl mb-3"
+                      style={{ background: tint, color: accent }}
+                    >
+                      <span aria-hidden>{emoji}</span>
+                    </div>
+                    <h3 className="relative font-semibold text-foreground tracking-tight">{f.name}</h3>
+                    <p className="relative text-xs text-muted-foreground mt-1">
+                      {formatRange(f.start_date, f.end_date)}
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ))
       )}
     </div>
   );
