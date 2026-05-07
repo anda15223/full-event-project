@@ -2808,9 +2808,11 @@ export type Database = {
           confirmed: boolean | null
           created_at: string | null
           festival_id: string
+          home_location: string | null
           id: string
           name: string | null
           notes: string | null
+          requires_transport: boolean
           role: string
           staff_source: string
           total_hours_planned: number | null
@@ -2826,9 +2828,11 @@ export type Database = {
           confirmed?: boolean | null
           created_at?: string | null
           festival_id: string
+          home_location?: string | null
           id?: string
           name?: string | null
           notes?: string | null
+          requires_transport?: boolean
           role: string
           staff_source: string
           total_hours_planned?: number | null
@@ -2844,9 +2848,11 @@ export type Database = {
           confirmed?: boolean | null
           created_at?: string | null
           festival_id?: string
+          home_location?: string | null
           id?: string
           name?: string | null
           notes?: string | null
+          requires_transport?: boolean
           role?: string
           staff_source?: string
           total_hours_planned?: number | null
@@ -3112,6 +3118,7 @@ export type Database = {
         Row: {
           actual_cost_dkk: number | null
           booking_reference: string | null
+          capacity: number | null
           created_at: string | null
           estimated_cost_dkk: number | null
           festival_id: string
@@ -3125,6 +3132,7 @@ export type Database = {
           return_date: string | null
           return_location: string | null
           return_time: string | null
+          season_rental_id: string | null
           status: string | null
           updated_at: string | null
           vehicle_purpose: string | null
@@ -3133,6 +3141,7 @@ export type Database = {
         Insert: {
           actual_cost_dkk?: number | null
           booking_reference?: string | null
+          capacity?: number | null
           created_at?: string | null
           estimated_cost_dkk?: number | null
           festival_id: string
@@ -3146,6 +3155,7 @@ export type Database = {
           return_date?: string | null
           return_location?: string | null
           return_time?: string | null
+          season_rental_id?: string | null
           status?: string | null
           updated_at?: string | null
           vehicle_purpose?: string | null
@@ -3154,6 +3164,7 @@ export type Database = {
         Update: {
           actual_cost_dkk?: number | null
           booking_reference?: string | null
+          capacity?: number | null
           created_at?: string | null
           estimated_cost_dkk?: number | null
           festival_id?: string
@@ -3167,6 +3178,7 @@ export type Database = {
           return_date?: string | null
           return_location?: string | null
           return_time?: string | null
+          season_rental_id?: string | null
           status?: string | null
           updated_at?: string | null
           vehicle_purpose?: string | null
@@ -3256,6 +3268,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
             referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "festival_transport_season_rental_id_fkey"
+            columns: ["season_rental_id"]
+            isOneToOne: false
+            referencedRelation: "season_rentals"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3862,6 +3881,141 @@ export type Database = {
           },
         ]
       }
+      season_rentals: {
+        Row: {
+          bilgruppe: string | null
+          contracting_entity: string
+          contracting_entity_cvr: string | null
+          created_at: string | null
+          customer_number: string | null
+          daily_rate_dkk: number | null
+          end_date: string
+          id: string
+          insurance_cdi: boolean | null
+          insurance_glass: boolean | null
+          insurance_pai: boolean | null
+          insurance_rsa: boolean | null
+          km_included_per_period: number | null
+          km_overage_rate_dkk: number | null
+          monthly_rate_dkk: number | null
+          monthly_renewal_day: number | null
+          notes: string | null
+          pickup_location: string | null
+          primary_driver_name: string | null
+          reservation_number: string
+          return_location: string | null
+          season_label: string
+          selvrisiko_dkk: number | null
+          start_date: string
+          status: string
+          supplier_id: string | null
+          supplier_name: string
+          tariff_model: string | null
+          updated_at: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          bilgruppe?: string | null
+          contracting_entity: string
+          contracting_entity_cvr?: string | null
+          created_at?: string | null
+          customer_number?: string | null
+          daily_rate_dkk?: number | null
+          end_date: string
+          id?: string
+          insurance_cdi?: boolean | null
+          insurance_glass?: boolean | null
+          insurance_pai?: boolean | null
+          insurance_rsa?: boolean | null
+          km_included_per_period?: number | null
+          km_overage_rate_dkk?: number | null
+          monthly_rate_dkk?: number | null
+          monthly_renewal_day?: number | null
+          notes?: string | null
+          pickup_location?: string | null
+          primary_driver_name?: string | null
+          reservation_number: string
+          return_location?: string | null
+          season_label: string
+          selvrisiko_dkk?: number | null
+          start_date: string
+          status?: string
+          supplier_id?: string | null
+          supplier_name: string
+          tariff_model?: string | null
+          updated_at?: string | null
+          vehicle_type: string
+        }
+        Update: {
+          bilgruppe?: string | null
+          contracting_entity?: string
+          contracting_entity_cvr?: string | null
+          created_at?: string | null
+          customer_number?: string | null
+          daily_rate_dkk?: number | null
+          end_date?: string
+          id?: string
+          insurance_cdi?: boolean | null
+          insurance_glass?: boolean | null
+          insurance_pai?: boolean | null
+          insurance_rsa?: boolean | null
+          km_included_per_period?: number | null
+          km_overage_rate_dkk?: number | null
+          monthly_rate_dkk?: number | null
+          monthly_renewal_day?: number | null
+          notes?: string | null
+          pickup_location?: string | null
+          primary_driver_name?: string | null
+          reservation_number?: string
+          return_location?: string | null
+          season_label?: string
+          selvrisiko_dkk?: number | null
+          start_date?: string
+          status?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          tariff_model?: string | null
+          updated_at?: string | null
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_rentals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_rentals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "season_rentals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["rental_supplier_id"]
+          },
+          {
+            foreignKeyName: "season_rentals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_supplier_options"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "season_rentals_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           created_at: string | null
@@ -4008,6 +4162,116 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      transport_leg_assignments: {
+        Row: {
+          created_at: string | null
+          id: string
+          leg_id: string
+          notes: string | null
+          pickup_point: string | null
+          role: string
+          seat_position: string | null
+          staff_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          leg_id: string
+          notes?: string | null
+          pickup_point?: string | null
+          role?: string
+          seat_position?: string | null
+          staff_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          leg_id?: string
+          notes?: string | null
+          pickup_point?: string | null
+          role?: string
+          seat_position?: string | null
+          staff_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_leg_assignments_leg_id_fkey"
+            columns: ["leg_id"]
+            isOneToOne: false
+            referencedRelation: "transport_legs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transport_leg_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transport_legs: {
+        Row: {
+          cargo_description: string | null
+          created_at: string | null
+          destination: string | null
+          effective_capacity: number | null
+          id: string
+          leg_date: string
+          leg_label: string
+          leg_phase: string
+          leg_start_time: string | null
+          notes: string | null
+          origin: string | null
+          status: string
+          transport_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          cargo_description?: string | null
+          created_at?: string | null
+          destination?: string | null
+          effective_capacity?: number | null
+          id?: string
+          leg_date: string
+          leg_label: string
+          leg_phase: string
+          leg_start_time?: string | null
+          notes?: string | null
+          origin?: string | null
+          status?: string
+          transport_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          cargo_description?: string | null
+          created_at?: string | null
+          destination?: string | null
+          effective_capacity?: number | null
+          id?: string
+          leg_date?: string
+          leg_label?: string
+          leg_phase?: string
+          leg_start_time?: string | null
+          notes?: string | null
+          origin?: string | null
+          status?: string
+          transport_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_legs_transport_id_fkey"
+            columns: ["transport_id"]
+            isOneToOne: false
+            referencedRelation: "festival_transport"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trolley_items: {
         Row: {
