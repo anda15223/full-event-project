@@ -76,13 +76,13 @@ export default function FestivalsList() {
         groupedList.map((group) => (
           <section key={group.key} className="space-y-3">
             <div className="flex items-baseline gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              <h2 className="text-lg font-bold uppercase tracking-wide text-foreground">
                 {group.label}
               </h2>
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span className="text-xs font-medium text-muted-foreground tabular-nums">
                 {group.items.length} festival{group.items.length === 1 ? "" : "s"}
               </span>
-              <div className="flex-1 h-px bg-border/60" />
+              <div className="flex-1 h-px bg-border" />
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {group.items.map((f) => {
