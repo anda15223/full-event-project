@@ -99,7 +99,22 @@ Deno.serve(async (req) => {
         });
         userParts.push({ type: "image_url", image_url: { url: `data:application/pdf;base64,${b64}` } });
       } else {
-        throw new Error("This file type cannot be read by AI yet. Please upload a JPG, PNG, WebP, GIF, PDF, or paste text.");
+        // Fallback: try to decode as text
+        try {
+          const binary = atob(b64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes).slice(0, 50000);
+          if (!text.trim()) {
+            throw new Error("empty");
+          }
+          userParts.push({
+            type: "text",
+            text: `Extract the full readable content from this file (filename: ${filename}, mime: ${mt}, category: ${category}). Then write a 1-2 sentence summary on the first line prefixed with "SUMMARY:". After that, return the cleaned full text.\n\nFILE CONTENTS:\n${text}`,
+          });
+        } catch {
+          throw new Error(`This file type (${mt || ext || "unknown"}) cannot be read by AI yet. Please upload a JPG, PNG, WebP, GIF, PDF, or paste text.`);
+        }
       }
     } else if (storage_path) {
       const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/festival-photos/${storage_path}`;
