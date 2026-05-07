@@ -628,45 +628,78 @@ export type Database = {
       }
       festival_cooling: {
         Row: {
+          contract_amount_excl_vat_dkk: number | null
+          contract_amount_incl_vat_dkk: number | null
+          contract_notes: string | null
           cost_dkk: number | null
           created_at: string | null
           delivery_date: string | null
+          delivery_time_earliest: string | null
+          delivery_time_latest: string | null
+          electrical_cable_length_m: number | null
           festival_id: string
           id: string
+          lock_count: number | null
           notes: string | null
           payment_due: string | null
           payment_status: string | null
           pickup_date: string | null
+          pickup_time_earliest: string | null
+          pickup_time_latest: string | null
+          power_connection: string | null
+          supplier_booking_number: string | null
           supplier_id: string | null
           supplier_ref: string | null
           unit_type: string
           updated_at: string | null
         }
         Insert: {
+          contract_amount_excl_vat_dkk?: number | null
+          contract_amount_incl_vat_dkk?: number | null
+          contract_notes?: string | null
           cost_dkk?: number | null
           created_at?: string | null
           delivery_date?: string | null
+          delivery_time_earliest?: string | null
+          delivery_time_latest?: string | null
+          electrical_cable_length_m?: number | null
           festival_id: string
           id?: string
+          lock_count?: number | null
           notes?: string | null
           payment_due?: string | null
           payment_status?: string | null
           pickup_date?: string | null
+          pickup_time_earliest?: string | null
+          pickup_time_latest?: string | null
+          power_connection?: string | null
+          supplier_booking_number?: string | null
           supplier_id?: string | null
           supplier_ref?: string | null
           unit_type: string
           updated_at?: string | null
         }
         Update: {
+          contract_amount_excl_vat_dkk?: number | null
+          contract_amount_incl_vat_dkk?: number | null
+          contract_notes?: string | null
           cost_dkk?: number | null
           created_at?: string | null
           delivery_date?: string | null
+          delivery_time_earliest?: string | null
+          delivery_time_latest?: string | null
+          electrical_cable_length_m?: number | null
           festival_id?: string
           id?: string
+          lock_count?: number | null
           notes?: string | null
           payment_due?: string | null
           payment_status?: string | null
           pickup_date?: string | null
+          pickup_time_earliest?: string | null
+          pickup_time_latest?: string | null
+          power_connection?: string | null
+          supplier_booking_number?: string | null
           supplier_id?: string | null
           supplier_ref?: string | null
           unit_type?: string
@@ -2052,19 +2085,25 @@ export type Database = {
           address: string | null
           breakdown_date: string | null
           city: string | null
+          confirmation_status: string | null
           country: string | null
           created_at: string | null
           end_date: string
           id: string
           is_active: boolean | null
+          menu_summary: string | null
           name: string
           notes: string | null
           organiser_email: string | null
           organiser_name: string | null
           organiser_phone: string | null
+          pack_date: string | null
+          pack_down_date: string | null
+          project_leaders: string | null
           setup_date: string | null
           slug: string
           start_date: string
+          tent_size_overall: string | null
           updated_at: string | null
           year: number
         }
@@ -2072,19 +2111,25 @@ export type Database = {
           address?: string | null
           breakdown_date?: string | null
           city?: string | null
+          confirmation_status?: string | null
           country?: string | null
           created_at?: string | null
           end_date: string
           id?: string
           is_active?: boolean | null
+          menu_summary?: string | null
           name: string
           notes?: string | null
           organiser_email?: string | null
           organiser_name?: string | null
           organiser_phone?: string | null
+          pack_date?: string | null
+          pack_down_date?: string | null
+          project_leaders?: string | null
           setup_date?: string | null
           slug: string
           start_date: string
+          tent_size_overall?: string | null
           updated_at?: string | null
           year: number
         }
@@ -2092,19 +2137,25 @@ export type Database = {
           address?: string | null
           breakdown_date?: string | null
           city?: string | null
+          confirmation_status?: string | null
           country?: string | null
           created_at?: string | null
           end_date?: string
           id?: string
           is_active?: boolean | null
+          menu_summary?: string | null
           name?: string
           notes?: string | null
           organiser_email?: string | null
           organiser_name?: string | null
           organiser_phone?: string | null
+          pack_date?: string | null
+          pack_down_date?: string | null
+          project_leaders?: string | null
           setup_date?: string | null
           slug?: string
           start_date?: string
+          tent_size_overall?: string | null
           updated_at?: string | null
           year?: number
         }
