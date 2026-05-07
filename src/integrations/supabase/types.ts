@@ -4422,16 +4422,15 @@ export type Database = {
       }
       v_attention_summary: {
         Row: {
-          count_critical: number | null
-          count_later: number | null
-          count_overdue: number | null
-          count_this_week: number | null
-          count_today: number | null
           festival_id: string | null
           festival_name: string | null
           festival_slug: string | null
           festival_start_date: string | null
-          total_attention_items: number | null
+          later_count: number | null
+          overdue_count: number | null
+          this_week_count: number | null
+          today_count: number | null
+          total_count: number | null
           worst_bucket: string | null
         }
         Relationships: []
