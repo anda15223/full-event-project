@@ -76,7 +76,7 @@ export default function FestivalsList() {
         groupedList.map((group) => (
           <section key={group.key} className="space-y-3">
             <div className="flex items-baseline gap-3">
-              <h2 className="text-lg font-bold uppercase tracking-wide text-foreground">
+              <h2 className="text-lg font-bold uppercase tracking-wide text-indigo-600">
                 {group.label}
               </h2>
               <span className="text-xs font-medium text-muted-foreground tabular-nums">
