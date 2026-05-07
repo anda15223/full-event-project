@@ -22,6 +22,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          operational_name: string | null
           short_name: string | null
           slug: string
           updated_at: string | null
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          operational_name?: string | null
           short_name?: string | null
           slug: string
           updated_at?: string | null
@@ -44,6 +46,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          operational_name?: string | null
           short_name?: string | null
           slug?: string
           updated_at?: string | null
@@ -477,28 +480,49 @@ export type Database = {
         Row: {
           concept_id: string
           created_at: string | null
+          dish_area_size: string | null
           festival_id: string
+          has_dish_area: boolean | null
           id: string
           notes: string | null
+          planned_headcount: number | null
+          power_amps: number | null
+          power_kw: number | null
+          roles_breakdown: string | null
           stall_name: string | null
+          tent_size: string | null
           zone: string | null
         }
         Insert: {
           concept_id: string
           created_at?: string | null
+          dish_area_size?: string | null
           festival_id: string
+          has_dish_area?: boolean | null
           id?: string
           notes?: string | null
+          planned_headcount?: number | null
+          power_amps?: number | null
+          power_kw?: number | null
+          roles_breakdown?: string | null
           stall_name?: string | null
+          tent_size?: string | null
           zone?: string | null
         }
         Update: {
           concept_id?: string
           created_at?: string | null
+          dish_area_size?: string | null
           festival_id?: string
+          has_dish_area?: boolean | null
           id?: string
           notes?: string | null
+          planned_headcount?: number | null
+          power_amps?: number | null
+          power_kw?: number | null
+          roles_breakdown?: string | null
           stall_name?: string | null
+          tent_size?: string | null
           zone?: string | null
         }
         Relationships: [
@@ -2149,6 +2173,7 @@ export type Database = {
           contact_phone: string | null
           country: string | null
           created_at: string | null
+          delivers_to_festival: boolean | null
           delivery_notes: string | null
           id: string
           is_active: boolean | null
@@ -2165,6 +2190,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string | null
+          delivers_to_festival?: boolean | null
           delivery_notes?: string | null
           id?: string
           is_active?: boolean | null
@@ -2181,6 +2207,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string | null
+          delivers_to_festival?: boolean | null
           delivery_notes?: string | null
           id?: string
           is_active?: boolean | null
