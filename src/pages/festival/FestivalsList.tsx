@@ -31,6 +31,14 @@ function styleFor(slug: string, idx: number) {
   return { emoji: FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length], hue };
 }
 
+function formatRange(start: string, end: string) {
+  const s = new Date(start);
+  const e = new Date(end);
+  const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const fmt = (d: Date) => `${d.getDate()} ${months[d.getMonth()]}`;
+  return `${fmt(s)} – ${fmt(e)} ${e.getFullYear()}`;
+}
+
 export default function FestivalsList() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,8 +81,8 @@ export default function FestivalsList() {
                   <span aria-hidden>{emoji}</span>
                 </div>
                 <h3 className="relative font-semibold text-foreground tracking-tight">{f.name}</h3>
-                <p className="relative text-xs text-muted-foreground mt-1 font-mono">
-                  {f.year} · {f.start_date} → {f.end_date}
+                <p className="relative text-xs text-muted-foreground mt-1">
+                  {formatRange(f.start_date, f.end_date)}
                 </p>
               </Link>
             );
