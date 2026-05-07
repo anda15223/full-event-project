@@ -15,7 +15,7 @@ export default function GlobalAttention() {
       const { data, error } = await (supabase as any)
         .from("v_attention_summary")
         .select("*")
-        .gt("total_attention_items", 0);
+        .gt("total_count", 0);
       if (error) throw error;
       const arr = (data ?? []) as AttentionSummary[];
       return arr.sort((a, b) => {
@@ -57,10 +57,10 @@ export default function GlobalAttention() {
           {summaries.map((s) => {
             const top5 = allItems.filter((i) => i.festival_slug === s.festival_slug).slice(0, 5);
             const counts: Record<Bucket, number> = {
-              overdue: s.count_overdue,
-              today: s.count_today,
-              "this-week": s.count_this_week,
-              later: s.count_later,
+              overdue: s.overdue_count,
+              today: s.today_count,
+              "this-week": s.this_week_count,
+              later: s.later_count,
             };
             return (
               <section key={s.festival_id} className="rounded-xl border bg-card p-5 shadow-sm">
@@ -69,7 +69,7 @@ export default function GlobalAttention() {
                     {s.festival_name}
                   </Link>
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {s.total_attention_items} item{s.total_attention_items === 1 ? "" : "s"}
+                    {s.total_count} item{s.total_count === 1 ? "" : "s"}
                   </span>
                 </header>
 
@@ -98,12 +98,12 @@ export default function GlobalAttention() {
                   ))}
                 </div>
 
-                {s.total_attention_items > 5 && (
+                {s.total_count > 5 && (
                   <Link
                     to={`/festivals/${s.festival_slug}/attention`}
                     className="inline-block mt-3 text-xs font-medium text-primary hover:underline"
                   >
-                    View all {s.total_attention_items} items →
+                    View all {s.total_count} items →
                   </Link>
                 )}
               </section>
