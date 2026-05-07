@@ -59,6 +59,7 @@ function SidebarNav() {
         <SidebarMenu>
           {navItems.map(item => {
             const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
+            const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -70,8 +71,18 @@ function SidebarNav() {
                     <div className="relative">
                       <item.icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
                       {item.color && <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${item.color} border-2 border-white`} />}
+                      {showAttentionDot && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                     </div>
-                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && (
+                      <span className="flex-1 flex items-center justify-between">
+                        <span>{item.label}</span>
+                        {item.path === "/attention" && attentionTotal > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                            {attentionTotal}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
