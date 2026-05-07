@@ -36,6 +36,8 @@ const App = () => (
             <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
             <Route path="/festivals" element={<Protected><FestivalsList /></Protected>} />
             <Route path="/festivals/:slug" element={<Protected><FestivalOverview /></Protected>} />
+            <Route path="/festivals/:slug/attention" element={<Protected><FestivalAttention /></Protected>} />
+            <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
