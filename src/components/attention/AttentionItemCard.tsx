@@ -81,12 +81,21 @@ export function AttentionItemCard({ item }: { item: AttentionItem }) {
           <span className={cn("font-medium tabular-nums", due.overdue && "text-destructive")}>{due.text}</span>
           {item.owner_name && <span className="text-muted-foreground">· {item.owner_name}</span>}
         </div>
-        <button
-          onClick={handleDone}
-          className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300 transition"
-        >
-          <Check className="h-3 w-3" /> Mark Done
-        </button>
+        {item.source_table === "festival_staff" ? (
+          <span
+            title="Assign passenger via transport card to clear"
+            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border border-border text-muted-foreground cursor-not-allowed opacity-60"
+          >
+            <Check className="h-3 w-3" /> Assign via transport
+          </span>
+        ) : (
+          <button
+            onClick={handleDone}
+            className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300 transition"
+          >
+            <Check className="h-3 w-3" /> Mark Done
+          </button>
+        )}
       </div>
     </div>
   );
