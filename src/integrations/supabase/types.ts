@@ -95,6 +95,13 @@ export type Database = {
             referencedRelation: "concepts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "dishes_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
         ]
       }
       equipment_catalog: {
@@ -158,6 +165,13 @@ export type Database = {
             foreignKeyName: "equipment_catalog_default_supplier_id_fkey"
             columns: ["default_supplier_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "equipment_catalog_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["rental_supplier_id"]
           },
@@ -188,6 +202,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipment_catalog_rental_supplier_id_fkey"
+            columns: ["rental_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "equipment_catalog_rental_supplier_id_fkey"
@@ -331,6 +352,13 @@ export type Database = {
             foreignKeyName: "festival_accommodations_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_accommodations_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -356,11 +384,25 @@ export type Database = {
             referencedColumns: ["festival_id"]
           },
           {
+            foreignKeyName: "festival_accommodations_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
             foreignKeyName: "festival_accommodations_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_accommodations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "festival_accommodations_supplier_id_fkey"
@@ -450,6 +492,13 @@ export type Database = {
             foreignKeyName: "festival_action_items_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_action_items_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -472,6 +521,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_action_items_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -534,11 +590,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "festival_concepts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
             foreignKeyName: "festival_concepts_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_concepts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
           },
           {
             foreignKeyName: "festival_concepts_festival_id_fkey"
@@ -566,6 +636,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concepts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -628,6 +705,13 @@ export type Database = {
             foreignKeyName: "festival_cooling_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -653,11 +737,25 @@ export type Database = {
             referencedColumns: ["festival_id"]
           },
           {
+            foreignKeyName: "festival_cooling_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
             foreignKeyName: "festival_cooling_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "festival_cooling_supplier_id_fkey"
@@ -738,6 +836,13 @@ export type Database = {
             foreignKeyName: "festival_deadlines_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -760,6 +865,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -813,6 +925,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "festival_equipment_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
             foreignKeyName: "festival_equipment_equipment_id_fkey"
             columns: ["equipment_id"]
             isOneToOne: false
@@ -825,6 +944,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
           },
           {
             foreignKeyName: "festival_equipment_festival_id_fkey"
@@ -855,11 +981,25 @@ export type Database = {
             referencedColumns: ["festival_id"]
           },
           {
+            foreignKeyName: "festival_equipment_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
             foreignKeyName: "festival_equipment_rental_supplier_id_fkey"
             columns: ["rental_supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_rental_supplier_id_fkey"
+            columns: ["rental_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "festival_equipment_rental_supplier_id_fkey"
@@ -962,6 +1102,13 @@ export type Database = {
             foreignKeyName: "festival_equipment_transport_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_transport_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -984,6 +1131,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_transport_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -1070,11 +1224,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "festival_facade_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
             foreignKeyName: "festival_facade_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_facade_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
           },
           {
             foreignKeyName: "festival_facade_festival_id_fkey"
@@ -1102,6 +1270,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_facade_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -1156,6 +1331,13 @@ export type Database = {
             foreignKeyName: "festival_forecasts_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_forecasts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -1178,6 +1360,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_forecasts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -1234,6 +1423,13 @@ export type Database = {
             foreignKeyName: "festival_reports_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_reports_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -1256,6 +1452,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_reports_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -1303,6 +1506,13 @@ export type Database = {
             foreignKeyName: "festival_safety_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -1325,6 +1535,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -1381,11 +1598,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "festival_shifts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
             foreignKeyName: "festival_shifts_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_shifts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
           },
           {
             foreignKeyName: "festival_shifts_festival_id_fkey"
@@ -1413,6 +1644,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_shifts_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
           {
@@ -1534,6 +1772,13 @@ export type Database = {
             foreignKeyName: "festival_staff_vehicles_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_staff_vehicles_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -1559,11 +1804,25 @@ export type Database = {
             referencedColumns: ["festival_id"]
           },
           {
+            foreignKeyName: "festival_staff_vehicles_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
             foreignKeyName: "festival_staff_vehicles_rental_supplier_id_fkey"
             columns: ["rental_supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_vehicles_rental_supplier_id_fkey"
+            columns: ["rental_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "festival_staff_vehicles_rental_supplier_id_fkey"
@@ -1638,11 +1897,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "festival_trolley_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
             foreignKeyName: "festival_trolley_items_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "festivals"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_items_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
           },
           {
             foreignKeyName: "festival_trolley_items_festival_id_fkey"
@@ -1673,11 +1946,25 @@ export type Database = {
             referencedColumns: ["festival_id"]
           },
           {
+            foreignKeyName: "festival_trolley_items_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
             foreignKeyName: "festival_trolley_items_trolley_item_id_fkey"
             columns: ["trolley_item_id"]
             isOneToOne: false
             referencedRelation: "trolley_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_items_trolley_item_id_fkey"
+            columns: ["trolley_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["item_id"]
           },
           {
             foreignKeyName: "festival_trolley_items_trolley_item_id_fkey"
@@ -1919,6 +2206,13 @@ export type Database = {
             foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["rental_supplier_id"]
           },
@@ -1995,6 +2289,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredients_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "ingredients_default_supplier_id_fkey"
@@ -2273,9 +2574,11 @@ export type Database = {
         Row: {
           category: string
           created_at: string | null
+          default_storage_location_id: string | null
           default_supplier_id: string | null
           id: string
           is_active: boolean | null
+          is_consumable: boolean | null
           name: string
           notes: string | null
           pack_size: number | null
@@ -2287,9 +2590,11 @@ export type Database = {
         Insert: {
           category: string
           created_at?: string | null
+          default_storage_location_id?: string | null
           default_supplier_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_consumable?: boolean | null
           name: string
           notes?: string | null
           pack_size?: number | null
@@ -2301,9 +2606,11 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string | null
+          default_storage_location_id?: string | null
           default_supplier_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_consumable?: boolean | null
           name?: string
           notes?: string | null
           pack_size?: number | null
@@ -2314,11 +2621,32 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "trolley_items_default_storage_location_id_fkey"
+            columns: ["default_storage_location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trolley_items_default_storage_location_id_fkey"
+            columns: ["default_storage_location_id"]
+            isOneToOne: false
+            referencedRelation: "v_ingredient_storage_options"
+            referencedColumns: ["storage_id"]
+          },
+          {
             foreignKeyName: "trolley_items_default_supplier_id_fkey"
             columns: ["default_supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trolley_items_default_supplier_id_fkey"
+            columns: ["default_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["supplier_id"]
           },
           {
             foreignKeyName: "trolley_items_default_supplier_id_fkey"
@@ -2373,6 +2701,22 @@ export type Database = {
       }
     }
     Views: {
+      v_consumables_order_by_supplier: {
+        Row: {
+          festival_id: string | null
+          festival_name: string | null
+          item_category: string | null
+          item_id: string | null
+          item_name: string | null
+          pack_size: number | null
+          pack_unit: string | null
+          supplier_id: string | null
+          supplier_name: string | null
+          total_qty_needed: number | null
+          unit: string | null
+        }
+        Relationships: []
+      }
       v_cooking_equipment_rentals: {
         Row: {
           concept_name: string | null
@@ -2446,6 +2790,13 @@ export type Database = {
             foreignKeyName: "festival_deadlines_festival_id_fkey"
             columns: ["festival_id"]
             isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
             referencedRelation: "v_cooking_equipment_rentals"
             referencedColumns: ["festival_id"]
           },
@@ -2468,6 +2819,13 @@ export type Database = {
             columns: ["festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_deadlines_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
           },
         ]
@@ -2529,6 +2887,22 @@ export type Database = {
           supplier_id: string | null
           supplier_name: string | null
           total_qty_needed: number | null
+          unit: string | null
+        }
+        Relationships: []
+      }
+      v_trolley_pack_list: {
+        Row: {
+          concept_id: string | null
+          concept_name: string | null
+          festival_id: string | null
+          festival_name: string | null
+          is_consumable: boolean | null
+          item_category: string | null
+          item_name: string | null
+          qty: number | null
+          source: string | null
+          trolley_number: number | null
           unit: string | null
         }
         Relationships: []
