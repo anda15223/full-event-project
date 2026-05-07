@@ -10,7 +10,7 @@ export default function FestivalsList() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("festivals").select("*").order("start_date", { ascending: false }).then(({ data }) => {
+    supabase.from("festivals").select("*").order("start_date", { ascending: true }).then(({ data }) => {
       setFestivals((data as Festival[]) ?? []);
       setLoading(false);
     });
