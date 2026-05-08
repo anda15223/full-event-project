@@ -1544,6 +1544,149 @@ export type Database = {
           },
         ]
       }
+      festival_cooling_unit: {
+        Row: {
+          container_count: number | null
+          container_type: string | null
+          cooling_model: string
+          cost_dkk: number | null
+          created_at: string | null
+          delivery_date: string | null
+          festival_id: string
+          id: string
+          notes: string | null
+          pallet_count_frys: number | null
+          pallet_count_kol: number | null
+          pickup_date: string | null
+          status: string
+          supplier: string | null
+          unit_label: string
+          updated_at: string | null
+        }
+        Insert: {
+          container_count?: number | null
+          container_type?: string | null
+          cooling_model?: string
+          cost_dkk?: number | null
+          created_at?: string | null
+          delivery_date?: string | null
+          festival_id: string
+          id?: string
+          notes?: string | null
+          pallet_count_frys?: number | null
+          pallet_count_kol?: number | null
+          pickup_date?: string | null
+          status?: string
+          supplier?: string | null
+          unit_label: string
+          updated_at?: string | null
+        }
+        Update: {
+          container_count?: number | null
+          container_type?: string | null
+          cooling_model?: string
+          cost_dkk?: number | null
+          created_at?: string | null
+          delivery_date?: string | null
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          pallet_count_frys?: number | null
+          pallet_count_kol?: number | null
+          pickup_date?: string | null
+          status?: string
+          supplier?: string | null
+          unit_label?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_cooling_unit_concepts: {
+        Row: {
+          cooling_unit_id: string
+          created_at: string | null
+          festival_contract_id: string
+          id: string
+        }
+        Insert: {
+          cooling_unit_id: string
+          created_at?: string | null
+          festival_contract_id: string
+          id?: string
+        }
+        Update: {
+          cooling_unit_id?: string
+          created_at?: string | null
+          festival_contract_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_cooling_unit_concepts_cooling_unit_id_fkey"
+            columns: ["cooling_unit_id"]
+            isOneToOne: false
+            referencedRelation: "festival_cooling_unit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_cooling_unit_concepts_festival_contract_id_fkey"
+            columns: ["festival_contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_daka: {
         Row: {
           concept_id: string | null
