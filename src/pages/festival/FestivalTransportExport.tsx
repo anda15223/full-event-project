@@ -145,7 +145,7 @@ function TransportPdf({
       <Page size="A4" style={styles.page}>
         <Text style={styles.h1}>{festival.name} — Transport Plan</Text>
         <Text style={styles.subtitle}>
-          {fmtDateLong(festival.start_date)} – {fmtDateLong(festival.end_date)}
+          {fmtDateLong(festival.start_date)} - {fmtDateLong(festival.end_date)}
           {"  ·  "}Generated {generated}
         </Text>
 
