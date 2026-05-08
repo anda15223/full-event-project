@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import SettingsPage from "./pages/SettingsPage";
 import FestivalsList from "./pages/festival/FestivalsList";
 import FestivalOverview from "./pages/festival/FestivalOverview";
+import FestivalOverviewExport from "./pages/festival/FestivalOverviewExport";
 import FestivalAttention from "./pages/festival/FestivalAttention";
 import FestivalTransport from "./pages/festival/FestivalTransport";
 import FestivalTransportExport from "./pages/festival/FestivalTransportExport";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
             <Route path="/festivals" element={<Protected><FestivalsList /></Protected>} />
             <Route path="/festivals/:slug" element={<Protected><FestivalOverview /></Protected>} />
+            <Route path="/festivals/:slug/export" element={<Protected><FestivalOverviewExport /></Protected>} />
             <Route path="/festivals/:slug/attention" element={<Protected><FestivalAttention /></Protected>} />
             <Route path="/festivals/:slug/transport" element={<Protected><FestivalTransport /></Protected>} />
             <Route path="/festivals/:slug/transport/export" element={<Protected><FestivalTransportExport /></Protected>} />
