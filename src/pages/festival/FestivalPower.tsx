@@ -502,7 +502,7 @@ function PowerCard({
         </Section>
 
         {/* Equipment list (structured) */}
-        <EquipmentSection power={power} equipment={equipment} contractsAll={[]} />
+        <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} />
 
         {/* Power match check */}
         <PowerMatchSection power={power} equipment={equipment} />
