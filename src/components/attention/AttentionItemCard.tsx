@@ -46,7 +46,10 @@ export function AttentionItemCard({ item }: { item: AttentionItem }) {
   if (done) return null;
 
   const cardHash = CARD_HASH[item.source_card_label] ?? "";
-  const cardLink = `/festivals/${item.festival_slug}${cardHash ? `#${cardHash}` : ""}`;
+  const cardLink =
+    item.source_table === "transport_legs" || item.source_table === "festival_transport"
+      ? `/festivals/${item.festival_slug}/transport?leg=${item.source_id}`
+      : `/festivals/${item.festival_slug}${cardHash ? `#${cardHash}` : ""}`;
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
