@@ -480,7 +480,8 @@ function useConceptStats(festivalId: string | null) {
 
 // ---------- main ----------
 
-const CARD_TILES = [
+type CardTile = { key: string; name: string; icon: typeof Truck; route?: (s: string) => string };
+const CARD_TILES: CardTile[] = [
   { key: "transport", name: "Transport", icon: Truck, route: (s: string) => `/festivals/${s}/transport` },
   { key: "topskilt", name: "Topskilt", icon: FileText },
   { key: "setup", name: "Setup", icon: Calendar },
