@@ -718,7 +718,9 @@ function PassengersCell({
             <SelectContent>
               {available.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">No staff available</div>}
               {available.map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name ?? "(unnamed)"} · {s.role}</SelectItem>
+                <SelectItem key={s.id} value={s.id} className={cn(conflictStaffIds.has(s.id) && "text-destructive")}>
+                  {s.name ?? "(unnamed)"} · {s.role}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
