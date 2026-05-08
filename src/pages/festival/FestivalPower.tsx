@@ -2,8 +2,12 @@ import { useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, AlertTriangle, Upload, Download, Trash2, FileText } from "lucide-react";
+import { Pencil, AlertTriangle, Upload, Download, Trash2, FileText, Plus, Link2, CheckCircle2, AlertCircle, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  computeGap, computeTentGap, POWER_TYPE_LABEL,
+  type GapRow, type PowerEquipmentRow, type PowerType,
+} from "@/lib/powerGapAnalysis";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
