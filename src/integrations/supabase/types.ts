@@ -2758,6 +2758,86 @@ export type Database = {
       }
       festival_power: {
         Row: {
+          connections_125a: number | null
+          connections_16a_240v: number | null
+          connections_16a_400v: number | null
+          connections_32a: number | null
+          connections_63a: number | null
+          cost_dkk: number | null
+          created_at: string | null
+          equipment_breakdown: string | null
+          festival_contract_id: string
+          id: string
+          notes: string | null
+          ordered_date: string | null
+          power_drawing_file_path: string | null
+          power_drawing_uploaded_at: string | null
+          status: string
+          submission_deadline: string | null
+          tableau_count: number | null
+          tableau_required: boolean | null
+          total_amp_estimate: number | null
+          total_kw_estimate: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          connections_125a?: number | null
+          connections_16a_240v?: number | null
+          connections_16a_400v?: number | null
+          connections_32a?: number | null
+          connections_63a?: number | null
+          cost_dkk?: number | null
+          created_at?: string | null
+          equipment_breakdown?: string | null
+          festival_contract_id: string
+          id?: string
+          notes?: string | null
+          ordered_date?: string | null
+          power_drawing_file_path?: string | null
+          power_drawing_uploaded_at?: string | null
+          status?: string
+          submission_deadline?: string | null
+          tableau_count?: number | null
+          tableau_required?: boolean | null
+          total_amp_estimate?: number | null
+          total_kw_estimate?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          connections_125a?: number | null
+          connections_16a_240v?: number | null
+          connections_16a_400v?: number | null
+          connections_32a?: number | null
+          connections_63a?: number | null
+          cost_dkk?: number | null
+          created_at?: string | null
+          equipment_breakdown?: string | null
+          festival_contract_id?: string
+          id?: string
+          notes?: string | null
+          ordered_date?: string | null
+          power_drawing_file_path?: string | null
+          power_drawing_uploaded_at?: string | null
+          status?: string
+          submission_deadline?: string | null
+          tableau_count?: number | null
+          tableau_required?: boolean | null
+          total_amp_estimate?: number | null
+          total_kw_estimate?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_power_festival_contract_id_fkey"
+            columns: ["festival_contract_id"]
+            isOneToOne: true
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_power_legacy: {
+        Row: {
           concept_id: string
           created_at: string | null
           estimated_amps: number | null
