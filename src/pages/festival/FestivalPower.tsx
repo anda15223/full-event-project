@@ -363,13 +363,14 @@ function PowerExportMenu({ slug, contracts }: { slug: string; contracts: Contrac
 
 // ============================================================
 function PowerCard({
-  contract, power, equipment, allContracts, festivalSlug,
+  contract, power, equipment, allContracts, festivalSlug, festivalId,
 }: {
   contract: ContractRow;
   power: PowerRow | undefined;
   equipment: PowerEquipmentRow[];
   allContracts: ContractRow[];
   festivalSlug: string;
+  festivalId: string;
 }) {
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
