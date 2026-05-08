@@ -734,6 +734,164 @@ function PassengersCell({
 }
 
 // ============================================================
+// ============================================================
+function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const path = vehicle.accreditation_pdf_path;
+  const uploadedAt = vehicle.accreditation_uploaded_at;
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+
+  async function uploadFile(file: File) {
+    if (!file) return;
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast.error("Only PDF files allowed");
+      return;
+    }
+    setBusy(true);
+    try {
+      const objectPath = `${slug}/${vehicle.id}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("vehicle-permits")
+        .upload(objectPath, file, { upsert: true, contentType: "application/pdf" });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase
+        .from("festival_transport")
+        .update({ accreditation_pdf_path: objectPath, accreditation_uploaded_at: new Date().toISOString() })
+        .eq("id", vehicle.id);
+      if (dbErr) throw dbErr;
+      toast.success("Accreditation uploaded");
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openSigned() {
+    if (!path) return;
+    const { data, error } = await supabase.storage.from("vehicle-permits").createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      toast.error(error?.message ?? "Could not create link");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+
+  async function downloadFile() {
+    if (!path) return;
+    try {
+      const { data, error } = await supabase.storage.from("vehicle-permits").download(path);
+      if (error || !data) throw error ?? new Error("No file");
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${slug}-${vehicle.vehicle_type.replace(/\s+/g, "_")}-accreditation.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Download failed");
+    }
+  }
+
+  async function removeFile() {
+    if (!path) return;
+    setBusy(true);
+    try {
+      const { error: rmErr } = await supabase.storage.from("vehicle-permits").remove([path]);
+      if (rmErr) throw rmErr;
+      const { error: dbErr } = await supabase
+        .from("festival_transport")
+        .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
+        .eq("id", vehicle.id);
+      if (dbErr) throw dbErr;
+      toast.success("Accreditation removed");
+      setConfirmRemove(false);
+      refresh();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Remove failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function pickFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/pdf,.pdf";
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (f) uploadFile(f);
+    };
+    input.click();
+  }
+
+  return (
+    <div className="px-4 py-3 border-b bg-background print:hidden">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Accreditation
+        </div>
+        {path ? (
+          <>
+            <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Uploaded {uploadedAt ? new Date(uploadedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : ""}
+            </span>
+            <div className="ml-auto flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={openSigned} disabled={busy}>View</Button>
+              <Button variant="outline" size="sm" onClick={downloadFile} disabled={busy}>
+                <Download className="h-3.5 w-3.5" /> Download
+              </Button>
+              <Button variant="outline" size="sm" onClick={pickFile} disabled={busy}>
+                <FileUp className="h-3.5 w-3.5" /> Replace
+              </Button>
+              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setConfirmRemove(true)} disabled={busy}>
+                <Trash2 className="h-3.5 w-3.5" /> Remove
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="inline-flex items-center gap-1 text-xs text-orange-700 dark:text-orange-300">
+              <AlertCircle className="h-3.5 w-3.5" />
+              No accreditation uploaded
+            </span>
+            <div className="ml-auto">
+              <Button variant="outline" size="sm" onClick={pickFile} disabled={busy}>
+                <FileUp className="h-3.5 w-3.5" /> Upload PDF
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
+      <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove accreditation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes the PDF from storage. You can re-upload at any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={removeFile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ============================================================
 function VehicleEditDrawer({
   open, onOpenChange, vehicle, slug,
 }: { open: boolean; onOpenChange: (b: boolean) => void; vehicle: Vehicle; slug: string }) {
