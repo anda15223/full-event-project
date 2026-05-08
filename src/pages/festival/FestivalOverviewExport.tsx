@@ -344,7 +344,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           <View>
             <Text style={s.fName}>{festival.name}</Text>
             <Text style={s.fSub}>
-              {fmtDateLong(festival.start_date)} – {fmtDateLong(festival.end_date)}
+              {fmtDateLong(festival.start_date)} - {fmtDateLong(festival.end_date)}
               {festival.city ? ` · ${festival.city}` : ""} · Generated {ts}
             </Text>
             {conceptName && <Text style={s.fSub}>— {conceptName} only</Text>}
