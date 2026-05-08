@@ -506,7 +506,7 @@ function LegRow({
           {leg.destination && <div className="text-muted-foreground">→ {leg.destination}</div>}
         </td>
         <td className="p-3">
-          <DriverCell leg={leg} driver={driver} staff={staff} staffById={staffById} festivalId={festivalId} />
+          <DriverCell leg={leg} driver={driver} staff={staff} staffById={staffById} festivalId={festivalId} conflictStaffIds={conflictStaffIds} />
         </td>
         <td className="p-3">
           <PassengersCell
@@ -520,6 +520,7 @@ function LegRow({
             overCapacity={overCapacity}
             expanded={expanded}
             setExpanded={setExpanded}
+            conflictStaffIds={conflictStaffIds}
           />
         </td>
         <td className="p-3 print:hidden">
