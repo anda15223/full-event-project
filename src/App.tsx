@@ -50,6 +50,8 @@ const App = () => (
             <Route path="/festivals/:slug/transport/export" element={<Protected><FestivalTransportExport /></Protected>} />
             <Route path="/festivals/:slug/cooling" element={<Protected><FestivalCooling /></Protected>} />
             <Route path="/festivals/:slug/cooling/export" element={<Protected><FestivalCoolingExport /></Protected>} />
+            <Route path="/festivals/:slug/power" element={<Protected><FestivalPower /></Protected>} />
+            <Route path="/festivals/:slug/power/export" element={<Protected><FestivalPowerExport /></Protected>} />
             <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="*" element={<NotFound />} />
