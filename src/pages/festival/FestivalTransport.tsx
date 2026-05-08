@@ -287,6 +287,7 @@ export default function FestivalTransport() {
             festivalId={festival?.id ?? ""}
             slug={slug}
             focusLegId={focusLegId}
+            conflictByLeg={conflictByLeg}
           />
         ))}
         {vehicles.length === 0 && festival && (
