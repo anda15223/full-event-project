@@ -7,6 +7,25 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 
+// Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
+// and middle dots (·) render correctly. Built-in Helvetica only covers
+// WinAnsi and renders these as garbage glyphs.
+Font.register({
+  family: "NotoSans",
+  fonts: [
+    {
+      src: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSans/NotoSans-Regular.ttf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSans/NotoSans-Bold.ttf",
+      fontWeight: 700,
+    },
+  ],
+});
+// Disable hyphenation (default breaks at hyphens, undesired in this report)
+Font.registerHyphenationCallback((word) => [word]);
+
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 type SeasonRental = { id: string; reservation_number: string | null; season_label: string | null };
 type Vehicle = {
