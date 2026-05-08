@@ -272,21 +272,38 @@ export default function FestivalPower() {
         </div>
       )}
 
+      {tentGroups.size > 0 && (
+        <FestivalOverview tentGaps={tentGaps} totals={totals} />
+      )}
+
       <div className="space-y-4">
-        {contracts.map((c) => (
-          <PowerCard
-            key={c.id}
-            contract={c}
-            power={powerByContract.get(c.id)}
-            festivalSlug={slug}
-          />
-        ))}
+        {contracts.map((c) => {
+          const p = powerByContract.get(c.id);
+          return (
+            <PowerCard
+              key={c.id}
+              contract={c}
+              power={p}
+              equipment={p ? equipmentByPower.get(p.id) ?? [] : []}
+              festivalSlug={slug}
+            />
+          );
+        })}
         {contracts.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
             No contracts at this festival.
           </div>
         )}
       </div>
+
+      {Array.from(tentGroups.entries()).map(([tent, g]) => (
+        <TentRollup
+          key={tent}
+          tent={tent}
+          gap={tentGaps.get(tent) ?? []}
+          contracts={g.contractIds.map((id) => contractById.get(id)).filter(Boolean) as ContractRow[]}
+        />
+      ))}
 
       {powers.length > 0 && (
         <div className="rounded-xl border bg-muted/30 p-5">
