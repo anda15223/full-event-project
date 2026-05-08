@@ -183,7 +183,7 @@ function TransportPdf({
                 {p.count} {p.count === 1 ? "vehicle" : "vehicles"} · {p.seats} seats · {p.assigned} assigned
               </Text>
               {p.tbd > 0 && (
-                <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", marginTop: 2 }}>
+                <Text style={{ fontSize: 8, fontFamily: "NotoSans", fontWeight: 700, marginTop: 2 }}>
                   {p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD
                 </Text>
               )}
