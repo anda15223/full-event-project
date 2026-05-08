@@ -8,6 +8,7 @@ import {
   computeGap, computeTentGap, POWER_TYPE_LABEL,
   type GapRow, type PowerEquipmentRow, type PowerType,
 } from "@/lib/powerGapAnalysis";
+import { seedEquipmentFromTemplate } from "@/lib/seedPowerEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
