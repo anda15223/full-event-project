@@ -2772,10 +2772,12 @@ export type Database = {
           ordered_date: string | null
           power_drawing_file_path: string | null
           power_drawing_uploaded_at: string | null
+          shared_tent_with_contracts: string[] | null
           status: string
           submission_deadline: string | null
           tableau_count: number | null
           tableau_required: boolean | null
+          tent_location: string | null
           total_amp_estimate: number | null
           total_kw_estimate: number | null
           updated_at: string | null
@@ -2795,10 +2797,12 @@ export type Database = {
           ordered_date?: string | null
           power_drawing_file_path?: string | null
           power_drawing_uploaded_at?: string | null
+          shared_tent_with_contracts?: string[] | null
           status?: string
           submission_deadline?: string | null
           tableau_count?: number | null
           tableau_required?: boolean | null
+          tent_location?: string | null
           total_amp_estimate?: number | null
           total_kw_estimate?: number | null
           updated_at?: string | null
@@ -2818,10 +2822,12 @@ export type Database = {
           ordered_date?: string | null
           power_drawing_file_path?: string | null
           power_drawing_uploaded_at?: string | null
+          shared_tent_with_contracts?: string[] | null
           status?: string
           submission_deadline?: string | null
           tableau_count?: number | null
           tableau_required?: boolean | null
+          tent_location?: string | null
           total_amp_estimate?: number | null
           total_kw_estimate?: number | null
           updated_at?: string | null
@@ -2832,6 +2838,59 @@ export type Database = {
             columns: ["festival_contract_id"]
             isOneToOne: true
             referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_power_equipment: {
+        Row: {
+          created_at: string | null
+          equipment_name: string
+          festival_power_id: string
+          id: string
+          is_shared: boolean | null
+          notes: string | null
+          position: number
+          power_kw: number | null
+          power_type: string
+          quantity: number
+          shared_with_concepts: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          equipment_name: string
+          festival_power_id: string
+          id?: string
+          is_shared?: boolean | null
+          notes?: string | null
+          position?: number
+          power_kw?: number | null
+          power_type: string
+          quantity?: number
+          shared_with_concepts?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          equipment_name?: string
+          festival_power_id?: string
+          id?: string
+          is_shared?: boolean | null
+          notes?: string | null
+          position?: number
+          power_kw?: number | null
+          power_type?: string
+          quantity?: number
+          shared_with_concepts?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_power_equipment_festival_power_id_fkey"
+            columns: ["festival_power_id"]
+            isOneToOne: false
+            referencedRelation: "festival_power"
             referencedColumns: ["id"]
           },
         ]

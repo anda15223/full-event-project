@@ -2,8 +2,12 @@ import { useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, AlertTriangle, Upload, Download, Trash2, FileText } from "lucide-react";
+import { Pencil, AlertTriangle, Upload, Download, Trash2, FileText, Plus, Link2, CheckCircle2, AlertCircle, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  computeGap, computeTentGap, POWER_TYPE_LABEL,
+  type GapRow, type PowerEquipmentRow, type PowerType,
+} from "@/lib/powerGapAnalysis";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +56,8 @@ type PowerRow = {
   ordered_date: string | null;
   cost_dkk: number | null;
   notes: string | null;
+  tent_location: string | null;
+  shared_tent_with_contracts: string[] | null;
 };
 
 const STATUS_FLOW: Status[] = ["drawing", "submitted", "ordered", "confirmed", "installed", "tested"];
@@ -147,6 +153,58 @@ export default function FestivalPower() {
     return m;
   }, [powers]);
 
+  const powerIds = powers.map((p) => p.id);
+  const { data: equipment = [] } = useQuery({
+    queryKey: ["festival-power-equipment", powerIds.join(",")],
+    enabled: powerIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_power_equipment")
+        .select("*")
+        .in("festival_power_id", powerIds)
+        .order("position");
+      if (error) throw error;
+      return (data ?? []) as unknown as PowerEquipmentRow[];
+    },
+  });
+
+  const equipmentByPower = useMemo(() => {
+    const m = new Map<string, PowerEquipmentRow[]>();
+    equipment.forEach((e) => {
+      const arr = m.get(e.festival_power_id) ?? [];
+      arr.push(e);
+      m.set(e.festival_power_id, arr);
+    });
+    return m;
+  }, [equipment]);
+
+  const contractById = useMemo(() => {
+    const m = new Map<string, ContractRow>();
+    contracts.forEach((c) => m.set(c.id, c));
+    return m;
+  }, [contracts]);
+
+  // Group powers by tent_location
+  const tentGroups = useMemo(() => {
+    const m = new Map<string, { powers: PowerRow[]; contractIds: string[] }>();
+    powers.forEach((p) => {
+      if (!p.tent_location) return;
+      const g = m.get(p.tent_location) ?? { powers: [], contractIds: [] };
+      g.powers.push(p);
+      g.contractIds.push(p.festival_contract_id);
+      m.set(p.tent_location, g);
+    });
+    return m;
+  }, [powers]);
+
+  const tentGaps = useMemo(() => {
+    const out = new Map<string, GapRow[]>();
+    tentGroups.forEach((g, tent) => {
+      out.set(tent, computeTentGap(g.powers, equipmentByPower, g.contractIds));
+    });
+    return out;
+  }, [tentGroups, equipmentByPower]);
+
   const warnings = useMemo(() => {
     const out: { kind: "due" | "overdue"; label: string; days: number; date: string }[] = [];
     contracts.forEach((c) => {
@@ -214,21 +272,39 @@ export default function FestivalPower() {
         </div>
       )}
 
+      {tentGroups.size > 0 && (
+        <FestivalOverview tentGaps={tentGaps} totals={totals} />
+      )}
+
       <div className="space-y-4">
-        {contracts.map((c) => (
-          <PowerCard
-            key={c.id}
-            contract={c}
-            power={powerByContract.get(c.id)}
-            festivalSlug={slug}
-          />
-        ))}
+        {contracts.map((c) => {
+          const p = powerByContract.get(c.id);
+          return (
+            <PowerCard
+              key={c.id}
+              contract={c}
+              power={p}
+              equipment={p ? equipmentByPower.get(p.id) ?? [] : []}
+              allContracts={contracts}
+              festivalSlug={slug}
+            />
+          );
+        })}
         {contracts.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
             No contracts at this festival.
           </div>
         )}
       </div>
+
+      {Array.from(tentGroups.entries()).map(([tent, g]) => (
+        <TentRollup
+          key={tent}
+          tent={tent}
+          gap={tentGaps.get(tent) ?? []}
+          contracts={g.contractIds.map((id) => contractById.get(id)).filter(Boolean) as ContractRow[]}
+        />
+      ))}
 
       {powers.length > 0 && (
         <div className="rounded-xl border bg-muted/30 p-5">
@@ -284,10 +360,12 @@ function PowerExportMenu({ slug, contracts }: { slug: string; contracts: Contrac
 
 // ============================================================
 function PowerCard({
-  contract, power, festivalSlug,
+  contract, power, equipment, allContracts, festivalSlug,
 }: {
   contract: ContractRow;
   power: PowerRow | undefined;
+  equipment: PowerEquipmentRow[];
+  allContracts: ContractRow[];
   festivalSlug: string;
 }) {
   const qc = useQueryClient();
@@ -423,18 +501,11 @@ function PowerCard({
           </div>
         </Section>
 
-        {/* Equipment breakdown */}
-        <Section title="Equipment breakdown">
-          <Textarea
-            defaultValue={power.equipment_breakdown ?? ""}
-            placeholder="Describe equipment and per-line loads…"
-            onBlur={(e) => {
-              if (e.target.value !== (power.equipment_breakdown ?? "")) {
-                updateField.mutate({ equipment_breakdown: e.target.value || null });
-              }
-            }}
-          />
-        </Section>
+        {/* Equipment list (structured) */}
+        <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} />
+
+        {/* Power match check */}
+        <PowerMatchSection power={power} equipment={equipment} />
 
         {/* Drawing */}
         <Section title="Power drawing">
@@ -515,7 +586,7 @@ function PowerCard({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{title}</div>
@@ -682,5 +753,382 @@ function NumField({
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
       />
     </div>
+  );
+}
+
+// ============================================================
+// FESTIVAL OVERVIEW
+// ============================================================
+function FestivalOverview({
+  tentGaps,
+  totals,
+}: {
+  tentGaps: Map<string, GapRow[]>;
+  totals: { c16_240: number; c16_400: number; c32: number; c63: number; c125: number; kw: number; amp: number };
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-5 space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Power overview</h2>
+      <div className="space-y-2">
+        {Array.from(tentGaps.entries()).map(([tent, gap]) => {
+          const shorts = gap.filter((g) => g.status === "short");
+          const spares = gap.filter((g) => g.status === "spare");
+          let icon = "✓";
+          let cls = "text-emerald-700 dark:text-emerald-300";
+          let msg = "all matched";
+          if (shorts.length) {
+            icon = "⚠";
+            cls = "text-destructive";
+            msg = shorts.map((s) => `${Math.abs(s.gap)}× ${POWER_TYPE_LABEL[s.power_type]} short`).join(", ");
+          } else if (spares.length) {
+            icon = "💰";
+            cls = "text-yellow-700 dark:text-yellow-300";
+            msg = spares.map((s) => `${s.gap}× ${POWER_TYPE_LABEL[s.power_type]} spare`).join(", ") + " (refund opportunity)";
+          }
+          return (
+            <div key={tent} className={cn("text-sm", cls)}>
+              <span className="font-semibold">{icon} {tent} tent</span> — {msg}
+            </div>
+          );
+        })}
+      </div>
+      <div className="pt-2 border-t text-xs text-muted-foreground">
+        Festival total ordered: {totals.c125}× 125A · {totals.c63}× 63A · {totals.c32}× 32A · {totals.c16_400}× 16A 400V · {totals.c16_240}× 16A 240V · Total kW {totals.kw} · Total Amp {totals.amp}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TENT ROLLUP
+// ============================================================
+function TentRollup({
+  tent,
+  gap,
+  contracts,
+}: {
+  tent: string;
+  gap: GapRow[];
+  contracts: ContractRow[];
+}) {
+  return (
+    <div className="rounded-xl border bg-muted/30 p-5">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {tent} tent — combined gap analysis
+      </h2>
+      <p className="text-xs text-muted-foreground mt-1">
+        Stalls in tent: {contracts.map(contractLabel).join(" · ") || "—"}
+      </p>
+      <div className="mt-3">
+        <GapTable rows={gap} compact />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// POWER MATCH SECTION
+// ============================================================
+function PowerMatchSection({ power, equipment }: { power: PowerRow; equipment: PowerEquipmentRow[] }) {
+  const rows = useMemo(() => computeGap(power, equipment), [power, equipment]);
+  if (equipment.length === 0) {
+    return (
+      <Section title="Power match check">
+        <div className="text-xs text-muted-foreground italic">No equipment defined.</div>
+      </Section>
+    );
+  }
+  const shorts = rows.filter((r) => r.status === "short");
+  const spares = rows.filter((r) => r.status === "spare");
+  const allGreen = shorts.length === 0 && spares.length === 0;
+  return (
+    <Section title="Power match check">
+      {shorts.length > 0 && (
+        <div className="mb-2 rounded-lg border border-destructive/40 bg-destructive/5 p-2.5 text-sm text-destructive flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          <span>⚠️ {shorts.length} power gap{shorts.length === 1 ? "" : "s"} to resolve</span>
+        </div>
+      )}
+      {allGreen && (
+        <div className="mb-2 rounded-lg border border-emerald-500/40 bg-emerald-500/5 p-2 text-sm text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4" /> All equipment powered correctly
+        </div>
+      )}
+      {!allGreen && shorts.length === 0 && spares.length > 0 && (
+        <div className="mb-2 rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-2 text-sm text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+          <Coins className="h-4 w-4" /> Refund opportunity: {spares.reduce((a, b) => a + b.gap, 0)} spare circuit{spares.reduce((a, b) => a + b.gap, 0) === 1 ? "" : "s"}
+        </div>
+      )}
+      <GapTable rows={rows} />
+      {shorts.length > 0 && (
+        <ul className="mt-3 space-y-1 text-xs text-destructive">
+          {shorts.map((s) => {
+            const items = equipment.filter((e) => e.power_type === s.power_type);
+            const names = items.map((e) => `${e.quantity}× ${e.equipment_name}`).join(", ");
+            return (
+              <li key={s.power_type}>
+                ⚠️ {POWER_TYPE_LABEL[s.power_type]} short by {Math.abs(s.gap)} — needed for {names}.
+                Resolve: add {Math.abs(s.gap)}× {POWER_TYPE_LABEL[s.power_type]} to order, or use existing circuit with adapter.
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Section>
+  );
+}
+
+function GapTable({ rows, compact = false }: { rows: GapRow[]; compact?: boolean }) {
+  return (
+    <div className={cn("overflow-x-auto rounded-lg border", compact && "bg-card")}>
+      <table className="w-full text-sm">
+        <thead className="bg-muted/40">
+          <tr className="text-left text-[10px] uppercase tracking-wide text-muted-foreground">
+            <th className="px-3 py-2">Type</th>
+            <th className="px-3 py-2 text-right">Need</th>
+            <th className="px-3 py-2 text-right">Ordered</th>
+            <th className="px-3 py-2 text-right">Gap</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const cls =
+              r.status === "short" ? "text-destructive font-semibold"
+              : r.status === "spare" ? "text-yellow-700 dark:text-yellow-300 font-medium"
+              : "text-emerald-700 dark:text-emerald-300";
+            const label =
+              r.status === "short" ? `${r.gap} SHORT 🔴`
+              : r.status === "spare" ? `+${r.gap} spare 🟡`
+              : "✓ Match";
+            const niceDemand = Number.isInteger(r.demand) ? r.demand : r.demand.toFixed(1);
+            return (
+              <tr key={r.power_type} className="border-t">
+                <td className="px-3 py-2">{POWER_TYPE_LABEL[r.power_type]}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{niceDemand}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{r.supply}</td>
+                <td className={cn("px-3 py-2 text-right tabular-nums", cls)}>{label}</td>
+              </tr>
+            );
+          })}
+          {rows.length === 0 && (
+            <tr><td colSpan={4} className="px-3 py-3 text-center text-xs text-muted-foreground">No equipment / supply defined.</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ============================================================
+// EQUIPMENT SECTION (CRUD)
+// ============================================================
+const POWER_TYPE_OPTIONS: PowerType[] = ["16A_240V", "16A_400V", "32A", "63A", "125A", "230V_socket"];
+
+function EquipmentSection({
+  power, equipment, contractsAll,
+}: {
+  power: PowerRow;
+  equipment: PowerEquipmentRow[];
+  contractsAll: ContractRow[];
+}) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<PowerEquipmentRow | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("festival_power_equipment").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Equipment removed");
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed"),
+  });
+
+  const conceptName = (id: string) => {
+    const c = contractsAll.find((x) => x.id === id);
+    return c ? contractLabel(c) : id.slice(0, 8);
+  };
+
+  return (
+    <Section
+      title={
+        <div className="flex items-center justify-between w-full">
+          <span>Equipment powered</span>
+          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+            <Plus className="h-3 w-3 mr-1" /> Add equipment
+          </Button>
+        </div>
+      }
+    >
+      {equipment.length === 0 ? (
+        <div className="text-xs text-muted-foreground italic">No equipment defined yet.</div>
+      ) : (
+        <ul className="space-y-1.5 text-sm">
+          {equipment.map((e) => (
+            <li key={e.id} className="flex items-start gap-2 group">
+              <div className="flex-1 min-w-0">
+                <div>
+                  <span className="font-medium">{e.quantity}× {e.equipment_name}</span>
+                  <span className="text-muted-foreground"> — {POWER_TYPE_LABEL[e.power_type]}</span>
+                  {e.power_kw != null && <span className="text-muted-foreground"> · {e.power_kw} kW each</span>}
+                </div>
+                {e.is_shared && e.shared_with_concepts && e.shared_with_concepts.length > 0 && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Link2 className="h-3 w-3" /> Shared with: {e.shared_with_concepts.map(conceptName).join(", ")}
+                  </div>
+                )}
+                {e.notes && <div className="text-xs text-muted-foreground italic">{e.notes}</div>}
+              </div>
+              <Button size="icon" variant="ghost" className="h-7 w-7 opacity-50 group-hover:opacity-100" onClick={() => setEditing(e)}>
+                <Pencil className="h-3 w-3" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7 opacity-50 group-hover:opacity-100 text-destructive" onClick={() => remove.mutate(e.id)}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {(adding || editing) && (
+        <EquipmentEditor
+          power={power}
+          existing={editing}
+          contractsAll={contractsAll}
+          nextPosition={(equipment[equipment.length - 1]?.position ?? 0) + 1}
+          onClose={() => { setAdding(false); setEditing(null); }}
+        />
+      )}
+    </Section>
+  );
+}
+
+function EquipmentEditor({
+  power, existing, contractsAll, nextPosition, onClose,
+}: {
+  power: PowerRow;
+  existing: PowerEquipmentRow | null;
+  contractsAll: ContractRow[];
+  nextPosition: number;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<Partial<PowerEquipmentRow>>(
+    existing ?? {
+      equipment_name: "",
+      quantity: 1,
+      power_type: "16A_400V",
+      power_kw: null,
+      is_shared: false,
+      shared_with_concepts: [],
+      notes: null,
+      position: nextPosition,
+    }
+  );
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        festival_power_id: power.id,
+        position: Number(form.position ?? nextPosition),
+        equipment_name: form.equipment_name ?? "",
+        quantity: Number(form.quantity ?? 1),
+        power_type: form.power_type as PowerType,
+        power_kw: form.power_kw ?? null,
+        is_shared: !!form.is_shared,
+        shared_with_concepts: form.is_shared ? (form.shared_with_concepts ?? []) : null,
+        notes: form.notes ?? null,
+      };
+      if (existing) {
+        const { error } = await supabase.from("festival_power_equipment").update(payload).eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("festival_power_equipment").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Saved");
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed"),
+  });
+
+  const otherContracts = contractsAll.filter((c) => c.id !== power.festival_contract_id);
+
+  return (
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{existing ? "Edit equipment" : "Add equipment"}</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <Label>Equipment name</Label>
+            <Input value={form.equipment_name ?? ""} onChange={(e) => setForm((f) => ({ ...f, equipment_name: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Quantity</Label>
+              <Input type="number" value={form.quantity ?? 1} onChange={(e) => setForm((f) => ({ ...f, quantity: Number(e.target.value) }))} />
+            </div>
+            <div>
+              <Label>Position</Label>
+              <Input type="number" value={form.position ?? 0} onChange={(e) => setForm((f) => ({ ...f, position: Number(e.target.value) }))} />
+            </div>
+          </div>
+          <div>
+            <Label>Power type</Label>
+            <Select value={form.power_type as string} onValueChange={(v) => setForm((f) => ({ ...f, power_type: v as PowerType }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {POWER_TYPE_OPTIONS.map((t) => <SelectItem key={t} value={t}>{POWER_TYPE_LABEL[t]}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Power (kW each)</Label>
+            <Input type="number" step="0.1" value={form.power_kw ?? ""} onChange={(e) => setForm((f) => ({ ...f, power_kw: e.target.value === "" ? null : Number(e.target.value) }))} />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox checked={!!form.is_shared} onCheckedChange={(v) => setForm((f) => ({ ...f, is_shared: !!v }))} />
+            <Label>Shared with other concepts</Label>
+          </div>
+          {form.is_shared && otherContracts.length > 0 && (
+            <div className="space-y-2">
+              <Label>Shared with</Label>
+              {otherContracts.map((c) => {
+                const checked = (form.shared_with_concepts ?? []).includes(c.id);
+                return (
+                  <div key={c.id} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => {
+                        const cur = new Set(form.shared_with_concepts ?? []);
+                        if (v) cur.add(c.id); else cur.delete(c.id);
+                        setForm((f) => ({ ...f, shared_with_concepts: Array.from(cur) }));
+                      }}
+                    />
+                    <span className="text-sm">{contractLabel(c)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div>
+            <Label>Notes</Label>
+            <Textarea value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+          </div>
+        </div>
+        <SheetFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => save.mutate()}>Save</Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
