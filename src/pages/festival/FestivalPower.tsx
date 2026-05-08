@@ -546,6 +546,13 @@ function PowerCard({
         </Section>
 
         {/* Equipment list (structured) */}
+        {/* Tent setup variant selector */}
+        <TentVariantSelector
+          conceptSlug={contract.concept?.slug}
+          variant={(power.equipment_variant ?? "standalone") as "standalone" | "inside_tent_shared"}
+          onChange={(v) => switchVariant.mutate(v)}
+        />
+
         <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} />
 
         {/* Power match check */}
