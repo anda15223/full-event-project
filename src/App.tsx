@@ -16,6 +16,7 @@ import FestivalOverview from "./pages/festival/FestivalOverview";
 import FestivalAttention from "./pages/festival/FestivalAttention";
 import FestivalTransport from "./pages/festival/FestivalTransport";
 import FestivalTransportExport from "./pages/festival/FestivalTransportExport";
+import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/festivals/:slug/attention" element={<Protected><FestivalAttention /></Protected>} />
             <Route path="/festivals/:slug/transport" element={<Protected><FestivalTransport /></Protected>} />
             <Route path="/festivals/:slug/transport/export" element={<Protected><FestivalTransportExport /></Protected>} />
+            <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
