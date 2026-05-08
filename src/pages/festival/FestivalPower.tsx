@@ -58,6 +58,7 @@ type PowerRow = {
   notes: string | null;
   tent_location: string | null;
   shared_tent_with_contracts: string[] | null;
+  equipment_variant: "standalone" | "inside_tent_shared" | null;
 };
 
 const STATUS_FLOW: Status[] = ["drawing", "submitted", "ordered", "confirmed", "installed", "tested"];
