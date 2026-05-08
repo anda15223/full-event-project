@@ -56,6 +56,45 @@ export type Database = {
         }
         Relationships: []
       }
+      cross_festival_rules: {
+        Row: {
+          active: boolean | null
+          applies_to_festivals: string[] | null
+          applies_to_operators: string[] | null
+          created_at: string | null
+          id: string
+          rule_description: string
+          rule_name: string
+          severity: string | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          applies_to_festivals?: string[] | null
+          applies_to_operators?: string[] | null
+          created_at?: string | null
+          id?: string
+          rule_description: string
+          rule_name: string
+          severity?: string | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          applies_to_festivals?: string[] | null
+          applies_to_operators?: string[] | null
+          created_at?: string | null
+          id?: string
+          rule_description?: string
+          rule_name?: string
+          severity?: string | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       dish_prices: {
         Row: {
           created_at: string | null
@@ -827,6 +866,44 @@ export type Database = {
           },
         ]
       }
+      festival_concept_city_assignments: {
+        Row: {
+          city: string
+          created_at: string | null
+          festival_contract_id: string
+          id: string
+          notes: string | null
+          stall_label: string
+          updated_at: string | null
+        }
+        Insert: {
+          city: string
+          created_at?: string | null
+          festival_contract_id: string
+          id?: string
+          notes?: string | null
+          stall_label: string
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string
+          created_at?: string | null
+          festival_contract_id?: string
+          id?: string
+          notes?: string | null
+          stall_label?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_concept_city_assignments_festival_contract_id_fkey"
+            columns: ["festival_contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_concepts: {
         Row: {
           concept_id: string
@@ -1043,9 +1120,12 @@ export type Database = {
           caravan_camp: string | null
           caravan_max_count: number | null
           cleanup_radius_m: number | null
+          concept_alias: string | null
           concept_id: string
+          concept_variation_note: string | null
           contract_doc_url: string | null
           contract_signed_date: string | null
+          contract_status: string | null
           contract_year: number | null
           contracting_entity: string
           contracting_entity_cvr: string | null
@@ -1069,6 +1149,8 @@ export type Database = {
           max_wristbands_total: number | null
           min_work_hours_for_partout: number | null
           notes: string | null
+          operating_entity: string | null
+          operating_entity_cvr: string | null
           operating_hours_summary: string | null
           payment_method_cashless: boolean | null
           pos_provider: string | null
@@ -1081,6 +1163,7 @@ export type Database = {
           revenue_share_tier_3_pct: number | null
           settlement_terms: string | null
           site_clearance_deadline: string | null
+          stall_count: number | null
           tent_cost_handling: string | null
           tent_floor: string | null
           tent_provided_by: string | null
@@ -1099,9 +1182,12 @@ export type Database = {
           caravan_camp?: string | null
           caravan_max_count?: number | null
           cleanup_radius_m?: number | null
+          concept_alias?: string | null
           concept_id: string
+          concept_variation_note?: string | null
           contract_doc_url?: string | null
           contract_signed_date?: string | null
+          contract_status?: string | null
           contract_year?: number | null
           contracting_entity: string
           contracting_entity_cvr?: string | null
@@ -1125,6 +1211,8 @@ export type Database = {
           max_wristbands_total?: number | null
           min_work_hours_for_partout?: number | null
           notes?: string | null
+          operating_entity?: string | null
+          operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           payment_method_cashless?: boolean | null
           pos_provider?: string | null
@@ -1137,6 +1225,7 @@ export type Database = {
           revenue_share_tier_3_pct?: number | null
           settlement_terms?: string | null
           site_clearance_deadline?: string | null
+          stall_count?: number | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
           tent_provided_by?: string | null
@@ -1155,9 +1244,12 @@ export type Database = {
           caravan_camp?: string | null
           caravan_max_count?: number | null
           cleanup_radius_m?: number | null
+          concept_alias?: string | null
           concept_id?: string
+          concept_variation_note?: string | null
           contract_doc_url?: string | null
           contract_signed_date?: string | null
+          contract_status?: string | null
           contract_year?: number | null
           contracting_entity?: string
           contracting_entity_cvr?: string | null
@@ -1181,6 +1273,8 @@ export type Database = {
           max_wristbands_total?: number | null
           min_work_hours_for_partout?: number | null
           notes?: string | null
+          operating_entity?: string | null
+          operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           payment_method_cashless?: boolean | null
           pos_provider?: string | null
@@ -1193,6 +1287,7 @@ export type Database = {
           revenue_share_tier_3_pct?: number | null
           settlement_terms?: string | null
           site_clearance_deadline?: string | null
+          stall_count?: number | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
           tent_provided_by?: string | null
@@ -2409,6 +2504,115 @@ export type Database = {
           },
         ]
       }
+      festival_open_questions: {
+        Row: {
+          concept_id: string | null
+          context: string | null
+          created_at: string | null
+          festival_id: string
+          id: string
+          question: string
+          raised_by: string | null
+          raised_date: string | null
+          resolution: string | null
+          resolved_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          concept_id?: string | null
+          context?: string | null
+          created_at?: string | null
+          festival_id: string
+          id?: string
+          question: string
+          raised_by?: string | null
+          raised_date?: string | null
+          resolution?: string | null
+          resolved_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          concept_id?: string | null
+          context?: string | null
+          created_at?: string | null
+          festival_id?: string
+          id?: string
+          question?: string
+          raised_by?: string | null
+          raised_date?: string | null
+          resolution?: string | null
+          resolved_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_open_questions_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
       festival_power: {
         Row: {
           concept_id: string
@@ -3114,6 +3318,7 @@ export type Database = {
           requires_transport: boolean
           role: string
           staff_source: string
+          staff_type: string | null
           total_hours_planned: number | null
           updated_at: string | null
           works_friday: boolean | null
@@ -3134,6 +3339,7 @@ export type Database = {
           requires_transport?: boolean
           role: string
           staff_source: string
+          staff_type?: string | null
           total_hours_planned?: number | null
           updated_at?: string | null
           works_friday?: boolean | null
@@ -3154,6 +3360,7 @@ export type Database = {
           requires_transport?: boolean
           role?: string
           staff_source?: string
+          staff_type?: string | null
           total_hours_planned?: number | null
           updated_at?: string | null
           works_friday?: boolean | null
@@ -3719,11 +3926,14 @@ export type Database = {
           country: string | null
           created_at: string | null
           end_date: string
+          festival_duration_days: number | null
           id: string
           is_active: boolean | null
           menu_summary: string | null
           name: string
           notes: string | null
+          operator_cvr: string | null
+          operator_org: string | null
           organiser_address: string | null
           organiser_cvr: string | null
           organiser_email: string | null
@@ -3731,12 +3941,16 @@ export type Database = {
           organiser_phone: string | null
           pack_date: string | null
           pack_down_date: string | null
+          prep_status: string | null
+          previous_contact_note: string | null
           project_leaders: string | null
           setup_date: string | null
+          setup_responsibility: string | null
           slug: string
           start_date: string
           tent_size_overall: string | null
           updated_at: string | null
+          website_domain: string | null
           year: number
         }
         Insert: {
@@ -3753,11 +3967,14 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           end_date: string
+          festival_duration_days?: number | null
           id?: string
           is_active?: boolean | null
           menu_summary?: string | null
           name: string
           notes?: string | null
+          operator_cvr?: string | null
+          operator_org?: string | null
           organiser_address?: string | null
           organiser_cvr?: string | null
           organiser_email?: string | null
@@ -3765,12 +3982,16 @@ export type Database = {
           organiser_phone?: string | null
           pack_date?: string | null
           pack_down_date?: string | null
+          prep_status?: string | null
+          previous_contact_note?: string | null
           project_leaders?: string | null
           setup_date?: string | null
+          setup_responsibility?: string | null
           slug: string
           start_date: string
           tent_size_overall?: string | null
           updated_at?: string | null
+          website_domain?: string | null
           year: number
         }
         Update: {
@@ -3787,11 +4008,14 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           end_date?: string
+          festival_duration_days?: number | null
           id?: string
           is_active?: boolean | null
           menu_summary?: string | null
           name?: string
           notes?: string | null
+          operator_cvr?: string | null
+          operator_org?: string | null
           organiser_address?: string | null
           organiser_cvr?: string | null
           organiser_email?: string | null
@@ -3799,12 +4023,16 @@ export type Database = {
           organiser_phone?: string | null
           pack_date?: string | null
           pack_down_date?: string | null
+          prep_status?: string | null
+          previous_contact_note?: string | null
           project_leaders?: string | null
           setup_date?: string | null
+          setup_responsibility?: string | null
           slug?: string
           start_date?: string
           tent_size_overall?: string | null
           updated_at?: string | null
+          website_domain?: string | null
           year?: number
         }
         Relationships: []
@@ -4089,6 +4317,48 @@ export type Database = {
             referencedColumns: ["supplier_id"]
           },
         ]
+      }
+      personnel_history: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          end_date: string | null
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          role: string
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          end_date?: string | null
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          role: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          end_date?: string | null
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
