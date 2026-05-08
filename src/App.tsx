@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import SettingsPage from "./pages/SettingsPage";
 import FestivalsList from "./pages/festival/FestivalsList";
 import FestivalOverview from "./pages/festival/FestivalOverview";
+import FestivalOverviewExport from "./pages/festival/FestivalOverviewExport";
 import FestivalAttention from "./pages/festival/FestivalAttention";
 import FestivalTransport from "./pages/festival/FestivalTransport";
 import FestivalTransportExport from "./pages/festival/FestivalTransportExport";
