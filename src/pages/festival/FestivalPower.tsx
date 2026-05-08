@@ -56,6 +56,8 @@ type PowerRow = {
   ordered_date: string | null;
   cost_dkk: number | null;
   notes: string | null;
+  tent_location: string | null;
+  shared_tent_with_contracts: string[] | null;
 };
 
 const STATUS_FLOW: Status[] = ["drawing", "submitted", "ordered", "confirmed", "installed", "tested"];
