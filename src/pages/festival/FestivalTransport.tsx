@@ -382,6 +382,7 @@ function VehicleBlock({
         staffById={staffById}
         festivalId={festivalId}
         focusLegId={focusLegId}
+        conflictByLeg={conflictByLeg}
       />
 
       <div className="p-3 border-t print:hidden">
