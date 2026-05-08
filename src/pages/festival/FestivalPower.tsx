@@ -586,7 +586,7 @@ function PowerCard({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">{title}</div>
