@@ -378,12 +378,52 @@ function PowerCard({
 
   const upsertEmpty = useMutation({
     mutationFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_power")
+        .insert({ festival_contract_id: contract.id, status: "drawing", equipment_variant: "standalone" })
+        .select("id")
+        .single();
+      if (error) throw error;
+      // Auto-seed equipment from standalone template
+      try {
+        await seedEquipmentFromTemplate({
+          festivalPowerId: data.id,
+          conceptId: contract.concept_id,
+          variant: "standalone",
+          festivalId,
+        });
+      } catch (e) {
+        // non-fatal
+        console.warn("Template seed failed", e);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["festival-power"] });
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+    },
+  });
+
+  const switchVariant = useMutation({
+    mutationFn: async (variant: "standalone" | "inside_tent_shared") => {
+      if (!power) return;
       const { error } = await supabase
         .from("festival_power")
-        .insert({ festival_contract_id: contract.id, status: "drawing" });
+        .update({ equipment_variant: variant })
+        .eq("id", power.id);
       if (error) throw error;
+      await seedEquipmentFromTemplate({
+        festivalPowerId: power.id,
+        conceptId: contract.concept_id,
+        variant,
+        festivalId,
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-power"] }),
+    onSuccess: () => {
+      toast.success("Equipment re-seeded from template");
+      qc.invalidateQueries({ queryKey: ["festival-power"] });
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
   const advance = useMutation({
