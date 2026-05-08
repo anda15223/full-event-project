@@ -466,10 +466,11 @@ function LegsTable({
 }
 
 function LegRow({
-  leg, assignments, staff, staffById, festivalId, highlighted,
+  leg, assignments, staff, staffById, festivalId, highlighted, conflictStaffIds,
 }: {
   leg: Leg; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; highlighted: boolean;
+  conflictStaffIds: Set<string>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
