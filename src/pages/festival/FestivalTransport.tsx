@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Printer, Trash2, X } from "lucide-react";
+import { Download, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -186,9 +186,16 @@ export default function FestivalTransport() {
         <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">
           ← Back to festival
         </Link>
-        <Button variant="outline" size="sm" onClick={() => window.print()}>
-          <Printer className="h-4 w-4" /> Print
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="h-4 w-4" /> Screen print
+          </Button>
+          <Button asChild size="sm">
+            <Link to={`/festivals/${slug}/transport/export`}>
+              <Download className="h-4 w-4" /> Export PDF
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Header band */}
