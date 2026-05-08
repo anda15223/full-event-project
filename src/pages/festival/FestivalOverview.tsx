@@ -9,6 +9,16 @@ export default function FestivalOverview() {
 
       <AttentionSummaryWidget festivalSlug={slug} />
 
+      <div className="flex flex-wrap gap-2">
+        <Link
+          to={`/festivals/${slug}/transport`}
+          className="text-xs font-medium px-3 py-1.5 rounded-md border bg-card hover:bg-accent transition"
+          id="card-7"
+        >
+          🚐 Transport plan →
+        </Link>
+      </div>
+
       <div id="card-1">
         <h1 className="text-2xl font-heading font-bold text-foreground">{slug}</h1>
         <p className="text-sm text-muted-foreground">
