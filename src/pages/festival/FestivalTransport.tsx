@@ -134,6 +134,33 @@ export default function FestivalTransport() {
 
   const staffById = useMemo(() => Object.fromEntries(staff.map((s) => [s.id, s])), [staff]);
 
+  // For each leg, set of staff_ids already assigned (any role) to ANOTHER leg in
+  // the same (festival_id, leg_date, leg_phase). All legs here belong to one festival.
+  const conflictByLeg = useMemo(() => {
+    const legById = new Map(legs.map((l) => [l.id, l]));
+    // Group staff_ids by `${date}|${phase}` -> array of {legId, staffId}
+    const slotIndex = new Map<string, { legId: string; staffId: string }[]>();
+    assignments.forEach((a) => {
+      if (!a.staff_id) return;
+      const l = legById.get(a.leg_id);
+      if (!l) return;
+      const key = `${l.leg_date}|${l.leg_phase}`;
+      if (!slotIndex.has(key)) slotIndex.set(key, []);
+      slotIndex.get(key)!.push({ legId: a.leg_id, staffId: a.staff_id });
+    });
+    const result = new Map<string, Set<string>>();
+    legs.forEach((l) => {
+      const key = `${l.leg_date}|${l.leg_phase}`;
+      const entries = slotIndex.get(key) ?? [];
+      const set = new Set<string>();
+      entries.forEach((e) => {
+        if (e.legId !== l.id) set.add(e.staffId);
+      });
+      result.set(l.id, set);
+    });
+    return result;
+  }, [legs, assignments]);
+
   // Scroll to focused leg
   useEffect(() => {
     if (!focusLegId || legs.length === 0) return;
