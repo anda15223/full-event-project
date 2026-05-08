@@ -496,7 +496,7 @@ const CARD_TILES: CardTile[] = [
   { key: "action-items", name: "Action Items", icon: ListChecks },
   { key: "staff", name: "Staff", icon: UserCog },
   { key: "groceries", name: "Groceries", icon: ShoppingCart },
-] as const;
+];
 
 export default function FestivalOverview() {
   const { slug = "" } = useParams();
