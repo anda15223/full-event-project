@@ -499,18 +499,11 @@ function PowerCard({
           </div>
         </Section>
 
-        {/* Equipment breakdown */}
-        <Section title="Equipment breakdown">
-          <Textarea
-            defaultValue={power.equipment_breakdown ?? ""}
-            placeholder="Describe equipment and per-line loads…"
-            onBlur={(e) => {
-              if (e.target.value !== (power.equipment_breakdown ?? "")) {
-                updateField.mutate({ equipment_breakdown: e.target.value || null });
-              }
-            }}
-          />
-        </Section>
+        {/* Equipment list (structured) */}
+        <EquipmentSection power={power} equipment={equipment} contractsAll={[]} />
+
+        {/* Power match check */}
+        <PowerMatchSection power={power} equipment={equipment} />
 
         {/* Drawing */}
         <Section title="Power drawing">
