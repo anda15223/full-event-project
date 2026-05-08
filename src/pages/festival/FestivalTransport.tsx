@@ -551,8 +551,8 @@ function LegRow({
 
 // ============================================================
 function DriverCell({
-  leg, driver, staff, staffById, festivalId,
-}: { leg: Leg; driver: Assignment | undefined; staff: Staff[]; staffById: Record<string, Staff>; festivalId: string }) {
+  leg, driver, staff, staffById, festivalId, conflictStaffIds,
+}: { leg: Leg; driver: Assignment | undefined; staff: Staff[]; staffById: Record<string, Staff>; festivalId: string; conflictStaffIds: Set<string> }) {
   const qc = useQueryClient();
 
   const upsertDriver = useMutation({
