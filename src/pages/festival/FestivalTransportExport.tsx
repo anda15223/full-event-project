@@ -9,21 +9,15 @@ import { Download, Loader2 } from "lucide-react";
 
 // Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
 // and middle dots (·) render correctly. Built-in Helvetica only covers
-// WinAnsi and renders these as garbage glyphs.
+// WinAnsi and renders these as garbage glyphs. Use Open Sans from Google's
+// gstatic CDN — stable TTF URLs known to work with @react-pdf/renderer.
 Font.register({
-  family: "NotoSans",
+  family: "OpenSans",
   fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSans/NotoSans-Regular.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSans/NotoSans-Bold.ttf",
-      fontWeight: 700,
-    },
+    { src: "https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf", fontWeight: 400 },
+    { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 700 },
   ],
 });
-// Disable hyphenation (default breaks at hyphens, undesired in this report)
 Font.registerHyphenationCallback((word) => [word]);
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
@@ -31,6 +25,7 @@ type SeasonRental = { id: string; reservation_number: string | null; season_labe
 type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
+  accreditation_pdf_path: string | null; accreditation_uploaded_at: string | null;
   season_rental?: SeasonRental | null;
 };
 type Leg = {
@@ -64,24 +59,24 @@ function fmtDateLong(d: string) {
 
 // ---------------- PDF styles ----------------
 const styles = StyleSheet.create({
-  page: { padding: 42, fontSize: 9, fontFamily: "NotoSans", color: "#000" },
-  h1: { fontSize: 18, fontFamily: "NotoSans", fontWeight: 700, marginBottom: 4 },
-  h2: { fontSize: 12, fontFamily: "NotoSans", fontWeight: 700, marginBottom: 4 },
+  page: { padding: 42, fontSize: 9, fontFamily: "OpenSans", color: "#000" },
+  h1: { fontSize: 18, fontFamily: "OpenSans", fontWeight: 700, marginBottom: 4 },
+  h2: { fontSize: 12, fontFamily: "OpenSans", fontWeight: 700, marginBottom: 4 },
   subtitle: { fontSize: 9, color: "#444", marginBottom: 14 },
   statRow: { flexDirection: "row", gap: 10, marginVertical: 12 },
   statTile: { flex: 1, borderWidth: 1, borderColor: "#000", padding: 8 },
-  statValue: { fontSize: 16, fontFamily: "NotoSans", fontWeight: 700 },
+  statValue: { fontSize: 16, fontFamily: "OpenSans", fontWeight: 700 },
   statLabel: { fontSize: 7, textTransform: "uppercase", color: "#444", marginTop: 2 },
   phaseGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   phaseTile: { width: "48.5%", borderWidth: 1, borderColor: "#000", padding: 6 },
   phaseLabel: { fontSize: 7, textTransform: "uppercase", color: "#444" },
   vehicleBlock: { borderWidth: 1, borderColor: "#000", marginBottom: 10 },
   vehicleHeader: { padding: 6, borderBottomWidth: 1, borderBottomColor: "#000", flexDirection: "row", justifyContent: "space-between" },
-  vehicleTitle: { fontSize: 11, fontFamily: "NotoSans", fontWeight: 700 },
+  vehicleTitle: { fontSize: 11, fontFamily: "OpenSans", fontWeight: 700 },
   vehicleMeta: { fontSize: 8, color: "#333", marginTop: 2 },
   table: { width: "100%" },
   thead: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#000", backgroundColor: "#eee" },
-  th: { padding: 4, fontSize: 7, fontFamily: "NotoSans", fontWeight: 700, textTransform: "uppercase" },
+  th: { padding: 4, fontSize: 7, fontFamily: "OpenSans", fontWeight: 700, textTransform: "uppercase" },
   tr: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#999" },
   td: { padding: 4, fontSize: 8 },
   cDate: { width: "12%" },
@@ -90,8 +85,8 @@ const styles = StyleSheet.create({
   cRoute: { width: "20%" },
   cDriver: { width: "17%" },
   cPax: { width: "22%" },
-  driverLine: { fontFamily: "NotoSans", fontWeight: 700 },
-  tbdLine: { fontFamily: "NotoSans", fontWeight: 700 },
+  driverLine: { fontFamily: "OpenSans", fontWeight: 700 },
+  tbdLine: { fontFamily: "OpenSans", fontWeight: 700 },
   paxItem: { fontSize: 7, color: "#222" },
   cancelled: { color: "#777" },
   footer: {
@@ -178,12 +173,12 @@ function TransportPdf({
           {phaseSummary.map((p, i) => (
             <View key={i} style={styles.phaseTile}>
               <Text style={styles.phaseLabel}>{PHASE_LABEL[p.phase] ?? p.phase}</Text>
-              <Text style={{ fontSize: 9, fontFamily: "NotoSans", fontWeight: 700 }}>{fmtDate(p.date)}</Text>
+              <Text style={{ fontSize: 9, fontFamily: "OpenSans", fontWeight: 700 }}>{fmtDate(p.date)}</Text>
               <Text style={{ fontSize: 8, marginTop: 2 }}>
                 {p.count} {p.count === 1 ? "vehicle" : "vehicles"} · {p.seats} seats · {p.assigned} assigned
               </Text>
               {p.tbd > 0 && (
-                <Text style={{ fontSize: 8, fontFamily: "NotoSans", fontWeight: 700, marginTop: 2 }}>
+                <Text style={{ fontSize: 8, fontFamily: "OpenSans", fontWeight: 700, marginTop: 2 }}>
                   {p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD
                 </Text>
               )}
@@ -214,6 +209,9 @@ function TransportPdf({
                       : ""}
                   </Text>
                   {v.notes ? <Text style={styles.vehicleMeta}>{v.notes}</Text> : null}
+                  <Text style={styles.vehicleMeta}>
+                    Accreditation: {v.accreditation_pdf_path ? "✅ uploaded" : "⚠️ not uploaded"}
+                  </Text>
                 </View>
               </View>
 
@@ -301,7 +299,7 @@ export default function FestivalTransportExport() {
 
         const { data: vehicles, error: ve } = await supabase
           .from("festival_transport")
-          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes, season_rental:season_rentals(id,reservation_number,season_label)")
+          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at, season_rental:season_rentals(id,reservation_number,season_label)")
           .eq("festival_id", festival.id)
           .order("created_at");
         if (ve) throw ve;

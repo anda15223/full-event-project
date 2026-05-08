@@ -3116,6 +3116,8 @@ export type Database = {
       }
       festival_transport: {
         Row: {
+          accreditation_pdf_path: string | null
+          accreditation_uploaded_at: string | null
           actual_cost_dkk: number | null
           booking_reference: string | null
           capacity: number | null
@@ -3139,6 +3141,8 @@ export type Database = {
           vehicle_type: string
         }
         Insert: {
+          accreditation_pdf_path?: string | null
+          accreditation_uploaded_at?: string | null
           actual_cost_dkk?: number | null
           booking_reference?: string | null
           capacity?: number | null
@@ -3162,6 +3166,8 @@ export type Database = {
           vehicle_type: string
         }
         Update: {
+          accreditation_pdf_path?: string | null
+          accreditation_uploaded_at?: string | null
           actual_cost_dkk?: number | null
           booking_reference?: string | null
           capacity?: number | null
