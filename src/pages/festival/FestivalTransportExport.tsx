@@ -209,6 +209,9 @@ function TransportPdf({
                       : ""}
                   </Text>
                   {v.notes ? <Text style={styles.vehicleMeta}>{v.notes}</Text> : null}
+                  <Text style={styles.vehicleMeta}>
+                    Accreditation: {v.accreditation_pdf_path ? "✅ uploaded" : "⚠️ not uploaded"}
+                  </Text>
                 </View>
               </View>
 
