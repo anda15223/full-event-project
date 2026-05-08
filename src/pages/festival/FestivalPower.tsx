@@ -153,6 +153,58 @@ export default function FestivalPower() {
     return m;
   }, [powers]);
 
+  const powerIds = powers.map((p) => p.id);
+  const { data: equipment = [] } = useQuery({
+    queryKey: ["festival-power-equipment", powerIds.join(",")],
+    enabled: powerIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_power_equipment")
+        .select("*")
+        .in("festival_power_id", powerIds)
+        .order("position");
+      if (error) throw error;
+      return (data ?? []) as unknown as PowerEquipmentRow[];
+    },
+  });
+
+  const equipmentByPower = useMemo(() => {
+    const m = new Map<string, PowerEquipmentRow[]>();
+    equipment.forEach((e) => {
+      const arr = m.get(e.festival_power_id) ?? [];
+      arr.push(e);
+      m.set(e.festival_power_id, arr);
+    });
+    return m;
+  }, [equipment]);
+
+  const contractById = useMemo(() => {
+    const m = new Map<string, ContractRow>();
+    contracts.forEach((c) => m.set(c.id, c));
+    return m;
+  }, [contracts]);
+
+  // Group powers by tent_location
+  const tentGroups = useMemo(() => {
+    const m = new Map<string, { powers: PowerRow[]; contractIds: string[] }>();
+    powers.forEach((p) => {
+      if (!p.tent_location) return;
+      const g = m.get(p.tent_location) ?? { powers: [], contractIds: [] };
+      g.powers.push(p);
+      g.contractIds.push(p.festival_contract_id);
+      m.set(p.tent_location, g);
+    });
+    return m;
+  }, [powers]);
+
+  const tentGaps = useMemo(() => {
+    const out = new Map<string, GapRow[]>();
+    tentGroups.forEach((g, tent) => {
+      out.set(tent, computeTentGap(g.powers, equipmentByPower, g.contractIds));
+    });
+    return out;
+  }, [tentGroups, equipmentByPower]);
+
   const warnings = useMemo(() => {
     const out: { kind: "due" | "overdue"; label: string; days: number; date: string }[] = [];
     contracts.forEach((c) => {
