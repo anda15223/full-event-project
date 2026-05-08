@@ -9,21 +9,15 @@ import { Download, Loader2 } from "lucide-react";
 
 // Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
 // and middle dots (·) render correctly. Built-in Helvetica only covers
-// WinAnsi and renders these as garbage glyphs.
+// WinAnsi and renders these as garbage glyphs. Use Open Sans from Google's
+// gstatic CDN — stable TTF URLs known to work with @react-pdf/renderer.
 Font.register({
-  family: "NotoSans",
+  family: "OpenSans",
   fonts: [
-    {
-      src: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSans/NotoSans-Regular.ttf",
-      fontWeight: 400,
-    },
-    {
-      src: "https://cdn.jsdelivr.net/gh/googlefonts/noto-fonts/hinted/ttf/NotoSans/NotoSans-Bold.ttf",
-      fontWeight: 700,
-    },
+    { src: "https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf", fontWeight: 400 },
+    { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 700 },
   ],
 });
-// Disable hyphenation (default breaks at hyphens, undesired in this report)
 Font.registerHyphenationCallback((word) => [word]);
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
