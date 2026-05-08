@@ -285,6 +285,7 @@ export default function FestivalPower() {
               contract={c}
               power={p}
               equipment={p ? equipmentByPower.get(p.id) ?? [] : []}
+              allContracts={contracts}
               festivalSlug={slug}
             />
           );
