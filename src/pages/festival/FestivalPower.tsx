@@ -8,6 +8,7 @@ import {
   computeGap, computeTentGap, POWER_TYPE_LABEL,
   type GapRow, type PowerEquipmentRow, type PowerType,
 } from "@/lib/powerGapAnalysis";
+import { seedEquipmentFromTemplate } from "@/lib/seedPowerEquipment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,6 +59,7 @@ type PowerRow = {
   notes: string | null;
   tent_location: string | null;
   shared_tent_with_contracts: string[] | null;
+  equipment_variant: "standalone" | "inside_tent_shared" | null;
 };
 
 const STATUS_FLOW: Status[] = ["drawing", "submitted", "ordered", "confirmed", "installed", "tested"];
@@ -287,6 +289,7 @@ export default function FestivalPower() {
               equipment={p ? equipmentByPower.get(p.id) ?? [] : []}
               allContracts={contracts}
               festivalSlug={slug}
+              festivalId={festivalId!}
             />
           );
         })}
@@ -360,13 +363,14 @@ function PowerExportMenu({ slug, contracts }: { slug: string; contracts: Contrac
 
 // ============================================================
 function PowerCard({
-  contract, power, equipment, allContracts, festivalSlug,
+  contract, power, equipment, allContracts, festivalSlug, festivalId,
 }: {
   contract: ContractRow;
   power: PowerRow | undefined;
   equipment: PowerEquipmentRow[];
   allContracts: ContractRow[];
   festivalSlug: string;
+  festivalId: string;
 }) {
   const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
@@ -374,12 +378,52 @@ function PowerCard({
 
   const upsertEmpty = useMutation({
     mutationFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_power")
+        .insert({ festival_contract_id: contract.id, status: "drawing", equipment_variant: "standalone" })
+        .select("id")
+        .single();
+      if (error) throw error;
+      // Auto-seed equipment from standalone template
+      try {
+        await seedEquipmentFromTemplate({
+          festivalPowerId: data.id,
+          conceptId: contract.concept_id,
+          variant: "standalone",
+          festivalId,
+        });
+      } catch (e) {
+        // non-fatal
+        console.warn("Template seed failed", e);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["festival-power"] });
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+    },
+  });
+
+  const switchVariant = useMutation({
+    mutationFn: async (variant: "standalone" | "inside_tent_shared") => {
+      if (!power) return;
       const { error } = await supabase
         .from("festival_power")
-        .insert({ festival_contract_id: contract.id, status: "drawing" });
+        .update({ equipment_variant: variant })
+        .eq("id", power.id);
       if (error) throw error;
+      await seedEquipmentFromTemplate({
+        festivalPowerId: power.id,
+        conceptId: contract.concept_id,
+        variant,
+        festivalId,
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-power"] }),
+    onSuccess: () => {
+      toast.success("Equipment re-seeded from template");
+      qc.invalidateQueries({ queryKey: ["festival-power"] });
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
   const advance = useMutation({
@@ -502,6 +546,13 @@ function PowerCard({
         </Section>
 
         {/* Equipment list (structured) */}
+        {/* Tent setup variant selector */}
+        <TentVariantSelector
+          conceptSlug={contract.concept?.slug}
+          variant={(power.equipment_variant ?? "standalone") as "standalone" | "inside_tent_shared"}
+          onChange={(v) => switchVariant.mutate(v)}
+        />
+
         <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} />
 
         {/* Power match check */}
@@ -1132,3 +1183,62 @@ function EquipmentEditor({
     </Sheet>
   );
 }
+
+// ============================================================
+// TENT SETUP VARIANT SELECTOR
+// ============================================================
+function TentVariantSelector({
+  conceptSlug,
+  variant,
+  onChange,
+}: {
+  conceptSlug: ConceptSlug | undefined;
+  variant: "standalone" | "inside_tent_shared";
+  onChange: (v: "standalone" | "inside_tent_shared") => void;
+}) {
+  const sharedAvailable = conceptSlug === "fish-chips" || conceptSlug === "gyros";
+
+  const handleChange = (v: "standalone" | "inside_tent_shared") => {
+    if (v === variant) return;
+    if (!window.confirm("Reset equipment from template? This will remove custom edits.")) return;
+    onChange(v);
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+        Tent setup
+      </div>
+      <div className="flex flex-col gap-1.5 text-sm">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name={`tent-variant-${conceptSlug}`}
+            checked={variant === "standalone"}
+            onChange={() => handleChange("standalone")}
+          />
+          <span>Solo (concept has its own tent)</span>
+        </label>
+        <label
+          className={cn(
+            "flex items-center gap-2",
+            sharedAvailable ? "cursor-pointer" : "opacity-50 cursor-not-allowed",
+          )}
+        >
+          <input
+            type="radio"
+            name={`tent-variant-${conceptSlug}`}
+            checked={variant === "inside_tent_shared"}
+            disabled={!sharedAvailable}
+            onChange={() => handleChange("inside_tent_shared")}
+          />
+          <span>Shared INSIDE tent (Fish + Gyros combined)</span>
+          {!sharedAvailable && (
+            <span className="text-[10px] uppercase text-muted-foreground">Fish/Gyros only</span>
+          )}
+        </label>
+      </div>
+    </div>
+  );
+}
+

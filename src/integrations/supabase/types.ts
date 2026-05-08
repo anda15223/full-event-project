@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      concept_equipment_template: {
+        Row: {
+          concept_id: string
+          created_at: string | null
+          equipment_name: string
+          id: string
+          is_shared_with_other_concept: boolean | null
+          notes: string | null
+          position: number
+          power_kw: number | null
+          power_type: string
+          quantity: number
+          shared_with_concept_slug: string | null
+          updated_at: string | null
+          variant: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string | null
+          equipment_name: string
+          id?: string
+          is_shared_with_other_concept?: boolean | null
+          notes?: string | null
+          position?: number
+          power_kw?: number | null
+          power_type: string
+          quantity?: number
+          shared_with_concept_slug?: string | null
+          updated_at?: string | null
+          variant?: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string | null
+          equipment_name?: string
+          id?: string
+          is_shared_with_other_concept?: boolean | null
+          notes?: string | null
+          position?: number
+          power_kw?: number | null
+          power_type?: string
+          quantity?: number
+          shared_with_concept_slug?: string | null
+          updated_at?: string | null
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_equipment_template_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concept_equipment_template_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+        ]
+      }
       concepts: {
         Row: {
           color_hex: string | null
@@ -2766,6 +2829,7 @@ export type Database = {
           cost_dkk: number | null
           created_at: string | null
           equipment_breakdown: string | null
+          equipment_variant: string
           festival_contract_id: string
           id: string
           notes: string | null
@@ -2791,6 +2855,7 @@ export type Database = {
           cost_dkk?: number | null
           created_at?: string | null
           equipment_breakdown?: string | null
+          equipment_variant?: string
           festival_contract_id: string
           id?: string
           notes?: string | null
@@ -2816,6 +2881,7 @@ export type Database = {
           cost_dkk?: number | null
           created_at?: string | null
           equipment_breakdown?: string | null
+          equipment_variant?: string
           festival_contract_id?: string
           id?: string
           notes?: string | null
