@@ -40,6 +40,7 @@ const App = () => (
             <Route path="/festivals/:slug" element={<Protected><FestivalOverview /></Protected>} />
             <Route path="/festivals/:slug/attention" element={<Protected><FestivalAttention /></Protected>} />
             <Route path="/festivals/:slug/transport" element={<Protected><FestivalTransport /></Protected>} />
+            <Route path="/festivals/:slug/transport/export" element={<Protected><FestivalTransportExport /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
