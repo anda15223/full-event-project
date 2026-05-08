@@ -1183,3 +1183,62 @@ function EquipmentEditor({
     </Sheet>
   );
 }
+
+// ============================================================
+// TENT SETUP VARIANT SELECTOR
+// ============================================================
+function TentVariantSelector({
+  conceptSlug,
+  variant,
+  onChange,
+}: {
+  conceptSlug: ConceptSlug | undefined;
+  variant: "standalone" | "inside_tent_shared";
+  onChange: (v: "standalone" | "inside_tent_shared") => void;
+}) {
+  const sharedAvailable = conceptSlug === "fish-chips" || conceptSlug === "gyros";
+
+  const handleChange = (v: "standalone" | "inside_tent_shared") => {
+    if (v === variant) return;
+    if (!window.confirm("Reset equipment from template? This will remove custom edits.")) return;
+    onChange(v);
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/30 px-3 py-2.5">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+        Tent setup
+      </div>
+      <div className="flex flex-col gap-1.5 text-sm">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="radio"
+            name={`tent-variant-${conceptSlug}`}
+            checked={variant === "standalone"}
+            onChange={() => handleChange("standalone")}
+          />
+          <span>Solo (concept has its own tent)</span>
+        </label>
+        <label
+          className={cn(
+            "flex items-center gap-2",
+            sharedAvailable ? "cursor-pointer" : "opacity-50 cursor-not-allowed",
+          )}
+        >
+          <input
+            type="radio"
+            name={`tent-variant-${conceptSlug}`}
+            checked={variant === "inside_tent_shared"}
+            disabled={!sharedAvailable}
+            onChange={() => handleChange("inside_tent_shared")}
+          />
+          <span>Shared INSIDE tent (Fish + Gyros combined)</span>
+          {!sharedAvailable && (
+            <span className="text-[10px] uppercase text-muted-foreground">Fish/Gyros only</span>
+          )}
+        </label>
+      </div>
+    </div>
+  );
+}
+
