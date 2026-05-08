@@ -360,11 +360,12 @@ function PowerExportMenu({ slug, contracts }: { slug: string; contracts: Contrac
 
 // ============================================================
 function PowerCard({
-  contract, power, equipment, festivalSlug,
+  contract, power, equipment, allContracts, festivalSlug,
 }: {
   contract: ContractRow;
   power: PowerRow | undefined;
   equipment: PowerEquipmentRow[];
+  allContracts: ContractRow[];
   festivalSlug: string;
 }) {
   const qc = useQueryClient();
