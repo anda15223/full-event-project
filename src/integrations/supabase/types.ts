@@ -2829,6 +2829,7 @@ export type Database = {
           cost_dkk: number | null
           created_at: string | null
           equipment_breakdown: string | null
+          equipment_variant: string
           festival_contract_id: string
           id: string
           notes: string | null
@@ -2854,6 +2855,7 @@ export type Database = {
           cost_dkk?: number | null
           created_at?: string | null
           equipment_breakdown?: string | null
+          equipment_variant?: string
           festival_contract_id: string
           id?: string
           notes?: string | null
@@ -2879,6 +2881,7 @@ export type Database = {
           cost_dkk?: number | null
           created_at?: string | null
           equipment_breakdown?: string | null
+          equipment_variant?: string
           festival_contract_id?: string
           id?: string
           notes?: string | null
