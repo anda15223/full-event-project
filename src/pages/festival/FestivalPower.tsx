@@ -116,7 +116,7 @@ export default function FestivalPower() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, concept_alias, concept:concepts(slug, name, display_order)")
+        .select("id, concept_id, concept_alias, concept:concepts!concept_id(slug, name, display_order)")
         .eq("festival_id", festivalId!);
       if (error) throw error;
       const sorted = (data ?? []).slice().sort((a: any, b: any) => {
