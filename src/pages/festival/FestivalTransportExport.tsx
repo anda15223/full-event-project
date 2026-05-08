@@ -178,7 +178,7 @@ function TransportPdf({
           {phaseSummary.map((p, i) => (
             <View key={i} style={styles.phaseTile}>
               <Text style={styles.phaseLabel}>{PHASE_LABEL[p.phase] ?? p.phase}</Text>
-              <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold" }}>{fmtDate(p.date)}</Text>
+              <Text style={{ fontSize: 9, fontFamily: "NotoSans", fontWeight: 700 }}>{fmtDate(p.date)}</Text>
               <Text style={{ fontSize: 8, marginTop: 2 }}>
                 {p.count} {p.count === 1 ? "vehicle" : "vehicles"} · {p.seats} seats · {p.assigned} assigned
               </Text>
