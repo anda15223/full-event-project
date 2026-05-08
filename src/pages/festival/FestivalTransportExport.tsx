@@ -58,24 +58,24 @@ function fmtDateLong(d: string) {
 
 // ---------------- PDF styles ----------------
 const styles = StyleSheet.create({
-  page: { padding: 42, fontSize: 9, fontFamily: "NotoSans", color: "#000" },
-  h1: { fontSize: 18, fontFamily: "NotoSans", fontWeight: 700, marginBottom: 4 },
-  h2: { fontSize: 12, fontFamily: "NotoSans", fontWeight: 700, marginBottom: 4 },
+  page: { padding: 42, fontSize: 9, fontFamily: "OpenSans", color: "#000" },
+  h1: { fontSize: 18, fontFamily: "OpenSans", fontWeight: 700, marginBottom: 4 },
+  h2: { fontSize: 12, fontFamily: "OpenSans", fontWeight: 700, marginBottom: 4 },
   subtitle: { fontSize: 9, color: "#444", marginBottom: 14 },
   statRow: { flexDirection: "row", gap: 10, marginVertical: 12 },
   statTile: { flex: 1, borderWidth: 1, borderColor: "#000", padding: 8 },
-  statValue: { fontSize: 16, fontFamily: "NotoSans", fontWeight: 700 },
+  statValue: { fontSize: 16, fontFamily: "OpenSans", fontWeight: 700 },
   statLabel: { fontSize: 7, textTransform: "uppercase", color: "#444", marginTop: 2 },
   phaseGrid: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
   phaseTile: { width: "48.5%", borderWidth: 1, borderColor: "#000", padding: 6 },
   phaseLabel: { fontSize: 7, textTransform: "uppercase", color: "#444" },
   vehicleBlock: { borderWidth: 1, borderColor: "#000", marginBottom: 10 },
   vehicleHeader: { padding: 6, borderBottomWidth: 1, borderBottomColor: "#000", flexDirection: "row", justifyContent: "space-between" },
-  vehicleTitle: { fontSize: 11, fontFamily: "NotoSans", fontWeight: 700 },
+  vehicleTitle: { fontSize: 11, fontFamily: "OpenSans", fontWeight: 700 },
   vehicleMeta: { fontSize: 8, color: "#333", marginTop: 2 },
   table: { width: "100%" },
   thead: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#000", backgroundColor: "#eee" },
-  th: { padding: 4, fontSize: 7, fontFamily: "NotoSans", fontWeight: 700, textTransform: "uppercase" },
+  th: { padding: 4, fontSize: 7, fontFamily: "OpenSans", fontWeight: 700, textTransform: "uppercase" },
   tr: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#999" },
   td: { padding: 4, fontSize: 8 },
   cDate: { width: "12%" },
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
   cRoute: { width: "20%" },
   cDriver: { width: "17%" },
   cPax: { width: "22%" },
-  driverLine: { fontFamily: "NotoSans", fontWeight: 700 },
-  tbdLine: { fontFamily: "NotoSans", fontWeight: 700 },
+  driverLine: { fontFamily: "OpenSans", fontWeight: 700 },
+  tbdLine: { fontFamily: "OpenSans", fontWeight: 700 },
   paxItem: { fontSize: 7, color: "#222" },
   cancelled: { color: "#777" },
   footer: {
@@ -172,12 +172,12 @@ function TransportPdf({
           {phaseSummary.map((p, i) => (
             <View key={i} style={styles.phaseTile}>
               <Text style={styles.phaseLabel}>{PHASE_LABEL[p.phase] ?? p.phase}</Text>
-              <Text style={{ fontSize: 9, fontFamily: "NotoSans", fontWeight: 700 }}>{fmtDate(p.date)}</Text>
+              <Text style={{ fontSize: 9, fontFamily: "OpenSans", fontWeight: 700 }}>{fmtDate(p.date)}</Text>
               <Text style={{ fontSize: 8, marginTop: 2 }}>
                 {p.count} {p.count === 1 ? "vehicle" : "vehicles"} · {p.seats} seats · {p.assigned} assigned
               </Text>
               {p.tbd > 0 && (
-                <Text style={{ fontSize: 8, fontFamily: "NotoSans", fontWeight: 700, marginTop: 2 }}>
+                <Text style={{ fontSize: 8, fontFamily: "OpenSans", fontWeight: 700, marginTop: 2 }}>
                   {p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD
                 </Text>
               )}
