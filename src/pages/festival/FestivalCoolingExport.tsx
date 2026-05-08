@@ -197,7 +197,7 @@ export default function FestivalCoolingExport() {
       const [uRes, cRes] = await Promise.all([
         supabase.from("festival_cooling_unit").select("*").eq("festival_id", fid).order("created_at"),
         supabase.from("festival_contracts")
-          .select("id, concept_alias, concept:concepts(slug, name, display_order)")
+          .select("id, concept_alias, concept:concepts!concept_id(slug, name, display_order)")
           .eq("festival_id", fid),
       ]);
       const us = (uRes.data ?? []) as Unit[];
