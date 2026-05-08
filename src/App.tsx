@@ -14,6 +14,7 @@ import SettingsPage from "./pages/SettingsPage";
 import FestivalsList from "./pages/festival/FestivalsList";
 import FestivalOverview from "./pages/festival/FestivalOverview";
 import FestivalAttention from "./pages/festival/FestivalAttention";
+import FestivalTransport from "./pages/festival/FestivalTransport";
 import GlobalAttention from "./pages/GlobalAttention";
 
 const queryClient = new QueryClient();
