@@ -376,6 +376,8 @@ function VehicleBlock({
         </Button>
       </div>
 
+      <AccreditationBlock vehicle={vehicle} slug={slug} />
+
       <LegsTable
         legs={legs}
         assignments={assignments}
