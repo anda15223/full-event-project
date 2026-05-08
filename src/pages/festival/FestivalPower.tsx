@@ -289,6 +289,7 @@ export default function FestivalPower() {
               equipment={p ? equipmentByPower.get(p.id) ?? [] : []}
               allContracts={contracts}
               festivalSlug={slug}
+              festivalId={festivalId!}
             />
           );
         })}
