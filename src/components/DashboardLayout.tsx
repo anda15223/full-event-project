@@ -74,6 +74,16 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: rulesBadge = 0 } = useQuery({
+    queryKey: ["rules-sidebar-badge"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("cross_festival_rules")
+        .select("id, severity, active").eq("active", true).eq("severity", "critical");
+      return (data ?? []).length;
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
@@ -100,6 +110,7 @@ function SidebarNav() {
             const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
             const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
             const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
+            const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -114,6 +125,7 @@ function SidebarNav() {
                       {showAttentionDot && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                       {showActionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-500 border-2 border-white" />}
                       {showQuestionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 border-2 border-white" />}
+                      {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
