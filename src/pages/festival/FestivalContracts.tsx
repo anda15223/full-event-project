@@ -29,6 +29,7 @@ import {
   ContractStatus, PaymentStatus, STATUS_META, PAYMENT_META, SIGNING_PLATFORMS,
   formatDKK, daysBetween, pushStatusEntry,
 } from "@/lib/contracts";
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
@@ -94,6 +95,7 @@ export default function FestivalContracts() {
   const [searchParams] = useSearchParams();
   const focusContractId = searchParams.get("contract");
   const qc = useQueryClient();
+  const hasFinanceAccess = useFinanceAccess();
 
   const festivalQ = useQuery({
     queryKey: ["festival-by-slug", slug], enabled: !!slug,
@@ -307,13 +309,15 @@ export default function FestivalContracts() {
             </Button>
           ))}
         </div>
-        <Select value={filterEntity} onValueChange={setFilterEntity}>
-          <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder="Operating entity" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All entities</SelectItem>
-            {allEntities.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {hasFinanceAccess && (
+          <Select value={filterEntity} onValueChange={setFilterEntity}>
+            <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder="Operating entity" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All entities</SelectItem>
+              {allEntities.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={filterConcept} onValueChange={setFilterConcept}>
           <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Concept" /></SelectTrigger>
           <SelectContent>
@@ -397,6 +401,7 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
   const qc = useQueryClient();
   const fileUrl = useFileUrl(c.contract_file_path);
   const [uploading, setUploading] = useState(false);
+  const hasFinanceAccess = useFinanceAccess();
 
   const handleFile = async (file: File) => {
     if (!file) return;
@@ -436,9 +441,11 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
               {concept?.name ?? "Unknown concept"}
               {c.concept_alias && <span className="text-muted-foreground font-normal ml-1">· {c.concept_alias}</span>}
             </div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              {c.operating_entity ?? "—"}{c.operating_entity_cvr && ` · CVR ${c.operating_entity_cvr}`}
-            </div>
+            {hasFinanceAccess && (
+              <div className="text-[11px] text-muted-foreground truncate">
+                {c.operating_entity ?? "—"}{c.operating_entity_cvr && ` · CVR ${c.operating_entity_cvr}`}
+              </div>
+            )}
           </div>
         </div>
         <StatusPill status={c.contract_status} />
@@ -446,11 +453,13 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
 
       {/* Metadata */}
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
-        <div>
-          <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Counterparty</div>
-          <div className="truncate">{c.counterparty_name ?? c.counterparty ?? "—"}</div>
-          {c.counterparty_cvr && <div className="text-[10px] text-muted-foreground">CVR {c.counterparty_cvr}</div>}
-        </div>
+        {hasFinanceAccess && (
+          <div>
+            <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Counterparty</div>
+            <div className="truncate">{c.counterparty_name ?? c.counterparty ?? "—"}</div>
+            {c.counterparty_cvr && <div className="text-[10px] text-muted-foreground">CVR {c.counterparty_cvr}</div>}
+          </div>
+        )}
         <div>
           <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Signed</div>
           <div>{c.contract_signed_date ?? "—"}{c.signing_platform && <span className="text-muted-foreground"> · {c.signing_platform}</span>}</div>
@@ -473,21 +482,23 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
       {/* Financials */}
       <div className="rounded-lg bg-muted/30 p-2 flex items-center justify-between flex-wrap gap-2">
         <div className="text-[12px]">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Value · Payment</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Value{hasFinanceAccess ? " · Payment" : ""}</div>
           <div className="font-semibold tabular-nums">{formatDKK(c.contract_value_dkk)}</div>
-          {c.payment_terms && <div className="text-[11px] text-muted-foreground">{c.payment_terms}</div>}
+          {hasFinanceAccess && c.payment_terms && <div className="text-[11px] text-muted-foreground">{c.payment_terms}</div>}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <PaymentPill status={c.payment_status} />
-          <div className="flex gap-1">
-            {c.payment_status !== "invoiced" && c.payment_status !== "paid" && (
-              <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("invoiced")}>Mark invoiced</Button>
-            )}
-            {c.payment_status !== "paid" && (
-              <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("paid")}>Mark paid</Button>
-            )}
+        {hasFinanceAccess && (
+          <div className="flex flex-col items-end gap-1">
+            <PaymentPill status={c.payment_status} />
+            <div className="flex gap-1">
+              {c.payment_status !== "invoiced" && c.payment_status !== "paid" && (
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("invoiced")}>Mark invoiced</Button>
+              )}
+              {c.payment_status !== "paid" && (
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("paid")}>Mark paid</Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* File */}
@@ -565,6 +576,7 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
   onSave: (p: Partial<Contract> & { id?: string }) => void;
   saving: boolean;
 }) {
+  const hasFinanceAccess = useFinanceAccess();
   const [form, setForm] = useState<any>({});
   useEffect(() => {
     if (open) {
@@ -583,12 +595,17 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
     if (!form.festival_id || !form.concept_id) {
       toast.error("Concept is required"); return;
     }
-    if (!form.contracting_entity && !form.operating_entity) {
-      // contracting_entity is NOT NULL in schema — fall back to operating_entity
-      form.contracting_entity = form.operating_entity ?? "Unknown";
+    // Phase 1+3: operating_entity, counterparty, payment_* live in festival_contracts_finance now.
+    // Strip them from the public-table payload so writes don't fail on missing columns.
+    const {
+      operating_entity, operating_entity_cvr, counterparty, counterparty_name, counterparty_cvr,
+      payment_terms, payment_status, payment_due_at, payment_amount, payment_currency,
+      ...publicForm
+    } = form;
+    if (!publicForm.contracting_entity) {
+      publicForm.contracting_entity = operating_entity ?? "Unknown";
     }
-    if (!form.counterparty) form.counterparty = form.counterparty_name ?? "Unknown";
-    onSave(form);
+    onSave(publicForm);
   };
 
   return (
@@ -607,14 +624,18 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
             <div><Label>Concept alias</Label><Input value={form.concept_alias ?? ""} onChange={(e) => set("concept_alias", e.target.value)} placeholder='e.g. "Fish 1"' /></div>
             <div><Label>Stalls</Label><Input type="number" value={form.stall_count ?? 1} onChange={(e) => set("stall_count", parseInt(e.target.value) || 1)} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>Operating entity</Label><Input value={form.operating_entity ?? ""} onChange={(e) => set("operating_entity", e.target.value)} /></div>
-            <div><Label>CVR</Label><Input value={form.operating_entity_cvr ?? ""} onChange={(e) => set("operating_entity_cvr", e.target.value)} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>Counterparty name</Label><Input value={form.counterparty_name ?? ""} onChange={(e) => set("counterparty_name", e.target.value)} /></div>
-            <div><Label>Counterparty CVR</Label><Input value={form.counterparty_cvr ?? ""} onChange={(e) => set("counterparty_cvr", e.target.value)} /></div>
-          </div>
+          {hasFinanceAccess && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Operating entity</Label><Input value={form.operating_entity ?? ""} onChange={(e) => set("operating_entity", e.target.value)} /></div>
+                <div><Label>CVR</Label><Input value={form.operating_entity_cvr ?? ""} onChange={(e) => set("operating_entity_cvr", e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Counterparty name</Label><Input value={form.counterparty_name ?? ""} onChange={(e) => set("counterparty_name", e.target.value)} /></div>
+                <div><Label>Counterparty CVR</Label><Input value={form.counterparty_cvr ?? ""} onChange={(e) => set("counterparty_cvr", e.target.value)} /></div>
+              </div>
+            </>
+          )}
           <div>
             <Label>Status</Label>
             <Select value={form.contract_status ?? "not_started"} onValueChange={(v) => set("contract_status", v)}>
@@ -624,7 +645,9 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Contract value (DKK)</Label><Input type="number" value={form.contract_value_dkk ?? ""} onChange={(e) => set("contract_value_dkk", e.target.value === "" ? null : parseFloat(e.target.value))} /></div>
-            <div><Label>Payment terms</Label><Input value={form.payment_terms ?? ""} onChange={(e) => set("payment_terms", e.target.value)} /></div>
+            {hasFinanceAccess && (
+              <div><Label>Payment terms</Label><Input value={form.payment_terms ?? ""} onChange={(e) => set("payment_terms", e.target.value)} /></div>
+            )}
           </div>
           <div>
             <Label>Variation note</Label>
