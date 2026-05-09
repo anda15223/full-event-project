@@ -95,6 +95,7 @@ export default function FestivalContracts() {
   const [searchParams] = useSearchParams();
   const focusContractId = searchParams.get("contract");
   const qc = useQueryClient();
+  const hasFinanceAccess = useFinanceAccess();
 
   const festivalQ = useQuery({
     queryKey: ["festival-by-slug", slug], enabled: !!slug,
