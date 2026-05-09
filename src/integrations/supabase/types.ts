@@ -1336,7 +1336,6 @@ export type Database = {
           contract_year: number | null
           contracting_entity: string
           contracting_entity_cvr: string | null
-          counterparty: string
           counterparty_cvr: string | null
           counterparty_name: string | null
           counterparty_name_in_contract: string | null
@@ -1359,12 +1358,9 @@ export type Database = {
           max_wristbands_total: number | null
           min_work_hours_for_partout: number | null
           notes: string | null
-          operating_entity: string | null
           operating_entity_cvr: string | null
           operating_hours_summary: string | null
           payment_method_cashless: boolean | null
-          payment_status: string | null
-          payment_terms: string | null
           pos_provider: string | null
           pos_terminal_extra_cost_dkk: number | null
           power_in_contract: string | null
@@ -1415,7 +1411,6 @@ export type Database = {
           contract_year?: number | null
           contracting_entity: string
           contracting_entity_cvr?: string | null
-          counterparty: string
           counterparty_cvr?: string | null
           counterparty_name?: string | null
           counterparty_name_in_contract?: string | null
@@ -1438,12 +1433,9 @@ export type Database = {
           max_wristbands_total?: number | null
           min_work_hours_for_partout?: number | null
           notes?: string | null
-          operating_entity?: string | null
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           payment_method_cashless?: boolean | null
-          payment_status?: string | null
-          payment_terms?: string | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
           power_in_contract?: string | null
@@ -1494,7 +1486,6 @@ export type Database = {
           contract_year?: number | null
           contracting_entity?: string
           contracting_entity_cvr?: string | null
-          counterparty?: string
           counterparty_cvr?: string | null
           counterparty_name?: string | null
           counterparty_name_in_contract?: string | null
@@ -1517,12 +1508,9 @@ export type Database = {
           max_wristbands_total?: number | null
           min_work_hours_for_partout?: number | null
           notes?: string | null
-          operating_entity?: string | null
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           payment_method_cashless?: boolean | null
-          payment_status?: string | null
-          payment_terms?: string | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
           power_in_contract?: string | null
@@ -1627,6 +1615,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["concept_id"]
+          },
+        ]
+      }
+      festival_contracts_finance: {
+        Row: {
+          contract_id: string
+          counterparty: string | null
+          created_at: string | null
+          cvr: string | null
+          id: string
+          notes: string | null
+          operating_entity: string | null
+          payment_amount: number | null
+          payment_currency: string | null
+          payment_due_at: string | null
+          payment_status: string | null
+          payment_terms: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contract_id: string
+          counterparty?: string | null
+          created_at?: string | null
+          cvr?: string | null
+          id?: string
+          notes?: string | null
+          operating_entity?: string | null
+          payment_amount?: number | null
+          payment_currency?: string | null
+          payment_due_at?: string | null
+          payment_status?: string | null
+          payment_terms?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contract_id?: string
+          counterparty?: string | null
+          created_at?: string | null
+          cvr?: string | null
+          id?: string
+          notes?: string | null
+          operating_entity?: string | null
+          payment_amount?: number | null
+          payment_currency?: string | null
+          payment_due_at?: string | null
+          payment_status?: string | null
+          payment_terms?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_contracts_finance_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
           },
         ]
       }
