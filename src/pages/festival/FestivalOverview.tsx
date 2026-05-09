@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AttentionSummaryWidget } from "@/components/attention/AttentionSummaryWidget";
 import { FestivalActionItemsStrip } from "@/components/attention/FestivalActionItemsStrip";
+import { FestivalQuestionsStrip } from "@/components/attention/FestivalQuestionsStrip";
 import { ConceptCardGrid } from "@/components/concept/ConceptCardGrid";
 import { ConceptExportMenu } from "@/components/concept/ConceptExportMenu";
 import { CONCEPT_EMOJI, ConceptSlug, CONCEPT_LABELS } from "@/components/concept/types";
@@ -586,6 +587,7 @@ export default function FestivalOverview() {
 
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
+      {festivalId && <FestivalQuestionsStrip festivalId={festivalId} slug={slug} />}
       <AttentionSummaryWidget festivalSlug={slug} />
 
       {/* BLOCK 3 — key dates */}

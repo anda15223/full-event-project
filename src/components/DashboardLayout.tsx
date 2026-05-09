@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,7 @@ const navItems: { icon: typeof LayoutDashboard; label: string; path: string; col
   { icon: Target, label: "Actions", path: "/actions" },
   { icon: AlertTriangle, label: "Attention", path: "/attention" },
   { icon: Contact, label: "Contacts", path: "/contacts" },
+  { icon: HelpCircle, label: "Questions", path: "/questions" },
 ];
 
 function SidebarNav() {
@@ -35,6 +36,22 @@ function SidebarNav() {
       const { data, error } = await (supabase as any).from("v_attention_summary").select("total_count");
       if (error) return 0;
       return ((data ?? []) as AttentionSummary[]).reduce((s, r) => s + (r.total_count ?? 0), 0);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: questionsBadge = 0 } = useQuery({
+    queryKey: ["questions-sidebar-badge"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await (supabase as any).from("festival_open_questions")
+        .select("id, deadline, priority, status")
+        .eq("status", "open");
+      return ((data ?? []) as any[]).filter((q) => {
+        if (q.priority === "critical") return true;
+        if (q.deadline && q.deadline < today) return true;
+        return false;
+      }).length;
     },
     refetchOnWindowFocus: true,
   });
@@ -81,6 +98,7 @@ function SidebarNav() {
             const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
             const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
             const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
+            const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -94,6 +112,7 @@ function SidebarNav() {
                       {item.color && <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${item.color} border-2 border-white`} />}
                       {showAttentionDot && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                       {showActionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-500 border-2 border-white" />}
+                      {showQuestionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
@@ -106,6 +125,11 @@ function SidebarNav() {
                         {item.path === "/actions" && actionsBadge > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-300">
                             {actionsBadge}
+                          </span>
+                        )}
+                        {item.path === "/questions" && questionsBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                            {questionsBadge}
                           </span>
                         )}
                       </span>

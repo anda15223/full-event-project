@@ -2754,9 +2754,14 @@ export type Database = {
       }
       festival_open_questions: {
         Row: {
+          blocking_what: string | null
           concept_id: string | null
           context: string | null
+          contract_id: string | null
           created_at: string | null
+          deadline: string | null
+          decision_owner: string | null
+          escalated_at: string | null
           festival_id: string
           id: string
           priority: string | null
@@ -2765,14 +2770,21 @@ export type Database = {
           raised_by: string | null
           raised_date: string | null
           resolution: string | null
+          resolved_at: string | null
           resolved_date: string | null
+          show_on_overview: boolean
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          blocking_what?: string | null
           concept_id?: string | null
           context?: string | null
+          contract_id?: string | null
           created_at?: string | null
+          deadline?: string | null
+          decision_owner?: string | null
+          escalated_at?: string | null
           festival_id: string
           id?: string
           priority?: string | null
@@ -2781,14 +2793,21 @@ export type Database = {
           raised_by?: string | null
           raised_date?: string | null
           resolution?: string | null
+          resolved_at?: string | null
           resolved_date?: string | null
+          show_on_overview?: boolean
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          blocking_what?: string | null
           concept_id?: string | null
           context?: string | null
+          contract_id?: string | null
           created_at?: string | null
+          deadline?: string | null
+          decision_owner?: string | null
+          escalated_at?: string | null
           festival_id?: string
           id?: string
           priority?: string | null
@@ -2797,7 +2816,9 @@ export type Database = {
           raised_by?: string | null
           raised_date?: string | null
           resolution?: string | null
+          resolved_at?: string | null
           resolved_date?: string | null
+          show_on_overview?: boolean
           status?: string | null
           updated_at?: string | null
         }
@@ -2815,6 +2836,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "festival_open_questions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "festival_open_questions_festival_id_fkey"
