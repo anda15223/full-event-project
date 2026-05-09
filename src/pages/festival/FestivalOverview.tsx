@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
+import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 
 // ---------- helpers ----------
 
@@ -603,6 +604,8 @@ export default function FestivalOverview() {
     },
   });
 
+  const tileCounts = useFestivalTileCounts(festivalId);
+
   const topActionsQ = useQuery({
     queryKey: ["festival-action-items", festivalId, "top5"],
     enabled: !!festivalId,
@@ -773,6 +776,36 @@ export default function FestivalOverview() {
                 summary = s.vehicleCount > 0
                   ? `${s.itemCount} items · ${s.vehicleCount} cars`
                   : "Not configured";
+              }
+            } else if (t.key === "topskilt") {
+              const n = tileCounts.topskiltCount;
+              if (typeof n === "number" && n > 0) summary = `${n} sets`;
+            } else if (t.key === "setup") {
+              const n = tileCounts.setupCount;
+              if (typeof n === "number" && n > 0) summary = `${n} phases`;
+            } else if (t.key === "equipment") {
+              const n = tileCounts.equipmentCount;
+              if (typeof n === "number" && n > 0) summary = `${n} items`;
+            } else if (t.key === "facade") {
+              const n = tileCounts.facadeCount;
+              const a = tileCounts.facadeApprovedCount;
+              if (typeof n === "number" && n > 0) {
+                summary = a && a > 0 ? `${n} sets · ${a} printed` : `${n} sets`;
+              }
+            } else if (t.key === "power") {
+              const n = tileCounts.powerCount;
+              const kw = tileCounts.powerTotalKw;
+              if (typeof n === "number" && n > 0) {
+                summary = kw ? `${n} records · ${kw}kW` : `${n} records`;
+              }
+            } else if (t.key === "safety") {
+              const n = tileCounts.safetyTotalCount;
+              if (typeof n === "number" && n > 0) summary = `${n} configured`;
+            } else if (t.key === "accommodation") {
+              const n = tileCounts.accommodationCount;
+              const nights = tileCounts.accommodationNights;
+              if (typeof n === "number" && n > 0) {
+                summary = nights ? `${n} bookings · ${nights} nights` : `${n} bookings`;
               }
             } else if (isComingSoon) {
               summary = <span className="italic">Coming soon</span>;
