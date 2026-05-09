@@ -795,14 +795,18 @@ function ResolveDrawer({
         if (error) throw error;
       }
 
-      // 4. Update contract
+      // 4. Update contract — operating entity is finance-locked, written via finance table
       if (updateContract && question!.contract_id) {
-        const patch: any = {};
-        if (contractEntity) patch.operating_entity = contractEntity;
-        if (contractCvr) patch.operating_entity_cvr = contractCvr;
-        if (contractStatus) patch.contract_status = contractStatus;
-        if (Object.keys(patch).length) {
-          const { error } = await supabase.from("festival_contracts").update(patch).eq("id", question!.contract_id);
+        const publicPatch: any = {};
+        if (contractCvr) publicPatch.operating_entity_cvr = contractCvr;
+        if (contractStatus) publicPatch.contract_status = contractStatus;
+        if (Object.keys(publicPatch).length) {
+          const { error } = await supabase.from("festival_contracts").update(publicPatch).eq("id", question!.contract_id);
+          if (error) throw error;
+        }
+        if (contractEntity) {
+          const { error } = await (supabase as any).from("festival_contracts_finance")
+            .upsert({ contract_id: question!.contract_id, operating_entity: contractEntity }, { onConflict: "contract_id" });
           if (error) throw error;
         }
       }
