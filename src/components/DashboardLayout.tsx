@@ -148,6 +148,8 @@ function SidebarNav() {
             const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
             const showTimelineBadge = item.path === "/timeline" && timelineBadge > 0;
             const showContractsBadge = item.path === "/contracts-overview" && contractsBadge > 0;
+            const todayBadge = actionsBadge + questionsBadge;
+            const showTodayBadge = item.path === "/" && todayBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
