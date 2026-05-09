@@ -506,15 +506,17 @@ function ActionRow({
 
   return (
     <div id={`fa-item-${item.id}`}
-      className={cn("group rounded-lg border bg-card p-3 hover:shadow-sm transition-all flex gap-3 items-start",
-      item.status === "done" && "opacity-60")}>
-      <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", PRIORITY_DOT[item.priority])} title={item.priority} />
-
+      className={cn(
+        "group rounded-lg border border-gray-200 dark:border-border bg-card shadow-sm p-3 pl-3.5 hover:shadow-md hover:border-gray-300 dark:hover:border-border/80 transition-all flex gap-3 items-start",
+        PRIORITY_BORDER[item.priority],
+        item.priority === "critical" && "bg-red-50/40 dark:bg-red-500/5",
+        item.status === "done" && "opacity-60",
+      )}>
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{item.title}</span>
+              <span className={cn("text-sm", item.priority === "critical" ? "font-semibold text-foreground" : "font-medium")}>{item.title}</span>
               {isOverdue && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">🚨 OVERDUE</Badge>}
               {isSnoozed && <Badge variant="outline" className="text-[10px] px-1.5 py-0"><AlarmClock className="h-2.5 w-2.5 mr-0.5" />Snoozed</Badge>}
             </div>
