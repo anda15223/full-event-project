@@ -158,9 +158,10 @@ function OverviewPage({ data }: { data: BinderData }) {
         <Text style={[s.bold, s.small, { marginBottom: 4 }]}>PRIMARY CONTACTS</Text>
         {primaryContacts.length === 0 && <Text style={[s.small, { color: GRAY }]}>None marked primary.</Text>}
         {primaryContacts.slice(0, 8).map((c: any) => (
-          <Text key={c.id} style={s.small}>
-            {c.role}: {c.full_name}{c.organization ? ` (${c.organization})` : ""} — 📧 {c.email ?? "—"}  📱 {c.phone ?? "—"}
-          </Text>
+          <View key={c.id} style={{ marginBottom: 3 }}>
+            <Text style={s.small}>{N(c.role)}: <Text style={s.bold}>{N(c.full_name)}</Text>{c.organization ? `  (${N(c.organization)})` : ""}</Text>
+            <Text style={[s.small, { color: GRAY }]}>Email: {N(c.email) || "\u2014"}    Phone: {N(c.phone) || "\u2014"}</Text>
+          </View>
         ))}
       </View>
 
@@ -222,12 +223,12 @@ function ContactsPage({ data }: { data: BinderData }) {
       </View>
       {contacts.map((c: any) => (
         <View key={c.id} style={s.tr} wrap={false}>
-          <Text style={{ width: 12 }}>{c.is_primary ? "★" : ""}</Text>
-          <Text style={{ flex: 1 }}>{c.full_name}</Text>
-          <Text style={{ width: 80 }}>{c.role ?? "—"}</Text>
-          <Text style={{ width: 90 }}>{c.organization ?? "—"}</Text>
-          <Text style={{ width: 110 }}>{c.email ?? "—"}</Text>
-          <Text style={{ width: 70 }}>{c.phone ?? "—"}</Text>
+          <Text style={{ width: 12 }}>{c.is_primary ? "\u2605" : ""}</Text>
+          <Text style={{ flex: 1 }}>{N(c.full_name)}</Text>
+          <Text style={{ width: 80 }}>{N(c.role) || "\u2014"}</Text>
+          <Text style={{ width: 90 }}>{N(c.organization) || "\u2014"}</Text>
+          <Text style={{ width: 110 }}>{N(c.email) || "\u2014"}</Text>
+          <Text style={{ width: 70 }}>{N(c.phone) || "\u2014"}</Text>
         </View>
       ))}
       <SectionFooter name="Contacts" festival={festival.name} />
@@ -293,9 +294,10 @@ function ContractsPage({ data }: { data: BinderData }) {
 
 function TransportPage({ data }: { data: BinderData }) {
   const { festival, transport, transportLegs } = data;
+  const vMap = new Map(transport.map((v: any) => [v.id, v]));
   return (
     <Page size="A4" style={s.page} bookmark="Transport" wrap>
-      <SectionHeader title="Transport" meta={`${transport.length} vehicles · ${transportLegs.length} legs`} />
+      <SectionHeader title="Transport" meta={`${transport.length} vehicles \u00b7 ${transportLegs.length} legs`} />
       <Text style={[s.bold, s.small, { marginTop: 4, marginBottom: 4 }]}>VEHICLES</Text>
       <View style={s.th}>
         <Text style={{ flex: 1 }}>Type</Text>
@@ -305,31 +307,37 @@ function TransportPage({ data }: { data: BinderData }) {
       </View>
       {transport.map((v: any) => (
         <View key={v.id} style={s.tr} wrap={false}>
-          <Text style={{ flex: 1 }}>{v.vehicle_type}</Text>
-          <Text style={{ width: 50 }}>{v.capacity ?? "—"}</Text>
-          <Text style={{ width: 60 }}>{v.status ?? "—"}</Text>
+          <Text style={{ flex: 1 }}>{N(v.vehicle_type)}</Text>
+          <Text style={{ width: 50 }}>{v.capacity ?? "\u2014"}</Text>
+          <Text style={{ width: 60 }}>{v.status ?? "\u2014"}</Text>
           <Text style={[{ width: 70 }, v.accreditation_pdf_path ? s.ok : s.warn]}>{v.accreditation_pdf_path ? "uploaded" : "missing"}</Text>
         </View>
       ))}
 
       <Text style={[s.bold, s.small, { marginTop: 10, marginBottom: 4 }]}>LEGS</Text>
       <View style={s.th}>
-        <Text style={{ width: 60 }}>Date</Text>
-        <Text style={{ width: 50 }}>Time</Text>
-        <Text style={{ flex: 1 }}>From → To</Text>
-        <Text style={{ width: 70 }}>Driver</Text>
-        <Text style={{ width: 60 }}>Status</Text>
+        <Text style={{ width: 50 }}>Date</Text>
+        <Text style={{ width: 40 }}>Time</Text>
+        <Text style={{ flex: 1 }}>From \u2192 To</Text>
+        <Text style={{ width: 110 }}>Vehicle</Text>
+        <Text style={{ width: 50 }}>Status</Text>
       </View>
       {transportLegs.length === 0 && <Text style={[s.small, { color: GRAY, marginTop: 4 }]}>No legs scheduled.</Text>}
-      {transportLegs.map((l: any) => (
-        <View key={l.id} style={s.tr} wrap={false}>
-          <Text style={{ width: 60 }}>{fmt(l.leg_date)}</Text>
-          <Text style={{ width: 50 }}>{l.leg_start_time ? String(l.leg_start_time).slice(0, 5) : "—"}</Text>
-          <Text style={{ flex: 1 }}>{l.from_location ?? "—"} → {l.to_location ?? "—"}</Text>
-          <Text style={[{ width: 70 }, !l.driver_name ? s.warn : {}]}>{l.driver_name ?? "TBD"}</Text>
-          <Text style={{ width: 60 }}>{l.status ?? "—"}</Text>
-        </View>
-      ))}
+      {transportLegs.map((l: any) => {
+        const veh: any = vMap.get(l.transport_id) ?? {};
+        const from = N(l.origin) || N(veh.pickup_location) || "TBD";
+        const to = N(l.destination) || N(veh.return_location) || "Festival site";
+        const time = l.leg_start_time ? String(l.leg_start_time).slice(0, 5) : "\u2014";
+        return (
+          <View key={l.id} style={s.tr} wrap={false}>
+            <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
+            <Text style={{ width: 40 }}>{time}</Text>
+            <Text style={{ flex: 1 }}>{from} \u2192 {to}{l.leg_label ? `  \u00b7  ${N(l.leg_label)}` : ""}</Text>
+            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}</Text>
+            <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
+          </View>
+        );
+      })}
       <SectionFooter name="Transport" festival={festival.name} />
     </Page>
   );
@@ -337,22 +345,28 @@ function TransportPage({ data }: { data: BinderData }) {
 
 function TopskiltPage({ data }: { data: BinderData }) {
   const { festival, topskilt, contracts, concepts } = data;
-  const cMap = new Map(concepts.map((c: any) => [c.id, c.name]));
-  const kMap = new Map(contracts.map((k: any) => [k.id, cMap.get(k.concept_id) ?? "—"]));
+  const cMap = new Map<string, any>(concepts.map((c: any) => [c.id, c]));
+  const kMap = new Map<string, any>(contracts.map((k: any) => [k.id, k]));
   return (
-    <Page size="A4" style={s.page} bookmark="Topskilt">
+    <Page size="A4" style={s.page} bookmark="Topskilt" wrap>
       <SectionHeader title="Topskilt" meta={`${topskilt.length} entries`} />
       {topskilt.length === 0 && <Text style={[s.small, { color: GRAY }]}>No topskilt records yet.</Text>}
-      {topskilt.map((t: any) => (
-        <View key={t.id} style={{ marginBottom: 6 }}>
-          <Text style={[s.bold, s.small]}>{kMap.get(t.festival_contract_id) ?? "—"}</Text>
-          <Text style={s.small}>
-            Design: {t.design_status ?? "—"}   ·   Print: {t.print_status ?? "—"}
-            {t.print_deadline ? `   ·   Deadline ${fmt(t.print_deadline)}` : ""}
-          </Text>
-          {t.notes && <Text style={[s.small, { color: GRAY }]}>{t.notes}</Text>}
-        </View>
-      ))}
+      {topskilt.map((t: any) => {
+        const k = kMap.get(t.festival_contract_id) ?? {};
+        const c = cMap.get(k.concept_id) ?? {};
+        const label = `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+        return (
+          <View key={t.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, s.small]}>{label}</Text>
+            <Text style={s.small}>
+              Design: <Text style={s.bold}>{t.design_status ?? "\u2014"}</Text>
+              {t.print_status ? `   \u00b7   Print: ${t.print_status}` : ""}
+              {t.print_deadline ? `   \u00b7   Print deadline: ${fmt(t.print_deadline)}` : ""}
+            </Text>
+            {t.notes && <Text style={[s.small, { color: GRAY }]}>{N(t.notes)}</Text>}
+          </View>
+        );
+      })}
       <SectionFooter name="Topskilt" festival={festival.name} />
     </Page>
   );
