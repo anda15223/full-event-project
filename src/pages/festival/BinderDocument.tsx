@@ -6,12 +6,12 @@ import { normalizeForPdf } from "@/lib/textNormalize";
 
 
 try {
-  // Open Sans via fontsource (jsdelivr) — reliable URLs, full Latin + Latin-Extended coverage
+  // Open Sans via fontsource (jsdelivr) — reliable WOFF URLs, full Latin + Latin-Extended coverage
   Font.register({
     family: "OpenSans",
     fonts: [
-      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-400-normal.ttf", fontWeight: 400 },
-      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-700-normal.ttf", fontWeight: 700 },
+      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-ext-400-normal.woff", fontWeight: 400 },
+      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-ext-700-normal.woff", fontWeight: 700 },
     ],
   });
   Font.registerHyphenationCallback((w) => [w]);
@@ -71,7 +71,7 @@ const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2,
 function SectionFooter({ name, festival }: { name: string; festival: string }) {
   return (
     <View style={s.footer} fixed>
-      <Text>{festival} · {name}</Text>
+      <Text>{N(festival)} / {N(name)}</Text>
       <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
     </View>
   );
@@ -618,8 +618,8 @@ function BackCoverPage({ data }: { data: BinderData }) {
         ))}
       </View>
       <Text style={[s.coverMeta, { marginTop: 24 }]}>Generated for hand-carry to festival site</Text>
-      <Text style={s.coverMeta}>{festival.name} · v1.0</Text>
-      <Text style={s.coverFooter}>The Fish Project · Aegean ApS</Text>
+      <Text style={s.coverMeta}>{N(festival.name)} / v1.0</Text>
+      <Text style={s.coverFooter}>{N("The Fish Project / Aegean ApS")}</Text>
     </Page>
   );
 }
