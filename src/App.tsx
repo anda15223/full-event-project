@@ -21,6 +21,8 @@ import FestivalCooling from "./pages/festival/FestivalCooling";
 import FestivalCoolingExport from "./pages/festival/FestivalCoolingExport";
 import FestivalPower from "./pages/festival/FestivalPower";
 import FestivalPowerExport from "./pages/festival/FestivalPowerExport";
+import FestivalActions from "./pages/festival/FestivalActions";
+import FestivalActionsExport from "./pages/festival/FestivalActionsExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
