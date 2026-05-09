@@ -221,11 +221,11 @@ export function ConceptCardGrid({
                 {(subtitle || verifyQuestion) && (
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                     {subtitle && <span>{subtitle}</span>}
-                    {verifyQuestion && (
+                    {hasFinanceAccess && verifyQuestion && (
                       <VerifyEntityBadge
                         question={verifyQuestion}
                         contractId={row.id}
-                        currentEntity={row.operating_entity}
+                        currentEntity={financeEntity}
                         currentCvr={row.operating_entity_cvr}
                       />
                     )}
