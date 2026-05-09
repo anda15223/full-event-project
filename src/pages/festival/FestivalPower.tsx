@@ -34,6 +34,7 @@ type ContractRow = {
   id: string;
   concept_id: string;
   concept_alias: string | null;
+  assigned_vehicle_id: string | null;
   concept: { slug: ConceptSlug; name: string; display_order: number | null } | null;
 };
 
