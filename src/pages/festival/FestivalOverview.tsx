@@ -604,6 +604,8 @@ export default function FestivalOverview() {
     },
   });
 
+  const tileCounts = useFestivalTileCounts(festivalId);
+
   const topActionsQ = useQuery({
     queryKey: ["festival-action-items", festivalId, "top5"],
     enabled: !!festivalId,
