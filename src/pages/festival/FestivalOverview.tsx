@@ -585,6 +585,7 @@ export default function FestivalOverview() {
       </section>
 
       {/* BLOCK 2 — attention */}
+      {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
       <AttentionSummaryWidget festivalSlug={slug} />
 
       {/* BLOCK 3 — key dates */}
