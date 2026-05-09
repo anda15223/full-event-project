@@ -49,15 +49,21 @@ const PRIORITY_DOT: Record<Priority, string> = {
   medium: "bg-yellow-500",
   low: "bg-muted-foreground/40",
 };
+const PRIORITY_BORDER: Record<Priority, string> = {
+  critical: "border-l-4 border-l-red-500",
+  high: "border-l-4 border-l-orange-400",
+  medium: "border-l-4 border-l-gray-200 dark:border-l-gray-700",
+  low: "border-l-4 border-l-gray-200 dark:border-l-gray-700",
+};
 const PRIORITY_RANK: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 const STATUS_LABEL: Record<Status, string> = {
   open: "Open", in_progress: "In Progress", done: "Done", blocked: "Blocked",
 };
 const STATUS_PILL: Record<Status, string> = {
-  open: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  in_progress: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  done: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  blocked: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  open: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40",
+  in_progress: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40",
+  done: "bg-green-50 text-green-700 border-green-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40",
+  blocked: "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/40",
 };
 const SOURCE_ICON: Record<string, any> = {
   email: Mail, manual: User, contract: FileText, intelligence: Brain, ingestion: Inbox,
