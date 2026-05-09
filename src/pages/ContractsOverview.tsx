@@ -39,9 +39,9 @@ export default function ContractsOverview() {
     queryKey: ["contracts-overview"],
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts").select(
-        "id, festival_id, concept_id, contract_status, operating_entity, contract_value_dkk, contract_signed_date, signing_platform, contract_file_path, counterparty_name, counterparty, concept_alias, sent_to_counterparty_at, stalled_since, stalled_reason, expected_signing_by"
+        "id, festival_id, concept_id, contract_status, contract_value_dkk, contract_signed_date, signing_platform, contract_file_path, counterparty_name, concept_alias, sent_to_counterparty_at, stalled_since, stalled_reason, expected_signing_by"
       );
-      return (data ?? []) as Row[];
+      return ((data ?? []) as any[]).map((r) => ({ ...r, operating_entity: null, counterparty: null })) as Row[];
     },
   });
 
