@@ -312,6 +312,28 @@ export default function CommandPalette() {
             ))}
           </CommandGroup>
         )}
+        {grouped.safety.length > 0 && (
+          <CommandGroup heading="Safety">
+            {grouped.safety.map(i => (
+              <CommandItem key={"sf:" + i.id} value={`safety ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <ShieldAlert className="h-4 w-4 mr-2 text-red-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.accommodations.length > 0 && (
+          <CommandGroup heading="Accommodation">
+            {grouped.accommodations.map(i => (
+              <CommandItem key={"ac:" + i.id} value={`accommodation ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <BedDouble className="h-4 w-4 mr-2 text-indigo-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );
