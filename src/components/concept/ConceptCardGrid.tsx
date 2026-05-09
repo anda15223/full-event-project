@@ -56,19 +56,35 @@ export function ConceptCardGrid({
 }: Props) {
   const qc = useQueryClient();
 
+  const { hasAccess: hasFinanceAccess } = useFinanceAccess();
+
   const contractsQ = useQuery({
     queryKey: ["festival-contracts-grid", festivalId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
         .select(
-          "id, concept_alias, operating_entity, operating_entity_cvr, contract_status, concept_variation_note, stall_count, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
+          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
         )
         .eq("festival_id", festivalId);
       if (error) throw error;
-      return (data ?? []) as unknown as ContractRow[];
+      return (data ?? []).map((r: any) => ({ ...r, operating_entity: null })) as unknown as ContractRow[];
     },
     enabled: !!festivalId,
+  });
+
+  // Finance-locked entity names — only loads for users with finance access (RLS).
+  const financeQ = useQuery({
+    queryKey: ["festival-contracts-finance", festivalId],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("festival_contracts_finance")
+        .select("contract_id, operating_entity");
+      const map = new Map<string, string | null>();
+      (data ?? []).forEach((r: any) => map.set(r.contract_id, r.operating_entity));
+      return map;
+    },
+    enabled: !!festivalId && hasFinanceAccess,
   });
 
   const assignmentsQ = useQuery({
