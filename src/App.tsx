@@ -100,6 +100,10 @@ const App = () => (
             <Route path="/contracts-overview" element={<Protected><ContractsOverview /></Protected>} />
             <Route path="/festivals/:slug/facade" element={<Protected><FestivalFacade /></Protected>} />
             <Route path="/festivals/:slug/facade/export" element={<Protected><FestivalFacadeExport /></Protected>} />
+            <Route path="/festivals/:slug/safety" element={<Protected><FestivalSafety /></Protected>} />
+            <Route path="/festivals/:slug/safety/export" element={<Protected><FestivalSafetyExport /></Protected>} />
+            <Route path="/festivals/:slug/accommodation" element={<Protected><FestivalAccommodation /></Protected>} />
+            <Route path="/festivals/:slug/accommodation/export" element={<Protected><FestivalAccommodationExport /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
