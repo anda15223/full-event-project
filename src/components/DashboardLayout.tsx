@@ -27,6 +27,7 @@ const navItems: { icon: typeof LayoutDashboard; label: string; path: string; col
   { icon: ScrollText, label: "Rules", path: "/rules" },
   { icon: Calendar, label: "Timeline", path: "/timeline" },
   { icon: FileSignature, label: "Contracts", path: "/contracts-overview" },
+  { icon: Inbox, label: "Ingest", path: "/ingest" },
 ];
 
 function SidebarNav() {
