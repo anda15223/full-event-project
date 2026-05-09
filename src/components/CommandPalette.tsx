@@ -126,8 +126,16 @@ export default function CommandPalette() {
         to: `/rules?q=${encodeURIComponent(r.rule_name)}`,
       });
     }
+    for (const t of timelineEvents as any[]) {
+      const f = fById.get(t.festival_id);
+      list.push({
+        id: t.id, type: "timeline", label: t.title,
+        sub: [f?.name, t.event_date].filter(Boolean).join(" · "),
+        to: f ? `/festivals/${f.slug}/timeline?event=${t.id}` : "/timeline",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions, rules]);
+  }, [festivals, contacts, actions, questions, rules, timelineEvents]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
@@ -135,6 +143,7 @@ export default function CommandPalette() {
     actions: items.filter(i => i.type === "action"),
     questions: items.filter(i => i.type === "question"),
     rules: items.filter(i => i.type === "rule"),
+    timeline: items.filter(i => i.type === "timeline"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
