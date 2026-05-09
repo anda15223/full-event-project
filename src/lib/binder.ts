@@ -157,6 +157,7 @@ export const BINDER_SECTIONS = [
   { key: "cooling", label: "Cooling" },
   { key: "safety", label: "Safety" },
   { key: "accommodation", label: "Accommodation" },
+  { key: "soborg_loading", label: "Søborg Loading Manifest" },
   { key: "questions", label: "Open Questions" },
   { key: "rules", label: "Active Rules" },
 ] as const;
