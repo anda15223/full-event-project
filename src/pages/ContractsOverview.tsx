@@ -306,7 +306,9 @@ export default function ContractsOverview() {
                       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: c?.color_hex ?? "hsl(var(--muted-foreground))" }} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate"><b>{c?.name ?? "?"}</b>{r.concept_alias && <span className="text-muted-foreground"> · {r.concept_alias}</span>} <span className="text-muted-foreground">@ {f?.name}</span></div>
-                        <div className="text-[11px] text-muted-foreground truncate">{r.operating_entity ?? "—"} · {r.counterparty_name ?? r.counterparty ?? "—"}</div>
+                        {hasFinanceAccess && (
+                          <div className="text-[11px] text-muted-foreground truncate">{r.operating_entity ?? "—"} · {r.counterparty_name ?? r.counterparty ?? "—"}</div>
+                        )}
                       </div>
                       <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border", STATUS_META[r.contract_status].chipClass)}>
                         {STATUS_META[r.contract_status].emoji}{STATUS_META[r.contract_status].label}
