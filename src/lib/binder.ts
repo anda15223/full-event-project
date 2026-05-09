@@ -26,6 +26,7 @@ export type BinderData = {
   staff: any[];
   facade: any[];
   power: any[];
+  powerEquipment: any[];
   cooling: any[];
   coolingAssignments: any[];
   safety: any | null;
@@ -88,15 +89,24 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
     contractIds.length
       ? sb.from("festival_power").select("*").in("festival_contract_id", contractIds)
       : Promise.resolve({ data: [] }),
-    sb.from("festival_cooling_unit").select("*").eq("festival_id", fid).order("created_at"),
+    sb.from("festival_cooling_unit")
+      .select("id, festival_id, unit_label, cooling_model, container_type, container_count, supplier, delivery_date, pickup_date, status, cost_dkk, notes, pallet_count_kol, pallet_count_frys")
+      .eq("festival_id", fid).order("created_at"),
     contractIds.length
       ? sb.from("festival_cooling_unit_concepts").select("cooling_unit_id, festival_contract_id").in("festival_contract_id", contractIds)
       : Promise.resolve({ data: [] }),
-    // Topskilt — try table; fall back to empty
     contractIds.length
-      ? sb.from("festival_topskilt").select("*").in("festival_contract_id", contractIds).then((r: any) => ({ data: r.data ?? [] }), () => ({ data: [] }))
+      ? sb.from("festival_topskilt").select("*").in("festival_contract_id", contractIds)
       : Promise.resolve({ data: [] }),
   ]);
+
+  // Power equipment — second hop, keyed by festival_power.id
+  const powerIds = (powerRes.data ?? []).map((p: any) => p.id);
+  const peRes = powerIds.length
+    ? await sb.from("festival_power_equipment")
+        .select("id, festival_power_id, equipment_name, quantity, power_type, power_kw, is_shared, notes, position")
+        .in("festival_power_id", powerIds).order("position")
+    : { data: [] };
 
   const actionItems = (actionsRes.data ?? []) as any[];
   const overdueCount = actionItems.filter((a) => a.status !== "done" && a.status !== "closed" && a.due_date && a.due_date < today).length;
@@ -116,6 +126,7 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
     staff: staffRes.data ?? [],
     facade: facadeRes.data ?? [],
     power: powerRes.data ?? [],
+    powerEquipment: peRes.data ?? [],
     cooling: coolingRes.data ?? [],
     coolingAssignments: coolingAssignRes.data ?? [],
     safety: safetyRes.data ?? null,
