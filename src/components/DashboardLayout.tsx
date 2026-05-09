@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature, Home, Inbox,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature, Home,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,7 +27,7 @@ const navItems: { icon: typeof LayoutDashboard; label: string; path: string; col
   { icon: ScrollText, label: "Rules", path: "/rules" },
   { icon: Calendar, label: "Timeline", path: "/timeline" },
   { icon: FileSignature, label: "Contracts", path: "/contracts-overview" },
-  { icon: Inbox, label: "Ingest", path: "/ingest" },
+  
 ];
 
 function SidebarNav() {
@@ -120,15 +120,6 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
-  const { data: ingestBadge = 0 } = useQuery({
-    queryKey: ["ingest-sidebar-badge"],
-    queryFn: async () => {
-      const { count } = await (supabase as any).from("intelligence_ingestion")
-        .select("id", { count: "exact", head: true }).eq("status", "parsed");
-      return count ?? 0;
-    },
-    refetchOnWindowFocus: true,
-  });
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
@@ -159,7 +150,7 @@ function SidebarNav() {
             const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
             const showTimelineBadge = item.path === "/timeline" && timelineBadge > 0;
             const showContractsBadge = item.path === "/contracts-overview" && contractsBadge > 0;
-            const showIngestBadge = item.path === "/ingest" && ingestBadge > 0;
+            
             const todayBadge = actionsBadge + questionsBadge;
             const showTodayBadge = item.path === "/" && todayBadge > 0;
             return (
@@ -179,7 +170,7 @@ function SidebarNav() {
                       {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                       {showTimelineBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border-2 border-white" />}
                       {showContractsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
-                      {showIngestBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-purple-500 border-2 border-white" />}
+                      
                       {showTodayBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                     </div>
                     {!collapsed && (
@@ -218,11 +209,6 @@ function SidebarNav() {
                         {item.path === "/contracts-overview" && contractsBadge > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-700 dark:text-red-300">
                             {contractsBadge}
-                          </span>
-                        )}
-                        {item.path === "/ingest" && ingestBadge > 0 && (
-                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300">
-                            {ingestBadge}
                           </span>
                         )}
                       </span>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatDateRange } from "@/lib/dateFormat";
 import {
   AlertOctagon, CalendarClock, Flame, CheckCircle2, ArrowRight, Tent,
-  Plus, HelpCircle, Contact as ContactIcon, Inbox, Sparkles,
+  Plus, HelpCircle, Contact as ContactIcon, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -341,9 +341,6 @@ export default function DashboardHome() {
         </Button>
         <Button size="sm" variant="ghost" className="rounded-full h-8" onClick={() => navigate("/contacts")}>
           <ContactIcon className="h-3.5 w-3.5 mr-1" /> Contact
-        </Button>
-        <Button size="sm" variant="ghost" className="rounded-full h-8 opacity-50 cursor-not-allowed" disabled title="Coming next">
-          <Inbox className="h-3.5 w-3.5 mr-1" /> Ingest
         </Button>
       </div>
     </div>

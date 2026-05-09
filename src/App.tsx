@@ -49,9 +49,6 @@ import FestivalSafety from "./pages/festival/FestivalSafety";
 import FestivalSafetyExport from "./pages/festival/FestivalSafetyExport";
 import FestivalAccommodation from "./pages/festival/FestivalAccommodation";
 import FestivalAccommodationExport from "./pages/festival/FestivalAccommodationExport";
-import IngestDropzone from "./pages/IngestDropzone";
-import IngestReview from "./pages/IngestReview";
-import IngestInbox from "./pages/IngestInbox";
 
 const queryClient = new QueryClient();
 
@@ -110,9 +107,6 @@ const App = () => (
             <Route path="/festivals/:slug/safety/export" element={<Protected><FestivalSafetyExport /></Protected>} />
             <Route path="/festivals/:slug/accommodation" element={<Protected><FestivalAccommodation /></Protected>} />
             <Route path="/festivals/:slug/accommodation/export" element={<Protected><FestivalAccommodationExport /></Protected>} />
-            <Route path="/ingest" element={<Protected><IngestDropzone /></Protected>} />
-            <Route path="/ingest/inbox" element={<Protected><IngestInbox /></Protected>} />
-            <Route path="/ingest/:id" element={<Protected><IngestReview /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

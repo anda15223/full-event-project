@@ -6200,10 +6200,6 @@ export type Database = {
       }
     }
     Functions: {
-      apply_ingestion: {
-        Args: { p_id: string; p_updates: Json }
-        Returns: Json
-      }
       get_active_rules_for_festival: {
         Args: { festival_slug: string }
         Returns: Json
