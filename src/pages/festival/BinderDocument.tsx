@@ -2,8 +2,11 @@ import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/rendere
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
 import { formatDateRange } from "@/lib/dateFormat";
+import { normalizeForPdf } from "@/lib/textNormalize";
+import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 
 try {
+  // Open Sans (Latin + Latin-Extended) — covers Danish/Romanian + arrow glyph U+2192
   Font.register({
     family: "OpenSans",
     fonts: [
@@ -13,6 +16,10 @@ try {
   });
   Font.registerHyphenationCallback((w) => [w]);
 } catch {}
+
+const N = normalizeForPdf;
+const emojiFor = (slug?: string | null) =>
+  slug && (CONCEPT_EMOJI as any)[slug] ? (CONCEPT_EMOJI as any)[slug] as string : "";
 
 const RED = "#c0392b";
 const GREEN = "#27ae60";
@@ -151,9 +158,10 @@ function OverviewPage({ data }: { data: BinderData }) {
         <Text style={[s.bold, s.small, { marginBottom: 4 }]}>PRIMARY CONTACTS</Text>
         {primaryContacts.length === 0 && <Text style={[s.small, { color: GRAY }]}>None marked primary.</Text>}
         {primaryContacts.slice(0, 8).map((c: any) => (
-          <Text key={c.id} style={s.small}>
-            {c.role}: {c.full_name}{c.organization ? ` (${c.organization})` : ""} — 📧 {c.email ?? "—"}  📱 {c.phone ?? "—"}
-          </Text>
+          <View key={c.id} style={{ marginBottom: 3 }}>
+            <Text style={s.small}>{N(c.role)}: <Text style={s.bold}>{N(c.full_name)}</Text>{c.organization ? `  (${N(c.organization)})` : ""}</Text>
+            <Text style={[s.small, { color: GRAY }]}>Email: {N(c.email) || "\u2014"}    Phone: {N(c.phone) || "\u2014"}</Text>
+          </View>
         ))}
       </View>
 
@@ -215,12 +223,12 @@ function ContactsPage({ data }: { data: BinderData }) {
       </View>
       {contacts.map((c: any) => (
         <View key={c.id} style={s.tr} wrap={false}>
-          <Text style={{ width: 12 }}>{c.is_primary ? "★" : ""}</Text>
-          <Text style={{ flex: 1 }}>{c.full_name}</Text>
-          <Text style={{ width: 80 }}>{c.role ?? "—"}</Text>
-          <Text style={{ width: 90 }}>{c.organization ?? "—"}</Text>
-          <Text style={{ width: 110 }}>{c.email ?? "—"}</Text>
-          <Text style={{ width: 70 }}>{c.phone ?? "—"}</Text>
+          <Text style={{ width: 12 }}>{c.is_primary ? "\u2605" : ""}</Text>
+          <Text style={{ flex: 1 }}>{N(c.full_name)}</Text>
+          <Text style={{ width: 80 }}>{N(c.role) || "\u2014"}</Text>
+          <Text style={{ width: 90 }}>{N(c.organization) || "\u2014"}</Text>
+          <Text style={{ width: 110 }}>{N(c.email) || "\u2014"}</Text>
+          <Text style={{ width: 70 }}>{N(c.phone) || "\u2014"}</Text>
         </View>
       ))}
       <SectionFooter name="Contacts" festival={festival.name} />
@@ -286,9 +294,10 @@ function ContractsPage({ data }: { data: BinderData }) {
 
 function TransportPage({ data }: { data: BinderData }) {
   const { festival, transport, transportLegs } = data;
+  const vMap = new Map(transport.map((v: any) => [v.id, v]));
   return (
     <Page size="A4" style={s.page} bookmark="Transport" wrap>
-      <SectionHeader title="Transport" meta={`${transport.length} vehicles · ${transportLegs.length} legs`} />
+      <SectionHeader title="Transport" meta={`${transport.length} vehicles \u00b7 ${transportLegs.length} legs`} />
       <Text style={[s.bold, s.small, { marginTop: 4, marginBottom: 4 }]}>VEHICLES</Text>
       <View style={s.th}>
         <Text style={{ flex: 1 }}>Type</Text>
@@ -298,31 +307,37 @@ function TransportPage({ data }: { data: BinderData }) {
       </View>
       {transport.map((v: any) => (
         <View key={v.id} style={s.tr} wrap={false}>
-          <Text style={{ flex: 1 }}>{v.vehicle_type}</Text>
-          <Text style={{ width: 50 }}>{v.capacity ?? "—"}</Text>
-          <Text style={{ width: 60 }}>{v.status ?? "—"}</Text>
+          <Text style={{ flex: 1 }}>{N(v.vehicle_type)}</Text>
+          <Text style={{ width: 50 }}>{v.capacity ?? "\u2014"}</Text>
+          <Text style={{ width: 60 }}>{v.status ?? "\u2014"}</Text>
           <Text style={[{ width: 70 }, v.accreditation_pdf_path ? s.ok : s.warn]}>{v.accreditation_pdf_path ? "uploaded" : "missing"}</Text>
         </View>
       ))}
 
       <Text style={[s.bold, s.small, { marginTop: 10, marginBottom: 4 }]}>LEGS</Text>
       <View style={s.th}>
-        <Text style={{ width: 60 }}>Date</Text>
-        <Text style={{ width: 50 }}>Time</Text>
-        <Text style={{ flex: 1 }}>From → To</Text>
-        <Text style={{ width: 70 }}>Driver</Text>
-        <Text style={{ width: 60 }}>Status</Text>
+        <Text style={{ width: 50 }}>Date</Text>
+        <Text style={{ width: 40 }}>Time</Text>
+        <Text style={{ flex: 1 }}>From \u2192 To</Text>
+        <Text style={{ width: 110 }}>Vehicle</Text>
+        <Text style={{ width: 50 }}>Status</Text>
       </View>
       {transportLegs.length === 0 && <Text style={[s.small, { color: GRAY, marginTop: 4 }]}>No legs scheduled.</Text>}
-      {transportLegs.map((l: any) => (
-        <View key={l.id} style={s.tr} wrap={false}>
-          <Text style={{ width: 60 }}>{fmt(l.leg_date)}</Text>
-          <Text style={{ width: 50 }}>{l.leg_start_time ? String(l.leg_start_time).slice(0, 5) : "—"}</Text>
-          <Text style={{ flex: 1 }}>{l.from_location ?? "—"} → {l.to_location ?? "—"}</Text>
-          <Text style={[{ width: 70 }, !l.driver_name ? s.warn : {}]}>{l.driver_name ?? "TBD"}</Text>
-          <Text style={{ width: 60 }}>{l.status ?? "—"}</Text>
-        </View>
-      ))}
+      {transportLegs.map((l: any) => {
+        const veh: any = vMap.get(l.transport_id) ?? {};
+        const from = N(l.origin) || N(veh.pickup_location) || "TBD";
+        const to = N(l.destination) || N(veh.return_location) || "Festival site";
+        const time = l.leg_start_time ? String(l.leg_start_time).slice(0, 5) : "\u2014";
+        return (
+          <View key={l.id} style={s.tr} wrap={false}>
+            <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
+            <Text style={{ width: 40 }}>{time}</Text>
+            <Text style={{ flex: 1 }}>{from} \u2192 {to}{l.leg_label ? `  \u00b7  ${N(l.leg_label)}` : ""}</Text>
+            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}</Text>
+            <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
+          </View>
+        );
+      })}
       <SectionFooter name="Transport" festival={festival.name} />
     </Page>
   );
@@ -330,22 +345,28 @@ function TransportPage({ data }: { data: BinderData }) {
 
 function TopskiltPage({ data }: { data: BinderData }) {
   const { festival, topskilt, contracts, concepts } = data;
-  const cMap = new Map(concepts.map((c: any) => [c.id, c.name]));
-  const kMap = new Map(contracts.map((k: any) => [k.id, cMap.get(k.concept_id) ?? "—"]));
+  const cMap = new Map<string, any>(concepts.map((c: any) => [c.id, c]));
+  const kMap = new Map<string, any>(contracts.map((k: any) => [k.id, k]));
   return (
-    <Page size="A4" style={s.page} bookmark="Topskilt">
+    <Page size="A4" style={s.page} bookmark="Topskilt" wrap>
       <SectionHeader title="Topskilt" meta={`${topskilt.length} entries`} />
       {topskilt.length === 0 && <Text style={[s.small, { color: GRAY }]}>No topskilt records yet.</Text>}
-      {topskilt.map((t: any) => (
-        <View key={t.id} style={{ marginBottom: 6 }}>
-          <Text style={[s.bold, s.small]}>{kMap.get(t.festival_contract_id) ?? "—"}</Text>
-          <Text style={s.small}>
-            Design: {t.design_status ?? "—"}   ·   Print: {t.print_status ?? "—"}
-            {t.print_deadline ? `   ·   Deadline ${fmt(t.print_deadline)}` : ""}
-          </Text>
-          {t.notes && <Text style={[s.small, { color: GRAY }]}>{t.notes}</Text>}
-        </View>
-      ))}
+      {topskilt.map((t: any) => {
+        const k = kMap.get(t.festival_contract_id) ?? {};
+        const c = cMap.get(k.concept_id) ?? {};
+        const label = `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+        return (
+          <View key={t.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, s.small]}>{label}</Text>
+            <Text style={s.small}>
+              Design: <Text style={s.bold}>{t.design_status ?? "\u2014"}</Text>
+              {t.print_status ? `   \u00b7   Print: ${t.print_status}` : ""}
+              {t.print_deadline ? `   \u00b7   Print deadline: ${fmt(t.print_deadline)}` : ""}
+            </Text>
+            {t.notes && <Text style={[s.small, { color: GRAY }]}>{N(t.notes)}</Text>}
+          </View>
+        );
+      })}
       <SectionFooter name="Topskilt" festival={festival.name} />
     </Page>
   );
@@ -377,29 +398,66 @@ function FacadePage({ data }: { data: BinderData }) {
 }
 
 function PowerPage({ data }: { data: BinderData }) {
-  const { festival, power, contracts, concepts } = data;
-  const cMap = new Map(concepts.map((c: any) => [c.id, c.name]));
-  const kMap = new Map(contracts.map((k: any) => [k.id, cMap.get(k.concept_id) ?? "—"]));
+  const { festival, power, powerEquipment, contracts, concepts } = data;
+  const cMap = new Map<string, any>(concepts.map((c: any) => [c.id, c]));
+  const kMap = new Map<string, any>(contracts.map((k: any) => [k.id, k]));
+  // Group equipment by festival_power_id
+  const eqByPower = new Map<string, any[]>();
+  (powerEquipment ?? []).forEach((e: any) => {
+    const arr = eqByPower.get(e.festival_power_id) ?? [];
+    arr.push(e);
+    eqByPower.set(e.festival_power_id, arr);
+  });
+
   return (
     <Page size="A4" style={s.page} bookmark="Power" wrap>
-      <SectionHeader title="Power" meta={`${power.length} entries`} />
-      <View style={s.th}>
-        <Text style={{ flex: 1 }}>Concept</Text>
-        <Text style={{ width: 60 }}>Need (A)</Text>
-        <Text style={{ width: 60 }}>Allocated</Text>
-        <Text style={{ width: 60 }}>Phase</Text>
-        <Text style={{ width: 60 }}>Status</Text>
-      </View>
+      <SectionHeader title="Power" meta={`${power.length} concepts \u00b7 ${powerEquipment.length} equipment items`} />
       {power.length === 0 && <Text style={[s.small, { color: GRAY, marginTop: 4 }]}>No power records.</Text>}
-      {power.map((p: any) => (
-        <View key={p.id} style={s.tr} wrap={false}>
-          <Text style={{ flex: 1 }}>{kMap.get(p.festival_contract_id) ?? "—"}</Text>
-          <Text style={{ width: 60 }}>{p.amperage_required ?? p.required_amps ?? "—"}</Text>
-          <Text style={{ width: 60 }}>{p.amperage_allocated ?? p.allocated_amps ?? "—"}</Text>
-          <Text style={{ width: 60 }}>{p.phase ?? "—"}</Text>
-          <Text style={{ width: 60 }}>{p.status ?? "—"}</Text>
-        </View>
-      ))}
+      {power.map((p: any) => {
+        const k = kMap.get(p.festival_contract_id) ?? {};
+        const c = cMap.get(k.concept_id) ?? {};
+        const label = `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+        const eqs = eqByPower.get(p.id) ?? [];
+        const demandKw = eqs.reduce((sum: number, e: any) => sum + (Number(e.power_kw) || 0) * (Number(e.quantity) || 1), 0);
+        const allocKw = Number(p.total_kw_estimate) || 0;
+        const gap = allocKw - demandKw;
+        return (
+          <View key={p.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, s.small]}>{label}{p.tent_location ? `  \u00b7  ${N(p.tent_location)}` : `  \u00b7  ${p.equipment_variant ?? "standalone"}`}</Text>
+            <Text style={s.small}>
+              Status: <Text style={s.bold}>{p.status ?? "\u2014"}</Text>
+              {p.total_kw_estimate ? `   \u00b7   Estimate: ${Number(p.total_kw_estimate).toFixed(1)} kW` : ""}
+              {p.total_amp_estimate ? ` (${p.total_amp_estimate} A)` : ""}
+              {p.submission_deadline ? `   \u00b7   Deadline: ${fmt(p.submission_deadline)}` : ""}
+            </Text>
+            <Text style={s.small}>
+              Connections: 16A/240V \u00d7{p.connections_16a_240v ?? 0}, 16A/400V \u00d7{p.connections_16a_400v ?? 0}, 32A \u00d7{p.connections_32a ?? 0}, 63A \u00d7{p.connections_63a ?? 0}, 125A \u00d7{p.connections_125a ?? 0}
+            </Text>
+            <Text style={[s.small, { marginTop: 2 }]}>Equipment ({eqs.length}):</Text>
+            {eqs.length === 0 && <Text style={[s.small, { color: GRAY, marginLeft: 8 }]}>\u2014 none recorded \u2014</Text>}
+            {eqs.map((e: any) => (
+              <Text key={e.id} style={[s.small, { marginLeft: 8 }]}>
+                \u2022 {e.quantity ?? 1}\u00d7 {N(e.equipment_name)} \u2014 {e.power_type ?? "\u2014"}{e.power_kw ? ` \u2014 ${Number(e.power_kw).toFixed(2)} kW` : ""}{e.is_shared ? "  (shared)" : ""}
+              </Text>
+            ))}
+            {eqs.length > 0 && (
+              <Text style={[s.small, { marginTop: 2 }]}>
+                Total demand: <Text style={s.bold}>{demandKw.toFixed(1)} kW</Text>
+                {allocKw > 0 ? (
+                  <>
+                    {"  \u00b7  Allocated: "}<Text style={s.bold}>{allocKw.toFixed(1)} kW</Text>
+                    {"  \u00b7  "}
+                    <Text style={gap < 0 ? s.warn : gap > 0 ? s.amber : s.ok}>
+                      {gap < 0 ? `SHORT ${(-gap).toFixed(1)} kW` : gap > 0 ? `+${gap.toFixed(1)} kW spare` : "match"}
+                    </Text>
+                  </>
+                ) : null}
+              </Text>
+            )}
+            {p.notes && <Text style={[s.small, { color: GRAY }]}>{N(p.notes)}</Text>}
+          </View>
+        );
+      })}
       <SectionFooter name="Power" festival={festival.name} />
     </Page>
   );
@@ -407,25 +465,36 @@ function PowerPage({ data }: { data: BinderData }) {
 
 function CoolingPage({ data }: { data: BinderData }) {
   const { festival, cooling, coolingAssignments, contracts, concepts } = data;
-  const cMap = new Map(concepts.map((c: any) => [c.id, c.name]));
-  const kMap = new Map(contracts.map((k: any) => [k.id, cMap.get(k.concept_id) ?? "—"]));
+  const cMap = new Map<string, any>(concepts.map((c: any) => [c.id, c]));
+  const kMap = new Map<string, any>(contracts.map((k: any) => [k.id, k]));
   return (
     <Page size="A4" style={s.page} bookmark="Cooling" wrap>
       <SectionHeader title="Cooling" meta={`${cooling.length} units`} />
+      {cooling.length === 0 && <Text style={[s.small, { color: GRAY }]}>No cooling units.</Text>}
       {cooling.map((u: any) => {
         const assigned = coolingAssignments
           .filter((a: any) => a.cooling_unit_id === u.id)
-          .map((a: any) => kMap.get(a.festival_contract_id) ?? "—");
+          .map((a: any) => {
+            const k = kMap.get(a.festival_contract_id) ?? {};
+            const c = cMap.get(k.concept_id) ?? {};
+            return `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+          });
         return (
-          <View key={u.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
-            <Text style={[s.bold, s.small]}>{u.label ?? u.unit_label ?? u.name ?? "Unit"} — {u.unit_type ?? "—"}</Text>
-            <Text style={s.small}>
-              {u.capacity_litres ? `${u.capacity_litres} L` : ""}
-              {u.temperature_target_c ? `   ·   target ${u.temperature_target_c}°C` : ""}
-              {u.status ? `   ·   ${u.status}` : ""}
+          <View key={u.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, s.small]}>
+              {N(u.unit_label) || "Unit"} \u2014 {N(u.cooling_model) || "\u2014"}{u.container_type ? `  (${N(u.container_type)})` : ""} \u2014 {N(u.supplier) || "Supplier TBD"}
             </Text>
-            <Text style={s.small}>Assigned to: {assigned.length ? assigned.join(", ") : "—"}</Text>
-            {u.notes && <Text style={[s.small, { color: GRAY }]}>{u.notes}</Text>}
+            <Text style={s.small}>
+              Delivery: <Text style={s.bold}>{fmt(u.delivery_date)}</Text>
+              {"   \u00b7   "}Pickup: <Text style={s.bold}>{fmt(u.pickup_date)}</Text>
+              {u.status ? `   \u00b7   Status: ${u.status}` : ""}
+              {u.cost_dkk ? `   \u00b7   ${Number(u.cost_dkk).toLocaleString()} DKK` : ""}
+            </Text>
+            {(u.pallet_count_kol || u.pallet_count_frys) && (
+              <Text style={s.small}>Pallets \u2014 chilled: {u.pallet_count_kol ?? 0}, frozen: {u.pallet_count_frys ?? 0}</Text>
+            )}
+            <Text style={s.small}>Assigned to: {assigned.length ? assigned.join(", ") : "\u2014"}</Text>
+            {u.notes && <Text style={[s.small, { color: GRAY }]}>{N(u.notes)}</Text>}
           </View>
         );
       })}
@@ -542,7 +611,7 @@ function BackCoverPage({ data }: { data: BinderData }) {
           <View key={c.id} style={{ marginBottom: 12, padding: 8, border: `1pt solid ${DARK}`, borderRadius: 4 }}>
             <Text style={[s.bold, { fontSize: 12 }]}>{c.full_name} — {c.role}</Text>
             {c.organization && <Text style={s.small}>{c.organization}</Text>}
-            <Text style={s.small}>📱 {c.phone ?? "—"}     📧 {c.email ?? "—"}</Text>
+            <Text style={s.small}>Phone: {N(c.phone) || "\u2014"}     Email: {N(c.email) || "\u2014"}</Text>
           </View>
         ))}
       </View>
