@@ -731,6 +731,8 @@ export type Database = {
         Row: {
           category: string | null
           completed_at: string | null
+          concept_id: string | null
+          contract_id: string | null
           created_at: string | null
           description: string | null
           due_date: string | null
@@ -739,6 +741,9 @@ export type Database = {
           notes: string | null
           owner: string | null
           priority: string | null
+          snoozed_until: string | null
+          source: string | null
+          source_ref: string | null
           status: string | null
           title: string
           updated_at: string | null
@@ -746,6 +751,8 @@ export type Database = {
         Insert: {
           category?: string | null
           completed_at?: string | null
+          concept_id?: string | null
+          contract_id?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
@@ -754,6 +761,9 @@ export type Database = {
           notes?: string | null
           owner?: string | null
           priority?: string | null
+          snoozed_until?: string | null
+          source?: string | null
+          source_ref?: string | null
           status?: string | null
           title: string
           updated_at?: string | null
@@ -761,6 +771,8 @@ export type Database = {
         Update: {
           category?: string | null
           completed_at?: string | null
+          concept_id?: string | null
+          contract_id?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string | null
@@ -769,11 +781,35 @@ export type Database = {
           notes?: string | null
           owner?: string | null
           priority?: string | null
+          snoozed_until?: string | null
+          source?: string | null
+          source_ref?: string | null
           status?: string | null
           title?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "festival_action_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_action_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "festival_action_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "festival_action_items_festival_id_fkey"
             columns: ["festival_id"]
