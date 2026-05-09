@@ -627,6 +627,7 @@ export default function FestivalOverview() {
           </Link>
           <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
         </div>
+      </section>
 
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
