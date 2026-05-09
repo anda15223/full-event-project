@@ -2395,98 +2395,103 @@ export type Database = {
       }
       festival_facade: {
         Row: {
-          concept_id: string
-          created_at: string | null
-          festival_id: string
+          cost_dkk: number | null
+          created_at: string
+          design_concept_note: string | null
+          design_file_path: string | null
+          design_preview_path: string | null
+          design_status: string
+          dimensions_h_cm: number | null
+          dimensions_text: string | null
+          dimensions_w_cm: number | null
+          festival_approval_contact_id: string | null
+          festival_approval_received_at: string | null
+          festival_approval_required: boolean
+          festival_contract_id: string
           id: string
+          installation_notes: string | null
+          material_deadline: string | null
+          material_orders_status: string | null
+          material_supplier: string | null
+          material_type: string | null
           notes: string | null
+          panel_count: number
           print_deadline: string | null
-          status: string | null
-          updated_at: string | null
+          reuse_modifications: string | null
+          reused_from: string | null
+          status_history: Json
+          updated_at: string
         }
         Insert: {
-          concept_id: string
-          created_at?: string | null
-          festival_id: string
+          cost_dkk?: number | null
+          created_at?: string
+          design_concept_note?: string | null
+          design_file_path?: string | null
+          design_preview_path?: string | null
+          design_status?: string
+          dimensions_h_cm?: number | null
+          dimensions_text?: string | null
+          dimensions_w_cm?: number | null
+          festival_approval_contact_id?: string | null
+          festival_approval_received_at?: string | null
+          festival_approval_required?: boolean
+          festival_contract_id: string
           id?: string
+          installation_notes?: string | null
+          material_deadline?: string | null
+          material_orders_status?: string | null
+          material_supplier?: string | null
+          material_type?: string | null
           notes?: string | null
+          panel_count?: number
           print_deadline?: string | null
-          status?: string | null
-          updated_at?: string | null
+          reuse_modifications?: string | null
+          reused_from?: string | null
+          status_history?: Json
+          updated_at?: string
         }
         Update: {
-          concept_id?: string
-          created_at?: string | null
-          festival_id?: string
+          cost_dkk?: number | null
+          created_at?: string
+          design_concept_note?: string | null
+          design_file_path?: string | null
+          design_preview_path?: string | null
+          design_status?: string
+          dimensions_h_cm?: number | null
+          dimensions_text?: string | null
+          dimensions_w_cm?: number | null
+          festival_approval_contact_id?: string | null
+          festival_approval_received_at?: string | null
+          festival_approval_required?: boolean
+          festival_contract_id?: string
           id?: string
+          installation_notes?: string | null
+          material_deadline?: string | null
+          material_orders_status?: string | null
+          material_supplier?: string | null
+          material_type?: string | null
           notes?: string | null
+          panel_count?: number
           print_deadline?: string | null
-          status?: string | null
-          updated_at?: string | null
+          reuse_modifications?: string | null
+          reused_from?: string | null
+          status_history?: Json
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "festival_facade_concept_id_fkey"
-            columns: ["concept_id"]
+            foreignKeyName: "festival_facade_festival_approval_contact_id_fkey"
+            columns: ["festival_approval_contact_id"]
             isOneToOne: false
-            referencedRelation: "concepts"
+            referencedRelation: "festival_contacts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "festival_facade_concept_id_fkey"
-            columns: ["concept_id"]
-            isOneToOne: false
-            referencedRelation: "v_trolley_pack_list"
-            referencedColumns: ["concept_id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "festivals"
+            foreignKeyName: "festival_facade_festival_contract_id_fkey"
+            columns: ["festival_contract_id"]
+            isOneToOne: true
+            referencedRelation: "festival_contracts"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "v_consumables_order_by_supplier"
-            referencedColumns: ["festival_id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "v_cooking_equipment_rentals"
-            referencedColumns: ["festival_id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "v_festival_kpis"
-            referencedColumns: ["festival_id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "v_missing_manual_quantities"
-            referencedColumns: ["festival_id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "v_trolley_order_by_supplier"
-            referencedColumns: ["festival_id"]
-          },
-          {
-            foreignKeyName: "festival_facade_festival_id_fkey"
-            columns: ["festival_id"]
-            isOneToOne: false
-            referencedRelation: "v_trolley_pack_list"
-            referencedColumns: ["festival_id"]
           },
         ]
       }

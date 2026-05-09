@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature, Image as ImageIcon } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract" | "facade";
   label: string;
   sub?: string;
   to: string;
@@ -95,6 +95,16 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: facades = [] } = useQuery({
+    queryKey: ["palette-facades"], enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase.from("festival_facade")
+        .select("id, design_status, festival_contract_id, contract:festival_contracts!festival_contract_id(festival_id, concept_alias, concept:concepts!concept_id(name))")
+        .limit(300);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
@@ -154,8 +164,18 @@ export default function CommandPalette() {
         to: f ? `/festivals/${f.slug}/contracts?contract=${ct.id}` : "/contracts-overview",
       });
     }
+    for (const f2 of facades as any[]) {
+      const ct = (f2 as any).contract;
+      const fest = ct ? fById.get(ct.festival_id) : null;
+      list.push({
+        id: f2.id, type: "facade",
+        label: `Façade — ${ct?.concept?.name ?? "?"}${ct?.concept_alias ? ` ${ct.concept_alias}` : ""} @ ${fest?.name ?? "?"}`,
+        sub: f2.design_status,
+        to: fest ? `/festivals/${fest.slug}/facade` : "/festivals",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts]);
+  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts, facades]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
@@ -165,6 +185,7 @@ export default function CommandPalette() {
     rules: items.filter(i => i.type === "rule"),
     timeline: items.filter(i => i.type === "timeline"),
     contracts: items.filter(i => i.type === "contract"),
+    facades: items.filter(i => i.type === "facade"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
@@ -247,6 +268,17 @@ export default function CommandPalette() {
                 <FileSignature className="h-4 w-4 mr-2 text-primary" />
                 <span className="truncate">{i.label}</span>
                 {i.sub && <span className="ml-auto text-xs text-muted-foreground truncate max-w-[50%]">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.facades.length > 0 && (
+          <CommandGroup heading="Façade">
+            {grouped.facades.map(i => (
+              <CommandItem key={"fc:" + i.id} value={`facade ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <ImageIcon className="h-4 w-4 mr-2 text-pink-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
               </CommandItem>
             ))}
           </CommandGroup>

@@ -42,6 +42,8 @@ import GlobalTimeline from "./pages/GlobalTimeline";
 import FestivalContracts from "./pages/festival/FestivalContracts";
 import FestivalContractsExport from "./pages/festival/FestivalContractsExport";
 import ContractsOverview from "./pages/ContractsOverview";
+import FestivalFacade from "./pages/festival/FestivalFacade";
+import FestivalFacadeExport from "./pages/festival/FestivalFacadeExport";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,8 @@ const App = () => (
             <Route path="/festivals/:slug/contracts" element={<Protected><FestivalContracts /></Protected>} />
             <Route path="/festivals/:slug/contracts/export" element={<Protected><FestivalContractsExport /></Protected>} />
             <Route path="/contracts-overview" element={<Protected><ContractsOverview /></Protected>} />
+            <Route path="/festivals/:slug/facade" element={<Protected><FestivalFacade /></Protected>} />
+            <Route path="/festivals/:slug/facade/export" element={<Protected><FestivalFacadeExport /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
