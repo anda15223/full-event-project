@@ -316,7 +316,7 @@ function TransportPage({ data }: { data: BinderData }) {
       <View style={s.th}>
         <Text style={{ width: 50 }}>Date</Text>
         <Text style={{ width: 40 }}>Time</Text>
-        <Text style={{ flex: 1 }}>{"From -> To"}</Text>
+        <Text style={{ flex: 1 }}>From / To</Text>
         <Text style={{ width: 110 }}>Vehicle</Text>
         <Text style={{ width: 50 }}>Status</Text>
       </View>
