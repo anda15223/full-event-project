@@ -1315,6 +1315,7 @@ export type Database = {
       festival_contracts: {
         Row: {
           allowed_beverages: string | null
+          assigned_vehicle_id: string | null
           br18_facade_compliance_required: boolean | null
           cancelled_reason: string | null
           caravan_allowed: boolean | null
@@ -1390,6 +1391,7 @@ export type Database = {
         }
         Insert: {
           allowed_beverages?: string | null
+          assigned_vehicle_id?: string | null
           br18_facade_compliance_required?: boolean | null
           cancelled_reason?: string | null
           caravan_allowed?: boolean | null
@@ -1465,6 +1467,7 @@ export type Database = {
         }
         Update: {
           allowed_beverages?: string | null
+          assigned_vehicle_id?: string | null
           br18_facade_compliance_required?: boolean | null
           cancelled_reason?: string | null
           caravan_allowed?: boolean | null
@@ -1615,6 +1618,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "fk_fc_vehicle"
+            columns: ["assigned_vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "festival_transport"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3311,7 +3321,6 @@ export type Database = {
       }
       festival_power_equipment: {
         Row: {
-          assigned_vehicle_id: string | null
           category: string
           created_at: string | null
           equipment_name: string
@@ -3331,7 +3340,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          assigned_vehicle_id?: string | null
           category?: string
           created_at?: string | null
           equipment_name: string
@@ -3351,7 +3359,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          assigned_vehicle_id?: string | null
           category?: string
           created_at?: string | null
           equipment_name?: string
@@ -3390,13 +3397,6 @@ export type Database = {
             columns: ["linked_topskilt_id"]
             isOneToOne: false
             referencedRelation: "festival_topskilt"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_fpe_vehicle"
-            columns: ["assigned_vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "festival_transport"
             referencedColumns: ["id"]
           },
         ]
