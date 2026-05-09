@@ -25,7 +25,7 @@ const STATUS_BADGE: Record<string, string> = {
   delayed: "bg-orange-500/10 text-orange-700", cancelled: "bg-destructive/10 text-destructive",
 };
 const TYPE_LABEL: Record<string, string> = {
-  load_soborg: "Load Søborg", drive_to_festival: "Drive", arrival_on_site: "Arrival",
+  load_soborg: "Load Soborg", drive_to_festival: "Drive", arrival_on_site: "Arrival",
   supplier_delivery: "Delivery", setup_start: "Setup start", setup_complete: "Setup done",
   festival_open: "Open", festival_close: "Close", wrap_start: "Wrap start",
   wrap_complete: "Wrap done", drive_return: "Return drive", pickup: "Pickup",

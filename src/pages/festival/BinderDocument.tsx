@@ -603,18 +603,18 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
   const { festival, soborgLoading } = data;
   if (!soborgLoading) {
     return (
-      <Page size="A4" style={s.page} bookmark="Søborg Loading Manifest">
-        <SectionHeader title="Søborg Loading Manifest" />
+      <Page size="A4" style={s.page} bookmark="Soborg Loading Manifest">
+        <SectionHeader title="Soborg Loading Manifest" />
         <Text style={[s.small, { color: GRAY }]}>No loading manifest data.</Text>
-        <SectionFooter name="Søborg Loading" festival={festival.name} />
+        <SectionFooter name="Soborg Loading" festival={festival.name} />
       </Page>
     );
   }
   return (
-    <Page size="A4" style={s.page} bookmark="Søborg Loading Manifest" wrap>
+    <Page size="A4" style={s.page} bookmark="Soborg Loading Manifest" wrap>
       <SectionHeader
-        title="Søborg Loading Manifest"
-        meta={`${soborgLoading.vehicles.length} vehicles · ${soborgLoading.total_items} items loaded from Søborg`}
+        title="Soborg Loading Manifest"
+        meta={`${soborgLoading.vehicles.length} vehicles · ${soborgLoading.total_items} items loaded from Soborg`}
       />
       {soborgLoading.vehicles.map((veh) => (
         <View key={veh.vehicle_id} style={{ marginBottom: 8 }} wrap={false}>
@@ -661,7 +661,7 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
       )}
       {soborgLoading.not_loaded_from_soborg.items.length > 0 && (
         <View style={{ marginTop: 8 }} wrap={false}>
-          <Text style={[s.bold, s.small, { marginBottom: 2 }]}>Delivered on-site (NOT loaded from Søborg)</Text>
+          <Text style={[s.bold, s.small, { marginBottom: 2 }]}>Delivered on-site (NOT loaded from Soborg)</Text>
           {soborgLoading.not_loaded_from_soborg.items.map((u) => (
             <Text key={u.id} style={s.small}>
               • {u.quantity}× {N(u.unit_label)}
@@ -672,7 +672,7 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
           ))}
         </View>
       )}
-      <SectionFooter name="Søborg Loading" festival={festival.name} />
+      <SectionFooter name="Soborg Loading" festival={festival.name} />
     </Page>
   );
 }

@@ -54,7 +54,7 @@ function fmt(iso?: string | null) {
 export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
   const ts = new Date().toLocaleString("en-GB");
   return (
-    <Document title={`${data.festival.name} — Søborg Loading Manifest`} author="Full Event Project">
+    <Document title={`${data.festival.name} — Soborg Loading Manifest`} author="Full Event Project">
       {data.vehicles.map((veh, vi) => (
         <Page key={veh.vehicle_id} size="A4" style={s.page} wrap>
           {vi === 0 && (
