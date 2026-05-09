@@ -435,6 +435,135 @@ export type Database = {
       }
       festival_accommodation: {
         Row: {
+          accommodation_type: Database["public"]["Enums"]["accommodation_type"]
+          address: string | null
+          amenities: string[] | null
+          assigned_staff: string[] | null
+          assigned_staff_count: number | null
+          booking_file_path: string | null
+          booking_made_by: string | null
+          capacity: number | null
+          check_in_date: string | null
+          check_in_time: string | null
+          check_out_date: string | null
+          check_out_time: string | null
+          confirmation_number: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          cost_dkk: number | null
+          created_at: string
+          festival_id: string
+          id: string
+          notes: string | null
+          payment_status: Database["public"]["Enums"]["accommodation_payment_status"]
+          provider_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          accommodation_type?: Database["public"]["Enums"]["accommodation_type"]
+          address?: string | null
+          amenities?: string[] | null
+          assigned_staff?: string[] | null
+          assigned_staff_count?: number | null
+          booking_file_path?: string | null
+          booking_made_by?: string | null
+          capacity?: number | null
+          check_in_date?: string | null
+          check_in_time?: string | null
+          check_out_date?: string | null
+          check_out_time?: string | null
+          confirmation_number?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          cost_dkk?: number | null
+          created_at?: string
+          festival_id: string
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["accommodation_payment_status"]
+          provider_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accommodation_type?: Database["public"]["Enums"]["accommodation_type"]
+          address?: string | null
+          amenities?: string[] | null
+          assigned_staff?: string[] | null
+          assigned_staff_count?: number | null
+          booking_file_path?: string | null
+          booking_made_by?: string | null
+          capacity?: number | null
+          check_in_date?: string | null
+          check_in_time?: string | null
+          check_out_date?: string | null
+          check_out_time?: string | null
+          confirmation_number?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          cost_dkk?: number | null
+          created_at?: string
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          payment_status?: Database["public"]["Enums"]["accommodation_payment_status"]
+          provider_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      festival_accommodation_assignments: {
+        Row: {
+          accommodation_id: string
+          check_in: string | null
+          check_out: string | null
+          created_at: string | null
+          id: string
+          nights: number | null
+          notes: string | null
+          staff_id: string
+        }
+        Insert: {
+          accommodation_id: string
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          id?: string
+          nights?: number | null
+          notes?: string | null
+          staff_id: string
+        }
+        Update: {
+          accommodation_id?: string
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          id?: string
+          nights?: number | null
+          notes?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_accommodation_assignments_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "festival_accommodations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_accommodation_assignments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_accommodation_legacy: {
+        Row: {
           actual_cost_dkk: number | null
           bed_count: number | null
           bed_nights: number | null
@@ -549,54 +678,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
-          },
-        ]
-      }
-      festival_accommodation_assignments: {
-        Row: {
-          accommodation_id: string
-          check_in: string | null
-          check_out: string | null
-          created_at: string | null
-          id: string
-          nights: number | null
-          notes: string | null
-          staff_id: string
-        }
-        Insert: {
-          accommodation_id: string
-          check_in?: string | null
-          check_out?: string | null
-          created_at?: string | null
-          id?: string
-          nights?: number | null
-          notes?: string | null
-          staff_id: string
-        }
-        Update: {
-          accommodation_id?: string
-          check_in?: string | null
-          check_out?: string | null
-          created_at?: string | null
-          id?: string
-          nights?: number | null
-          notes?: string | null
-          staff_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "festival_accommodation_assignments_accommodation_id_fkey"
-            columns: ["accommodation_id"]
-            isOneToOne: false
-            referencedRelation: "festival_accommodations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "festival_accommodation_assignments_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -3320,6 +3401,129 @@ export type Database = {
       }
       festival_safety: {
         Row: {
+          additional_notes: string | null
+          created_at: string
+          electrical_certification_date: string | null
+          electrical_certification_path: string | null
+          electrical_certification_status: Database["public"]["Enums"]["safety_electrical_status"]
+          electrical_certifier: string | null
+          emergency_contacts_text: string | null
+          festival_id: string
+          fire_safety_blanket_count: number | null
+          fire_safety_evacuation_plan_path: string | null
+          fire_safety_extinguishers_count: number | null
+          fire_safety_extinguishers_inspection_date: string | null
+          first_aid_certified_staff_count: number | null
+          first_aid_kit_count: number | null
+          first_aid_kit_locations: string | null
+          first_aid_responsible: string | null
+          food_authority_certificate_path: string | null
+          food_authority_inspection_date: string | null
+          food_authority_lead: string | null
+          food_authority_notes: string | null
+          food_authority_status: Database["public"]["Enums"]["safety_food_status"]
+          gas_safety_certificate_path: string | null
+          gas_safety_date: string | null
+          gas_safety_inspector: string | null
+          gas_safety_notes: string | null
+          gas_safety_required: boolean
+          gas_safety_status: Database["public"]["Enums"]["safety_gas_status"]
+          gas_safety_time: string | null
+          id: string
+          insurance_certificate_path: string | null
+          insurance_coverage_summary: string | null
+          insurance_policy_number: string | null
+          insurance_provider: string | null
+          safety_briefing_attendees: string[] | null
+          safety_briefing_completed: boolean
+          safety_briefing_date: string | null
+          status_history: Json
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          created_at?: string
+          electrical_certification_date?: string | null
+          electrical_certification_path?: string | null
+          electrical_certification_status?: Database["public"]["Enums"]["safety_electrical_status"]
+          electrical_certifier?: string | null
+          emergency_contacts_text?: string | null
+          festival_id: string
+          fire_safety_blanket_count?: number | null
+          fire_safety_evacuation_plan_path?: string | null
+          fire_safety_extinguishers_count?: number | null
+          fire_safety_extinguishers_inspection_date?: string | null
+          first_aid_certified_staff_count?: number | null
+          first_aid_kit_count?: number | null
+          first_aid_kit_locations?: string | null
+          first_aid_responsible?: string | null
+          food_authority_certificate_path?: string | null
+          food_authority_inspection_date?: string | null
+          food_authority_lead?: string | null
+          food_authority_notes?: string | null
+          food_authority_status?: Database["public"]["Enums"]["safety_food_status"]
+          gas_safety_certificate_path?: string | null
+          gas_safety_date?: string | null
+          gas_safety_inspector?: string | null
+          gas_safety_notes?: string | null
+          gas_safety_required?: boolean
+          gas_safety_status?: Database["public"]["Enums"]["safety_gas_status"]
+          gas_safety_time?: string | null
+          id?: string
+          insurance_certificate_path?: string | null
+          insurance_coverage_summary?: string | null
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
+          safety_briefing_attendees?: string[] | null
+          safety_briefing_completed?: boolean
+          safety_briefing_date?: string | null
+          status_history?: Json
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          created_at?: string
+          electrical_certification_date?: string | null
+          electrical_certification_path?: string | null
+          electrical_certification_status?: Database["public"]["Enums"]["safety_electrical_status"]
+          electrical_certifier?: string | null
+          emergency_contacts_text?: string | null
+          festival_id?: string
+          fire_safety_blanket_count?: number | null
+          fire_safety_evacuation_plan_path?: string | null
+          fire_safety_extinguishers_count?: number | null
+          fire_safety_extinguishers_inspection_date?: string | null
+          first_aid_certified_staff_count?: number | null
+          first_aid_kit_count?: number | null
+          first_aid_kit_locations?: string | null
+          first_aid_responsible?: string | null
+          food_authority_certificate_path?: string | null
+          food_authority_inspection_date?: string | null
+          food_authority_lead?: string | null
+          food_authority_notes?: string | null
+          food_authority_status?: Database["public"]["Enums"]["safety_food_status"]
+          gas_safety_certificate_path?: string | null
+          gas_safety_date?: string | null
+          gas_safety_inspector?: string | null
+          gas_safety_notes?: string | null
+          gas_safety_required?: boolean
+          gas_safety_status?: Database["public"]["Enums"]["safety_gas_status"]
+          gas_safety_time?: string | null
+          id?: string
+          insurance_certificate_path?: string | null
+          insurance_coverage_summary?: string | null
+          insurance_policy_number?: string | null
+          insurance_provider?: string | null
+          safety_briefing_attendees?: string[] | null
+          safety_briefing_completed?: boolean
+          safety_briefing_date?: string | null
+          status_history?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      festival_safety_legacy: {
+        Row: {
           created_at: string | null
           festival_id: string
           id: string
@@ -5835,6 +6039,19 @@ export type Database = {
       recalculate_invoice_statuses: { Args: never; Returns: undefined }
     }
     Enums: {
+      accommodation_payment_status:
+        | "not_paid"
+        | "deposit_paid"
+        | "paid_in_full"
+        | "invoiced"
+      accommodation_type:
+        | "festival_camping"
+        | "festival_caravan"
+        | "festival_provided_room"
+        | "hotel"
+        | "airbnb"
+        | "private_house"
+        | "company_van"
       app_role: "admin" | "member"
       contact_type: "festival_organizer" | "operator" | "internal" | "supplier"
       document_category:
@@ -5847,6 +6064,24 @@ export type Database = {
         | "other"
       equipment_source: "by_us" | "by_festival"
       equipment_status: "pending" | "confirmed" | "delivered" | "returned"
+      safety_electrical_status:
+        | "not_required"
+        | "pending"
+        | "certified"
+        | "failed"
+      safety_food_status:
+        | "not_scheduled"
+        | "scheduled"
+        | "passed"
+        | "passed_with_remarks"
+        | "failed"
+        | "not_required"
+      safety_gas_status:
+        | "not_required"
+        | "scheduled"
+        | "passed"
+        | "failed"
+        | "pending_reschedule"
       task_priority: "urgent" | "high" | "normal" | "low"
       task_status: "pending" | "in_progress" | "done"
     }
@@ -5976,6 +6211,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      accommodation_payment_status: [
+        "not_paid",
+        "deposit_paid",
+        "paid_in_full",
+        "invoiced",
+      ],
+      accommodation_type: [
+        "festival_camping",
+        "festival_caravan",
+        "festival_provided_room",
+        "hotel",
+        "airbnb",
+        "private_house",
+        "company_van",
+      ],
       app_role: ["admin", "member"],
       contact_type: ["festival_organizer", "operator", "internal", "supplier"],
       document_category: [
@@ -5989,6 +6239,27 @@ export const Constants = {
       ],
       equipment_source: ["by_us", "by_festival"],
       equipment_status: ["pending", "confirmed", "delivered", "returned"],
+      safety_electrical_status: [
+        "not_required",
+        "pending",
+        "certified",
+        "failed",
+      ],
+      safety_food_status: [
+        "not_scheduled",
+        "scheduled",
+        "passed",
+        "passed_with_remarks",
+        "failed",
+        "not_required",
+      ],
+      safety_gas_status: [
+        "not_required",
+        "scheduled",
+        "passed",
+        "failed",
+        "pending_reschedule",
+      ],
       task_priority: ["urgent", "high", "normal", "low"],
       task_status: ["pending", "in_progress", "done"],
     },

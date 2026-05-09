@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature, Image as ImageIcon } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature, Image as ImageIcon, ShieldAlert, BedDouble } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract" | "facade";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract" | "facade" | "safety" | "accommodation";
   label: string;
   sub?: string;
   to: string;
@@ -105,6 +105,15 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: accommodations = [] } = useQuery({
+    queryKey: ["palette-accommodations"], enabled: open,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("festival_accommodation")
+        .select("id, festival_id, provider_name, accommodation_type, payment_status").limit(300);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
@@ -174,8 +183,26 @@ export default function CommandPalette() {
         to: fest ? `/festivals/${fest.slug}/facade` : "/festivals",
       });
     }
+    // Safety entry per festival
+    for (const fest of festivals as any[]) {
+      list.push({
+        id: `safety:${fest.id}`, type: "safety",
+        label: `Safety — ${fest.name}`,
+        sub: "gas, food, electrical, fire, first aid",
+        to: `/festivals/${fest.slug}/safety`,
+      });
+    }
+    for (const a of accommodations as any[]) {
+      const f = fById.get(a.festival_id);
+      list.push({
+        id: a.id, type: "accommodation",
+        label: `${a.provider_name ?? "Accommodation"} @ ${f?.name ?? "?"}`,
+        sub: [a.accommodation_type, a.payment_status].filter(Boolean).join(" · "),
+        to: f ? `/festivals/${f.slug}/accommodation` : "/festivals",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts, facades]);
+  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts, facades, accommodations]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
@@ -186,6 +213,8 @@ export default function CommandPalette() {
     timeline: items.filter(i => i.type === "timeline"),
     contracts: items.filter(i => i.type === "contract"),
     facades: items.filter(i => i.type === "facade"),
+    safety: items.filter(i => i.type === "safety"),
+    accommodations: items.filter(i => i.type === "accommodation"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
@@ -277,6 +306,28 @@ export default function CommandPalette() {
             {grouped.facades.map(i => (
               <CommandItem key={"fc:" + i.id} value={`facade ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
                 <ImageIcon className="h-4 w-4 mr-2 text-pink-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.safety.length > 0 && (
+          <CommandGroup heading="Safety">
+            {grouped.safety.map(i => (
+              <CommandItem key={"sf:" + i.id} value={`safety ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <ShieldAlert className="h-4 w-4 mr-2 text-red-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.accommodations.length > 0 && (
+          <CommandGroup heading="Accommodation">
+            {grouped.accommodations.map(i => (
+              <CommandItem key={"ac:" + i.id} value={`accommodation ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <BedDouble className="h-4 w-4 mr-2 text-indigo-600" />
                 <span className="truncate">{i.label}</span>
                 {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
               </CommandItem>
