@@ -272,6 +272,17 @@ export default function CommandPalette() {
             ))}
           </CommandGroup>
         )}
+        {grouped.facades.length > 0 && (
+          <CommandGroup heading="Façade">
+            {grouped.facades.map(i => (
+              <CommandItem key={"fc:" + i.id} value={`facade ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <ImageIcon className="h-4 w-4 mr-2 text-pink-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );
