@@ -6,6 +6,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
+import { formatDateRange } from "@/lib/dateFormat";
 
 // Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
 // and middle dots (·) render correctly. Built-in Helvetica only covers
