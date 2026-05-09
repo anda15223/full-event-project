@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract";
   label: string;
   sub?: string;
   to: string;
@@ -85,6 +85,16 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: contracts = [] } = useQuery({
+    queryKey: ["palette-contracts-list"], enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase.from("festival_contracts")
+        .select("id, festival_id, concept_id, contract_status, operating_entity, counterparty_name, counterparty, concept_alias")
+        .limit(300);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
@@ -134,8 +144,18 @@ export default function CommandPalette() {
         to: f ? `/festivals/${f.slug}/timeline?event=${t.id}` : "/timeline",
       });
     }
+    const conceptsMap = new Map<string, any>();
+    for (const ct of contracts as any[]) {
+      const f = fById.get(ct.festival_id);
+      list.push({
+        id: ct.id, type: "contract",
+        label: `${ct.concept_alias ?? "Contract"} @ ${f?.name ?? "?"}`,
+        sub: [ct.contract_status, ct.counterparty_name ?? ct.counterparty, ct.operating_entity].filter(Boolean).join(" · "),
+        to: f ? `/festivals/${f.slug}/contracts?contract=${ct.id}` : "/contracts-overview",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions, rules, timelineEvents]);
+  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
@@ -144,6 +164,7 @@ export default function CommandPalette() {
     questions: items.filter(i => i.type === "question"),
     rules: items.filter(i => i.type === "rule"),
     timeline: items.filter(i => i.type === "timeline"),
+    contracts: items.filter(i => i.type === "contract"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
