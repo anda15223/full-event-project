@@ -145,6 +145,11 @@ function SidebarNav() {
                             {questionsBadge}
                           </span>
                         )}
+                        {item.path === "/rules" && rulesBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-700 dark:text-red-300">
+                            {rulesBadge}
+                          </span>
+                        )}
                       </span>
                     )}
                   </NavLink>
