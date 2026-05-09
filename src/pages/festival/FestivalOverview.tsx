@@ -27,7 +27,6 @@ import {
 } from "lucide-react";
 import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
-import { cn as _cn } from "@/lib/utils";
 
 // ---------- helpers ----------
 
