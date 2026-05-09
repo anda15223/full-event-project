@@ -450,11 +450,13 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
 
       {/* Metadata */}
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
-        <div>
-          <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Counterparty</div>
-          <div className="truncate">{c.counterparty_name ?? c.counterparty ?? "—"}</div>
-          {c.counterparty_cvr && <div className="text-[10px] text-muted-foreground">CVR {c.counterparty_cvr}</div>}
-        </div>
+        {hasFinanceAccess && (
+          <div>
+            <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Counterparty</div>
+            <div className="truncate">{c.counterparty_name ?? c.counterparty ?? "—"}</div>
+            {c.counterparty_cvr && <div className="text-[10px] text-muted-foreground">CVR {c.counterparty_cvr}</div>}
+          </div>
+        )}
         <div>
           <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Signed</div>
           <div>{c.contract_signed_date ?? "—"}{c.signing_platform && <span className="text-muted-foreground"> · {c.signing_platform}</span>}</div>
