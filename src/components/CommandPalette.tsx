@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle, ScrollText } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar } from "lucide-react";
 
 interface Item {
   id: string;
