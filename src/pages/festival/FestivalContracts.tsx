@@ -418,7 +418,9 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
   };
 
   const setPayment = async (status: PaymentStatus) => {
-    const { error } = await supabase.from("festival_contracts").update({ payment_status: status }).eq("id", c.id);
+    // Phase 1: payment_status moved to festival_contracts_finance (RBAC). Update there instead.
+    const { error } = await (supabase as any).from("festival_contracts_finance")
+      .upsert({ contract_id: c.id, payment_status: status }, { onConflict: "contract_id" });
     if (error) toast.error(error.message);
     else { toast.success("Payment status updated"); qc.invalidateQueries({ queryKey: ["festival-contracts"] }); }
   };
