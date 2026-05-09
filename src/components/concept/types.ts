@@ -19,7 +19,7 @@ export interface ConceptManager {
 export const CONCEPT_LABELS: Record<ConceptSlug, string> = {
   'fish-chips': 'Fish & Chips',
   'gyros': 'Gyropolis Gyros',
-  'creperie': 'La Crêperie',
+  'creperie': 'La Creperie',
   'chicks': "Chicks 'n' Buns",
 };
 

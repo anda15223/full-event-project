@@ -24,12 +24,24 @@ export function normalizeForPdf(text: string | null | undefined): string {
     .replace(/[\u2018\u2019\u201A\u201B`]/g, "'") // curly + backtick → straight
     .replace(/[\u201C\u201D\u201E\u201F]/g, '"');
 
+  // Strip Romance-language diacritics. Open Sans drops these glyphs.
+  // KEEP Danish characters (æ Æ ø Ø å Å) — real names depend on them.
+  const ROMANCE_FROM = "çÇêÊéÉèÈëËàÀâÂäÄáÁíÍîÎïÏóÓôÔöÖúÚùÙûÛüÜñÑ";
+  const ROMANCE_TO   = "cCeEeEeEeEaAaAaAaAiIiIiIoOoOoOuUuUuUuUnN";
+  s = s.replace(/[çÇêÊéÉèÈëËàÀâÂäÄáÁíÍîÎïÏóÓôÔöÖúÚùÙûÛüÜñÑ]/g, (ch) => {
+    const i = ROMANCE_FROM.indexOf(ch);
+    return i >= 0 ? ROMANCE_TO[i] : ch;
+  });
+
   return s
     // Open Sans cannot render U+2192/U+2190 reliably — use plain English
+    .replace(/\s*↔\s*/g, " to ")
     .replace(/\s*→\s*/g, " to ")
     .replace(/\s*←\s*/g, " from ")
     .replace(/->/g, " to ")
     .replace(/<-/g, " from ")
+    // strip stray ordinal indicators that some fonts render badly
+    .replace(/[\u00AA\u00BA]/g, "")
     // zero-width / BOM
     .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
     // common emoji icons that the binder font cannot render

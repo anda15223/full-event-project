@@ -92,8 +92,7 @@ function CoverPage({ data }: { data: BinderData }) {
   const { festival, generatedAt } = data;
   return (
     <Page size="A4" style={s.coverPage}>
-      <Text style={s.coverEmoji}>🎪</Text>
-      <Text style={s.coverTitle}>{festival.name.toUpperCase()}</Text>
+      <Text style={s.coverTitle}>{N(festival.name).toUpperCase()}</Text>
       <Text style={s.coverSub}>Operations Binder</Text>
       <Text style={s.coverDates}>{formatDateRange(festival.start_date, festival.end_date)}</Text>
       {festival.city && <Text style={s.coverDates}>{festival.city}</Text>}
