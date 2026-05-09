@@ -3311,11 +3311,17 @@ export type Database = {
       }
       festival_power_equipment: {
         Row: {
+          assigned_vehicle_id: string | null
+          category: string
           created_at: string | null
           equipment_name: string
           festival_power_id: string
           id: string
+          is_powered: boolean
           is_shared: boolean | null
+          linked_facade_id: string | null
+          linked_topskilt_id: string | null
+          loads_from_soborg: boolean
           notes: string | null
           position: number
           power_kw: number | null
@@ -3325,11 +3331,17 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          assigned_vehicle_id?: string | null
+          category?: string
           created_at?: string | null
           equipment_name: string
           festival_power_id: string
           id?: string
+          is_powered?: boolean
           is_shared?: boolean | null
+          linked_facade_id?: string | null
+          linked_topskilt_id?: string | null
+          loads_from_soborg?: boolean
           notes?: string | null
           position?: number
           power_kw?: number | null
@@ -3339,11 +3351,17 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          assigned_vehicle_id?: string | null
+          category?: string
           created_at?: string | null
           equipment_name?: string
           festival_power_id?: string
           id?: string
+          is_powered?: boolean
           is_shared?: boolean | null
+          linked_facade_id?: string | null
+          linked_topskilt_id?: string | null
+          loads_from_soborg?: boolean
           notes?: string | null
           position?: number
           power_kw?: number | null
@@ -3358,6 +3376,27 @@ export type Database = {
             columns: ["festival_power_id"]
             isOneToOne: false
             referencedRelation: "festival_power"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_fpe_facade"
+            columns: ["linked_facade_id"]
+            isOneToOne: false
+            referencedRelation: "festival_facade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_fpe_topskilt"
+            columns: ["linked_topskilt_id"]
+            isOneToOne: false
+            referencedRelation: "festival_topskilt"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_fpe_vehicle"
+            columns: ["assigned_vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "festival_transport"
             referencedColumns: ["id"]
           },
         ]

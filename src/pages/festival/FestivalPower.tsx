@@ -164,6 +164,7 @@ export default function FestivalPower() {
         .from("festival_power_equipment")
         .select("*")
         .in("festival_power_id", powerIds)
+        .eq("is_powered", true)
         .order("position");
       if (error) throw error;
       return (data ?? []) as unknown as PowerEquipmentRow[];
