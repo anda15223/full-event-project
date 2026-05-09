@@ -23,6 +23,8 @@ import FestivalPower from "./pages/festival/FestivalPower";
 import FestivalPowerExport from "./pages/festival/FestivalPowerExport";
 import FestivalActions from "./pages/festival/FestivalActions";
 import FestivalActionsExport from "./pages/festival/FestivalActionsExport";
+import FestivalContacts from "./pages/festival/FestivalContacts";
+import FestivalContactsExport from "./pages/festival/FestivalContactsExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import GlobalActions from "./pages/GlobalActions";
@@ -59,6 +61,8 @@ const App = () => (
             <Route path="/festivals/:slug/power/export" element={<Protected><FestivalPowerExport /></Protected>} />
             <Route path="/festivals/:slug/actions" element={<Protected><FestivalActions /></Protected>} />
             <Route path="/festivals/:slug/actions/export" element={<Protected><FestivalActionsExport /></Protected>} />
+            <Route path="/festivals/:slug/contacts" element={<Protected><FestivalContacts /></Protected>} />
+            <Route path="/festivals/:slug/contacts/export" element={<Protected><FestivalContactsExport /></Protected>} />
             <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="/actions" element={<Protected><GlobalActions /></Protected>} />
