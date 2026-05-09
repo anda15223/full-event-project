@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature, Image as ImageIcon } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar, FileSignature, Image as ImageIcon, ShieldAlert, BedDouble } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract" | "facade";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline" | "contract" | "facade" | "safety" | "accommodation";
   label: string;
   sub?: string;
   to: string;
