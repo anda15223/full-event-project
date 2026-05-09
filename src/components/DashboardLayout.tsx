@@ -120,6 +120,16 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: ingestBadge = 0 } = useQuery({
+    queryKey: ["ingest-sidebar-badge"],
+    queryFn: async () => {
+      const { count } = await (supabase as any).from("intelligence_ingestion")
+        .select("id", { count: "exact", head: true }).eq("status", "parsed");
+      return count ?? 0;
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
