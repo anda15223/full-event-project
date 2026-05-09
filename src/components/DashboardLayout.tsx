@@ -146,6 +146,7 @@ function SidebarNav() {
             const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
             const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
             const showTimelineBadge = item.path === "/timeline" && timelineBadge > 0;
+            const showContractsBadge = item.path === "/contracts-overview" && contractsBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -162,6 +163,7 @@ function SidebarNav() {
                       {showQuestionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 border-2 border-white" />}
                       {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                       {showTimelineBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border-2 border-white" />}
+                      {showContractsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
@@ -189,6 +191,11 @@ function SidebarNav() {
                         {item.path === "/timeline" && timelineBadge > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
                             {timelineBadge}
+                          </span>
+                        )}
+                        {item.path === "/contracts-overview" && contractsBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-700 dark:text-red-300">
+                            {contractsBadge}
                           </span>
                         )}
                       </span>
