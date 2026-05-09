@@ -581,6 +581,28 @@ export default function FestivalOverview() {
     },
   });
 
+  const contractsCountQ = useQuery({
+    queryKey: ["overview-contracts-count", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { count } = await supabase.from("festival_contracts")
+        .select("id", { count: "exact", head: true }).eq("festival_id", festivalId!);
+      return count ?? 0;
+    },
+  });
+
+  const soborgQ = useQuery({
+    queryKey: ["overview-soborg", slug],
+    enabled: !!slug,
+    queryFn: async () => {
+      const m = await getSoborgLoadingManifest(slug);
+      if (!m) return null;
+      const vehicleCount = m.vehicles.length;
+      const itemCount = m.total_items;
+      return { vehicleCount, itemCount };
+    },
+  });
+
   const topActionsQ = useQuery({
     queryKey: ["festival-action-items", festivalId, "top5"],
     enabled: !!festivalId,
