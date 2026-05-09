@@ -89,7 +89,7 @@ export default function CommandPalette() {
     queryKey: ["palette-contracts-list"], enabled: open,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
-        .select("id, festival_id, concept_id, contract_status, operating_entity, counterparty_name, counterparty, concept_alias")
+        .select("id, festival_id, concept_id, contract_status, counterparty_name, concept_alias")
         .limit(300);
       return data ?? [];
     },
