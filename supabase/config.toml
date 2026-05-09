@@ -50,6 +50,3 @@ verify_jwt = false
 
 [functions.backfill-documents]
 verify_jwt = false
-
-[functions.parse-ingestion]
-verify_jwt = false

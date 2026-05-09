@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatDateRange } from "@/lib/dateFormat";
 import {
   AlertOctagon, CalendarClock, Flame, CheckCircle2, ArrowRight, Tent,
-  Plus, HelpCircle, Contact as ContactIcon, Inbox, Sparkles,
+  Plus, HelpCircle, Contact as ContactIcon, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
