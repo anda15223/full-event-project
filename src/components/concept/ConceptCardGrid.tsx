@@ -56,7 +56,7 @@ export function ConceptCardGrid({
 }: Props) {
   const qc = useQueryClient();
 
-  const { hasAccess: hasFinanceAccess } = useFinanceAccess();
+  const hasFinanceAccess = useFinanceAccess();
 
   const contractsQ = useQuery({
     queryKey: ["festival-contracts-grid", festivalId],
