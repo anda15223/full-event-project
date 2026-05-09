@@ -24,6 +24,7 @@ import FestivalPowerExport from "./pages/festival/FestivalPowerExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
+import EquipmentSeed from "./pages/admin/EquipmentSeed";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
+            <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

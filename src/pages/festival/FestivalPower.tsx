@@ -553,7 +553,7 @@ function PowerCard({
           onChange={(v) => switchVariant.mutate(v)}
         />
 
-        <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} />
+        <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} contract={contract} festivalId={festivalId} />
 
         {/* Power match check */}
         <PowerMatchSection power={power} equipment={equipment} />
@@ -976,11 +976,13 @@ function GapTable({ rows, compact = false }: { rows: GapRow[]; compact?: boolean
 const POWER_TYPE_OPTIONS: PowerType[] = ["16A_240V", "16A_400V", "32A", "63A", "125A", "230V_socket"];
 
 function EquipmentSection({
-  power, equipment, contractsAll,
+  power, equipment, contractsAll, contract, festivalId,
 }: {
   power: PowerRow;
   equipment: PowerEquipmentRow[];
   contractsAll: ContractRow[];
+  contract: ContractRow;
+  festivalId: string;
 }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<PowerEquipmentRow | null>(null);
@@ -998,6 +1000,25 @@ function EquipmentSection({
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
+  const seed = useMutation({
+    mutationFn: async () => {
+      const variant = (power.equipment_variant ?? "standalone") as "standalone" | "inside_tent_shared";
+      const result = await seedEquipmentFromTemplate({
+        festivalPowerId: power.id,
+        conceptId: contract.concept_id,
+        variant,
+        festivalId,
+      });
+      return { variant, inserted: result.inserted };
+    },
+    onSuccess: ({ variant, inserted }) => {
+      const conceptName = contract.concept?.name ?? "concept";
+      toast.success(`Seeded ${inserted} equipment items from ${conceptName} ${variant} template — review and adjust`);
+      qc.invalidateQueries({ queryKey: ["festival-power-equipment"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Seed failed"),
+  });
+
   const conceptName = (id: string) => {
     const c = contractsAll.find((x) => x.id === id);
     return c ? contractLabel(c) : id.slice(0, 8);
@@ -1008,14 +1029,23 @@ function EquipmentSection({
       title={
         <div className="flex items-center justify-between w-full">
           <span>Equipment powered</span>
-          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
-            <Plus className="h-3 w-3 mr-1" /> Add equipment
-          </Button>
+          <div className="flex items-center gap-2">
+            {equipment.length === 0 && (
+              <Button size="sm" variant="secondary" onClick={() => seed.mutate()} disabled={seed.isPending}>
+                {seed.isPending ? "Seeding…" : "Seed equipment from template"}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+              <Plus className="h-3 w-3 mr-1" /> Add equipment
+            </Button>
+          </div>
         </div>
       }
     >
       {equipment.length === 0 ? (
-        <div className="text-xs text-muted-foreground italic">No equipment defined yet.</div>
+        <div className="text-xs text-muted-foreground italic">
+          No equipment defined yet. Click "Seed equipment from template" to start with the {(power.equipment_variant ?? "standalone").replace("_", " ")} preset for {contract.concept?.name ?? "this concept"}.
+        </div>
       ) : (
         <ul className="space-y-1.5 text-sm">
           {equipment.map((e) => (

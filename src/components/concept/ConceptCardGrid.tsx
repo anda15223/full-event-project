@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Concept, ConceptManager, ConceptSlug, CONCEPT_EMOJI, CONCEPT_LABELS } from "./types";
+import { VerifyEntityBadge, useVerifyEntityQuestions } from "./VerifyEntityBadge";
 
 export interface ConceptContract {
   contract_id: string;
@@ -128,6 +129,9 @@ export function ConceptCardGrid({
     onSuccess: () => qc.invalidateQueries({ queryKey: ["concept-assignments", festivalId] }),
   });
 
+  const verifyQ = useVerifyEntityQuestions(festivalId);
+  const verifyQuestions = verifyQ.data ?? [];
+
   const sortedRows = useMemo(() => {
     const rows = (contractsQ.data ?? []).slice();
     rows.sort((a, b) => {
@@ -176,6 +180,9 @@ export function ConceptCardGrid({
         if (row.operating_entity) subtitleParts.push(row.operating_entity);
         if (row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
         const subtitle = subtitleParts.join(" · ");
+        const verifyQuestion =
+          verifyQuestions.find((q) => q.concept_id === c.id) ??
+          verifyQuestions.find((q) => q.concept_id === null);
         const contract: ConceptContract = {
           contract_id: row.id,
           concept_alias: row.concept_alias,
@@ -193,8 +200,18 @@ export function ConceptCardGrid({
                   <span className="text-2xl" aria-hidden>{emoji}</span>
                   <h3 className="text-lg font-semibold truncate">{title}</h3>
                 </div>
-                {subtitle && (
-                  <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+                {(subtitle || verifyQuestion) && (
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                    {subtitle && <span>{subtitle}</span>}
+                    {verifyQuestion && (
+                      <VerifyEntityBadge
+                        question={verifyQuestion}
+                        contractId={row.id}
+                        currentEntity={row.operating_entity}
+                        currentCvr={row.operating_entity_cvr}
+                      />
+                    )}
+                  </div>
                 )}
                 {row.concept_variation_note && (
                   <div className="text-xs italic text-muted-foreground mt-1">

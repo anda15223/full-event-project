@@ -2717,7 +2717,9 @@ export type Database = {
           created_at: string | null
           festival_id: string
           id: string
+          priority: string | null
           question: string
+          question_type: string | null
           raised_by: string | null
           raised_date: string | null
           resolution: string | null
@@ -2731,7 +2733,9 @@ export type Database = {
           created_at?: string | null
           festival_id: string
           id?: string
+          priority?: string | null
           question: string
+          question_type?: string | null
           raised_by?: string | null
           raised_date?: string | null
           resolution?: string | null
@@ -2745,7 +2749,9 @@ export type Database = {
           created_at?: string | null
           festival_id?: string
           id?: string
+          priority?: string | null
           question?: string
+          question_type?: string | null
           raised_by?: string | null
           raised_date?: string | null
           resolution?: string | null
