@@ -139,6 +139,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, signOut } = useAuth();
   return (
     <SidebarProvider>
+      <CommandPalette />
       <div className="min-h-screen flex w-full bg-background">
         <SidebarNav />
         <SidebarInset>
