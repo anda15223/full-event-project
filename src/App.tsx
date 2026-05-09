@@ -51,6 +51,8 @@ import FestivalAccommodation from "./pages/festival/FestivalAccommodation";
 import FestivalAccommodationExport from "./pages/festival/FestivalAccommodationExport";
 import FestivalBinder from "./pages/festival/FestivalBinder";
 import FestivalBinderExport from "./pages/festival/FestivalBinderExport";
+import FestivalSoborgLoading from "./pages/festival/FestivalSoborgLoading";
+import FestivalSoborgLoadingExport from "./pages/festival/FestivalSoborgLoadingExport";
 
 const queryClient = new QueryClient();
 
