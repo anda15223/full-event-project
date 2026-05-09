@@ -172,6 +172,11 @@ function SidebarNav() {
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
                         <span>{item.label}</span>
+                        {item.path === "/" && todayBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                            {todayBadge}
+                          </span>
+                        )}
                         {item.path === "/attention" && attentionTotal > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
                             {attentionTotal}
