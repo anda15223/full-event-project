@@ -49,15 +49,21 @@ const PRIORITY_DOT: Record<Priority, string> = {
   medium: "bg-yellow-500",
   low: "bg-muted-foreground/40",
 };
+const PRIORITY_BORDER: Record<Priority, string> = {
+  critical: "border-l-4 border-l-red-500",
+  high: "border-l-4 border-l-orange-400",
+  medium: "border-l-4 border-l-gray-200 dark:border-l-gray-700",
+  low: "border-l-4 border-l-gray-200 dark:border-l-gray-700",
+};
 const PRIORITY_RANK: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 const STATUS_LABEL: Record<Status, string> = {
   open: "Open", in_progress: "In Progress", done: "Done", blocked: "Blocked",
 };
 const STATUS_PILL: Record<Status, string> = {
-  open: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  in_progress: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  done: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  blocked: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  open: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/40",
+  in_progress: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/40",
+  done: "bg-green-50 text-green-700 border-green-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40",
+  blocked: "bg-red-50 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/40",
 };
 const SOURCE_ICON: Record<string, any> = {
   email: Mail, manual: User, contract: FileText, intelligence: Brain, ingestion: Inbox,
@@ -89,13 +95,14 @@ function dayDiff(iso: string) {
   return Math.round((d - t.getTime()) / 86400000);
 }
 function dueChip(iso: string | null) {
-  if (!iso) return { cls: "border-border bg-muted/40 text-muted-foreground", label: "No due date" };
+  if (!iso) return { cls: "border-gray-200 bg-gray-50 text-gray-500 dark:border-border dark:bg-muted/40 dark:text-muted-foreground", label: "No due date" };
   const diff = dayDiff(iso);
   const label = format(new Date(iso + "T00:00:00"), "d MMM");
-  if (diff < 0) return { cls: "border-destructive/40 bg-destructive/10 text-destructive", label: `${label} · ${Math.abs(diff)}d overdue` };
-  if (diff === 0) return { cls: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300", label: `${label} · today` };
-  if (diff <= 7) return { cls: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300", label: `${label} · in ${diff}d` };
-  return { cls: "border-border bg-muted/40 text-muted-foreground", label };
+  if (diff < 0) return { cls: "border-red-200 bg-red-100 text-red-700 dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive", label: `${label} · ${Math.abs(diff)}d overdue` };
+  if (diff === 0) return { cls: "border-red-200 bg-red-100 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300", label: `${label} · today` };
+  if (diff <= 3) return { cls: "border-orange-200 bg-orange-100 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-300", label: `${label} · in ${diff}d` };
+  if (diff <= 7) return { cls: "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300", label: `${label} · in ${diff}d` };
+  return { cls: "border-gray-200 bg-gray-100 text-gray-600 dark:border-border dark:bg-muted/40 dark:text-muted-foreground", label };
 }
 
 function snoozeDate(option: "1d" | "3d" | "1w" | "monday"): string {
@@ -499,15 +506,17 @@ function ActionRow({
 
   return (
     <div id={`fa-item-${item.id}`}
-      className={cn("group rounded-lg border bg-card p-3 hover:shadow-sm transition-all flex gap-3 items-start",
-      item.status === "done" && "opacity-60")}>
-      <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", PRIORITY_DOT[item.priority])} title={item.priority} />
-
+      className={cn(
+        "group rounded-lg border border-gray-200 dark:border-border bg-card shadow-sm p-3 pl-3.5 hover:shadow-md hover:border-gray-300 dark:hover:border-border/80 transition-all flex gap-3 items-start",
+        PRIORITY_BORDER[item.priority],
+        item.priority === "critical" && "bg-red-50/40 dark:bg-red-500/5",
+        item.status === "done" && "opacity-60",
+      )}>
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm">{item.title}</span>
+              <span className={cn("text-sm", item.priority === "critical" ? "font-semibold text-foreground" : "font-medium")}>{item.title}</span>
               {isOverdue && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">🚨 OVERDUE</Badge>}
               {isSnoozed && <Badge variant="outline" className="text-[10px] px-1.5 py-0"><AlarmClock className="h-2.5 w-2.5 mr-0.5" />Snoozed</Badge>}
             </div>
