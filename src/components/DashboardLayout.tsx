@@ -24,6 +24,7 @@ const navItems: { icon: typeof LayoutDashboard; label: string; path: string; col
   { icon: Contact, label: "Contacts", path: "/contacts" },
   { icon: HelpCircle, label: "Questions", path: "/questions" },
   { icon: ScrollText, label: "Rules", path: "/rules" },
+  { icon: Calendar, label: "Timeline", path: "/timeline" },
 ];
 
 function SidebarNav() {
