@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle, ScrollText } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question" | "rule";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline";
   label: string;
   sub?: string;
   to: string;
@@ -75,6 +75,16 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: timelineEvents = [] } = useQuery({
+    queryKey: ["palette-timeline"], enabled: open,
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await (supabase as any).from("festival_timeline_event")
+        .select("id, title, festival_id, event_date, status").gte("event_date", today).neq("status","done").limit(200);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
@@ -116,8 +126,16 @@ export default function CommandPalette() {
         to: `/rules?q=${encodeURIComponent(r.rule_name)}`,
       });
     }
+    for (const t of timelineEvents as any[]) {
+      const f = fById.get(t.festival_id);
+      list.push({
+        id: t.id, type: "timeline", label: t.title,
+        sub: [f?.name, t.event_date].filter(Boolean).join(" · "),
+        to: f ? `/festivals/${f.slug}/timeline?event=${t.id}` : "/timeline",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions, rules]);
+  }, [festivals, contacts, actions, questions, rules, timelineEvents]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
@@ -125,6 +143,7 @@ export default function CommandPalette() {
     actions: items.filter(i => i.type === "action"),
     questions: items.filter(i => i.type === "question"),
     rules: items.filter(i => i.type === "rule"),
+    timeline: items.filter(i => i.type === "timeline"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
@@ -183,6 +202,17 @@ export default function CommandPalette() {
             {grouped.rules.map(i => (
               <CommandItem key={"r:" + i.id} value={`rule ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
                 <ScrollText className="h-4 w-4 mr-2 text-red-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.timeline.length > 0 && (
+          <CommandGroup heading="Timeline events">
+            {grouped.timeline.map(i => (
+              <CommandItem key={"t:" + i.id} value={`timeline ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
                 <span className="truncate">{i.label}</span>
                 {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
               </CommandItem>

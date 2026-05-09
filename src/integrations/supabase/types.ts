@@ -4056,6 +4056,81 @@ export type Database = {
           },
         ]
       }
+      festival_timeline_event: {
+        Row: {
+          completed_at: string | null
+          concepts_involved: string[] | null
+          confirmed_at: string | null
+          contracts_involved: string[] | null
+          created_at: string
+          end_date: string | null
+          end_time: string | null
+          event_date: string
+          event_time: string | null
+          event_type: string
+          festival_id: string
+          id: string
+          linked_action_item_id: string | null
+          linked_supplier_name: string | null
+          location: string | null
+          notes: string | null
+          responsible_contact_id: string | null
+          responsible_party: string
+          status: string
+          supplier_contact_phone: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          concepts_involved?: string[] | null
+          confirmed_at?: string | null
+          contracts_involved?: string[] | null
+          created_at?: string
+          end_date?: string | null
+          end_time?: string | null
+          event_date: string
+          event_time?: string | null
+          event_type: string
+          festival_id: string
+          id?: string
+          linked_action_item_id?: string | null
+          linked_supplier_name?: string | null
+          location?: string | null
+          notes?: string | null
+          responsible_contact_id?: string | null
+          responsible_party?: string
+          status?: string
+          supplier_contact_phone?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          concepts_involved?: string[] | null
+          confirmed_at?: string | null
+          contracts_involved?: string[] | null
+          created_at?: string
+          end_date?: string | null
+          end_time?: string | null
+          event_date?: string
+          event_time?: string | null
+          event_type?: string
+          festival_id?: string
+          id?: string
+          linked_action_item_id?: string | null
+          linked_supplier_name?: string | null
+          location?: string | null
+          notes?: string | null
+          responsible_contact_id?: string | null
+          responsible_party?: string
+          status?: string
+          supplier_contact_phone?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       festival_transport: {
         Row: {
           accreditation_pdf_path: string | null
