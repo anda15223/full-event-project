@@ -95,13 +95,14 @@ function dayDiff(iso: string) {
   return Math.round((d - t.getTime()) / 86400000);
 }
 function dueChip(iso: string | null) {
-  if (!iso) return { cls: "border-border bg-muted/40 text-muted-foreground", label: "No due date" };
+  if (!iso) return { cls: "border-gray-200 bg-gray-50 text-gray-500 dark:border-border dark:bg-muted/40 dark:text-muted-foreground", label: "No due date" };
   const diff = dayDiff(iso);
   const label = format(new Date(iso + "T00:00:00"), "d MMM");
-  if (diff < 0) return { cls: "border-destructive/40 bg-destructive/10 text-destructive", label: `${label} · ${Math.abs(diff)}d overdue` };
-  if (diff === 0) return { cls: "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300", label: `${label} · today` };
-  if (diff <= 7) return { cls: "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300", label: `${label} · in ${diff}d` };
-  return { cls: "border-border bg-muted/40 text-muted-foreground", label };
+  if (diff < 0) return { cls: "border-red-200 bg-red-100 text-red-700 dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive", label: `${label} · ${Math.abs(diff)}d overdue` };
+  if (diff === 0) return { cls: "border-red-200 bg-red-100 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300", label: `${label} · today` };
+  if (diff <= 3) return { cls: "border-orange-200 bg-orange-100 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-300", label: `${label} · in ${diff}d` };
+  if (diff <= 7) return { cls: "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300", label: `${label} · in ${diff}d` };
+  return { cls: "border-gray-200 bg-gray-100 text-gray-600 dark:border-border dark:bg-muted/40 dark:text-muted-foreground", label };
 }
 
 function snoozeDate(option: "1d" | "3d" | "1w" | "monday"): string {
