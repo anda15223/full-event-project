@@ -687,7 +687,7 @@ function QuestionForm({
             <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">None</SelectItem>
-              {filteredContracts.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.concept_alias || c.concept?.name} {c.operating_entity ? `· ${c.operating_entity}` : ""}</SelectItem>)}
+              {filteredContracts.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.concept_alias || c.concept?.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
