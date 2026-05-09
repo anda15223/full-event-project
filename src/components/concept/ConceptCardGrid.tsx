@@ -129,7 +129,8 @@ export function ConceptCardGrid({
     onSuccess: () => qc.invalidateQueries({ queryKey: ["concept-assignments", festivalId] }),
   });
 
-  const sortedRows = useMemo(() => {
+  const verifyQ = useVerifyEntityQuestions(festivalId);
+  const verifyQuestions = verifyQ.data ?? [];
     const rows = (contractsQ.data ?? []).slice();
     rows.sort((a, b) => {
       const ao = a.concept?.display_order ?? 999;
