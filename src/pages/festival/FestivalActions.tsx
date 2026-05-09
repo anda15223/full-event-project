@@ -163,8 +163,23 @@ export default function FestivalActions() {
     return () => { supabase.removeChannel(ch); };
   }, [festival?.id, refetch]);
 
+  // Scroll to highlighted item from deep link
+  useEffect(() => {
+    if (!highlightId || items.length === 0) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`fa-item-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-primary");
+        setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2400);
+      }
+    }, 200);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId, items.length]);
+
   // Filters
-  const [tab, setTab] = useState<"all" | Status>("open");
+  const [tab, setTab] = useState<"all" | Status>(highlightId ? "all" : "open");
   const [pill, setPill] = useState<null | "critical" | "week" | "overdue" | "fif" | "marius" | "costel">(null);
   const [groupBy, setGroupBy] = useState<"status" | "priority" | "due" | "concept" | "owner">("status");
   const [search, setSearch] = useState("");
