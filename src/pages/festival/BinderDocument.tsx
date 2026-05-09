@@ -316,7 +316,7 @@ function TransportPage({ data }: { data: BinderData }) {
       <View style={s.th}>
         <Text style={{ width: 50 }}>Date</Text>
         <Text style={{ width: 40 }}>Time</Text>
-        <Text style={{ flex: 1 }}>{"From → To"}</Text>
+        <Text style={{ flex: 1 }}>{"From -> To"}</Text>
         <Text style={{ width: 110 }}>Vehicle</Text>
         <Text style={{ width: 50 }}>Status</Text>
       </View>
@@ -330,7 +330,7 @@ function TransportPage({ data }: { data: BinderData }) {
           <View key={l.id} style={s.tr} wrap={false}>
             <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
             <Text style={{ width: 40 }}>{time}</Text>
-            <Text style={{ flex: 1 }}>{from}{" → "}{to}{l.leg_label ? `  ·  ${N(l.leg_label)}` : ""}</Text>
+            <Text style={{ flex: 1 }}>{from}{" -> "}{to}{l.leg_label ? `  ·  ${N(l.leg_label)}` : ""}</Text>
             <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}</Text>
             <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
           </View>
@@ -534,7 +534,7 @@ function AccommodationPage({ data }: { data: BinderData }) {
         <View key={a.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
           <Text style={[s.bold, s.small]}>{a.provider_name ?? a.accommodation_type ?? "—"} ({a.accommodation_type ?? "—"})</Text>
           <Text style={s.small}>
-            {fmt(a.check_in_date)} → {fmt(a.check_out_date)}
+            {fmt(a.check_in_date)} -&gt; {fmt(a.check_out_date)}
             {a.capacity ? `   ·   ${a.capacity} pax` : ""}
             {a.cost_dkk ? `   ·   ${Number(a.cost_dkk).toLocaleString()} DKK` : ""}
             {a.payment_status ? `   ·   ${a.payment_status}` : ""}
