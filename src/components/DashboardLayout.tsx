@@ -99,6 +99,25 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: contractsBadge = 0 } = useQuery({
+    queryKey: ["contracts-sidebar-badge"],
+    queryFn: async () => {
+      const today = new Date();
+      const { data } = await supabase.from("festival_contracts")
+        .select("id, contract_status, sent_to_counterparty_at");
+      return ((data ?? []) as any[]).filter((c) => {
+        if (c.contract_status === "stalled") return true;
+        if (c.contract_status === "pending_signature" && c.sent_to_counterparty_at) {
+          const sent = new Date(c.sent_to_counterparty_at);
+          const days = Math.round((today.getTime() - sent.getTime()) / 86400000);
+          return days > 14;
+        }
+        return false;
+      }).length;
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
