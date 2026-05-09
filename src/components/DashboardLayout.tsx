@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
