@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,7 @@ import { AttentionSummary } from "@/lib/attention";
 const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
+  { icon: Target, label: "Actions", path: "/actions" },
   { icon: AlertTriangle, label: "Attention", path: "/attention" },
 ];
 
