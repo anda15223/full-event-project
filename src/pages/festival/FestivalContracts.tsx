@@ -645,7 +645,9 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div><Label>Contract value (DKK)</Label><Input type="number" value={form.contract_value_dkk ?? ""} onChange={(e) => set("contract_value_dkk", e.target.value === "" ? null : parseFloat(e.target.value))} /></div>
-            <div><Label>Payment terms</Label><Input value={form.payment_terms ?? ""} onChange={(e) => set("payment_terms", e.target.value)} /></div>
+            {hasFinanceAccess && (
+              <div><Label>Payment terms</Label><Input value={form.payment_terms ?? ""} onChange={(e) => set("payment_terms", e.target.value)} /></div>
+            )}
           </div>
           <div>
             <Label>Variation note</Label>
