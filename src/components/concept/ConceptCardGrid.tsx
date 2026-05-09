@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Concept, ConceptManager, ConceptSlug, CONCEPT_EMOJI, CONCEPT_LABELS } from "./types";
 import { VerifyEntityBadge, useVerifyEntityQuestions } from "./VerifyEntityBadge";
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 export interface ConceptContract {
   contract_id: string;
