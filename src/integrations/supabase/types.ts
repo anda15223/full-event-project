@@ -1232,6 +1232,7 @@ export type Database = {
         Row: {
           allowed_beverages: string | null
           br18_facade_compliance_required: boolean | null
+          cancelled_reason: string | null
           caravan_allowed: boolean | null
           caravan_booking_deadline: string | null
           caravan_camp: string | null
@@ -1241,16 +1242,23 @@ export type Database = {
           concept_id: string
           concept_variation_note: string | null
           contract_doc_url: string | null
+          contract_expires_at: string | null
+          contract_file_path: string | null
+          contract_signed_by: string | null
           contract_signed_date: string | null
           contract_status: string | null
+          contract_terms_summary: string | null
+          contract_value_dkk: number | null
           contract_year: number | null
           contracting_entity: string
           contracting_entity_cvr: string | null
           counterparty: string
           counterparty_cvr: string | null
+          counterparty_name: string | null
           counterparty_name_in_contract: string | null
           created_at: string | null
           drinks_revenue_share_pct: number | null
+          expected_signing_by: string | null
           extra_power_unit_cost_dkk: number | null
           festival_id: string
           fixed_fee_dkk: number | null
@@ -1260,6 +1268,7 @@ export type Database = {
           inspection_date: string | null
           inspection_self_paid_if_late: boolean | null
           inspection_time: string | null
+          key_obligations: string | null
           lactose_free_required: boolean | null
           max_partout_black: number | null
           max_partout_normal: number | null
@@ -1270,6 +1279,8 @@ export type Database = {
           operating_entity_cvr: string | null
           operating_hours_summary: string | null
           payment_method_cashless: boolean | null
+          payment_status: string | null
+          payment_terms: string | null
           pos_provider: string | null
           pos_terminal_extra_cost_dkk: number | null
           power_in_contract: string | null
@@ -1278,9 +1289,15 @@ export type Database = {
           revenue_share_tier_2_max_dkk: number | null
           revenue_share_tier_2_pct: number | null
           revenue_share_tier_3_pct: number | null
+          sent_to_counterparty_at: string | null
           settlement_terms: string | null
+          signing_platform: string | null
           site_clearance_deadline: string | null
           stall_count: number | null
+          stalled_reason: string | null
+          stalled_since: string | null
+          status_changed_at: string | null
+          status_history: Json | null
           tent_cost_handling: string | null
           tent_floor: string | null
           tent_provided_by: string | null
@@ -1294,6 +1311,7 @@ export type Database = {
         Insert: {
           allowed_beverages?: string | null
           br18_facade_compliance_required?: boolean | null
+          cancelled_reason?: string | null
           caravan_allowed?: boolean | null
           caravan_booking_deadline?: string | null
           caravan_camp?: string | null
@@ -1303,16 +1321,23 @@ export type Database = {
           concept_id: string
           concept_variation_note?: string | null
           contract_doc_url?: string | null
+          contract_expires_at?: string | null
+          contract_file_path?: string | null
+          contract_signed_by?: string | null
           contract_signed_date?: string | null
           contract_status?: string | null
+          contract_terms_summary?: string | null
+          contract_value_dkk?: number | null
           contract_year?: number | null
           contracting_entity: string
           contracting_entity_cvr?: string | null
           counterparty: string
           counterparty_cvr?: string | null
+          counterparty_name?: string | null
           counterparty_name_in_contract?: string | null
           created_at?: string | null
           drinks_revenue_share_pct?: number | null
+          expected_signing_by?: string | null
           extra_power_unit_cost_dkk?: number | null
           festival_id: string
           fixed_fee_dkk?: number | null
@@ -1322,6 +1347,7 @@ export type Database = {
           inspection_date?: string | null
           inspection_self_paid_if_late?: boolean | null
           inspection_time?: string | null
+          key_obligations?: string | null
           lactose_free_required?: boolean | null
           max_partout_black?: number | null
           max_partout_normal?: number | null
@@ -1332,6 +1358,8 @@ export type Database = {
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           payment_method_cashless?: boolean | null
+          payment_status?: string | null
+          payment_terms?: string | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
           power_in_contract?: string | null
@@ -1340,9 +1368,15 @@ export type Database = {
           revenue_share_tier_2_max_dkk?: number | null
           revenue_share_tier_2_pct?: number | null
           revenue_share_tier_3_pct?: number | null
+          sent_to_counterparty_at?: string | null
           settlement_terms?: string | null
+          signing_platform?: string | null
           site_clearance_deadline?: string | null
           stall_count?: number | null
+          stalled_reason?: string | null
+          stalled_since?: string | null
+          status_changed_at?: string | null
+          status_history?: Json | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
           tent_provided_by?: string | null
@@ -1356,6 +1390,7 @@ export type Database = {
         Update: {
           allowed_beverages?: string | null
           br18_facade_compliance_required?: boolean | null
+          cancelled_reason?: string | null
           caravan_allowed?: boolean | null
           caravan_booking_deadline?: string | null
           caravan_camp?: string | null
@@ -1365,16 +1400,23 @@ export type Database = {
           concept_id?: string
           concept_variation_note?: string | null
           contract_doc_url?: string | null
+          contract_expires_at?: string | null
+          contract_file_path?: string | null
+          contract_signed_by?: string | null
           contract_signed_date?: string | null
           contract_status?: string | null
+          contract_terms_summary?: string | null
+          contract_value_dkk?: number | null
           contract_year?: number | null
           contracting_entity?: string
           contracting_entity_cvr?: string | null
           counterparty?: string
           counterparty_cvr?: string | null
+          counterparty_name?: string | null
           counterparty_name_in_contract?: string | null
           created_at?: string | null
           drinks_revenue_share_pct?: number | null
+          expected_signing_by?: string | null
           extra_power_unit_cost_dkk?: number | null
           festival_id?: string
           fixed_fee_dkk?: number | null
@@ -1384,6 +1426,7 @@ export type Database = {
           inspection_date?: string | null
           inspection_self_paid_if_late?: boolean | null
           inspection_time?: string | null
+          key_obligations?: string | null
           lactose_free_required?: boolean | null
           max_partout_black?: number | null
           max_partout_normal?: number | null
@@ -1394,6 +1437,8 @@ export type Database = {
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           payment_method_cashless?: boolean | null
+          payment_status?: string | null
+          payment_terms?: string | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
           power_in_contract?: string | null
@@ -1402,9 +1447,15 @@ export type Database = {
           revenue_share_tier_2_max_dkk?: number | null
           revenue_share_tier_2_pct?: number | null
           revenue_share_tier_3_pct?: number | null
+          sent_to_counterparty_at?: string | null
           settlement_terms?: string | null
+          signing_platform?: string | null
           site_clearance_deadline?: string | null
           stall_count?: number | null
+          stalled_reason?: string | null
+          stalled_since?: string | null
+          status_changed_at?: string | null
+          status_history?: Json | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
           tent_provided_by?: string | null

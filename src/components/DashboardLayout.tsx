@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,7 @@ const navItems: { icon: typeof LayoutDashboard; label: string; path: string; col
   { icon: HelpCircle, label: "Questions", path: "/questions" },
   { icon: ScrollText, label: "Rules", path: "/rules" },
   { icon: Calendar, label: "Timeline", path: "/timeline" },
+  { icon: FileSignature, label: "Contracts", path: "/contracts-overview" },
 ];
 
 function SidebarNav() {
@@ -98,6 +99,25 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: contractsBadge = 0 } = useQuery({
+    queryKey: ["contracts-sidebar-badge"],
+    queryFn: async () => {
+      const today = new Date();
+      const { data } = await supabase.from("festival_contracts")
+        .select("id, contract_status, sent_to_counterparty_at");
+      return ((data ?? []) as any[]).filter((c) => {
+        if (c.contract_status === "stalled") return true;
+        if (c.contract_status === "pending_signature" && c.sent_to_counterparty_at) {
+          const sent = new Date(c.sent_to_counterparty_at);
+          const days = Math.round((today.getTime() - sent.getTime()) / 86400000);
+          return days > 14;
+        }
+        return false;
+      }).length;
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
@@ -126,6 +146,7 @@ function SidebarNav() {
             const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
             const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
             const showTimelineBadge = item.path === "/timeline" && timelineBadge > 0;
+            const showContractsBadge = item.path === "/contracts-overview" && contractsBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -142,6 +163,7 @@ function SidebarNav() {
                       {showQuestionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 border-2 border-white" />}
                       {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                       {showTimelineBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border-2 border-white" />}
+                      {showContractsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
@@ -169,6 +191,11 @@ function SidebarNav() {
                         {item.path === "/timeline" && timelineBadge > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
                             {timelineBadge}
+                          </span>
+                        )}
+                        {item.path === "/contracts-overview" && contractsBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-700 dark:text-red-300">
+                            {contractsBadge}
                           </span>
                         )}
                       </span>

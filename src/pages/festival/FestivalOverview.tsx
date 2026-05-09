@@ -336,6 +336,40 @@ interface Contact {
   email: string | null; phone: string | null; is_primary: boolean;
 }
 
+function ContractsMiniBlock({ festivalId, slug }: { festivalId: string; slug: string }) {
+  const { data } = useQuery({
+    queryKey: ["festival-contracts-mini", festivalId],
+    queryFn: async () => {
+      const { data } = await supabase.from("festival_contracts")
+        .select("contract_status, contract_value_dkk, operating_entity").eq("festival_id", festivalId);
+      return data ?? [];
+    },
+  });
+  const counts: Record<string, number> = { signed: 0, pending_signature: 0, in_negotiation: 0, not_started: 0, stalled: 0 };
+  let total = 0;
+  (data ?? []).forEach((c: any) => {
+    counts[c.contract_status] = (counts[c.contract_status] ?? 0) + 1;
+    if (c.contract_status !== "cancelled") total += Number(c.contract_value_dkk) || 0;
+  });
+  const fmt = new Intl.NumberFormat("da-DK", { maximumFractionDigits: 0 }).format(total);
+  return (
+    <section className="rounded-lg border bg-card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-heading text-lg font-semibold flex items-center gap-2"><FileSignature className="h-4 w-4 text-primary" /> Contracts</h2>
+        <Link to={`/festivals/${slug}/contracts`} className="text-xs text-primary hover:underline">View all →</Link>
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">✅ {counts.signed} signed</span>
+        <span className="px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300">⏳ {counts.pending_signature} pending</span>
+        <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">🔄 {counts.in_negotiation} negotiation</span>
+        <span className="px-2 py-1 rounded-full bg-muted text-muted-foreground">🆕 {counts.not_started} not started</span>
+        {counts.stalled > 0 && <span className="px-2 py-1 rounded-full bg-red-500/10 text-red-700 dark:text-red-300">🚨 {counts.stalled} stalled</span>}
+        {total > 0 && <span className="ml-auto text-muted-foreground">Total active value: <b className="text-foreground">{fmt} kr</b></span>}
+      </div>
+    </section>
+  );
+}
+
 function ContactsBlock({ festivalId, slug }: { festivalId: string; slug: string }) {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -625,6 +659,9 @@ export default function FestivalOverview() {
 
       {/* BLOCK 5 — contacts */}
       {festivalId && <ContactsBlock festivalId={festivalId} slug={slug} />}
+
+      {/* BLOCK 5b — contracts mini-grid */}
+      {festivalId && <ContractsMiniBlock festivalId={festivalId} slug={slug} />}
 
       {/* BLOCK 6 — concept lineup */}
       {festivalId && (
