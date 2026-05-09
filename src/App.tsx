@@ -55,6 +55,7 @@ const App = () => (
             <Route path="/festivals/:slug/power/export" element={<Protected><FestivalPowerExport /></Protected>} />
             <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
+            <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
