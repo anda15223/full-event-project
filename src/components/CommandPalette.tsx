@@ -240,7 +240,17 @@ export default function CommandPalette() {
             ))}
           </CommandGroup>
         )}
-      </CommandList>
+        {grouped.contracts.length > 0 && (
+          <CommandGroup heading="Contracts">
+            {grouped.contracts.map(i => (
+              <CommandItem key={"ct:" + i.id} value={`contract ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <FileSignature className="h-4 w-4 mr-2 text-primary" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground truncate max-w-[50%]">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
     </CommandDialog>
   );
 }
