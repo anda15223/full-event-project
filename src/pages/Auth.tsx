@@ -58,7 +58,7 @@ export default function AuthPage() {
             <Zap className="h-6 w-6 text-white" />
           </div>
           <div className="text-center">
-            <h1 className="text-xl font-bold">AI Suite</h1>
+            <h1 className="text-xl font-bold">Full Event Project</h1>
             <p className="text-sm text-muted-foreground">Sign in to continue</p>
           </div>
         </div>
