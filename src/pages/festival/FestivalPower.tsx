@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import { VehicleSelector } from "@/components/concept/VehicleSelector";
 
 type Festival = { id: string; slug: string; name: string };
 type Status = "drawing" | "submitted" | "ordered" | "confirmed" | "installed" | "tested";
