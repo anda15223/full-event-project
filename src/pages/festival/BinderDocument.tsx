@@ -6,12 +6,12 @@ import { normalizeForPdf } from "@/lib/textNormalize";
 
 
 try {
-  // Open Sans (Latin + Latin-Extended) — covers Danish/Romanian + arrow glyph U+2192
+  // Open Sans via fontsource (jsdelivr) — reliable URLs, full Latin + Latin-Extended coverage
   Font.register({
     family: "OpenSans",
     fonts: [
-      { src: "https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf", fontWeight: 400 },
-      { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 700 },
+      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-400-normal.ttf", fontWeight: 400 },
+      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-700-normal.ttf", fontWeight: 700 },
     ],
   });
   Font.registerHyphenationCallback((w) => [w]);
@@ -90,17 +90,20 @@ function SectionHeader({ title, meta }: { title: string; meta?: string }) {
 
 function CoverPage({ data }: { data: BinderData }) {
   const { festival, generatedAt } = data;
-  const titleString = N(festival.name.toUpperCase()).replace(/^[^A-Z0-9ÆØÅ]+/g, "");
+  const STRIP_LEAD = (s: string) => s.replace(/^[^A-Za-z0-9ÆØÅæøå]+/, "");
+  const titleString = STRIP_LEAD(N(festival.name).toUpperCase());
+  const cityString = festival.city ? STRIP_LEAD(N(festival.city)) : "";
+  const dateString = STRIP_LEAD(N(formatDateRange(festival.start_date, festival.end_date)));
   console.log("Binder cover title codepoints", [...titleString].map((c) => c.charCodeAt(0).toString(16)));
   return (
     <Page size="A4" style={s.coverPage}>
       <Text style={s.coverTitle}>{titleString}</Text>
-      <Text style={s.coverSub}>Operations Binder</Text>
-      <Text style={s.coverDates}>{formatDateRange(festival.start_date, festival.end_date)}</Text>
-      {festival.city && <Text style={s.coverDates}>{festival.city}</Text>}
-      <Text style={s.coverMeta}>Generated {new Date(generatedAt).toLocaleString("en-GB")}</Text>
+      <Text style={s.coverSub}>{N("Operations Binder")}</Text>
+      <Text style={s.coverDates}>{dateString}</Text>
+      {cityString ? <Text style={s.coverDates}>{cityString}</Text> : null}
+      <Text style={s.coverMeta}>{N(`Generated ${new Date(generatedAt).toLocaleString("en-GB")}`)}</Text>
       <Text style={s.coverMeta}>v1.0</Text>
-      <Text style={s.coverFooter}>The Fish Project · Aegean ApS</Text>
+      <Text style={s.coverFooter}>{N("The Fish Project / Aegean ApS")}</Text>
     </Page>
   );
 }
