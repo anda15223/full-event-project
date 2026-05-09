@@ -9,7 +9,7 @@ import { Tent, User, Target, Building2, HelpCircle, ScrollText, Calendar } from 
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question" | "rule";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule" | "timeline";
   label: string;
   sub?: string;
   to: string;
