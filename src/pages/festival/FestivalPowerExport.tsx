@@ -8,7 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { formatDateRange } from "@/lib/dateFormat";
+import { normalizeForPdf as N } from "@/lib/textNormalize";
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
+// TODO Sprint 7: Open Sans v17 drops fi/fl ligatures ("confrmed" / "fxed").
+// Plan to swap to a font with full ligature support (Inter, IBM Plex Sans).
+// Defer to post-Jelling — font swap is global to all PDFs.
 try {
   Font.register({
     family: "OpenSans",
@@ -48,6 +53,7 @@ type PowerRow = {
 const styles = StyleSheet.create({
   page: { padding: 36, fontFamily: "OpenSans", fontSize: 10, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
+  h2: { fontSize: 14, fontWeight: 700, marginBottom: 10 },
   meta: { fontSize: 9, color: "#555", marginTop: 2 },
   title: { fontSize: 13, fontWeight: 700, marginTop: 12, marginBottom: 8 },
   unit: { marginTop: 12, paddingTop: 8, borderTop: "1pt solid #ccc" },
@@ -71,10 +77,11 @@ function fmtDate(d: string | null) {
 }
 
 function contractText(c: Contract) {
-  const slug = c.concept?.slug;
-  const emoji = slug ? CONCEPT_EMOJI[slug] ?? "" : "";
+  // Emoji intentionally omitted for PDF — Open Sans v17 cannot render them.
+  // CONCEPT_EMOJI is still imported for type/contract parity with the on-screen view.
+  void CONCEPT_EMOJI;
   const base = c.concept?.name ?? "—";
-  return c.concept_alias ? `${emoji} ${base} — ${c.concept_alias}` : `${emoji} ${base}`;
+  return c.concept_alias ? `${base} — ${c.concept_alias}` : base;
 }
 
 function trunc(s: string | null, n: number) {
@@ -83,15 +90,16 @@ function trunc(s: string | null, n: number) {
 }
 
 function PowerDoc({
-  festival, rows, contractsById, filterLabel,
+  festival, rows, contractsById, filterLabel, canSeeFinance,
 }: {
   festival: Festival;
   rows: PowerRow[];
   contractsById: Map<string, Contract>;
   filterLabel: string | null;
+  canSeeFinance: boolean;
 }) {
   const ts = new Date().toLocaleString("en-GB");
-  const subtitle = filterLabel ? `Power Plan — ${filterLabel}` : "Power Plan";
+  const dateRange = formatDateRange(festival.start_date, festival.end_date);
 
   const totals = rows.reduce(
     (t, p) => {
@@ -107,64 +115,97 @@ function PowerDoc({
     { c16_240: 0, c16_400: 0, c32: 0, c63: 0, c125: 0, kw: 0, cost: 0 },
   );
 
+  const Footer = () => (
+    <View style={styles.footer} fixed>
+      <Text>{N(festival.name)}</Text>
+      <Text>{ts}</Text>
+      <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+    </View>
+  );
+
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        <Text style={styles.h1}>Power Plan — {festival.name}</Text>
-        <Text style={styles.meta}>
-          {formatDateRange(festival.start_date, festival.end_date)}  ·  Generated {ts}
-        </Text>
-        <Text style={styles.title}>{subtitle}</Text>
+      {rows.length === 0 && (
+        <Page size="A4" style={styles.page}>
+          <Text style={styles.h1}>{N(`Power Plan — ${festival.name}`)}</Text>
+          <Text style={styles.meta}>{N(`${dateRange}  ·  Generated ${ts}`)}</Text>
+          {filterLabel && <Text style={styles.title}>{N(`Power Plan — ${filterLabel}`)}</Text>}
+          <Text style={styles.meta}>No power records.</Text>
+          <Footer />
+        </Page>
+      )}
 
-        {rows.length === 0 && <Text style={styles.meta}>No power records.</Text>}
+      {rows.map((p) => {
+        const c = contractsById.get(p.festival_contract_id);
+        const conceptTitle = c ? contractText(c) : "—";
+        const lines: string[] = [];
+        if ((p.connections_16a_240v ?? 0) > 0) lines.push(`16A 240V: ${p.connections_16a_240v}`);
+        if ((p.connections_16a_400v ?? 0) > 0) lines.push(`16A 400V: ${p.connections_16a_400v}`);
+        if ((p.connections_32a ?? 0) > 0) lines.push(`32A: ${p.connections_32a}`);
+        if ((p.connections_63a ?? 0) > 0) lines.push(`63A: ${p.connections_63a}`);
+        if ((p.connections_125a ?? 0) > 0) lines.push(`125A: ${p.connections_125a}`);
+        if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
 
-        {rows.map((p) => {
-          const c = contractsById.get(p.festival_contract_id);
-          const lines: string[] = [];
-          if ((p.connections_16a_240v ?? 0) > 0) lines.push(`16A 240V: ${p.connections_16a_240v}`);
-          if ((p.connections_16a_400v ?? 0) > 0) lines.push(`16A 400V: ${p.connections_16a_400v}`);
-          if ((p.connections_32a ?? 0) > 0) lines.push(`32A: ${p.connections_32a}`);
-          if ((p.connections_63a ?? 0) > 0) lines.push(`63A: ${p.connections_63a}`);
-          if ((p.connections_125a ?? 0) > 0) lines.push(`125A: ${p.connections_125a}`);
-          if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
-          return (
-            <View key={p.id} wrap={false} style={styles.unit}>
-              <Text style={styles.unitTitle}>{c ? contractText(c) : "—"}</Text>
+        return (
+          <Page key={p.id} size="A4" style={styles.page}>
+            <Text style={styles.h1}>{N(`Power Plan — ${festival.name}`)}</Text>
+            <Text style={styles.meta}>{N(`${dateRange}  ·  Generated ${ts}`)}</Text>
+
+            <View style={styles.unit}>
+              <Text style={styles.unitTitle}>{N(conceptTitle)}</Text>
               <View style={styles.pillRow}>
-                <Text style={styles.pill}>status: {p.status}</Text>
-                <Text style={styles.pill}>drawing: {p.power_drawing_file_path ? "uploaded" : "missing"}</Text>
+                <Text style={styles.pill}>{N(`status: ${p.status}`)}</Text>
+                <Text style={styles.pill}>
+                  {N(`drawing: ${p.power_drawing_file_path ? "uploaded" : "missing"}`)}
+                </Text>
               </View>
 
               {lines.length === 0
                 ? <Text style={styles.row}>Connections: —</Text>
-                : lines.map((l, i) => <Text key={i} style={styles.row}>{l}</Text>)}
+                : lines.map((l, i) => <Text key={i} style={styles.row}>{N(l)}</Text>)}
 
-              <Text style={styles.row}>Total kW: {p.total_kw_estimate ?? "—"}   ·   Total Amp: {p.total_amp_estimate ?? "—"}</Text>
-              <Text style={styles.row}>Equipment: {trunc(p.equipment_breakdown, 400)}</Text>
               <Text style={styles.row}>
-                Ordered: {fmtDate(p.ordered_date)}   ·   Cost: {p.cost_dkk != null ? Number(p.cost_dkk).toLocaleString("da-DK") + " DKK" : "—"}
+                {N(`Total kW: ${p.total_kw_estimate ?? "—"}   ·   Total Amp: ${p.total_amp_estimate ?? "—"}`)}
               </Text>
-              {p.notes && <Text style={styles.notes}>Notes: {trunc(p.notes, 300)}</Text>}
+              <Text style={styles.row}>{N(`Equipment: ${trunc(p.equipment_breakdown, 400)}`)}</Text>
+              {canSeeFinance ? (
+                <Text style={styles.row}>
+                  {N(
+                    `Ordered: ${fmtDate(p.ordered_date)}   ·   Cost: ${
+                      p.cost_dkk != null ? Number(p.cost_dkk).toLocaleString("da-DK") + " DKK" : "—"
+                    }`,
+                  )}
+                </Text>
+              ) : (
+                <Text style={styles.row}>{N(`Ordered: ${fmtDate(p.ordered_date)}`)}</Text>
+              )}
+              {p.notes && <Text style={styles.notes}>{N(`Notes: ${trunc(p.notes, 600)}`)}</Text>}
             </View>
-          );
-        })}
 
-        {rows.length > 0 && (
-          <View style={styles.sumBox} wrap={false}>
+            <Footer />
+          </Page>
+        );
+      })}
+
+      {rows.length > 0 && (
+        <Page size="A4" style={styles.page}>
+          <Text style={styles.h1}>{N(`Power Plan — ${festival.name}`)}</Text>
+          <Text style={styles.meta}>{N(`${dateRange}  ·  Generated ${ts}`)}</Text>
+          <Text style={styles.title}>Festival summary</Text>
+
+          <View style={styles.sumBox}>
             <Text style={styles.sumTitle}>Festival summary</Text>
-            <Text style={styles.row}>16A 240V: {totals.c16_240}   ·   16A 400V: {totals.c16_400}</Text>
-            <Text style={styles.row}>32A: {totals.c32}   ·   63A: {totals.c63}   ·   125A: {totals.c125}</Text>
-            <Text style={styles.row}>Total kW: {totals.kw}</Text>
-            <Text style={styles.row}>Total cost: {totals.cost.toLocaleString("da-DK")} DKK</Text>
+            <Text style={styles.row}>{N(`16A 240V: ${totals.c16_240}   ·   16A 400V: ${totals.c16_400}`)}</Text>
+            <Text style={styles.row}>{N(`32A: ${totals.c32}   ·   63A: ${totals.c63}   ·   125A: ${totals.c125}`)}</Text>
+            <Text style={styles.row}>{N(`Total kW: ${totals.kw}`)}</Text>
+            {canSeeFinance && (
+              <Text style={styles.row}>{N(`Total cost: ${totals.cost.toLocaleString("da-DK")} DKK`)}</Text>
+            )}
           </View>
-        )}
 
-        <View style={styles.footer} fixed>
-          <Text>{festival.name}</Text>
-          <Text>{ts}</Text>
-          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
-        </View>
-      </Page>
+          <Footer />
+        </Page>
+      )}
     </Document>
   );
 }
@@ -174,6 +215,7 @@ export default function FestivalPowerExport() {
   const [params] = useSearchParams();
   const filterContract = params.get("contract");
   const filterConcept = params.get("concept");
+  const canSeeFinance = useFinanceAccess();
 
   const [festival, setFestival] = useState<Festival | null>(null);
   const [rows, setRows] = useState<PowerRow[]>([]);
@@ -239,7 +281,13 @@ export default function FestivalPowerExport() {
   });
 
   const doc = (
-    <PowerDoc festival={festival} rows={sortedRows} contractsById={contractsById} filterLabel={filterLabel} />
+    <PowerDoc
+      festival={festival}
+      rows={sortedRows}
+      contractsById={contractsById}
+      filterLabel={filterLabel}
+      canSeeFinance={canSeeFinance}
+    />
   );
 
   return (

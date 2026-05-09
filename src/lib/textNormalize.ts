@@ -46,7 +46,10 @@ export function normalizeForPdf(text: string | null | undefined): string {
     .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
     // common emoji icons that the binder font cannot render
     .replace(/[\u2709\uFE0F]/g, "")
-    .replace(/\uD83D[\uDCE7\uDCE8\uDCF1\uDCDE\uDCF2]/g, "");
+    .replace(/\uD83D[\uDCE7\uDCE8\uDCF1\uDCDE\uDCF2]/g, "")
+    // strip broad emoji ranges (Misc Symbols, Dingbats, SMP emoji blocks).
+    // Danish (æ ø å U+00E5/E6/F8) and Romanian diacritics are well below U+2600 and unaffected.
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "");
 }
 
 export function dash(v: string | number | null | undefined): string {
