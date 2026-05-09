@@ -624,14 +624,18 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
             <div><Label>Concept alias</Label><Input value={form.concept_alias ?? ""} onChange={(e) => set("concept_alias", e.target.value)} placeholder='e.g. "Fish 1"' /></div>
             <div><Label>Stalls</Label><Input type="number" value={form.stall_count ?? 1} onChange={(e) => set("stall_count", parseInt(e.target.value) || 1)} /></div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>Operating entity</Label><Input value={form.operating_entity ?? ""} onChange={(e) => set("operating_entity", e.target.value)} /></div>
-            <div><Label>CVR</Label><Input value={form.operating_entity_cvr ?? ""} onChange={(e) => set("operating_entity_cvr", e.target.value)} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><Label>Counterparty name</Label><Input value={form.counterparty_name ?? ""} onChange={(e) => set("counterparty_name", e.target.value)} /></div>
-            <div><Label>Counterparty CVR</Label><Input value={form.counterparty_cvr ?? ""} onChange={(e) => set("counterparty_cvr", e.target.value)} /></div>
-          </div>
+          {hasFinanceAccess && (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Operating entity</Label><Input value={form.operating_entity ?? ""} onChange={(e) => set("operating_entity", e.target.value)} /></div>
+                <div><Label>CVR</Label><Input value={form.operating_entity_cvr ?? ""} onChange={(e) => set("operating_entity_cvr", e.target.value)} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Counterparty name</Label><Input value={form.counterparty_name ?? ""} onChange={(e) => set("counterparty_name", e.target.value)} /></div>
+                <div><Label>Counterparty CVR</Label><Input value={form.counterparty_cvr ?? ""} onChange={(e) => set("counterparty_cvr", e.target.value)} /></div>
+              </div>
+            </>
+          )}
           <div>
             <Label>Status</Label>
             <Select value={form.contract_status ?? "not_started"} onValueChange={(v) => set("contract_status", v)}>
