@@ -149,7 +149,6 @@ function OverviewPage({ data }: { data: BinderData }) {
           return (
             <Text key={c.id} style={s.small}>
               • {c.name} — contract: <Text style={k?.contract_status === "signed" ? s.ok : s.warn}>{k?.contract_status ?? "missing"}</Text>
-              {k?.operating_entity ? `  ·  ${k.operating_entity}` : ""}
               {k?.inspection_date ? `  ·  inspection ${fmt(k.inspection_date)}` : ""}
             </Text>
           );
