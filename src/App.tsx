@@ -23,6 +23,8 @@ import FestivalPower from "./pages/festival/FestivalPower";
 import FestivalPowerExport from "./pages/festival/FestivalPowerExport";
 import FestivalActions from "./pages/festival/FestivalActions";
 import FestivalActionsExport from "./pages/festival/FestivalActionsExport";
+import FestivalContacts from "./pages/festival/FestivalContacts";
+import FestivalContactsExport from "./pages/festival/FestivalContactsExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import GlobalActions from "./pages/GlobalActions";
