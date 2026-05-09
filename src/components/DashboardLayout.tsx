@@ -141,7 +141,7 @@ function SidebarNav() {
         {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.14em] mb-2 mt-3 px-3">Agents</p>}
         <SidebarMenu>
           {navItems.map(item => {
-            const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
+            const active = item.path === "/" ? pathname === "/" : (pathname === item.path || pathname.startsWith(item.path + "/"));
             const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
             const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
             const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
