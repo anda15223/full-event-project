@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { CONCEPT_LABELS, CONCEPT_EMOJI, ConceptSlug, CONCEPT_SLUGS } from "@/components/concept/types";
+import { formatDateRange } from "@/lib/dateFormat";
 
 try {
   Font.register({
@@ -344,7 +345,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           <View>
             <Text style={s.fName}>{festival.name}</Text>
             <Text style={s.fSub}>
-              {fmtDateLong(festival.start_date)} - {fmtDateLong(festival.end_date)}
+              {formatDateRange(festival.start_date, festival.end_date)}
               {festival.city ? ` · ${festival.city}` : ""} · Generated {ts}
             </Text>
             {conceptName && <Text style={s.fSub}>— {conceptName} only</Text>}

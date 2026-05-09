@@ -6,6 +6,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
+import { formatDateRange } from "@/lib/dateFormat";
 
 // Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
 // and middle dots (·) render correctly. Built-in Helvetica only covers
@@ -145,7 +146,7 @@ function TransportPdf({
       <Page size="A4" style={styles.page}>
         <Text style={styles.h1}>{festival.name} — Transport Plan</Text>
         <Text style={styles.subtitle}>
-          {fmtDateLong(festival.start_date)} - {fmtDateLong(festival.end_date)}
+          {formatDateRange(festival.start_date, festival.end_date)}
           {"  ·  "}Generated {generated}
         </Text>
 

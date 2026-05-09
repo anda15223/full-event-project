@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Concept, ConceptManager, ConceptSlug, CONCEPT_LABELS } from "./types";
+import { formatDateRange } from "@/lib/dateFormat";
 
 // Open Sans for Unicode glyphs (arrows, dashes, accents). Registered once.
 try {
@@ -123,7 +124,7 @@ function DataDoc(props: Props) {
         <View>
           <Text style={styles.festivalName}>{festival.name}</Text>
           <Text style={styles.meta}>
-            {festival.start_date} → {festival.end_date}  ·  Generated {ts}
+            {formatDateRange(festival.start_date, festival.end_date)}  ·  Generated {ts}
           </Text>
           <Text style={styles.title}>{subtitle}</Text>
         </View>
