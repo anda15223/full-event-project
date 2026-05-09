@@ -479,21 +479,23 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
       {/* Financials */}
       <div className="rounded-lg bg-muted/30 p-2 flex items-center justify-between flex-wrap gap-2">
         <div className="text-[12px]">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Value · Payment</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Value{hasFinanceAccess ? " · Payment" : ""}</div>
           <div className="font-semibold tabular-nums">{formatDKK(c.contract_value_dkk)}</div>
-          {c.payment_terms && <div className="text-[11px] text-muted-foreground">{c.payment_terms}</div>}
+          {hasFinanceAccess && c.payment_terms && <div className="text-[11px] text-muted-foreground">{c.payment_terms}</div>}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <PaymentPill status={c.payment_status} />
-          <div className="flex gap-1">
-            {c.payment_status !== "invoiced" && c.payment_status !== "paid" && (
-              <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("invoiced")}>Mark invoiced</Button>
-            )}
-            {c.payment_status !== "paid" && (
-              <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("paid")}>Mark paid</Button>
-            )}
+        {hasFinanceAccess && (
+          <div className="flex flex-col items-end gap-1">
+            <PaymentPill status={c.payment_status} />
+            <div className="flex gap-1">
+              {c.payment_status !== "invoiced" && c.payment_status !== "paid" && (
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("invoiced")}>Mark invoiced</Button>
+              )}
+              {c.payment_status !== "paid" && (
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => setPayment("paid")}>Mark paid</Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* File */}
