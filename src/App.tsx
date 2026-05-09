@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/Auth";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
+import DashboardHome from "./pages/DashboardHome";
 import SettingsPage from "./pages/SettingsPage";
 import FestivalsList from "./pages/festival/FestivalsList";
 import FestivalOverview from "./pages/festival/FestivalOverview";
