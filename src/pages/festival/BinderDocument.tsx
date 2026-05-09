@@ -564,13 +564,13 @@ function QuestionsPage({ data }: { data: BinderData }) {
       {sorted.map((q: any) => (
         <View key={q.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
           <Text style={[s.bold, s.small, q.priority === "critical" ? s.warn : q.priority === "high" ? s.amber : {}]}>
-            [{q.priority}] {q.question}
+            [{q.priority}] {N(q.question)}
           </Text>
-          {q.context && <Text style={s.small}>{q.context}</Text>}
+          {q.context && <Text style={s.small}>{N(q.context)}</Text>}
           <Text style={[s.small, { color: GRAY }]}>
             Owner: {q.decision_owner ?? "—"}
             {q.deadline ? `   ·   Deadline ${fmt(q.deadline)}` : ""}
-            {q.blocking_what ? `   ·   Blocking: ${q.blocking_what}` : ""}
+            {q.blocking_what ? `   ·   Blocking: ${N(q.blocking_what)}` : ""}
           </Text>
         </View>
       ))}
@@ -589,9 +589,9 @@ function RulesPage({ data }: { data: BinderData }) {
       {filtered.map((r: any) => (
         <View key={r.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
           <Text style={[s.bold, s.small, r.level === "critical" ? s.warn : s.amber]}>
-            [{r.level}] {r.title}
+            [{r.level}] {N(r.title)}
           </Text>
-          {r.description && <Text style={s.small}>{r.description}</Text>}
+          {r.description && <Text style={s.small}>{N(r.description)}</Text>}
           {r.category && <Text style={[s.small, { color: GRAY }]}>Category: {r.category}</Text>}
         </View>
       ))}
