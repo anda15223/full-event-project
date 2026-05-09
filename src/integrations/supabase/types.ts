@@ -1120,12 +1120,14 @@ export type Database = {
       }
       festival_contacts: {
         Row: {
+          contact_type: Database["public"]["Enums"]["contact_type"]
           created_at: string | null
           email: string | null
           festival_id: string
           full_name: string
           id: string
           is_primary: boolean
+          last_contact_date: string | null
           notes: string | null
           organization: string | null
           phone: string | null
@@ -1133,12 +1135,14 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          contact_type?: Database["public"]["Enums"]["contact_type"]
           created_at?: string | null
           email?: string | null
           festival_id: string
           full_name: string
           id?: string
           is_primary?: boolean
+          last_contact_date?: string | null
           notes?: string | null
           organization?: string | null
           phone?: string | null
@@ -1146,12 +1150,14 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          contact_type?: Database["public"]["Enums"]["contact_type"]
           created_at?: string | null
           email?: string | null
           festival_id?: string
           full_name?: string
           id?: string
           is_primary?: boolean
+          last_contact_date?: string | null
           notes?: string | null
           organization?: string | null
           phone?: string | null
@@ -5362,6 +5368,24 @@ export type Database = {
       }
     }
     Views: {
+      festival_contacts_aggregated: {
+        Row: {
+          canonical_name: string | null
+          contact_type: Database["public"]["Enums"]["contact_type"] | null
+          dedup_key: string | null
+          email: string | null
+          festival_count: number | null
+          festival_ids: string[] | null
+          festival_names: string[] | null
+          festival_slugs: string[] | null
+          is_primary_at_any: boolean | null
+          notes_combined: string | null
+          organization: string | null
+          phone: string | null
+          role: string | null
+        }
+        Relationships: []
+      }
       v_attention_items: {
         Row: {
           concept_id: string | null
@@ -5637,6 +5661,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "member"
+      contact_type: "festival_organizer" | "operator" | "internal" | "supplier"
       document_category:
         | "invoice"
         | "festival"
@@ -5777,6 +5802,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "member"],
+      contact_type: ["festival_organizer", "operator", "internal", "supplier"],
       document_category: [
         "invoice",
         "festival",
