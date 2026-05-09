@@ -208,6 +208,17 @@ export default function CommandPalette() {
             ))}
           </CommandGroup>
         )}
+        {grouped.timeline.length > 0 && (
+          <CommandGroup heading="Timeline events">
+            {grouped.timeline.map(i => (
+              <CommandItem key={"t:" + i.id} value={`timeline ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );
