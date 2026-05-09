@@ -72,10 +72,12 @@ export function VerifyEntityBadge({ question, contractId, currentEntity, current
 
   const saveEntity = useMutation({
     mutationFn: async () => {
-      const { error: e1 } = await supabase
-        .from("festival_contracts")
-        .update({ operating_entity: entity || null, operating_entity_cvr: cvr || null })
-        .eq("id", contractId);
+      const { error: e1 } = await (supabase as any)
+        .from("festival_contracts_finance")
+        .upsert(
+          { contract_id: contractId, operating_entity: entity || null, cvr: cvr || null },
+          { onConflict: "contract_id" }
+        );
       if (e1) throw e1;
       const { error: e2 } = await supabase
         .from("festival_open_questions")
