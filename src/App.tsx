@@ -49,6 +49,9 @@ import FestivalSafety from "./pages/festival/FestivalSafety";
 import FestivalSafetyExport from "./pages/festival/FestivalSafetyExport";
 import FestivalAccommodation from "./pages/festival/FestivalAccommodation";
 import FestivalAccommodationExport from "./pages/festival/FestivalAccommodationExport";
+import IngestDropzone from "./pages/IngestDropzone";
+import IngestReview from "./pages/IngestReview";
+import IngestInbox from "./pages/IngestInbox";
 
 const queryClient = new QueryClient();
 
