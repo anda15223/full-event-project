@@ -183,8 +183,26 @@ export default function CommandPalette() {
         to: fest ? `/festivals/${fest.slug}/facade` : "/festivals",
       });
     }
+    // Safety entry per festival
+    for (const fest of festivals as any[]) {
+      list.push({
+        id: `safety:${fest.id}`, type: "safety",
+        label: `Safety — ${fest.name}`,
+        sub: "gas, food, electrical, fire, first aid",
+        to: `/festivals/${fest.slug}/safety`,
+      });
+    }
+    for (const a of accommodations as any[]) {
+      const f = fById.get(a.festival_id);
+      list.push({
+        id: a.id, type: "accommodation",
+        label: `${a.provider_name ?? "Accommodation"} @ ${f?.name ?? "?"}`,
+        sub: [a.accommodation_type, a.payment_status].filter(Boolean).join(" · "),
+        to: f ? `/festivals/${f.slug}/accommodation` : "/festivals",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts, facades]);
+  }, [festivals, contacts, actions, questions, rules, timelineEvents, contracts, facades, accommodations]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
@@ -195,6 +213,8 @@ export default function CommandPalette() {
     timeline: items.filter(i => i.type === "timeline"),
     contracts: items.filter(i => i.type === "contract"),
     facades: items.filter(i => i.type === "facade"),
+    safety: items.filter(i => i.type === "safety"),
+    accommodations: items.filter(i => i.type === "accommodation"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
