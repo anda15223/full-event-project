@@ -341,7 +341,7 @@ function ContractsMiniBlock({ festivalId, slug }: { festivalId: string; slug: st
     queryKey: ["festival-contracts-mini", festivalId],
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
-        .select("contract_status, contract_value_dkk, operating_entity").eq("festival_id", festivalId);
+        .select("contract_status, contract_value_dkk").eq("festival_id", festivalId);
       return data ?? [];
     },
   });
