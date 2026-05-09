@@ -751,7 +751,7 @@ function ResolveDrawer({
     setRuleTitle(question.question.slice(0, 80)); setRuleDesc(""); setRuleSeverity("important");
     if (question.contract_id) {
       const c = contracts.find((ct: any) => ct.id === question.contract_id);
-      setContractEntity(c?.operating_entity ?? "");
+      setContractEntity("");
       setContractStatus(c?.contract_status ?? "");
       setContractCvr("");
     }
