@@ -518,6 +518,13 @@ function PowerCard({
               </span>
             )}
           </div>
+          <div className="mt-2">
+            <VehicleSelector
+              festivalId={festivalId}
+              contractId={contract.id}
+              currentVehicleId={contract.assigned_vehicle_id}
+            />
+          </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
           <Pencil className="h-4 w-4" />
