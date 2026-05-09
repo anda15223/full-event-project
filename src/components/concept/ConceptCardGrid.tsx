@@ -41,6 +41,7 @@ interface ContractRow {
   contract_status: string | null;
   concept_variation_note: string | null;
   stall_count: number | null;
+  assigned_vehicle_id: string | null;
   concept: {
     id: string;
     slug: ConceptSlug;
