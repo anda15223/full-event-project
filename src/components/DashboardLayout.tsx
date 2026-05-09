@@ -167,6 +167,7 @@ function SidebarNav() {
                       {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                       {showTimelineBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border-2 border-white" />}
                       {showContractsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
+                      {showTodayBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
