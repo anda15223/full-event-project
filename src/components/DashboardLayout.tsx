@@ -6,8 +6,19 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature, Home,
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AttentionSummary } from "@/lib/attention";
+import CommandPalette from "@/components/CommandPalette";
+
+const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
+  { icon: Home, label: "Today", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard-legacy" },
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
