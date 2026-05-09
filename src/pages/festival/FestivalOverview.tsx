@@ -493,7 +493,7 @@ const CARD_TILES: CardTile[] = [
   { key: "contracts", name: "Contracts", icon: FileSignature },
   { key: "accommodation", name: "Accommodation", icon: BedDouble },
   { key: "contacts", name: "Contacts", icon: Users },
-  { key: "action-items", name: "Action Items", icon: ListChecks },
+  { key: "action-items", name: "Action Items", icon: ListChecks, route: (s: string) => `/festivals/${s}/actions` },
   { key: "staff", name: "Staff", icon: UserCog },
   { key: "groceries", name: "Groceries", icon: ShoppingCart },
 ];
