@@ -111,7 +111,7 @@ function PowerDoc({
       <Page size="A4" style={styles.page}>
         <Text style={styles.h1}>Power Plan — {festival.name}</Text>
         <Text style={styles.meta}>
-          {festival.start_date} → {festival.end_date}  ·  Generated {ts}
+          {formatDateRange(festival.start_date, festival.end_date)}  ·  Generated {ts}
         </Text>
         <Text style={styles.title}>{subtitle}</Text>
 
