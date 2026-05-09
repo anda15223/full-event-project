@@ -64,9 +64,11 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Protected><DashboardHome /></Protected>} />
+            <Route path="/home" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+            <Route path="/dashboard" element={<Protected><DashboardHome /></Protected>} />
+            <Route path="/dashboard-legacy" element={<Protected><Dashboard /></Protected>} />
             <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
             <Route path="/festivals" element={<Protected><FestivalsList /></Protected>} />
             <Route path="/festivals/:slug" element={<Protected><FestivalOverview /></Protected>} />
