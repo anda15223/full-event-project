@@ -105,7 +105,7 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
   const peRes = powerIds.length
     ? await sb.from("festival_power_equipment")
         .select("id, festival_power_id, equipment_name, quantity, power_type, power_kw, is_shared, notes, position")
-        .in("festival_power_id", powerIds).order("position")
+        .in("festival_power_id", powerIds).eq("is_powered", true).order("position")
     : { data: [] };
 
   const actionItems = (actionsRes.data ?? []) as any[];
