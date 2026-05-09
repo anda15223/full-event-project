@@ -14,6 +14,7 @@ import { FileSignature, Search, AlertTriangle, Clock, FileCheck } from "lucide-r
 import {
   ContractStatus, STATUS_META, formatDKK, daysBetween,
 } from "@/lib/contracts";
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 interface Row {
   id: string;
