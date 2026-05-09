@@ -626,6 +626,9 @@ export default function FestivalOverview() {
       {/* BLOCK 5 — contacts */}
       {festivalId && <ContactsBlock festivalId={festivalId} slug={slug} />}
 
+      {/* BLOCK 5b — contracts mini-grid */}
+      {festivalId && <ContractsMiniBlock festivalId={festivalId} slug={slug} />}
+
       {/* BLOCK 6 — concept lineup */}
       {festivalId && (
         <section className="rounded-lg border bg-card p-4">
