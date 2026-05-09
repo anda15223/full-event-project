@@ -166,6 +166,11 @@ function SidebarNav() {
                             {rulesBadge}
                           </span>
                         )}
+                        {item.path === "/timeline" && timelineBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                            {timelineBadge}
+                          </span>
+                        )}
                       </span>
                     )}
                   </NavLink>
