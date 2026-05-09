@@ -611,7 +611,7 @@ function BackCoverPage({ data }: { data: BinderData }) {
           <View key={c.id} style={{ marginBottom: 12, padding: 8, border: `1pt solid ${DARK}`, borderRadius: 4 }}>
             <Text style={[s.bold, { fontSize: 12 }]}>{c.full_name} — {c.role}</Text>
             {c.organization && <Text style={s.small}>{c.organization}</Text>}
-            <Text style={s.small}>📱 {c.phone ?? "—"}     📧 {c.email ?? "—"}</Text>
+            <Text style={s.small}>Phone: {N(c.phone) || "\u2014"}     Email: {N(c.email) || "\u2014"}</Text>
           </View>
         ))}
       </View>
