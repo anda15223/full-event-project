@@ -618,8 +618,15 @@ export default function FestivalOverview() {
             </p>
           )}
         </div>
-        <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
-      </section>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/festivals/${slug}/binder`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-secondary"
+          >
+            📘 Binder
+          </Link>
+          <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
+        </div>
 
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
