@@ -258,13 +258,15 @@ export default function ContractsOverview() {
             {(Object.keys(STATUS_META) as ContractStatus[]).map(s => <SelectItem key={s} value={s}>{STATUS_META[s].label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterEntity} onValueChange={setFilterEntity}>
-          <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Entity" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All entities</SelectItem>
-            {allEntities.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {hasFinanceAccess && (
+          <Select value={filterEntity} onValueChange={setFilterEntity}>
+            <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Entity" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All entities</SelectItem>
+              {allEntities.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={filterFestival} onValueChange={setFilterFestival}>
           <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Festival" /></SelectTrigger>
           <SelectContent>
