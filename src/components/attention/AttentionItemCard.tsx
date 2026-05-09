@@ -47,7 +47,9 @@ export function AttentionItemCard({ item }: { item: AttentionItem }) {
 
   const cardHash = CARD_HASH[item.source_card_label] ?? "";
   const cardLink =
-    item.source_table === "transport_legs" || item.source_table === "festival_transport"
+    item.source_table === "festival_action_items"
+      ? `/festivals/${item.festival_slug}/actions?item=${item.source_id}`
+      : item.source_table === "transport_legs" || item.source_table === "festival_transport"
       ? `/festivals/${item.festival_slug}/transport?leg=${item.source_id}`
       : `/festivals/${item.festival_slug}${cardHash ? `#${cardHash}` : ""}`;
 
