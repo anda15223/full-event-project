@@ -19,16 +19,6 @@ import CommandPalette from "@/components/CommandPalette";
 const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
   { icon: Home, label: "Today", path: "/" },
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard-legacy" },
-import { useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { AttentionSummary } from "@/lib/attention";
-import CommandPalette from "@/components/CommandPalette";
-
-const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
   { icon: Target, label: "Actions", path: "/actions" },
   { icon: AlertTriangle, label: "Attention", path: "/attention" },
