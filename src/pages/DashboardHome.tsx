@@ -342,9 +342,6 @@ export default function DashboardHome() {
         <Button size="sm" variant="ghost" className="rounded-full h-8" onClick={() => navigate("/contacts")}>
           <ContactIcon className="h-3.5 w-3.5 mr-1" /> Contact
         </Button>
-        <Button size="sm" variant="ghost" className="rounded-full h-8 opacity-50 cursor-not-allowed" disabled title="Coming next">
-          <Inbox className="h-3.5 w-3.5 mr-1" /> Ingest
-        </Button>
       </div>
     </div>
   );

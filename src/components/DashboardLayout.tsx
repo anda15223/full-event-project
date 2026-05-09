@@ -211,11 +211,6 @@ function SidebarNav() {
                             {contractsBadge}
                           </span>
                         )}
-                        {item.path === "/ingest" && ingestBadge > 0 && (
-                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300">
-                            {ingestBadge}
-                          </span>
-                        )}
                       </span>
                     )}
                   </NavLink>
