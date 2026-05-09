@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
+import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 
 // ---------- helpers ----------
 
