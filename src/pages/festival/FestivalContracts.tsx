@@ -576,6 +576,7 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
   onSave: (p: Partial<Contract> & { id?: string }) => void;
   saving: boolean;
 }) {
+  const hasFinanceAccess = useFinanceAccess();
   const [form, setForm] = useState<any>({});
   useEffect(() => {
     if (open) {
