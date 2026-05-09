@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getSoborgLoadingManifest, type SoborgLoadingManifest } from "@/lib/soborgLoading";
 
 const sb: any = supabase;
 
