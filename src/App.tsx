@@ -28,6 +28,7 @@ import FestivalContactsExport from "./pages/festival/FestivalContactsExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import GlobalActions from "./pages/GlobalActions";
+import GlobalContacts from "./pages/GlobalContacts";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
 
