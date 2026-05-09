@@ -534,7 +534,7 @@ function AccommodationPage({ data }: { data: BinderData }) {
         <View key={a.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
           <Text style={[s.bold, s.small]}>{a.provider_name ?? a.accommodation_type ?? "—"} ({a.accommodation_type ?? "—"})</Text>
           <Text style={s.small}>
-            {fmt(a.check_in_date)} -&gt; {fmt(a.check_out_date)}
+            {fmt(a.check_in_date)} to {fmt(a.check_out_date)}
             {a.capacity ? `   ·   ${a.capacity} pax` : ""}
             {a.cost_dkk ? `   ·   ${Number(a.cost_dkk).toLocaleString()} DKK` : ""}
             {a.payment_status ? `   ·   ${a.payment_status}` : ""}
