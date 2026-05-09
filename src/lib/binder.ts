@@ -110,6 +110,8 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
         .in("festival_power_id", powerIds).eq("is_powered", true).order("position")
     : { data: [] };
 
+  const soborgLoading = await getSoborgLoadingManifest(slug);
+
   const actionItems = (actionsRes.data ?? []) as any[];
   const overdueCount = actionItems.filter((a) => a.status !== "done" && a.status !== "closed" && a.due_date && a.due_date < today).length;
   const criticalCount = actionItems.filter((a) => a.status !== "done" && a.status !== "closed" && a.priority === "critical").length;
@@ -136,6 +138,7 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
     questions: questionsRes.data ?? [],
     rules: (rulesRes.data ?? []) as any[],
     topskilt: topskiltRes.data ?? [],
+    soborgLoading,
     criticalCount,
     overdueCount,
   };
