@@ -49,6 +49,8 @@ import FestivalSafety from "./pages/festival/FestivalSafety";
 import FestivalSafetyExport from "./pages/festival/FestivalSafetyExport";
 import FestivalAccommodation from "./pages/festival/FestivalAccommodation";
 import FestivalAccommodationExport from "./pages/festival/FestivalAccommodationExport";
+import FestivalBinder from "./pages/festival/FestivalBinder";
+import FestivalBinderExport from "./pages/festival/FestivalBinderExport";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +109,8 @@ const App = () => (
             <Route path="/festivals/:slug/safety/export" element={<Protected><FestivalSafetyExport /></Protected>} />
             <Route path="/festivals/:slug/accommodation" element={<Protected><FestivalAccommodation /></Protected>} />
             <Route path="/festivals/:slug/accommodation/export" element={<Protected><FestivalAccommodationExport /></Protected>} />
+            <Route path="/festivals/:slug/binder" element={<Protected><FestivalBinder /></Protected>} />
+            <Route path="/festivals/:slug/binder/export" element={<Protected><FestivalBinderExport /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
