@@ -525,7 +525,7 @@ const CARD_TILES: CardTile[] = [
   { key: "setup", name: "Setup", icon: Calendar },
   { key: "cooling", name: "Cooling", icon: Snowflake },
   { key: "equipment", name: "Equipment", icon: Wrench },
-  { key: "facade", name: "Façade", icon: ImageIcon },
+  { key: "facade", name: "Façade", icon: ImageIcon, route: (s: string) => `/festivals/${s}/facade` },
   { key: "power", name: "Power", icon: Zap },
   { key: "safety", name: "Safety", icon: ShieldAlert },
   { key: "contracts", name: "Contracts", icon: FileSignature },
