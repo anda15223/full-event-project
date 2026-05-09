@@ -6,12 +6,12 @@ import { normalizeForPdf } from "@/lib/textNormalize";
 
 
 try {
-  // Open Sans (Latin + Latin-Extended) — covers Danish/Romanian + arrow glyph U+2192
+  // Open Sans via fontsource (jsdelivr) — reliable URLs, full Latin + Latin-Extended coverage
   Font.register({
     family: "OpenSans",
     fonts: [
-      { src: "https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf", fontWeight: 400 },
-      { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 700 },
+      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-400-normal.ttf", fontWeight: 400 },
+      { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-700-normal.ttf", fontWeight: 700 },
     ],
   });
   Font.registerHyphenationCallback((w) => [w]);
