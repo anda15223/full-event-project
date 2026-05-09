@@ -13,7 +13,7 @@ export function normalizeForPdf(text: string | null | undefined): string {
 
   // Literal escape sequences sometimes pasted into DB content
   s = s
-    .replace(/\\u2192/g, " -> ")
+    .replace(/\\u2192/g, " to ")
     .replace(/\\u00d7/g, "×")
     .replace(/\\u2014/g, "—")
     .replace(/\\u2013/g, "–");
@@ -25,9 +25,11 @@ export function normalizeForPdf(text: string | null | undefined): string {
     .replace(/[\u201C\u201D\u201E\u201F]/g, '"');
 
   return s
-    // Open Sans cannot render U+2192/U+2190 reliably — fall back to ASCII
-    .replace(/\s*→\s*/g, " -> ")
-    .replace(/\s*←\s*/g, " <- ")
+    // Open Sans cannot render U+2192/U+2190 reliably — use plain English
+    .replace(/\s*→\s*/g, " to ")
+    .replace(/\s*←\s*/g, " from ")
+    .replace(/->/g, " to ")
+    .replace(/<-/g, " from ")
     // zero-width / BOM
     .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
     // common emoji icons that the binder font cannot render
