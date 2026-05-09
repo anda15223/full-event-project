@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import { VehicleSelector } from "@/components/concept/VehicleSelector";
 
 type Festival = { id: string; slug: string; name: string };
 type Status = "drawing" | "submitted" | "ordered" | "confirmed" | "installed" | "tested";
@@ -34,6 +35,7 @@ type ContractRow = {
   id: string;
   concept_id: string;
   concept_alias: string | null;
+  assigned_vehicle_id: string | null;
   concept: { slug: ConceptSlug; name: string; display_order: number | null } | null;
 };
 
@@ -124,7 +126,7 @@ export default function FestivalPower() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, concept_alias, concept:concepts!concept_id(slug, name, display_order)")
+        .select("id, concept_id, concept_alias, assigned_vehicle_id, concept:concepts!concept_id(slug, name, display_order)")
         .eq("festival_id", festivalId!);
       if (error) throw error;
       const sorted = (data ?? []).slice().sort((a: any, b: any) => {
@@ -515,6 +517,13 @@ function PowerCard({
                 {dueDays < 0 ? `Overdue ${Math.abs(dueDays)}d` : `Due in ${dueDays}d`}
               </span>
             )}
+          </div>
+          <div className="mt-2">
+            <VehicleSelector
+              festivalId={festivalId}
+              contractId={contract.id}
+              currentVehicleId={contract.assigned_vehicle_id}
+            />
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>

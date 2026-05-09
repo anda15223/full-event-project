@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Concept, ConceptManager, ConceptSlug, CONCEPT_EMOJI, CONCEPT_LABELS } from "./types";
 import { VerifyEntityBadge, useVerifyEntityQuestions } from "./VerifyEntityBadge";
+import { VehicleSelector } from "./VehicleSelector";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 export interface ConceptContract {
@@ -28,6 +29,8 @@ interface Props {
     contract?: ConceptContract,
   ) => ReactNode;
   enableManagerEdit?: boolean;
+  /** Show "Pack into: [vehicle]" dropdown on each card. Use on Power/Facade/Topskilt/Loading pages only. */
+  showVehicleSelector?: boolean;
 }
 
 interface ContractRow {
@@ -38,6 +41,7 @@ interface ContractRow {
   contract_status: string | null;
   concept_variation_note: string | null;
   stall_count: number | null;
+  assigned_vehicle_id: string | null;
   concept: {
     id: string;
     slug: ConceptSlug;
@@ -53,6 +57,7 @@ export function ConceptCardGrid({
   conceptData,
   renderConceptBody,
   enableManagerEdit = true,
+  showVehicleSelector = false,
 }: Props) {
   const qc = useQueryClient();
 
@@ -64,7 +69,7 @@ export function ConceptCardGrid({
       const { data, error } = await supabase
         .from("festival_contracts")
         .select(
-          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
+          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, assigned_vehicle_id, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
         )
         .eq("festival_id", festivalId);
       if (error) throw error;
@@ -267,6 +272,15 @@ export function ConceptCardGrid({
                 )}
               </div>
             </div>
+            {showVehicleSelector && (
+              <div className="mb-3">
+                <VehicleSelector
+                  festivalId={festivalId}
+                  contractId={row.id}
+                  currentVehicleId={row.assigned_vehicle_id}
+                />
+              </div>
+            )}
             <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
           </div>
         );

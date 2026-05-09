@@ -159,7 +159,7 @@ export default function FestivalFacade() {
       </div>
 
       {festivalId && (
-        <ConceptCardGrid festivalId={festivalId} conceptData={{}} renderConceptBody={renderBody} enableManagerEdit={false} />
+        <ConceptCardGrid festivalId={festivalId} conceptData={{}} renderConceptBody={renderBody} enableManagerEdit={false} showVehicleSelector />
       )}
 
       {bulkOpen && festival && (
