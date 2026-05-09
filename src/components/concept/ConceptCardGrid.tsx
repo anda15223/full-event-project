@@ -131,6 +131,8 @@ export function ConceptCardGrid({
 
   const verifyQ = useVerifyEntityQuestions(festivalId);
   const verifyQuestions = verifyQ.data ?? [];
+
+  const sortedRows = useMemo(() => {
     const rows = (contractsQ.data ?? []).slice();
     rows.sort((a, b) => {
       const ao = a.concept?.display_order ?? 999;
