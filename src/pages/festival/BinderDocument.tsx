@@ -732,6 +732,7 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
           case "cooling": return <CoolingPage key={sec.key} data={data} />;
           case "safety": return <SafetyPage key={sec.key} data={data} />;
           case "accommodation": return <AccommodationPage key={sec.key} data={data} />;
+          case "soborg_loading": return <SoborgLoadingPage key={sec.key} data={data} />;
           case "questions": return <QuestionsPage key={sec.key} data={data} />;
           case "rules": return <RulesPage key={sec.key} data={data} />;
           default: return null;
