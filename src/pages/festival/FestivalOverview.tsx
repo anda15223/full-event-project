@@ -591,6 +591,7 @@ export default function FestivalOverview() {
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
       {festivalId && <FestivalQuestionsStrip festivalId={festivalId} slug={slug} />}
       <AttentionSummaryWidget festivalSlug={slug} />
+      {festivalId && <FestivalTimelineNextEvents festivalId={festivalId} slug={slug} />}
 
       {/* BLOCK 3 — key dates */}
       <section className="rounded-lg border bg-card p-4">
