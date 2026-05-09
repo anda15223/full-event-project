@@ -124,8 +124,12 @@ export type Database = {
           active: boolean | null
           applies_to_festivals: string[] | null
           applies_to_operators: string[] | null
+          category: string | null
           created_at: string | null
+          effective_from: string | null
+          effective_until: string | null
           id: string
+          linked_question_id: string | null
           rule_description: string
           rule_name: string
           severity: string | null
@@ -136,8 +140,12 @@ export type Database = {
           active?: boolean | null
           applies_to_festivals?: string[] | null
           applies_to_operators?: string[] | null
+          category?: string | null
           created_at?: string | null
+          effective_from?: string | null
+          effective_until?: string | null
           id?: string
+          linked_question_id?: string | null
           rule_description: string
           rule_name: string
           severity?: string | null
@@ -148,8 +156,12 @@ export type Database = {
           active?: boolean | null
           applies_to_festivals?: string[] | null
           applies_to_operators?: string[] | null
+          category?: string | null
           created_at?: string | null
+          effective_from?: string | null
+          effective_until?: string | null
           id?: string
+          linked_question_id?: string | null
           rule_description?: string
           rule_name?: string
           severity?: string | null
@@ -5674,6 +5686,10 @@ export type Database = {
       }
     }
     Functions: {
+      get_active_rules_for_festival: {
+        Args: { festival_slug: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
