@@ -208,7 +208,7 @@ export default function DashboardHome() {
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Link to={`/festivals/${spotlight.slug}/power`} className="text-xs p-2.5 rounded-lg bg-white/60 hover:bg-white transition-colors">⚡ Power</Link>
             <Link to={`/festivals/${spotlight.slug}/cooling`} className="text-xs p-2.5 rounded-lg bg-white/60 hover:bg-white transition-colors">❄️ Cooling</Link>
-            <Link to={`/festivals/${spotlight.slug}/facade`} className="text-xs p-2.5 rounded-lg bg-white/60 hover:bg-white transition-colors">🎨 Façade</Link>
+            <Link to={`/festivals/${spotlight.slug}/facade`} className="text-xs p-2.5 rounded-lg bg-white/60 hover:bg-white transition-colors">🎨 Facade</Link>
             <Link to={`/festivals/${spotlight.slug}/safety`} className="text-xs p-2.5 rounded-lg bg-white/60 hover:bg-white transition-colors">🛡️ Safety</Link>
           </div>
           <div className="mt-3 flex items-center justify-between text-xs">

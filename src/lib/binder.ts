@@ -147,7 +147,7 @@ export const BINDER_SECTIONS = [
   { key: "contracts", label: "Contracts" },
   { key: "transport", label: "Transport" },
   { key: "topskilt", label: "Topskilt" },
-  { key: "facade", label: "Façade" },
+  { key: "facade", label: "Facade" },
   { key: "power", label: "Power" },
   { key: "cooling", label: "Cooling" },
   { key: "safety", label: "Safety" },

@@ -72,7 +72,7 @@ export default function FestivalFacadeExport() {
     <PDFViewer style={{ width: "100vw", height: "100vh", border: 0 }}>
       <Document>
         <Page size="A4" style={styles.page}>
-          <Text style={styles.h1}>Façade Status — {data.festival.name}</Text>
+          <Text style={styles.h1}>Facade Status — {data.festival.name}</Text>
           <Text style={styles.meta}>{formatDateRange(data.festival.start_date, data.festival.end_date)}</Text>
 
           <View style={styles.summary}>
@@ -90,7 +90,7 @@ export default function FestivalFacadeExport() {
                   <Text style={styles.name}>{c.concept?.name ?? "—"}{c.concept_alias ? ` — ${c.concept_alias}` : ""}</Text>
                   {meta && <Text style={styles.badge}>{meta.label}</Text>}
                 </View>
-                {!facade && <Text style={styles.note}>No façade record.</Text>}
+                {!facade && <Text style={styles.note}>No facade record.</Text>}
                 {facade && (
                   <>
                     <View style={styles.row}><Text style={styles.label}>Material</Text><Text style={styles.value}>{facade.material_type ?? "—"} · {facade.material_supplier ?? "—"}</Text></View>
@@ -108,7 +108,7 @@ export default function FestivalFacadeExport() {
           })}
 
           <View style={styles.footer} fixed>
-            <Text>Façade — {data.festival.name}</Text>
+            <Text>Facade — {data.festival.name}</Text>
             <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
         </Page>

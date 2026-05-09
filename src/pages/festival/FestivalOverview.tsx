@@ -97,8 +97,8 @@ function useKeyDates(festivalId: string | null) {
       });
       (facade.data ?? []).forEach((r: any) => {
         const cn = r.concept?.name ? ` (${r.concept.name})` : "";
-        if (r.design_deadline) out.push({ iso: r.design_deadline, label: `Façade design${cn}` });
-        if (r.print_deadline) out.push({ iso: r.print_deadline, label: `Façade print${cn}` });
+        if (r.design_deadline) out.push({ iso: r.design_deadline, label: `Facade design${cn}` });
+        if (r.print_deadline) out.push({ iso: r.print_deadline, label: `Facade print${cn}` });
       });
       (setup.data ?? []).forEach((r: any) => {
         if (r.scheduled_start_at) {
@@ -525,7 +525,7 @@ const CARD_TILES: CardTile[] = [
   { key: "setup", name: "Setup", icon: Calendar },
   { key: "cooling", name: "Cooling", icon: Snowflake },
   { key: "equipment", name: "Equipment", icon: Wrench },
-  { key: "facade", name: "Façade", icon: ImageIcon, route: (s: string) => `/festivals/${s}/facade` },
+  { key: "facade", name: "Facade", icon: ImageIcon, route: (s: string) => `/festivals/${s}/facade` },
   { key: "power", name: "Power", icon: Zap },
   { key: "safety", name: "Safety", icon: ShieldAlert, route: (s: string) => `/festivals/${s}/safety` },
   { key: "contracts", name: "Contracts", icon: FileSignature },

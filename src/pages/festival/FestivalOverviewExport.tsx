@@ -213,8 +213,8 @@ async function loadData(slug: string, conceptFilter: ConceptSlug | null): Promis
   }
   for (const f of (facadeR.data ?? [])) {
     const cn = f.concept?.name ?? null;
-    if (f.design_deadline) addDeadline(f.design_deadline, "Façade design deadline", cn ?? "Façade", cn);
-    if (f.print_deadline) addDeadline(f.print_deadline, "Façade print deadline", cn ?? "Façade", cn);
+    if (f.design_deadline) addDeadline(f.design_deadline, "Facade design deadline", cn ?? "Facade", cn);
+    if (f.print_deadline) addDeadline(f.print_deadline, "Facade print deadline", cn ?? "Facade", cn);
   }
   for (const c of (contractsR.data ?? [])) {
     if (c.inspection_date) addDeadline(c.inspection_date, "Inspection", "[Festival-wide]");
@@ -440,7 +440,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
                 </Text>
                 <Text>
                   Setup phases: {c.setupCount} · Equipment: {c.equipmentCount} items · Cooling: {c.coolingCount} units
-                  {c.facadeStatus ? ` · Façade: ${c.facadeStatus}` : ""}
+                  {c.facadeStatus ? ` · Facade: ${c.facadeStatus}` : ""}
                 </Text>
               </View>
             ) : (
