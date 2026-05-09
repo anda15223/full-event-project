@@ -483,7 +483,7 @@ function useConceptStats(festivalId: string | null) {
         supabase.from("festival_contracts").select("concept_id, contract_signed_date").eq("festival_id", fid),
         supabase.from("festival_setup").select("concept_id").eq("festival_id", fid),
         supabase.from("festival_equipment").select("concept_id, qty").eq("festival_id", fid),
-        supabase.from("festival_cooling").select("id").eq("festival_id", fid),
+        supabase.from("festival_cooling_unit").select("id").eq("festival_id", fid),
         supabase.from("festival_action_items").select("priority, status").eq("festival_id", fid).neq("status", "closed"),
       ]);
       const byConcept: Record<string, any> = {};
