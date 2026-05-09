@@ -67,6 +67,7 @@ const App = () => (
             <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="/actions" element={<Protected><GlobalActions /></Protected>} />
+            <Route path="/contacts" element={<Protected><GlobalContacts /></Protected>} />
             <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
             <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
             <Route path="*" element={<NotFound />} />
