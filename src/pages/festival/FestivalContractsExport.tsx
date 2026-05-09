@@ -88,12 +88,9 @@ export default function FestivalContractsExport() {
                   <Text style={styles.conceptName}>{con?.name ?? "?"}{c.concept_alias ? ` · ${c.concept_alias}` : ""}</Text>
                   <Text style={styles.badge}>{STATUS_META[c.contract_status as ContractStatus]?.label ?? c.contract_status}</Text>
                 </View>
-                <View style={styles.row}><Text style={styles.label}>Operating entity</Text><Text style={styles.value}>{c.operating_entity ?? "—"}{c.operating_entity_cvr ? ` (CVR ${c.operating_entity_cvr})` : ""}</Text></View>
-                <View style={styles.row}><Text style={styles.label}>Counterparty</Text><Text style={styles.value}>{c.counterparty_name ?? c.counterparty ?? "—"}{c.counterparty_cvr ? ` (CVR ${c.counterparty_cvr})` : ""}</Text></View>
                 {c.contract_signed_date && (
                   <View style={styles.row}><Text style={styles.label}>Signed</Text><Text style={styles.value}>{c.contract_signed_date}{c.signing_platform ? ` · ${c.signing_platform}` : ""}{c.contract_signed_by ? ` · by ${c.contract_signed_by}` : ""}</Text></View>
                 )}
-                <View style={styles.row}><Text style={styles.label}>Value</Text><Text style={styles.value}>{formatDKK(c.contract_value_dkk)}{c.payment_terms ? ` — ${c.payment_terms}` : ""}{c.payment_status ? ` (${c.payment_status})` : ""}</Text></View>
                 <View style={styles.row}><Text style={styles.label}>Stalls</Text><Text style={styles.value}>{c.stall_count ?? 1}</Text></View>
                 {c.concept_variation_note && (
                   <View style={styles.row}><Text style={styles.label}>Variation</Text><Text style={[styles.value, { fontStyle: "italic" }]}>{c.concept_variation_note}</Text></View>

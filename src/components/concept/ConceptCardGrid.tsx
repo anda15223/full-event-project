@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Concept, ConceptManager, ConceptSlug, CONCEPT_EMOJI, CONCEPT_LABELS } from "./types";
 import { VerifyEntityBadge, useVerifyEntityQuestions } from "./VerifyEntityBadge";
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 export interface ConceptContract {
   contract_id: string;
@@ -55,19 +56,35 @@ export function ConceptCardGrid({
 }: Props) {
   const qc = useQueryClient();
 
+  const hasFinanceAccess = useFinanceAccess();
+
   const contractsQ = useQuery({
     queryKey: ["festival-contracts-grid", festivalId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
         .select(
-          "id, concept_alias, operating_entity, operating_entity_cvr, contract_status, concept_variation_note, stall_count, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
+          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
         )
         .eq("festival_id", festivalId);
       if (error) throw error;
-      return (data ?? []) as unknown as ContractRow[];
+      return (data ?? []).map((r: any) => ({ ...r, operating_entity: null })) as unknown as ContractRow[];
     },
     enabled: !!festivalId,
+  });
+
+  // Finance-locked entity names — only loads for users with finance access (RLS).
+  const financeQ = useQuery({
+    queryKey: ["festival-contracts-finance", festivalId],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("festival_contracts_finance")
+        .select("contract_id, operating_entity");
+      const map = new Map<string, string | null>();
+      (data ?? []).forEach((r: any) => map.set(r.contract_id, r.operating_entity));
+      return map;
+    },
+    enabled: !!festivalId && hasFinanceAccess,
   });
 
   const assignmentsQ = useQuery({
@@ -176,9 +193,10 @@ export function ConceptCardGrid({
         const emoji = CONCEPT_EMOJI[slug] ?? "🍽️";
         const baseLabel = CONCEPT_LABELS[slug] ?? c.name;
         const title = row.concept_alias?.trim() ? row.concept_alias : baseLabel;
+        const financeEntity = hasFinanceAccess ? (financeQ.data?.get(row.id) ?? null) : null;
         const subtitleParts: string[] = [];
-        if (row.operating_entity) subtitleParts.push(row.operating_entity);
-        if (row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
+        if (hasFinanceAccess && financeEntity) subtitleParts.push(financeEntity);
+        if (hasFinanceAccess && row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
         const subtitle = subtitleParts.join(" · ");
         const verifyQuestion =
           verifyQuestions.find((q) => q.concept_id === c.id) ??
@@ -186,8 +204,8 @@ export function ConceptCardGrid({
         const contract: ConceptContract = {
           contract_id: row.id,
           concept_alias: row.concept_alias,
-          operating_entity: row.operating_entity,
-          operating_entity_cvr: row.operating_entity_cvr,
+          operating_entity: financeEntity,
+          operating_entity_cvr: hasFinanceAccess ? row.operating_entity_cvr : null,
           contract_status: row.contract_status,
           concept_variation_note: row.concept_variation_note,
           stall_count: row.stall_count,
@@ -203,11 +221,11 @@ export function ConceptCardGrid({
                 {(subtitle || verifyQuestion) && (
                   <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                     {subtitle && <span>{subtitle}</span>}
-                    {verifyQuestion && (
+                    {hasFinanceAccess && verifyQuestion && (
                       <VerifyEntityBadge
                         question={verifyQuestion}
                         contractId={row.id}
-                        currentEntity={row.operating_entity}
+                        currentEntity={financeEntity}
                         currentCvr={row.operating_entity_cvr}
                       />
                     )}

@@ -39,13 +39,21 @@ export default function ConceptGridVerify() {
         .from("festivals")
         .select("id, slug, name, start_date")
         .order("start_date", { ascending: true });
-      const { data: contracts } = await supabase
+      const { data: contractsRaw } = await supabase
         .from("festival_contracts")
         .select(
-          "id, festival_id, concept_alias, operating_entity, operating_entity_cvr, contract_status, concept:concepts!concept_id(slug, name)",
+          "id, festival_id, concept_alias, operating_entity_cvr, contract_status, concept:concepts!concept_id(slug, name)",
         );
+      const { data: financeRows } = await (supabase as any)
+        .from("festival_contracts_finance")
+        .select("contract_id, operating_entity");
+      const financeMap = new Map<string, string | null>();
+      (financeRows ?? []).forEach((r: any) => financeMap.set(r.contract_id, r.operating_entity));
       const fests = (festivals ?? []) as Festival[];
-      const allContracts = (contracts ?? []) as unknown as ContractRow[];
+      const allContracts = ((contractsRaw ?? []) as any[]).map((c) => ({
+        ...c,
+        operating_entity: financeMap.get(c.id) ?? null,
+      })) as unknown as ContractRow[];
       const result: FestivalSummary[] = fests.map((f) => {
         const cs = allContracts.filter((c) => c.festival_id === f.id);
         const issues: string[] = [];

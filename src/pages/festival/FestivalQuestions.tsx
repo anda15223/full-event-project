@@ -131,7 +131,7 @@ export default function FestivalQuestions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
-        .select("id, concept_id, concept_alias, operating_entity, contract_status, concept:concepts(slug, name)")
+        .select("id, concept_id, concept_alias, contract_status, concept:concepts(slug, name)")
         .eq("festival_id", festival!.id);
       return (data ?? []) as any[];
     },
@@ -687,7 +687,7 @@ function QuestionForm({
             <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">None</SelectItem>
-              {filteredContracts.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.concept_alias || c.concept?.name} {c.operating_entity ? `· ${c.operating_entity}` : ""}</SelectItem>)}
+              {filteredContracts.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.concept_alias || c.concept?.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -751,7 +751,7 @@ function ResolveDrawer({
     setRuleTitle(question.question.slice(0, 80)); setRuleDesc(""); setRuleSeverity("important");
     if (question.contract_id) {
       const c = contracts.find((ct: any) => ct.id === question.contract_id);
-      setContractEntity(c?.operating_entity ?? "");
+      setContractEntity("");
       setContractStatus(c?.contract_status ?? "");
       setContractCvr("");
     }
@@ -795,14 +795,18 @@ function ResolveDrawer({
         if (error) throw error;
       }
 
-      // 4. Update contract
+      // 4. Update contract — operating entity is finance-locked, written via finance table
       if (updateContract && question!.contract_id) {
-        const patch: any = {};
-        if (contractEntity) patch.operating_entity = contractEntity;
-        if (contractCvr) patch.operating_entity_cvr = contractCvr;
-        if (contractStatus) patch.contract_status = contractStatus;
-        if (Object.keys(patch).length) {
-          const { error } = await supabase.from("festival_contracts").update(patch).eq("id", question!.contract_id);
+        const publicPatch: any = {};
+        if (contractCvr) publicPatch.operating_entity_cvr = contractCvr;
+        if (contractStatus) publicPatch.contract_status = contractStatus;
+        if (Object.keys(publicPatch).length) {
+          const { error } = await supabase.from("festival_contracts").update(publicPatch).eq("id", question!.contract_id);
+          if (error) throw error;
+        }
+        if (contractEntity) {
+          const { error } = await (supabase as any).from("festival_contracts_finance")
+            .upsert({ contract_id: question!.contract_id, operating_entity: contractEntity }, { onConflict: "contract_id" });
           if (error) throw error;
         }
       }

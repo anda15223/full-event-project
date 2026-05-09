@@ -169,7 +169,7 @@ export default function CommandPalette() {
       list.push({
         id: ct.id, type: "contract",
         label: `${ct.concept_alias ?? "Contract"} @ ${f?.name ?? "?"}`,
-        sub: [ct.contract_status, ct.counterparty_name ?? ct.counterparty, ct.operating_entity].filter(Boolean).join(" · "),
+        sub: [ct.contract_status].filter(Boolean).join(" · "),
         to: f ? `/festivals/${f.slug}/contracts?contract=${ct.id}` : "/contracts-overview",
       });
     }

@@ -56,7 +56,7 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
     sb.from("festival_timeline_event").select("*").eq("festival_id", fid)
       .order("event_date").order("event_time", { nullsFirst: false }),
     sb.from("festival_contracts")
-      .select("id, concept_id, concept_alias, contract_status, contract_signed_date, signing_platform, contract_value_dkk, payment_terms, payment_status, counterparty_name, counterparty_cvr, key_obligations, contract_signed_by, operating_entity, inspection_date, site_clearance_deadline")
+      .select("id, concept_id, concept_alias, contract_status, contract_signed_date, signing_platform, contract_value_dkk, counterparty_name, counterparty_cvr, key_obligations, contract_signed_by, inspection_date, site_clearance_deadline")
       .eq("festival_id", fid),
     sb.from("concepts").select("id, slug, name, display_order, color_hex").order("display_order"),
     sb.from("festival_transport").select("id, vehicle_type, capacity, status, notes, accreditation_pdf_path, accreditation_uploaded_at").eq("festival_id", fid),
