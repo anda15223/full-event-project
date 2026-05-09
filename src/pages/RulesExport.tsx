@@ -106,6 +106,7 @@ export default function RulesExport() {
       const { data } = await (supabase as any)
         .from("cross_festival_rules")
         .select("*")
+        .eq("visibility", "public")
         .order("severity")
         .order("rule_name");
       setRules((data ?? []) as Rule[]);

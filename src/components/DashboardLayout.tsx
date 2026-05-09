@@ -51,7 +51,8 @@ function SidebarNav() {
       const today = new Date().toISOString().slice(0, 10);
       const { data } = await (supabase as any).from("festival_open_questions")
         .select("id, deadline, priority, status")
-        .eq("status", "open");
+        .eq("status", "open")
+        .eq("visibility", "public");
       return ((data ?? []) as any[]).filter((q) => {
         if (q.priority === "critical") return true;
         if (q.deadline && q.deadline < today) return true;
@@ -82,7 +83,7 @@ function SidebarNav() {
     queryKey: ["rules-sidebar-badge"],
     queryFn: async () => {
       const { data } = await (supabase as any).from("cross_festival_rules")
-        .select("id, severity, active").eq("active", true).eq("severity", "critical");
+        .select("id, severity, active").eq("active", true).eq("severity", "critical").eq("visibility", "public");
       return (data ?? []).length;
     },
     refetchOnWindowFocus: true,

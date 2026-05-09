@@ -37,7 +37,8 @@ export function FestivalRulesBlock({ slug }: { slug: string }) {
       const { data, error } = await (supabase as any)
         .from("cross_festival_rules")
         .select("*")
-        .eq("active", true);
+        .eq("active", true)
+        .eq("visibility", "public");
       if (error) throw error;
       return ((data ?? []) as Rule[]).filter((r) => {
         const f = r.applies_to_festivals;

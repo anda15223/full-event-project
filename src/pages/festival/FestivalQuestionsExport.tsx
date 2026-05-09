@@ -127,7 +127,8 @@ export default function FestivalQuestionsExport() {
       setFestival(f as Festival);
       const { data } = await (supabase as any).from("festival_open_questions")
         .select("id, question, context, status, priority, question_type, decision_owner, deadline, blocking_what, resolution, resolved_at")
-        .eq("festival_id", f.id);
+        .eq("festival_id", f.id)
+        .eq("visibility", "public");
       setItems((data ?? []) as Q[]);
       setLoading(false);
     })();

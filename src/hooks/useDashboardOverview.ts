@@ -80,7 +80,7 @@ export function useActivityFeed(limit = 10) {
         supabase.from("festival_contracts").select("id,counterparty,contract_status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
         (supabase as any).from("festival_facade").select("id,design_status,updated_at,festival_contract_id").order("updated_at", { ascending: false }).limit(limit),
         (supabase as any).from("festival_timeline_event").select("id,title,status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
-        (supabase as any).from("festival_open_questions").select("id,question,status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
+        (supabase as any).from("festival_open_questions").select("id,question,status,updated_at,festival_id").eq("visibility", "public").order("updated_at", { ascending: false }).limit(limit),
       ]);
       const rows: { kind: string; label: string; ts: string; festival_id?: string | null; href?: string }[] = [];
       (actions.data ?? []).forEach((r: any) => rows.push({ kind: "Action", label: `${r.status === "closed" ? "Closed" : "Updated"}: ${r.title}`, ts: r.updated_at, festival_id: r.festival_id }));

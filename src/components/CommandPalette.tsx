@@ -61,7 +61,7 @@ export default function CommandPalette() {
     queryKey: ["palette-questions"], enabled: open,
     queryFn: async () => {
       const { data } = await (supabase as any).from("festival_open_questions")
-        .select("id, question, festival_id, status").eq("status", "open").limit(150);
+        .select("id, question, festival_id, status").eq("status", "open").eq("visibility", "public").limit(150);
       return data ?? [];
     },
   });
@@ -70,7 +70,7 @@ export default function CommandPalette() {
     queryKey: ["palette-rules"], enabled: open,
     queryFn: async () => {
       const { data } = await (supabase as any).from("cross_festival_rules")
-        .select("id, rule_name, severity, category, active").eq("active", true).limit(200);
+        .select("id, rule_name, severity, category, active").eq("active", true).eq("visibility", "public").limit(200);
       return data ?? [];
     },
   });

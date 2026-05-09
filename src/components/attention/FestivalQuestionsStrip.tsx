@@ -18,7 +18,8 @@ export function FestivalQuestionsStrip({ festivalId, slug }: { festivalId: strin
         .from("festival_open_questions")
         .select("id, question, deadline, priority, show_on_overview, escalated_at")
         .eq("festival_id", festivalId)
-        .eq("status", "open");
+        .eq("status", "open")
+        .eq("visibility", "public");
       return (data ?? []) as Array<{ id: string; question: string; deadline: string | null; priority: string; show_on_overview: boolean; escalated_at: string | null }>;
     },
   });

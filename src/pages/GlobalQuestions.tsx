@@ -53,7 +53,8 @@ export default function GlobalQuestions() {
     queryKey: ["global-questions"],
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("festival_open_questions")
-        .select(`*, festival:festivals(id, slug, name, start_date, end_date), concept:concepts(slug, name)`);
+        .select(`*, festival:festivals(id, slug, name, start_date, end_date), concept:concepts(slug, name)`)
+        .eq("visibility", "public");
       if (error) throw error;
       return (data ?? []) as Item[];
     },
