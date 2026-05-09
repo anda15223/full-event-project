@@ -135,6 +135,7 @@ export type Database = {
           severity: string | null
           source: string | null
           updated_at: string | null
+          visibility: string
         }
         Insert: {
           active?: boolean | null
@@ -151,6 +152,7 @@ export type Database = {
           severity?: string | null
           source?: string | null
           updated_at?: string | null
+          visibility?: string
         }
         Update: {
           active?: boolean | null
@@ -167,6 +169,7 @@ export type Database = {
           severity?: string | null
           source?: string | null
           updated_at?: string | null
+          visibility?: string
         }
         Relationships: []
       }
@@ -2697,6 +2700,132 @@ export type Database = {
           },
         ]
       }
+      festival_finance_costs: {
+        Row: {
+          amount_currency: string | null
+          amount_dkk: number
+          amount_original: number | null
+          attached_invoice_path: string | null
+          concept_id: string | null
+          contract_id: string | null
+          cost_category: string
+          created_at: string
+          description: string | null
+          festival_id: string
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          is_jonas_commission: boolean | null
+          notes: string | null
+          paid_by_entity: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_status: string | null
+          subcategory: string | null
+          supplier_name: string | null
+          updated_at: string
+          vat_dkk: number | null
+          vat_rate: number | null
+        }
+        Insert: {
+          amount_currency?: string | null
+          amount_dkk: number
+          amount_original?: number | null
+          attached_invoice_path?: string | null
+          concept_id?: string | null
+          contract_id?: string | null
+          cost_category: string
+          created_at?: string
+          description?: string | null
+          festival_id: string
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          is_jonas_commission?: boolean | null
+          notes?: string | null
+          paid_by_entity?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          subcategory?: string | null
+          supplier_name?: string | null
+          updated_at?: string
+          vat_dkk?: number | null
+          vat_rate?: number | null
+        }
+        Update: {
+          amount_currency?: string | null
+          amount_dkk?: number
+          amount_original?: number | null
+          attached_invoice_path?: string | null
+          concept_id?: string | null
+          contract_id?: string | null
+          cost_category?: string
+          created_at?: string
+          description?: string | null
+          festival_id?: string
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          is_jonas_commission?: boolean | null
+          notes?: string | null
+          paid_by_entity?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_status?: string | null
+          subcategory?: string | null
+          supplier_name?: string | null
+          updated_at?: string
+          vat_dkk?: number | null
+          vat_rate?: number | null
+        }
+        Relationships: []
+      }
+      festival_finance_revenue: {
+        Row: {
+          amount_dkk: number
+          concept_id: string | null
+          contract_id: string | null
+          created_at: string
+          festival_id: string
+          id: string
+          notes: string | null
+          received_into_entity: string | null
+          revenue_date: string | null
+          revenue_source: string | null
+          transaction_count: number | null
+          vat_dkk: number | null
+        }
+        Insert: {
+          amount_dkk: number
+          concept_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          festival_id: string
+          id?: string
+          notes?: string | null
+          received_into_entity?: string | null
+          revenue_date?: string | null
+          revenue_source?: string | null
+          transaction_count?: number | null
+          vat_dkk?: number | null
+        }
+        Update: {
+          amount_dkk?: number
+          concept_id?: string | null
+          contract_id?: string | null
+          created_at?: string
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          received_into_entity?: string | null
+          revenue_date?: string | null
+          revenue_source?: string | null
+          transaction_count?: number | null
+          vat_dkk?: number | null
+        }
+        Relationships: []
+      }
       festival_forecasts: {
         Row: {
           created_at: string | null
@@ -2924,6 +3053,7 @@ export type Database = {
           show_on_overview: boolean
           status: string | null
           updated_at: string | null
+          visibility: string
         }
         Insert: {
           blocking_what?: string | null
@@ -2947,6 +3077,7 @@ export type Database = {
           show_on_overview?: boolean
           status?: string | null
           updated_at?: string | null
+          visibility?: string
         }
         Update: {
           blocking_what?: string | null
@@ -2970,6 +3101,7 @@ export type Database = {
           show_on_overview?: boolean
           status?: string | null
           updated_at?: string | null
+          visibility?: string
         }
         Relationships: [
           {
@@ -5346,6 +5478,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          can_access_finance: boolean
           created_at: string
           display_name: string | null
           email: string | null
@@ -5355,6 +5488,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          can_access_finance?: boolean
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -5364,6 +5498,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          can_access_finance?: boolean
           created_at?: string
           display_name?: string | null
           email?: string | null
@@ -6238,6 +6373,7 @@ export type Database = {
         Returns: Json
       }
       get_dashboard_overview: { Args: never; Returns: Json }
+      has_finance_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
