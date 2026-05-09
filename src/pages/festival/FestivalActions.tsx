@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -110,6 +110,8 @@ function snoozeDate(option: "1d" | "3d" | "1w" | "monday"): string {
 export default function FestivalActions() {
   const { slug = "" } = useParams();
   const qc = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("item");
 
   const { data: festival } = useQuery({
     queryKey: ["festival", slug],
@@ -161,8 +163,23 @@ export default function FestivalActions() {
     return () => { supabase.removeChannel(ch); };
   }, [festival?.id, refetch]);
 
+  // Scroll to highlighted item from deep link
+  useEffect(() => {
+    if (!highlightId || items.length === 0) return;
+    const t = setTimeout(() => {
+      const el = document.getElementById(`fa-item-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-primary");
+        setTimeout(() => el.classList.remove("ring-2", "ring-primary"), 2400);
+      }
+    }, 200);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId, items.length]);
+
   // Filters
-  const [tab, setTab] = useState<"all" | Status>("open");
+  const [tab, setTab] = useState<"all" | Status>(highlightId ? "all" : "open");
   const [pill, setPill] = useState<null | "critical" | "week" | "overdue" | "fif" | "marius" | "costel">(null);
   const [groupBy, setGroupBy] = useState<"status" | "priority" | "due" | "concept" | "owner">("status");
   const [search, setSearch] = useState("");
@@ -481,7 +498,8 @@ function ActionRow({
   const isSnoozed = item.snoozed_until && item.snoozed_until > todayStr();
 
   return (
-    <div className={cn("group rounded-lg border bg-card p-3 hover:shadow-sm transition-all flex gap-3 items-start",
+    <div id={`fa-item-${item.id}`}
+      className={cn("group rounded-lg border bg-card p-3 hover:shadow-sm transition-all flex gap-3 items-start",
       item.status === "done" && "opacity-60")}>
       <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", PRIORITY_DOT[item.priority])} title={item.priority} />
 

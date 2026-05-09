@@ -25,6 +25,7 @@ import FestivalActions from "./pages/festival/FestivalActions";
 import FestivalActionsExport from "./pages/festival/FestivalActionsExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
+import GlobalActions from "./pages/GlobalActions";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
 
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/festivals/:slug/actions/export" element={<Protected><FestivalActionsExport /></Protected>} />
             <Route path="/festivals/:slug/concept-test" element={<Protected><ConceptTest /></Protected>} />
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
+            <Route path="/actions" element={<Protected><GlobalActions /></Protected>} />
             <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
             <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
             <Route path="*" element={<NotFound />} />

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,7 @@ import { AttentionSummary } from "@/lib/attention";
 const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
+  { icon: Target, label: "Actions", path: "/actions" },
   { icon: AlertTriangle, label: "Attention", path: "/attention" },
 ];
 
@@ -32,6 +33,23 @@ function SidebarNav() {
       const { data, error } = await (supabase as any).from("v_attention_summary").select("total_count");
       if (error) return 0;
       return ((data ?? []) as AttentionSummary[]).reduce((s, r) => s + (r.total_count ?? 0), 0);
+    },
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: actionsBadge = 0 } = useQuery({
+    queryKey: ["actions-sidebar-badge"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase.from("festival_action_items")
+        .select("id, due_date, priority, status, snoozed_until")
+        .in("status", ["open", "in_progress"]);
+      return ((data ?? []) as any[]).filter((i) => {
+        if (i.snoozed_until && i.snoozed_until > today) return false;
+        if (i.priority === "critical") return true;
+        if (i.due_date && i.due_date < today) return true;
+        return false;
+      }).length;
     },
     refetchOnWindowFocus: true,
   });
@@ -60,6 +78,7 @@ function SidebarNav() {
           {navItems.map(item => {
             const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
             const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
+            const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -72,6 +91,7 @@ function SidebarNav() {
                       <item.icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
                       {item.color && <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${item.color} border-2 border-white`} />}
                       {showAttentionDot && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
+                      {showActionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
@@ -79,6 +99,11 @@ function SidebarNav() {
                         {item.path === "/attention" && attentionTotal > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
                             {attentionTotal}
+                          </span>
+                        )}
+                        {item.path === "/actions" && actionsBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-300">
+                            {actionsBadge}
                           </span>
                         )}
                       </span>
