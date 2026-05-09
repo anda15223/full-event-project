@@ -85,6 +85,19 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: timelineBadge = 0 } = useQuery({
+    queryKey: ["timeline-sidebar-badge"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const d = new Date(); d.setDate(d.getDate() + 7);
+      const next7 = d.toISOString().slice(0, 10);
+      const { data } = await (supabase as any).from("festival_timeline_event")
+        .select("id, event_date, status").gte("event_date", today).lte("event_date", next7).neq("status", "done");
+      return (data ?? []).length;
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
