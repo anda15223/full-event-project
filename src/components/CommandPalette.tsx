@@ -75,6 +75,16 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: timelineEvents = [] } = useQuery({
+    queryKey: ["palette-timeline"], enabled: open,
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await (supabase as any).from("festival_timeline_event")
+        .select("id, title, festival_id, event_date, status").gte("event_date", today).neq("status","done").limit(200);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
