@@ -595,12 +595,17 @@ function ContractEditDrawer({ open, contract, festivalId, concepts, onClose, onS
     if (!form.festival_id || !form.concept_id) {
       toast.error("Concept is required"); return;
     }
-    if (!form.contracting_entity && !form.operating_entity) {
-      // contracting_entity is NOT NULL in schema — fall back to operating_entity
-      form.contracting_entity = form.operating_entity ?? "Unknown";
+    // Phase 1+3: operating_entity, counterparty, payment_* live in festival_contracts_finance now.
+    // Strip them from the public-table payload so writes don't fail on missing columns.
+    const {
+      operating_entity, operating_entity_cvr, counterparty, counterparty_name, counterparty_cvr,
+      payment_terms, payment_status, payment_due_at, payment_amount, payment_currency,
+      ...publicForm
+    } = form;
+    if (!publicForm.contracting_entity) {
+      publicForm.contracting_entity = operating_entity ?? "Unknown";
     }
-    if (!form.counterparty) form.counterparty = form.counterparty_name ?? "Unknown";
-    onSave(form);
+    onSave(publicForm);
   };
 
   return (
