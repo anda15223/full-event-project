@@ -85,7 +85,7 @@ export function useActivityFeed(limit = 10) {
       const rows: { kind: string; label: string; ts: string; festival_id?: string | null; href?: string }[] = [];
       (actions.data ?? []).forEach((r: any) => rows.push({ kind: "Action", label: `${r.status === "closed" ? "Closed" : "Updated"}: ${r.title}`, ts: r.updated_at, festival_id: r.festival_id }));
       (contracts.data ?? []).forEach((r: any) => rows.push({ kind: "Contract", label: `${r.counterparty} → ${r.contract_status}`, ts: r.updated_at, festival_id: r.festival_id }));
-      (facade.data ?? []).forEach((r: any) => rows.push({ kind: "Façade", label: `Design status → ${r.design_status}`, ts: r.updated_at }));
+      (facade.data ?? []).forEach((r: any) => rows.push({ kind: "Facade", label: `Design status → ${r.design_status}`, ts: r.updated_at }));
       (events.data ?? []).forEach((r: any) => rows.push({ kind: "Timeline", label: `${r.title} (${r.status})`, ts: r.updated_at, festival_id: r.festival_id }));
       (questions.data ?? []).forEach((r: any) => rows.push({ kind: "Question", label: `${r.status === "resolved" ? "Resolved" : "Updated"}: ${r.question?.slice(0, 80)}`, ts: r.updated_at, festival_id: r.festival_id }));
       return rows.sort((a, b) => (a.ts < b.ts ? 1 : -1)).slice(0, limit);

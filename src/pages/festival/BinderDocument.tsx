@@ -375,9 +375,9 @@ function FacadePage({ data }: { data: BinderData }) {
   const cMap = new Map(concepts.map((c: any) => [c.id, c.name]));
   const kMap = new Map(contracts.map((k: any) => [k.id, cMap.get(k.concept_id) ?? "—"]));
   return (
-    <Page size="A4" style={s.page} bookmark="Façade" wrap>
-      <SectionHeader title="Façade" meta={`${facade.length} entries`} />
-      {facade.length === 0 && <Text style={[s.small, { color: GRAY }]}>No façade records yet.</Text>}
+    <Page size="A4" style={s.page} bookmark="Facade" wrap>
+      <SectionHeader title="Facade" meta={`${facade.length} entries`} />
+      {facade.length === 0 && <Text style={[s.small, { color: GRAY }]}>No facade records yet.</Text>}
       {facade.map((f: any) => (
         <View key={f.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
           <Text style={[s.bold, s.small]}>{kMap.get(f.festival_contract_id) ?? "—"}</Text>
@@ -390,7 +390,7 @@ function FacadePage({ data }: { data: BinderData }) {
           {f.notes && <Text style={[s.small, { color: GRAY }]}>{f.notes}</Text>}
         </View>
       ))}
-      <SectionFooter name="Façade" festival={festival.name} />
+      <SectionFooter name="Facade" festival={festival.name} />
     </Page>
   );
 }

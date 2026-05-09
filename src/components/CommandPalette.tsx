@@ -178,7 +178,7 @@ export default function CommandPalette() {
       const fest = ct ? fById.get(ct.festival_id) : null;
       list.push({
         id: f2.id, type: "facade",
-        label: `Façade — ${ct?.concept?.name ?? "?"}${ct?.concept_alias ? ` ${ct.concept_alias}` : ""} @ ${fest?.name ?? "?"}`,
+        label: `Facade — ${ct?.concept?.name ?? "?"}${ct?.concept_alias ? ` ${ct.concept_alias}` : ""} @ ${fest?.name ?? "?"}`,
         sub: f2.design_status,
         to: fest ? `/festivals/${fest.slug}/facade` : "/festivals",
       });
@@ -302,7 +302,7 @@ export default function CommandPalette() {
           </CommandGroup>
         )}
         {grouped.facades.length > 0 && (
-          <CommandGroup heading="Façade">
+          <CommandGroup heading="Facade">
             {grouped.facades.map(i => (
               <CommandItem key={"fc:" + i.id} value={`facade ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
                 <ImageIcon className="h-4 w-4 mr-2 text-pink-600" />

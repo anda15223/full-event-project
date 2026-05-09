@@ -140,7 +140,7 @@ export default function FestivalFacade() {
 
       <div className="rounded-xl border bg-card p-5">
         <h1 className="text-2xl font-bold tracking-tight">{festival?.name ?? slug}</h1>
-        <p className="text-sm text-muted-foreground">Façade design & production</p>
+        <p className="text-sm text-muted-foreground">Facade design & production</p>
         <div className="mt-3 flex flex-wrap gap-3 text-xs">
           {summary.approved > 0 && <Stat label="Approved" value={summary.approved} tone="emerald" />}
           {summary.in_review > 0 && <Stat label="In review" value={summary.in_review} tone="yellow" />}
@@ -153,7 +153,7 @@ export default function FestivalFacade() {
         </div>
         {criticalCount > 0 && (
           <div className="mt-3 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-            🚨 {criticalCount} façade{criticalCount === 1 ? "" : "s"} with print deadline within 14 days and not yet printed.
+            🚨 {criticalCount} facade{criticalCount === 1 ? "" : "s"} with print deadline within 14 days and not yet printed.
           </div>
         )}
       </div>
@@ -223,7 +223,7 @@ function FacadeBody({
   if (!facade) {
     return (
       <div className="rounded border border-dashed p-3 text-sm text-muted-foreground flex items-center justify-between">
-        <span>No façade record yet.</span>
+        <span>No facade record yet.</span>
         <Button size="sm" variant="outline" onClick={() => ensureRow.mutate()}>Create</Button>
       </div>
     );
@@ -345,7 +345,7 @@ function FacadeBody({
             <DropdownMenuItem onClick={() => setDuplicateOpen(true)}><Copy className="h-3.5 w-3.5 mr-1" />Duplicate to another festival</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={async () => {
-              if (!confirm("Delete façade record?")) return;
+              if (!confirm("Delete facade record?")) return;
               const { error } = await supabase.from("festival_facade").delete().eq("id", facade.id);
               if (error) toast.error(error.message); else {
                 toast.success("Deleted");
@@ -373,8 +373,8 @@ function FacadeBody({
 
       <Dialog open={!!previewUrl} onOpenChange={(o) => !o && setPreviewUrl(null)}>
         <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>Façade preview</DialogTitle></DialogHeader>
-          {previewUrl && <img src={previewUrl} alt="Façade preview" className="w-full rounded" />}
+          <DialogHeader><DialogTitle>Facade preview</DialogTitle></DialogHeader>
+          {previewUrl && <img src={previewUrl} alt="Facade preview" className="w-full rounded" />}
         </DialogContent>
       </Dialog>
     </div>
@@ -448,7 +448,7 @@ function EditDrawer({ open, onOpenChange, facade, onSaved }: {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Edit façade specs</SheetTitle>
+          <SheetTitle>Edit facade specs</SheetTitle>
           <SheetDescription>Material, dimensions, deadlines, and notes.</SheetDescription>
         </SheetHeader>
         <div className="space-y-3 py-4">
@@ -544,7 +544,7 @@ function StatusDrawer({ open, onOpenChange, facade, contract, onSaved }: {
           if (extra.approval_expected_by) {
             await supabase.from("festival_action_items").insert({
               festival_id: (await supabase.from("festival_contracts").select("festival_id").eq("id", contract.contract_id).single()).data?.festival_id,
-              title: `Chase façade approval — ${contract.concept_alias ?? "concept"}`,
+              title: `Chase facade approval — ${contract.concept_alias ?? "concept"}`,
               due_date: extra.approval_expected_by,
               priority: "high",
               source: "facade_status",
@@ -571,7 +571,7 @@ function StatusDrawer({ open, onOpenChange, facade, contract, onSaved }: {
           update.notes = (facade.notes ? facade.notes + " | " : "") + `DAMAGED: ${extra.damage_description ?? ""}`;
           await supabase.from("festival_action_items").insert({
             festival_id: (await supabase.from("festival_contracts").select("festival_id").eq("id", contract.contract_id).single()).data?.festival_id,
-            title: `🚨 Replace damaged façade — ${contract.concept_alias ?? "concept"}`,
+            title: `🚨 Replace damaged facade — ${contract.concept_alias ?? "concept"}`,
             description: extra.damage_description ?? "",
             priority: "critical",
             source: "facade_status",
@@ -592,7 +592,7 @@ function StatusDrawer({ open, onOpenChange, facade, contract, onSaved }: {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Update façade status</SheetTitle>
+          <SheetTitle>Update facade status</SheetTitle>
           <SheetDescription>Current: {FACADE_STATUS_META[facade.design_status].label}</SheetDescription>
         </SheetHeader>
         <div className="py-4 space-y-3">
@@ -698,7 +698,7 @@ function BulkReuseDialog({ open, onOpenChange, festivalName, facades, onDone }: 
       if (fid) {
         await supabase.from("festival_action_items").insert({
           festival_id: fid,
-          title: `Verify 2025 façade archive accessibility for ${festivalName}`,
+          title: `Verify 2025 facade archive accessibility for ${festivalName}`,
           priority: "high",
           source: "facade_bulk_reuse",
         });
@@ -708,7 +708,7 @@ function BulkReuseDialog({ open, onOpenChange, festivalName, facades, onDone }: 
       if (anyMods && fid) {
         await supabase.from("festival_open_questions").insert({
           festival_id: fid,
-          question: `Confirm 2025 façade modifications for ${festivalName}`,
+          question: `Confirm 2025 facade modifications for ${festivalName}`,
           context: selected.filter(([_, v]) => v.mods).map(([_, v]) => `• ${v.source}: ${v.mods}`).join("\n"),
           priority: "medium",
         });
@@ -723,7 +723,7 @@ function BulkReuseDialog({ open, onOpenChange, festivalName, facades, onDone }: 
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Bulk reuse from 2025</DialogTitle>
-          <DialogDescription>Mark which façades to reuse, with optional modifications.</DialogDescription>
+          <DialogDescription>Mark which facades to reuse, with optional modifications.</DialogDescription>
         </DialogHeader>
         <div className="space-y-2 max-h-[60vh] overflow-y-auto">
           {(contracts as any[]).map((c) => {

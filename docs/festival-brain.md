@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 1 | Introduction | — | — |
 | 2 | Concepts | — | — |
-| 3 | Equipment | Setup · Façade · Equipment Transportation | 📄 Fidibus build sheet · 📄 Print files |
+| 3 | Equipment | Setup · Facade · Equipment Transportation | 📄 Fidibus build sheet · 📄 Print files |
 | 4 | Cooling & Storage | — | — |
 | 5 | Power | — | 📄 Power requirements |
 | 6 | Staffing & Vagtplan | — | 📄 Vagtplan PDF per person |
@@ -121,7 +121,7 @@
 
 **Hero KPIs:**
 - Total Setup items count
-- Façade status summary (e.g. "3/4 print-ready")
+- Facade status summary (e.g. "3/4 print-ready")
 - Equipment trucks count
 
 ### 3.1 — Setup sub-card
@@ -130,7 +130,7 @@
 
 **Content:**
 - Tables, table covers, countertops
-- Façade panels (structure)
+- Facade panels (structure)
 - Cables, lights
 - DAKA bins
 - Price-writing display (chalkboards / printed boards)
@@ -151,9 +151,9 @@
 - Includes quantities, zone, arrival contact, Fidibus deadline
 - Sent to Fidibus before festival
 
-### 3.2 — Façade sub-card
+### 3.2 — Facade sub-card
 
-**Purpose:** Track façade print readiness per concept.
+**Purpose:** Track facade print readiness per concept.
 
 **Content:**
 - Status per concept: pending / in-progress / print-ready / printed / installed
@@ -169,7 +169,7 @@
 - 🟡 Yellow: any concept "in-progress" within 7 days of print deadline
 - 🔴 Red: any concept "pending" past print deadline
 
-**Reports:** 📄 **Façade Print Files** (links to design files for each concept)
+**Reports:** 📄 **Facade Print Files** (links to design files for each concept)
 
 ### 3.3 — Equipment Transportation sub-card
 
@@ -598,7 +598,7 @@ Concepts (Card 2)
     ├─→ Cooking Equipment (9): cooking gear per concept
     ├─→ BC Trolley (8): trolleys per concept
     ├─→ Menu & Groceries (10): dishes per concept
-    └─→ Façade (3.2): façade per concept
+    └─→ Facade (3.2): facade per concept
 
 Staffing (Card 6)
     └─→ Staff Transportation & Accommodation (Card 7)
