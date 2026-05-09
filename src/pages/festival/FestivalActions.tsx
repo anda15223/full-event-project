@@ -498,7 +498,8 @@ function ActionRow({
   const isSnoozed = item.snoozed_until && item.snoozed_until > todayStr();
 
   return (
-    <div className={cn("group rounded-lg border bg-card p-3 hover:shadow-sm transition-all flex gap-3 items-start",
+    <div id={`fa-item-${item.id}`}
+      className={cn("group rounded-lg border bg-card p-3 hover:shadow-sm transition-all flex gap-3 items-start",
       item.status === "done" && "opacity-60")}>
       <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", PRIORITY_DOT[item.priority])} title={item.priority} />
 
