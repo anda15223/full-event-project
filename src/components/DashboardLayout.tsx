@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,7 @@ const navItems: { icon: typeof LayoutDashboard; label: string; path: string; col
   { icon: HelpCircle, label: "Questions", path: "/questions" },
   { icon: ScrollText, label: "Rules", path: "/rules" },
   { icon: Calendar, label: "Timeline", path: "/timeline" },
+  { icon: FileSignature, label: "Contracts", path: "/contracts-overview" },
 ];
 
 function SidebarNav() {
