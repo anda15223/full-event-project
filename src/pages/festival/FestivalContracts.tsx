@@ -398,6 +398,7 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
   const qc = useQueryClient();
   const fileUrl = useFileUrl(c.contract_file_path);
   const [uploading, setUploading] = useState(false);
+  const hasFinanceAccess = useFinanceAccess();
 
   const handleFile = async (file: File) => {
     if (!file) return;
