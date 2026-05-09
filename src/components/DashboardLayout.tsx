@@ -125,6 +125,7 @@ function SidebarNav() {
             const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
             const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
             const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
+            const showTimelineBadge = item.path === "/timeline" && timelineBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -140,6 +141,7 @@ function SidebarNav() {
                       {showActionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-500 border-2 border-white" />}
                       {showQuestionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 border-2 border-white" />}
                       {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
+                      {showTimelineBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
