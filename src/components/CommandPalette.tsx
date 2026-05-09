@@ -105,6 +105,15 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: accommodations = [] } = useQuery({
+    queryKey: ["palette-accommodations"], enabled: open,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("festival_accommodation")
+        .select("id, festival_id, provider_name, accommodation_type, payment_status").limit(300);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
