@@ -2,8 +2,11 @@ import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/rendere
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
 import { formatDateRange } from "@/lib/dateFormat";
+import { normalizeForPdf } from "@/lib/textNormalize";
+import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 
 try {
+  // Open Sans (Latin + Latin-Extended) — covers Danish/Romanian + arrow glyph U+2192
   Font.register({
     family: "OpenSans",
     fonts: [
@@ -13,6 +16,10 @@ try {
   });
   Font.registerHyphenationCallback((w) => [w]);
 } catch {}
+
+const N = normalizeForPdf;
+const emojiFor = (slug?: string | null) =>
+  slug && (CONCEPT_EMOJI as any)[slug] ? (CONCEPT_EMOJI as any)[slug] as string : "";
 
 const RED = "#c0392b";
 const GREEN = "#27ae60";
