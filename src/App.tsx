@@ -36,6 +36,9 @@ import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
 import GlobalRules from "./pages/GlobalRules";
 import RulesExport from "./pages/RulesExport";
+import FestivalTimeline from "./pages/festival/FestivalTimeline";
+import FestivalTimelineExport from "./pages/festival/FestivalTimelineExport";
+import GlobalTimeline from "./pages/GlobalTimeline";
 
 const queryClient = new QueryClient();
 
