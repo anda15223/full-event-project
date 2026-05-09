@@ -6025,6 +6025,7 @@ export type Database = {
         Args: { festival_slug: string }
         Returns: Json
       }
+      get_dashboard_overview: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
