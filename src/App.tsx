@@ -44,6 +44,10 @@ import FestivalContractsExport from "./pages/festival/FestivalContractsExport";
 import ContractsOverview from "./pages/ContractsOverview";
 import FestivalFacade from "./pages/festival/FestivalFacade";
 import FestivalFacadeExport from "./pages/festival/FestivalFacadeExport";
+import FestivalSafety from "./pages/festival/FestivalSafety";
+import FestivalSafetyExport from "./pages/festival/FestivalSafetyExport";
+import FestivalAccommodation from "./pages/festival/FestivalAccommodation";
+import FestivalAccommodationExport from "./pages/festival/FestivalAccommodationExport";
 
 const queryClient = new QueryClient();
 
