@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2, HelpCircle } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle, ScrollText } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org" | "question";
+  type: "festival" | "contact" | "action" | "org" | "question" | "rule";
   label: string;
   sub?: string;
   to: string;
@@ -66,6 +66,15 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: rules = [] } = useQuery({
+    queryKey: ["palette-rules"], enabled: open,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("cross_festival_rules")
+        .select("id, rule_name, severity, category, active").eq("active", true).limit(200);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
@@ -100,14 +109,22 @@ export default function CommandPalette() {
         to: f ? `/festivals/${f.slug}/questions?q=${q.id}` : "/questions",
       });
     }
+    for (const r of rules as any[]) {
+      list.push({
+        id: r.id, type: "rule", label: r.rule_name,
+        sub: [r.severity, r.category].filter(Boolean).join(" · "),
+        to: `/rules?q=${encodeURIComponent(r.rule_name)}`,
+      });
+    }
     return list;
-  }, [festivals, contacts, actions, questions]);
+  }, [festivals, contacts, actions, questions, rules]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
     contacts: items.filter(i => i.type === "contact"),
     actions: items.filter(i => i.type === "action"),
     questions: items.filter(i => i.type === "question"),
+    rules: items.filter(i => i.type === "rule"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
@@ -155,6 +172,17 @@ export default function CommandPalette() {
             {grouped.questions.map(i => (
               <CommandItem key={"q:" + i.id} value={`question ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
                 <HelpCircle className="h-4 w-4 mr-2 text-amber-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.rules.length > 0 && (
+          <CommandGroup heading="Rules">
+            {grouped.rules.map(i => (
+              <CommandItem key={"r:" + i.id} value={`rule ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <ScrollText className="h-4 w-4 mr-2 text-red-600" />
                 <span className="truncate">{i.label}</span>
                 {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
               </CommandItem>
