@@ -5017,6 +5017,42 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_rules: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          priority: string
+          rule_description: string
+          rule_name: string
+          source_rule_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority: string
+          rule_description: string
+          rule_name: string
+          source_rule_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: string
+          rule_description?: string
+          rule_name?: string
+          source_rule_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ingredient_storage: {
         Row: {
           created_at: string | null
