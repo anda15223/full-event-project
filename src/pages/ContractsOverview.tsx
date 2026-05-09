@@ -36,6 +36,7 @@ interface Row {
 }
 
 export default function ContractsOverview() {
+  const hasFinanceAccess = useFinanceAccess();
   const contractsQ = useQuery({
     queryKey: ["contracts-overview"],
     queryFn: async () => {
