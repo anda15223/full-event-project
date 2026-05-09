@@ -4391,6 +4391,39 @@ export type Database = {
         }
         Relationships: []
       }
+      festival_topskilt: {
+        Row: {
+          created_at: string
+          design_status: string
+          festival_contract_id: string
+          id: string
+          notes: string | null
+          print_deadline: string | null
+          print_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          design_status?: string
+          festival_contract_id: string
+          id?: string
+          notes?: string | null
+          print_deadline?: string | null
+          print_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          design_status?: string
+          festival_contract_id?: string
+          id?: string
+          notes?: string | null
+          print_deadline?: string | null
+          print_status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       festival_transport: {
         Row: {
           accreditation_pdf_path: string | null
