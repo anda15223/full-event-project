@@ -9,6 +9,7 @@ import { FestivalQuestionsStrip } from "@/components/attention/FestivalQuestions
 import { ConceptCardGrid } from "@/components/concept/ConceptCardGrid";
 import { ConceptExportMenu } from "@/components/concept/ConceptExportMenu";
 import { FestivalRulesBlock } from "@/components/rules/FestivalRulesBlock";
+import { FestivalTimelineNextEvents } from "@/components/timeline/FestivalTimelineNextEvents";
 import { CONCEPT_EMOJI, ConceptSlug, CONCEPT_LABELS } from "@/components/concept/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
