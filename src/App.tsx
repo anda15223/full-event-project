@@ -25,6 +25,7 @@ import FestivalActions from "./pages/festival/FestivalActions";
 import FestivalActionsExport from "./pages/festival/FestivalActionsExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
+import GlobalActions from "./pages/GlobalActions";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
 
