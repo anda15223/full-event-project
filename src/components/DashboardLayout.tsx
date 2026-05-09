@@ -78,6 +78,7 @@ function SidebarNav() {
           {navItems.map(item => {
             const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
             const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
+            const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -90,6 +91,7 @@ function SidebarNav() {
                       <item.icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
                       {item.color && <div className={`absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full ${item.color} border-2 border-white`} />}
                       {showAttentionDot && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
+                      {showActionsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-orange-500 border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
@@ -97,6 +99,11 @@ function SidebarNav() {
                         {item.path === "/attention" && attentionTotal > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
                             {attentionTotal}
+                          </span>
+                        )}
+                        {item.path === "/actions" && actionsBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-300">
+                            {actionsBadge}
                           </span>
                         )}
                       </span>
