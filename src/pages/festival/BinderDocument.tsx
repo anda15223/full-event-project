@@ -279,12 +279,9 @@ function ContractsPage({ data }: { data: BinderData }) {
             {k.contract_signed_date ? `   ·   Signed ${fmt(k.contract_signed_date)}` : ""}
             {k.signing_platform ? `   ·   ${k.signing_platform}` : ""}
           </Text>
-          <Text style={s.small}>
-            Operating entity: {k.operating_entity ?? "—"}   ·   CVR: {k.counterparty_cvr ?? "—"}
-            {k.contract_value_dkk ? `   ·   Value: ${Number(k.contract_value_dkk).toLocaleString()} DKK` : ""}
-          </Text>
-          <Text style={s.small}>Counterparty: {k.counterparty_name ?? "—"}{k.contract_signed_by ? `   ·   Signed by ${k.contract_signed_by}` : ""}</Text>
-          {k.payment_terms && <Text style={s.small}>Payment terms: {k.payment_terms} (status: {k.payment_status ?? "—"})</Text>}
+          {k.contract_value_dkk ? (
+            <Text style={s.small}>Value: {Number(k.contract_value_dkk).toLocaleString()} DKK{k.contract_signed_by ? `   ·   Signed by ${k.contract_signed_by}` : ""}</Text>
+          ) : (k.contract_signed_by ? <Text style={s.small}>Signed by {k.contract_signed_by}</Text> : null)}
           {k.key_obligations && <Text style={[s.small, { color: GRAY, marginTop: 2 }]}>Obligations: {k.key_obligations}</Text>}
         </View>
       ))}
