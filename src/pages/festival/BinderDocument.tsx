@@ -90,9 +90,11 @@ function SectionHeader({ title, meta }: { title: string; meta?: string }) {
 
 function CoverPage({ data }: { data: BinderData }) {
   const { festival, generatedAt } = data;
+  const titleString = N(festival.name.toUpperCase()).replace(/^[^A-Z0-9ÆØÅ]+/g, "");
+  console.log("Binder cover title codepoints", [...titleString].map((c) => c.charCodeAt(0).toString(16)));
   return (
     <Page size="A4" style={s.coverPage}>
-      <Text style={s.coverTitle}>{N(festival.name).toUpperCase()}</Text>
+      <Text style={s.coverTitle}>{titleString}</Text>
       <Text style={s.coverSub}>Operations Binder</Text>
       <Text style={s.coverDates}>{formatDateRange(festival.start_date, festival.end_date)}</Text>
       {festival.city && <Text style={s.coverDates}>{festival.city}</Text>}
