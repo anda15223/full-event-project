@@ -521,6 +521,7 @@ function useConceptStats(festivalId: string | null) {
 type CardTile = { key: string; name: string; icon: typeof Truck; route?: (s: string) => string };
 const CARD_TILES: CardTile[] = [
   { key: "transport", name: "Transport", icon: Truck, route: (s: string) => `/festivals/${s}/transport` },
+  { key: "soborg-loading", name: "Søborg Loading", icon: Truck, route: (s: string) => `/festivals/${s}/soborg-loading` },
   { key: "topskilt", name: "Topskilt", icon: FileText },
   { key: "setup", name: "Setup", icon: Calendar },
   { key: "cooling", name: "Cooling", icon: Snowflake },

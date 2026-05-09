@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
+import { sortedCategories, categoryLabel } from "@/lib/soborgLoading";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
@@ -598,6 +599,84 @@ function RulesPage({ data }: { data: BinderData }) {
   );
 }
 
+function SoborgLoadingPage({ data }: { data: BinderData }) {
+  const { festival, soborgLoading } = data;
+  if (!soborgLoading) {
+    return (
+      <Page size="A4" style={s.page} bookmark="Søborg Loading Manifest">
+        <SectionHeader title="Søborg Loading Manifest" />
+        <Text style={[s.small, { color: GRAY }]}>No loading manifest data.</Text>
+        <SectionFooter name="Søborg Loading" festival={festival.name} />
+      </Page>
+    );
+  }
+  return (
+    <Page size="A4" style={s.page} bookmark="Søborg Loading Manifest" wrap>
+      <SectionHeader
+        title="Søborg Loading Manifest"
+        meta={`${soborgLoading.vehicles.length} vehicles · ${soborgLoading.total_items} items loaded from Søborg`}
+      />
+      {soborgLoading.vehicles.map((veh) => (
+        <View key={veh.vehicle_id} style={{ marginBottom: 8 }} wrap={false}>
+          <Text style={[s.bold, { fontSize: 11, marginBottom: 3, paddingBottom: 2, borderBottom: `0.5pt solid ${DARK}` }]}>
+            {N(veh.vehicle_type)} — {veh.car_total_items} items
+          </Text>
+          {veh.concepts.map((cg) => (
+            <View key={cg.contract_id} style={{ marginTop: 3, marginBottom: 3 }}>
+              <Text style={[s.small, s.bold]}>
+                {N(cg.concept_name)}{cg.concept_alias ? ` — ${N(cg.concept_alias)}` : ""}
+                <Text style={{ color: GRAY }}>  ({cg.total_items} items)</Text>
+              </Text>
+              {sortedCategories(cg.items_by_category).map((cat) => (
+                <View key={cat} style={{ marginTop: 1 }}>
+                  <Text style={[s.small, { color: GRAY, marginLeft: 6 }]}>{categoryLabel(cat)}:</Text>
+                  {cg.items_by_category[cat].map((it) => {
+                    const tags: string[] = [];
+                    if (it.power_type) tags.push(it.power_type);
+                    if (it.power_kw) tags.push(`${Number(it.power_kw).toFixed(1)} kW`);
+                    if (it.is_shared) tags.push("shared");
+                    return (
+                      <Text key={it.id} style={[s.small, { marginLeft: 16 }]}>
+                        • {it.quantity}× {N(it.name)}
+                        {tags.length > 0 ? `  (${tags.join(", ")})` : ""}
+                      </Text>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      ))}
+      {soborgLoading.unassigned.concepts.length > 0 && (
+        <View style={{ marginTop: 8, padding: 6, border: `1pt solid ${AMBER}` }} wrap={false}>
+          <Text style={[s.bold, s.small, s.amber]}>Concepts without vehicle assignment</Text>
+          {soborgLoading.unassigned.concepts.map((c) => (
+            <Text key={c.contract_id} style={s.small}>
+              • {N(c.concept_name)}{c.concept_alias ? ` — ${N(c.concept_alias)}` : ""}
+              {c.total_items > 0 ? `  (${c.total_items} items)` : ""}
+            </Text>
+          ))}
+        </View>
+      )}
+      {soborgLoading.not_loaded_from_soborg.items.length > 0 && (
+        <View style={{ marginTop: 8 }} wrap={false}>
+          <Text style={[s.bold, s.small, { marginBottom: 2 }]}>Delivered on-site (NOT loaded from Søborg)</Text>
+          {soborgLoading.not_loaded_from_soborg.items.map((u) => (
+            <Text key={u.id} style={s.small}>
+              • {u.quantity}× {N(u.unit_label)}
+              {u.container_type ? ` — ${N(u.container_type)}` : ""}
+              {u.supplier ? `  (${N(u.supplier)})` : ""}
+              {(u.delivery_date || u.pickup_date) ? `  — delivered ${fmt(u.delivery_date)}, picked up ${fmt(u.pickup_date)}` : ""}
+            </Text>
+          ))}
+        </View>
+      )}
+      <SectionFooter name="Søborg Loading" festival={festival.name} />
+    </Page>
+  );
+}
+
 function BackCoverPage({ data }: { data: BinderData }) {
   const { festival, primaryContacts } = data;
   return (
@@ -653,6 +732,7 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
           case "cooling": return <CoolingPage key={sec.key} data={data} />;
           case "safety": return <SafetyPage key={sec.key} data={data} />;
           case "accommodation": return <AccommodationPage key={sec.key} data={data} />;
+          case "soborg_loading": return <SoborgLoadingPage key={sec.key} data={data} />;
           case "questions": return <QuestionsPage key={sec.key} data={data} />;
           case "rules": return <RulesPage key={sec.key} data={data} />;
           default: return null;
