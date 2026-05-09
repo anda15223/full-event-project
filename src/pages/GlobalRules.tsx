@@ -93,6 +93,7 @@ export default function GlobalRules() {
       const { data, error } = await (supabase as any)
         .from("cross_festival_rules")
         .select("*")
+        .eq("visibility", "public")
         .order("severity", { ascending: true })
         .order("rule_name", { ascending: true });
       if (error) throw error;

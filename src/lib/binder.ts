@@ -64,7 +64,7 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
     sb.from("festival_accommodation").select("*").eq("festival_id", fid).order("check_in_date"),
     sb.from("festival_open_questions")
       .select("id, question, context, status, priority, question_type, decision_owner, deadline, blocking_what")
-      .eq("festival_id", fid).eq("status", "open"),
+      .eq("festival_id", fid).eq("status", "open").eq("visibility", "public"),
     sb.rpc("get_active_rules_for_festival", { festival_slug: slug }),
   ]);
 
