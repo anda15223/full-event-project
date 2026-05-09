@@ -251,6 +251,7 @@ export default function CommandPalette() {
             ))}
           </CommandGroup>
         )}
+      </CommandList>
     </CommandDialog>
   );
 }
