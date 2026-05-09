@@ -1,6 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
+import { sortedCategories, categoryLabel } from "@/lib/soborgLoading";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
