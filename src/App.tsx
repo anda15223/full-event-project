@@ -34,6 +34,8 @@ import FestivalQuestions from "./pages/festival/FestivalQuestions";
 import FestivalQuestionsExport from "./pages/festival/FestivalQuestionsExport";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
+import GlobalRules from "./pages/GlobalRules";
+import RulesExport from "./pages/RulesExport";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +78,8 @@ const App = () => (
             <Route path="/festivals/:slug/questions/export" element={<Protected><FestivalQuestionsExport /></Protected>} />
             <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
             <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
+            <Route path="/rules" element={<Protected><GlobalRules /></Protected>} />
+            <Route path="/rules/export" element={<Protected><RulesExport /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
