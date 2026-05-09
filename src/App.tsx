@@ -29,6 +29,9 @@ import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import GlobalActions from "./pages/GlobalActions";
 import GlobalContacts from "./pages/GlobalContacts";
+import GlobalQuestions from "./pages/GlobalQuestions";
+import FestivalQuestions from "./pages/festival/FestivalQuestions";
+import FestivalQuestionsExport from "./pages/festival/FestivalQuestionsExport";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
 
@@ -68,6 +71,9 @@ const App = () => (
             <Route path="/attention" element={<Protected><GlobalAttention /></Protected>} />
             <Route path="/actions" element={<Protected><GlobalActions /></Protected>} />
             <Route path="/contacts" element={<Protected><GlobalContacts /></Protected>} />
+            <Route path="/questions" element={<Protected><GlobalQuestions /></Protected>} />
+            <Route path="/festivals/:slug/questions" element={<Protected><FestivalQuestions /></Protected>} />
+            <Route path="/festivals/:slug/questions/export" element={<Protected><FestivalQuestionsExport /></Protected>} />
             <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
             <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
             <Route path="*" element={<NotFound />} />

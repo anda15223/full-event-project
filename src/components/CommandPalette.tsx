@@ -5,11 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
-import { Tent, User, Target, Building2 } from "lucide-react";
+import { Tent, User, Target, Building2, HelpCircle } from "lucide-react";
 
 interface Item {
   id: string;
-  type: "festival" | "contact" | "action" | "org";
+  type: "festival" | "contact" | "action" | "org" | "question";
   label: string;
   sub?: string;
   to: string;
@@ -57,6 +57,15 @@ export default function CommandPalette() {
     },
   });
 
+  const { data: questions = [] } = useQuery({
+    queryKey: ["palette-questions"], enabled: open,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("festival_open_questions")
+        .select("id, question, festival_id, status").eq("status", "open").limit(150);
+      return data ?? [];
+    },
+  });
+
   const items = useMemo<Item[]>(() => {
     const list: Item[] = [];
     for (const f of festivals as any[]) {
@@ -83,13 +92,22 @@ export default function CommandPalette() {
         to: f ? `/festivals/${f.slug}/actions?item=${a.id}` : "/actions",
       });
     }
+    for (const q of questions as any[]) {
+      const f = fById.get(q.festival_id);
+      list.push({
+        id: q.id, type: "question", label: q.question,
+        sub: f ? f.name : undefined,
+        to: f ? `/festivals/${f.slug}/questions?q=${q.id}` : "/questions",
+      });
+    }
     return list;
-  }, [festivals, contacts, actions]);
+  }, [festivals, contacts, actions, questions]);
 
   const grouped = useMemo(() => ({
     festivals: items.filter(i => i.type === "festival"),
     contacts: items.filter(i => i.type === "contact"),
     actions: items.filter(i => i.type === "action"),
+    questions: items.filter(i => i.type === "question"),
   }), [items]);
 
   const go = (to: string) => { setOpen(false); navigate(to); };
@@ -126,6 +144,17 @@ export default function CommandPalette() {
             {grouped.actions.map(i => (
               <CommandItem key={"a:" + i.id} value={`action ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
                 <Target className="h-4 w-4 mr-2 text-orange-600" />
+                <span className="truncate">{i.label}</span>
+                {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {grouped.questions.length > 0 && (
+          <CommandGroup heading="Open questions">
+            {grouped.questions.map(i => (
+              <CommandItem key={"q:" + i.id} value={`question ${i.label} ${i.sub ?? ""}`} onSelect={() => go(i.to)}>
+                <HelpCircle className="h-4 w-4 mr-2 text-amber-600" />
                 <span className="truncate">{i.label}</span>
                 {i.sub && <span className="ml-auto text-xs text-muted-foreground">{i.sub}</span>}
               </CommandItem>
