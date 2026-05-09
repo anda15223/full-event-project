@@ -309,13 +309,15 @@ export default function FestivalContracts() {
             </Button>
           ))}
         </div>
-        <Select value={filterEntity} onValueChange={setFilterEntity}>
-          <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder="Operating entity" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All entities</SelectItem>
-            {allEntities.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {hasFinanceAccess && (
+          <Select value={filterEntity} onValueChange={setFilterEntity}>
+            <SelectTrigger className="w-[200px] h-9"><SelectValue placeholder="Operating entity" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All entities</SelectItem>
+              {allEntities.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={filterConcept} onValueChange={setFilterConcept}>
           <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Concept" /></SelectTrigger>
           <SelectContent>
