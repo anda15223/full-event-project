@@ -740,18 +740,50 @@ export default function FestivalOverview() {
           {CARD_TILES.map((t) => {
             const Icon = t.icon;
             const route = t.route ? t.route(slug) : `/festivals/${slug}/${t.key}`;
-            const summary =
-              t.key === "transport"
-                ? `${transportSummaryQ.data?.vehicleCount ?? 0} vehicles`
-                : t.key === "contracts"
-                ? `${conceptsQ.data?.length ?? 0} concepts`
-                : t.key === "contacts"
-                ? "Directory"
-                : "—";
+            const isComingSoon = t.key === "staff" || t.key === "groceries";
+            let summary: React.ReactNode = "—";
+            if (t.key === "transport") {
+              summary = `${transportSummaryQ.data?.vehicleCount ?? 0} vehicles`;
+            } else if (t.key === "contracts") {
+              summary = `${contractsCountQ.data ?? 0} concepts`;
+            } else if (t.key === "contacts") {
+              summary = "Directory";
+            } else if (t.key === "action-items") {
+              const a = statsQ.data?.actionTotals;
+              if (a) {
+                const total = a.crit + a.high + a.normal;
+                summary = (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span>{total} open</span>
+                    {a.crit > 0 && (
+                      <span className="inline-flex items-center gap-1 text-destructive">
+                        <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                        {a.crit} critical
+                      </span>
+                    )}
+                  </span>
+                );
+              }
+            } else if (t.key === "cooling") {
+              const n = statsQ.data?.totalCooling;
+              if (typeof n === "number") summary = `${n} units`;
+            } else if (t.key === "soborg-loading") {
+              const s = soborgQ.data;
+              if (s) {
+                summary = s.vehicleCount > 0
+                  ? `${s.itemCount} items · ${s.vehicleCount} cars`
+                  : "Not configured";
+              }
+            } else if (isComingSoon) {
+              summary = <span className="italic">Coming soon</span>;
+            }
             return (
               <Link
                 key={t.key} to={route}
-                className="rounded-md border bg-background p-3 hover:bg-accent transition flex items-start gap-3"
+                className={cn(
+                  "rounded-md border bg-background p-3 hover:bg-accent transition flex items-start gap-3",
+                  isComingSoon && "opacity-60 border-dashed"
+                )}
               >
                 <Icon className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
                 <div className="min-w-0">
