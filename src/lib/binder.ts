@@ -35,6 +35,7 @@ export type BinderData = {
   questions: any[];
   rules: any[];
   topskilt: any[];
+  soborgLoading: SoborgLoadingManifest | null;
   // Overview-derived
   criticalCount: number;
   overdueCount: number;
