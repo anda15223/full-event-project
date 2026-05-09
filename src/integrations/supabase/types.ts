@@ -5089,6 +5089,185 @@ export type Database = {
           },
         ]
       }
+      intelligence_ingestion: {
+        Row: {
+          ai_proposed_updates: Json | null
+          ai_summary: string | null
+          ai_warnings: string[] | null
+          application_results: Json | null
+          applied_at: string | null
+          created_at: string
+          error_log: string | null
+          file_path: string | null
+          hint_card_types: string[] | null
+          hint_concept_ids: string[] | null
+          hint_festival_id: string | null
+          hint_notes: string | null
+          human_decision: string | null
+          human_edits: Json | null
+          human_reviewed_at: string | null
+          human_reviewed_by: string | null
+          id: string
+          parse_confidence: number | null
+          parse_duration_ms: number | null
+          parse_input_tokens: number | null
+          parse_model: string | null
+          parse_output_tokens: number | null
+          parsed_at: string | null
+          preview_image_path: string | null
+          raw_content: string | null
+          resulted_in_accommodation_updates: string[] | null
+          resulted_in_action_items: string[] | null
+          resulted_in_contact_updates: string[] | null
+          resulted_in_contract_updates: string[] | null
+          resulted_in_facade_updates: string[] | null
+          resulted_in_questions: string[] | null
+          resulted_in_safety_updates: string[] | null
+          resulted_in_timeline_events: string[] | null
+          source_filename: string | null
+          source_received_at: string | null
+          source_sender: string | null
+          source_subject: string | null
+          source_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_proposed_updates?: Json | null
+          ai_summary?: string | null
+          ai_warnings?: string[] | null
+          application_results?: Json | null
+          applied_at?: string | null
+          created_at?: string
+          error_log?: string | null
+          file_path?: string | null
+          hint_card_types?: string[] | null
+          hint_concept_ids?: string[] | null
+          hint_festival_id?: string | null
+          hint_notes?: string | null
+          human_decision?: string | null
+          human_edits?: Json | null
+          human_reviewed_at?: string | null
+          human_reviewed_by?: string | null
+          id?: string
+          parse_confidence?: number | null
+          parse_duration_ms?: number | null
+          parse_input_tokens?: number | null
+          parse_model?: string | null
+          parse_output_tokens?: number | null
+          parsed_at?: string | null
+          preview_image_path?: string | null
+          raw_content?: string | null
+          resulted_in_accommodation_updates?: string[] | null
+          resulted_in_action_items?: string[] | null
+          resulted_in_contact_updates?: string[] | null
+          resulted_in_contract_updates?: string[] | null
+          resulted_in_facade_updates?: string[] | null
+          resulted_in_questions?: string[] | null
+          resulted_in_safety_updates?: string[] | null
+          resulted_in_timeline_events?: string[] | null
+          source_filename?: string | null
+          source_received_at?: string | null
+          source_sender?: string | null
+          source_subject?: string | null
+          source_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_proposed_updates?: Json | null
+          ai_summary?: string | null
+          ai_warnings?: string[] | null
+          application_results?: Json | null
+          applied_at?: string | null
+          created_at?: string
+          error_log?: string | null
+          file_path?: string | null
+          hint_card_types?: string[] | null
+          hint_concept_ids?: string[] | null
+          hint_festival_id?: string | null
+          hint_notes?: string | null
+          human_decision?: string | null
+          human_edits?: Json | null
+          human_reviewed_at?: string | null
+          human_reviewed_by?: string | null
+          id?: string
+          parse_confidence?: number | null
+          parse_duration_ms?: number | null
+          parse_input_tokens?: number | null
+          parse_model?: string | null
+          parse_output_tokens?: number | null
+          parsed_at?: string | null
+          preview_image_path?: string | null
+          raw_content?: string | null
+          resulted_in_accommodation_updates?: string[] | null
+          resulted_in_action_items?: string[] | null
+          resulted_in_contact_updates?: string[] | null
+          resulted_in_contract_updates?: string[] | null
+          resulted_in_facade_updates?: string[] | null
+          resulted_in_questions?: string[] | null
+          resulted_in_safety_updates?: string[] | null
+          resulted_in_timeline_events?: string[] | null
+          source_filename?: string | null
+          source_received_at?: string | null
+          source_sender?: string | null
+          source_subject?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "intelligence_ingestion_hint_festival_id_fkey"
+            columns: ["hint_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
       personnel_history: {
         Row: {
           created_at: string | null
@@ -6021,6 +6200,10 @@ export type Database = {
       }
     }
     Functions: {
+      apply_ingestion: {
+        Args: { p_id: string; p_updates: Json }
+        Returns: Json
+      }
       get_active_rules_for_festival: {
         Args: { festival_slug: string }
         Returns: Json
