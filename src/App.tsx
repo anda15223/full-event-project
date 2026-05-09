@@ -24,6 +24,7 @@ import FestivalPowerExport from "./pages/festival/FestivalPowerExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
+import EquipmentSeed from "./pages/admin/EquipmentSeed";
 
 const queryClient = new QueryClient();
 
