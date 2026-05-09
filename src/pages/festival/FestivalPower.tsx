@@ -553,7 +553,7 @@ function PowerCard({
           onChange={(v) => switchVariant.mutate(v)}
         />
 
-        <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} />
+        <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} contract={contract} festivalId={festivalId} />
 
         {/* Power match check */}
         <PowerMatchSection power={power} equipment={equipment} />
