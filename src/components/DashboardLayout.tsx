@@ -37,6 +37,23 @@ function SidebarNav() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: actionsBadge = 0 } = useQuery({
+    queryKey: ["actions-sidebar-badge"],
+    queryFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase.from("festival_action_items")
+        .select("id, due_date, priority, status, snoozed_until")
+        .in("status", ["open", "in_progress"]);
+      return ((data ?? []) as any[]).filter((i) => {
+        if (i.snoozed_until && i.snoozed_until > today) return false;
+        if (i.priority === "critical") return true;
+        if (i.due_date && i.due_date < today) return true;
+        return false;
+      }).length;
+    },
+    refetchOnWindowFocus: true,
+  });
+
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50 bg-white">
       <SidebarHeader className="h-16 justify-center px-3">
