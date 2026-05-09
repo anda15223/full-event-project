@@ -124,7 +124,7 @@ function DataDoc(props: Props) {
         <View>
           <Text style={styles.festivalName}>{festival.name}</Text>
           <Text style={styles.meta}>
-            {festival.start_date} → {festival.end_date}  ·  Generated {ts}
+            {formatDateRange(festival.start_date, festival.end_date)}  ·  Generated {ts}
           </Text>
           <Text style={styles.title}>{subtitle}</Text>
         </View>
