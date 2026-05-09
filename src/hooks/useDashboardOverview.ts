@@ -77,7 +77,7 @@ export function useActivityFeed(limit = 10) {
     queryFn: async () => {
       const [actions, contracts, facade, events, questions] = await Promise.all([
         supabase.from("festival_action_items").select("id,title,status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
-        supabase.from("festival_contracts").select("id,counterparty,contract_status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
+        supabase.from("festival_contracts").select("id,concept_alias,contract_status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
         (supabase as any).from("festival_facade").select("id,design_status,updated_at,festival_contract_id").order("updated_at", { ascending: false }).limit(limit),
         (supabase as any).from("festival_timeline_event").select("id,title,status,updated_at,festival_id").order("updated_at", { ascending: false }).limit(limit),
         (supabase as any).from("festival_open_questions").select("id,question,status,updated_at,festival_id").eq("visibility", "public").order("updated_at", { ascending: false }).limit(limit),
