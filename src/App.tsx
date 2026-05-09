@@ -83,6 +83,9 @@ const App = () => (
             <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
             <Route path="/rules" element={<Protected><GlobalRules /></Protected>} />
             <Route path="/rules/export" element={<Protected><RulesExport /></Protected>} />
+            <Route path="/festivals/:slug/timeline" element={<Protected><FestivalTimeline /></Protected>} />
+            <Route path="/festivals/:slug/timeline/export" element={<Protected><FestivalTimelineExport /></Protected>} />
+            <Route path="/timeline" element={<Protected><GlobalTimeline /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
