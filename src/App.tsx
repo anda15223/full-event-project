@@ -23,6 +23,7 @@ import FestivalPower from "./pages/festival/FestivalPower";
 import FestivalPowerExport from "./pages/festival/FestivalPowerExport";
 import ConceptTest from "./pages/festival/ConceptTest";
 import GlobalAttention from "./pages/GlobalAttention";
+import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 
 const queryClient = new QueryClient();
 
