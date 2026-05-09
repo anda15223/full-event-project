@@ -5,11 +5,45 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Concept, ConceptManager, ConceptSlug, CONCEPT_EMOJI, CONCEPT_LABELS } from "./types";
 
+export interface ConceptContract {
+  contract_id: string;
+  concept_alias: string | null;
+  operating_entity: string | null;
+  operating_entity_cvr: string | null;
+  contract_status: string | null;
+  concept_variation_note: string | null;
+  stall_count: number | null;
+}
+
 interface Props {
   festivalId: string;
+  /** Data keyed by concept_id (shared across stalls of same brand) */
   conceptData: Record<string, any>;
-  renderConceptBody: (concept: Concept, data: any, manager: ConceptManager | null) => ReactNode;
+  renderConceptBody: (
+    concept: Concept,
+    data: any,
+    manager: ConceptManager | null,
+    contract?: ConceptContract,
+  ) => ReactNode;
   enableManagerEdit?: boolean;
+}
+
+interface ContractRow {
+  id: string;
+  concept_alias: string | null;
+  operating_entity: string | null;
+  operating_entity_cvr: string | null;
+  contract_status: string | null;
+  concept_variation_note: string | null;
+  stall_count: number | null;
+  concept: {
+    id: string;
+    slug: ConceptSlug;
+    name: string;
+    display_order: number | null;
+    color_hex: string | null;
+    short_name: string | null;
+  } | null;
 }
 
 export function ConceptCardGrid({
@@ -20,17 +54,19 @@ export function ConceptCardGrid({
 }: Props) {
   const qc = useQueryClient();
 
-  const conceptsQ = useQuery({
-    queryKey: ["concepts-ordered"],
+  const contractsQ = useQuery({
+    queryKey: ["festival-contracts-grid", festivalId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("concepts")
-        .select("id, slug, name, display_order, color_hex, short_name")
-        .not("display_order", "is", null)
-        .order("display_order", { ascending: true });
+        .from("festival_contracts")
+        .select(
+          "id, concept_alias, operating_entity, operating_entity_cvr, contract_status, concept_variation_note, stall_count, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
+        )
+        .eq("festival_id", festivalId);
       if (error) throw error;
-      return (data ?? []) as unknown as Concept[];
+      return (data ?? []) as unknown as ContractRow[];
     },
+    enabled: !!festivalId,
   });
 
   const assignmentsQ = useQuery({
@@ -92,7 +128,18 @@ export function ConceptCardGrid({
     onSuccess: () => qc.invalidateQueries({ queryKey: ["concept-assignments", festivalId] }),
   });
 
-  if (conceptsQ.isLoading) {
+  const sortedRows = useMemo(() => {
+    const rows = (contractsQ.data ?? []).slice();
+    rows.sort((a, b) => {
+      const ao = a.concept?.display_order ?? 999;
+      const bo = b.concept?.display_order ?? 999;
+      if (ao !== bo) return ao - bo;
+      return (a.concept_alias ?? "").localeCompare(b.concept_alias ?? "");
+    });
+    return rows;
+  }, [contractsQ.data]);
+
+  if (contractsQ.isLoading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-32 w-full" />)}
@@ -100,21 +147,62 @@ export function ConceptCardGrid({
     );
   }
 
+  if (sortedRows.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground italic p-4 border rounded-md">
+        No concept contracts found for this festival.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {(conceptsQ.data ?? []).map((c) => {
+      {sortedRows.map((row) => {
+        if (!row.concept) return null;
+        const c: Concept = {
+          id: row.concept.id,
+          slug: row.concept.slug,
+          name: row.concept.name,
+          display_order: row.concept.display_order ?? 0,
+          color_hex: row.concept.color_hex,
+          short_name: row.concept.short_name,
+        };
         const manager = managerByConcept.get(c.id) ?? null;
         const slug = c.slug as ConceptSlug;
         const emoji = CONCEPT_EMOJI[slug] ?? "🍽️";
-        const label = CONCEPT_LABELS[slug] ?? c.name;
+        const baseLabel = CONCEPT_LABELS[slug] ?? c.name;
+        const title = row.concept_alias?.trim() ? row.concept_alias : baseLabel;
+        const subtitleParts: string[] = [];
+        if (row.operating_entity) subtitleParts.push(row.operating_entity);
+        if (row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
+        const subtitle = subtitleParts.join(" · ");
+        const contract: ConceptContract = {
+          contract_id: row.id,
+          concept_alias: row.concept_alias,
+          operating_entity: row.operating_entity,
+          operating_entity_cvr: row.operating_entity_cvr,
+          contract_status: row.contract_status,
+          concept_variation_note: row.concept_variation_note,
+          stall_count: row.stall_count,
+        };
         return (
-          <div key={c.id} className="rounded-lg border bg-card p-4 print:break-inside-avoid">
+          <div key={row.id} className="rounded-lg border bg-card p-4 print:break-inside-avoid">
             <div className="flex items-start justify-between gap-4 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl" aria-hidden>{emoji}</span>
-                <h3 className="text-lg font-semibold">{label}</h3>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl" aria-hidden>{emoji}</span>
+                  <h3 className="text-lg font-semibold truncate">{title}</h3>
+                </div>
+                {subtitle && (
+                  <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+                )}
+                {row.concept_variation_note && (
+                  <div className="text-xs italic text-muted-foreground mt-1">
+                    {row.concept_variation_note}
+                  </div>
+                )}
               </div>
-              <div className="min-w-[220px]">
+              <div className="min-w-[220px] shrink-0">
                 {enableManagerEdit ? (
                   <div className="flex items-center gap-2">
                     <span aria-hidden>👤</span>
@@ -144,7 +232,7 @@ export function ConceptCardGrid({
                 )}
               </div>
             </div>
-            <div>{renderConceptBody(c, conceptData[c.id], manager)}</div>
+            <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
           </div>
         );
       })}
