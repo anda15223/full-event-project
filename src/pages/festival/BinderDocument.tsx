@@ -318,7 +318,7 @@ function TransportPage({ data }: { data: BinderData }) {
       <View style={s.th}>
         <Text style={{ width: 50 }}>Date</Text>
         <Text style={{ width: 40 }}>Time</Text>
-        <Text style={{ flex: 1 }}>From \u2192 To</Text>
+        <Text style={{ flex: 1 }}>{"From → To"}</Text>
         <Text style={{ width: 110 }}>Vehicle</Text>
         <Text style={{ width: 50 }}>Status</Text>
       </View>
@@ -332,7 +332,7 @@ function TransportPage({ data }: { data: BinderData }) {
           <View key={l.id} style={s.tr} wrap={false}>
             <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
             <Text style={{ width: 40 }}>{time}</Text>
-            <Text style={{ flex: 1 }}>{from} \u2192 {to}{l.leg_label ? `  \u00b7  ${N(l.leg_label)}` : ""}</Text>
+            <Text style={{ flex: 1 }}>{from}{" → "}{to}{l.leg_label ? `  ·  ${N(l.leg_label)}` : ""}</Text>
             <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}</Text>
             <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
           </View>
@@ -354,7 +354,7 @@ function TopskiltPage({ data }: { data: BinderData }) {
       {topskilt.map((t: any) => {
         const k = kMap.get(t.festival_contract_id) ?? {};
         const c = cMap.get(k.concept_id) ?? {};
-        const label = `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+        const label = N(k.concept_alias) || N(c.name) || "—";
         return (
           <View key={t.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
             <Text style={[s.bold, s.small]}>{label}</Text>
@@ -416,7 +416,7 @@ function PowerPage({ data }: { data: BinderData }) {
       {power.map((p: any) => {
         const k = kMap.get(p.festival_contract_id) ?? {};
         const c = cMap.get(k.concept_id) ?? {};
-        const label = `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+        const label = N(k.concept_alias) || N(c.name) || "—";
         const eqs = eqByPower.get(p.id) ?? [];
         const demandKw = eqs.reduce((sum: number, e: any) => sum + (Number(e.power_kw) || 0) * (Number(e.quantity) || 1), 0);
         const allocKw = Number(p.total_kw_estimate) || 0;
@@ -431,13 +431,13 @@ function PowerPage({ data }: { data: BinderData }) {
               {p.submission_deadline ? `   \u00b7   Deadline: ${fmt(p.submission_deadline)}` : ""}
             </Text>
             <Text style={s.small}>
-              Connections: 16A/240V \u00d7{p.connections_16a_240v ?? 0}, 16A/400V \u00d7{p.connections_16a_400v ?? 0}, 32A \u00d7{p.connections_32a ?? 0}, 63A \u00d7{p.connections_63a ?? 0}, 125A \u00d7{p.connections_125a ?? 0}
+              {`Connections: 16A/240V ×${p.connections_16a_240v ?? 0}, 16A/400V ×${p.connections_16a_400v ?? 0}, 32A ×${p.connections_32a ?? 0}, 63A ×${p.connections_63a ?? 0}, 125A ×${p.connections_125a ?? 0}`}
             </Text>
             <Text style={[s.small, { marginTop: 2 }]}>Equipment ({eqs.length}):</Text>
-            {eqs.length === 0 && <Text style={[s.small, { color: GRAY, marginLeft: 8 }]}>\u2014 none recorded \u2014</Text>}
+            {eqs.length === 0 && <Text style={[s.small, { color: GRAY, marginLeft: 8 }]}>{"— none recorded —"}</Text>}
             {eqs.map((e: any) => (
               <Text key={e.id} style={[s.small, { marginLeft: 8 }]}>
-                \u2022 {e.quantity ?? 1}\u00d7 {N(e.equipment_name)} \u2014 {e.power_type ?? "\u2014"}{e.power_kw ? ` \u2014 ${Number(e.power_kw).toFixed(2)} kW` : ""}{e.is_shared ? "  (shared)" : ""}
+                {`• ${e.quantity ?? 1}× ${N(e.equipment_name)} — ${e.power_type ?? "—"}${e.power_kw ? ` — ${Number(e.power_kw).toFixed(2)} kW` : ""}${e.is_shared ? "  (shared)" : ""}`}
               </Text>
             ))}
             {eqs.length > 0 && (
@@ -477,12 +477,12 @@ function CoolingPage({ data }: { data: BinderData }) {
           .map((a: any) => {
             const k = kMap.get(a.festival_contract_id) ?? {};
             const c = cMap.get(k.concept_id) ?? {};
-            return `${emojiFor(c.slug)} ${N(k.concept_alias) || N(c.name) || "\u2014"}`.trim();
+            return N(k.concept_alias) || N(c.name) || "—";
           });
         return (
           <View key={u.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
             <Text style={[s.bold, s.small]}>
-              {N(u.unit_label) || "Unit"} \u2014 {N(u.cooling_model) || "\u2014"}{u.container_type ? `  (${N(u.container_type)})` : ""} \u2014 {N(u.supplier) || "Supplier TBD"}
+              {`${N(u.unit_label) || "Unit"} — ${N(u.cooling_model) || "—"}${u.container_type ? `  (${N(u.container_type)})` : ""} — ${N(u.supplier) || "Supplier TBD"}`}
             </Text>
             <Text style={s.small}>
               Delivery: <Text style={s.bold}>{fmt(u.delivery_date)}</Text>
@@ -491,7 +491,7 @@ function CoolingPage({ data }: { data: BinderData }) {
               {u.cost_dkk ? `   \u00b7   ${Number(u.cost_dkk).toLocaleString()} DKK` : ""}
             </Text>
             {(u.pallet_count_kol || u.pallet_count_frys) && (
-              <Text style={s.small}>Pallets \u2014 chilled: {u.pallet_count_kol ?? 0}, frozen: {u.pallet_count_frys ?? 0}</Text>
+              <Text style={s.small}>{`Pallets — chilled: ${u.pallet_count_kol ?? 0}, frozen: ${u.pallet_count_frys ?? 0}`}</Text>
             )}
             <Text style={s.small}>Assigned to: {assigned.length ? assigned.join(", ") : "\u2014"}</Text>
             {u.notes && <Text style={[s.small, { color: GRAY }]}>{N(u.notes)}</Text>}
