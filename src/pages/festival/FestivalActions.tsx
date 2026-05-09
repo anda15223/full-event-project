@@ -110,6 +110,8 @@ function snoozeDate(option: "1d" | "3d" | "1w" | "monday"): string {
 export default function FestivalActions() {
   const { slug = "" } = useParams();
   const qc = useQueryClient();
+  const [searchParams] = (useSearchParamsImport as any)();
+  const highlightId = searchParams.get("item");
 
   const { data: festival } = useQuery({
     queryKey: ["festival", slug],
