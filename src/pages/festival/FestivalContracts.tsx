@@ -438,9 +438,11 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
               {concept?.name ?? "Unknown concept"}
               {c.concept_alias && <span className="text-muted-foreground font-normal ml-1">· {c.concept_alias}</span>}
             </div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              {c.operating_entity ?? "—"}{c.operating_entity_cvr && ` · CVR ${c.operating_entity_cvr}`}
-            </div>
+            {hasFinanceAccess && (
+              <div className="text-[11px] text-muted-foreground truncate">
+                {c.operating_entity ?? "—"}{c.operating_entity_cvr && ` · CVR ${c.operating_entity_cvr}`}
+              </div>
+            )}
           </div>
         </div>
         <StatusPill status={c.contract_status} />
