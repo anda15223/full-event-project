@@ -3334,7 +3334,7 @@ export type Database = {
           notes: string | null
           position: number
           power_kw: number | null
-          power_type: string
+          power_type: string | null
           quantity: number
           shared_with_concepts: string[] | null
           updated_at: string | null
@@ -3353,7 +3353,7 @@ export type Database = {
           notes?: string | null
           position?: number
           power_kw?: number | null
-          power_type: string
+          power_type?: string | null
           quantity?: number
           shared_with_concepts?: string[] | null
           updated_at?: string | null
@@ -3372,7 +3372,7 @@ export type Database = {
           notes?: string | null
           position?: number
           power_kw?: number | null
-          power_type?: string
+          power_type?: string | null
           quantity?: number
           shared_with_concepts?: string[] | null
           updated_at?: string | null
