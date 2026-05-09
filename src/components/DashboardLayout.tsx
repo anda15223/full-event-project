@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature, Home,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,7 +17,8 @@ import { AttentionSummary } from "@/lib/attention";
 import CommandPalette from "@/components/CommandPalette";
 
 const navItems: { icon: typeof LayoutDashboard; label: string; path: string; color?: string }[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Home, label: "Today", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard-legacy" },
   { icon: Tent, label: "Festivals", path: "/festivals", color: "bg-primary" },
   { icon: Target, label: "Actions", path: "/actions" },
   { icon: AlertTriangle, label: "Attention", path: "/attention" },
@@ -140,13 +141,15 @@ function SidebarNav() {
         {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.14em] mb-2 mt-3 px-3">Agents</p>}
         <SidebarMenu>
           {navItems.map(item => {
-            const active = pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path));
+            const active = item.path === "/" ? pathname === "/" : (pathname === item.path || pathname.startsWith(item.path + "/"));
             const showAttentionDot = item.path === "/attention" && attentionTotal > 0;
             const showActionsBadge = item.path === "/actions" && actionsBadge > 0;
             const showQuestionsBadge = item.path === "/questions" && questionsBadge > 0;
             const showRulesBadge = item.path === "/rules" && rulesBadge > 0;
             const showTimelineBadge = item.path === "/timeline" && timelineBadge > 0;
             const showContractsBadge = item.path === "/contracts-overview" && contractsBadge > 0;
+            const todayBadge = actionsBadge + questionsBadge;
+            const showTodayBadge = item.path === "/" && todayBadge > 0;
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
@@ -164,10 +167,16 @@ function SidebarNav() {
                       {showRulesBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
                       {showTimelineBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-blue-500 border-2 border-white" />}
                       {showContractsBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500 border-2 border-white" />}
+                      {showTodayBadge && <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive border-2 border-white" />}
                     </div>
                     {!collapsed && (
                       <span className="flex-1 flex items-center justify-between">
                         <span>{item.label}</span>
+                        {item.path === "/" && todayBadge > 0 && (
+                          <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                            {todayBadge}
+                          </span>
+                        )}
                         {item.path === "/attention" && attentionTotal > 0 && (
                           <span className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive">
                             {attentionTotal}
