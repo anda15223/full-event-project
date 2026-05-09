@@ -8,6 +8,7 @@ import { FestivalActionItemsStrip } from "@/components/attention/FestivalActionI
 import { FestivalQuestionsStrip } from "@/components/attention/FestivalQuestionsStrip";
 import { ConceptCardGrid } from "@/components/concept/ConceptCardGrid";
 import { ConceptExportMenu } from "@/components/concept/ConceptExportMenu";
+import { FestivalRulesBlock } from "@/components/rules/FestivalRulesBlock";
 import { CONCEPT_EMOJI, ConceptSlug, CONCEPT_LABELS } from "@/components/concept/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -725,6 +726,9 @@ export default function FestivalOverview() {
           <Link to={`/festivals/${slug}/action-items`} className="text-xs text-primary hover:underline">→ See all action items</Link>
         </div>
       </section>
+
+      {/* BLOCK 9 — applicable rules */}
+      <FestivalRulesBlock slug={slug} />
     </div>
   );
 }
