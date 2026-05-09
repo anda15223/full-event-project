@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { CONCEPT_LABELS, CONCEPT_EMOJI, ConceptSlug, CONCEPT_SLUGS } from "@/components/concept/types";
+import { formatDateRange } from "@/lib/dateFormat";
 
 try {
   Font.register({
