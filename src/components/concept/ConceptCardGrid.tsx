@@ -180,6 +180,9 @@ export function ConceptCardGrid({
         if (row.operating_entity) subtitleParts.push(row.operating_entity);
         if (row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
         const subtitle = subtitleParts.join(" · ");
+        const verifyQuestion =
+          verifyQuestions.find((q) => q.concept_id === c.id) ??
+          verifyQuestions.find((q) => q.concept_id === null);
         const contract: ConceptContract = {
           contract_id: row.id,
           concept_alias: row.concept_alias,
@@ -197,8 +200,18 @@ export function ConceptCardGrid({
                   <span className="text-2xl" aria-hidden>{emoji}</span>
                   <h3 className="text-lg font-semibold truncate">{title}</h3>
                 </div>
-                {subtitle && (
-                  <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+                {(subtitle || verifyQuestion) && (
+                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                    {subtitle && <span>{subtitle}</span>}
+                    {verifyQuestion && (
+                      <VerifyEntityBadge
+                        question={verifyQuestion}
+                        contractId={row.id}
+                        currentEntity={row.operating_entity}
+                        currentCvr={row.operating_entity_cvr}
+                      />
+                    )}
+                  </div>
                 )}
                 {row.concept_variation_note && (
                   <div className="text-xs italic text-muted-foreground mt-1">
