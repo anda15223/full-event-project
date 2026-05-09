@@ -29,6 +29,7 @@ import {
   ContractStatus, PaymentStatus, STATUS_META, PAYMENT_META, SIGNING_PLATFORMS,
   formatDKK, daysBetween, pushStatusEntry,
 } from "@/lib/contracts";
+import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
