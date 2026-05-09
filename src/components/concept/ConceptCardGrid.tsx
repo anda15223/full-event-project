@@ -193,9 +193,10 @@ export function ConceptCardGrid({
         const emoji = CONCEPT_EMOJI[slug] ?? "🍽️";
         const baseLabel = CONCEPT_LABELS[slug] ?? c.name;
         const title = row.concept_alias?.trim() ? row.concept_alias : baseLabel;
+        const financeEntity = hasFinanceAccess ? (financeQ.data?.get(row.id) ?? null) : null;
         const subtitleParts: string[] = [];
-        if (row.operating_entity) subtitleParts.push(row.operating_entity);
-        if (row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
+        if (hasFinanceAccess && financeEntity) subtitleParts.push(financeEntity);
+        if (hasFinanceAccess && row.operating_entity_cvr) subtitleParts.push(`CVR ${row.operating_entity_cvr}`);
         const subtitle = subtitleParts.join(" · ");
         const verifyQuestion =
           verifyQuestions.find((q) => q.concept_id === c.id) ??
@@ -203,8 +204,8 @@ export function ConceptCardGrid({
         const contract: ConceptContract = {
           contract_id: row.id,
           concept_alias: row.concept_alias,
-          operating_entity: row.operating_entity,
-          operating_entity_cvr: row.operating_entity_cvr,
+          operating_entity: financeEntity,
+          operating_entity_cvr: hasFinanceAccess ? row.operating_entity_cvr : null,
           contract_status: row.contract_status,
           concept_variation_note: row.concept_variation_note,
           stall_count: row.stall_count,
