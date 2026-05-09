@@ -29,6 +29,8 @@ interface Props {
     contract?: ConceptContract,
   ) => ReactNode;
   enableManagerEdit?: boolean;
+  /** Show "Pack into: [vehicle]" dropdown on each card. Use on Power/Facade/Topskilt/Loading pages only. */
+  showVehicleSelector?: boolean;
 }
 
 interface ContractRow {
