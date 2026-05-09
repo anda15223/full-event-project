@@ -13,7 +13,7 @@ export function normalizeForPdf(text: string | null | undefined): string {
 
   // Literal escape sequences sometimes pasted into DB content
   s = s
-    .replace(/\\u2192/g, " -> ")
+    .replace(/\\u2192/g, " to ")
     .replace(/\\u00d7/g, "×")
     .replace(/\\u2014/g, "—")
     .replace(/\\u2013/g, "–");
