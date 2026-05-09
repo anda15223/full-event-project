@@ -272,6 +272,15 @@ export function ConceptCardGrid({
                 )}
               </div>
             </div>
+            {showVehicleSelector && (
+              <div className="mb-3">
+                <VehicleSelector
+                  festivalId={festivalId}
+                  contractId={row.id}
+                  currentVehicleId={row.assigned_vehicle_id}
+                />
+              </div>
+            )}
             <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
           </div>
         );
