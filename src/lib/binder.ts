@@ -61,7 +61,7 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
       .select("id, concept_id, concept_alias, contract_status, contract_signed_date, signing_platform, contract_value_dkk, counterparty_name, counterparty_cvr, key_obligations, contract_signed_by, inspection_date, site_clearance_deadline")
       .eq("festival_id", fid),
     sb.from("concepts").select("id, slug, name, display_order, color_hex").order("display_order"),
-    sb.from("festival_transport").select("id, vehicle_type, capacity, status, notes, accreditation_pdf_path, accreditation_uploaded_at, license_plate").eq("festival_id", fid),
+    sb.from("festival_transport").select("id, vehicle_type, capacity, status, notes, accreditation_pdf_path, accreditation_uploaded_at, license_plate, season_rental_id, season_rental:season_rentals(id, vehicle_type, capacity, license_plate, accreditation_pdf_path, accreditation_uploaded_at, ownership, reservation_number)").eq("festival_id", fid),
     sb.from("festival_staff").select("id, name, role, home_location, requires_transport, concept_id").eq("festival_id", fid),
     sb.from("festival_safety").select("*").eq("festival_id", fid).maybeSingle(),
     sb.from("festival_accommodation").select("*").eq("festival_id", fid).order("check_in_date"),

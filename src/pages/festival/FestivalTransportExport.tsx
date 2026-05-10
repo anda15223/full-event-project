@@ -25,7 +25,17 @@ Font.register({
 Font.registerHyphenationCallback((word) => [word]);
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
-type SeasonRental = { id: string; reservation_number: string | null; season_label: string | null };
+type SeasonRental = {
+  id: string;
+  vehicle_type: string | null;
+  capacity: number | null;
+  license_plate: string | null;
+  accreditation_pdf_path: string | null;
+  accreditation_uploaded_at: string | null;
+  reservation_number: string | null;
+  season_label: string | null;
+  ownership: string | null;
+};
 type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
@@ -208,7 +218,13 @@ function TransportPdf({
           const vLegs = legs.filter((l) => l.transport_id === v.id);
           const cancelled = v.status === "cancelled";
           const statusColor = pdfStatusColor(v.status ?? "planned");
-          const accredOk = !!v.accreditation_pdf_path;
+          // Phase 2K-3: dual-read — canonical season_rentals first, fall back to legacy festival_transport.
+          const name = v.season_rental?.vehicle_type ?? v.vehicle_type;
+          const capacity = v.season_rental?.capacity ?? v.capacity;
+          const plate = v.season_rental?.license_plate ?? v.license_plate;
+          const accredPath = v.season_rental?.accreditation_pdf_path ?? v.accreditation_pdf_path;
+          const accredOk = !!accredPath;
+          const reservation = v.season_rental?.reservation_number;
           return (
             <View
               key={v.id}
@@ -221,22 +237,22 @@ function TransportPdf({
               <View style={styles.vehicleHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.vehicleTitle, cancelled && styles.cancelled]}>
-                    {N(v.vehicle_type)}
+                    {N(name)}
                     {cancelled ? "  (CANCELLED)" : ""}
                   </Text>
                   <Text style={styles.vehicleMeta}>
-                    {(v.capacity ?? "?")} seats
+                    {(capacity ?? "?")} seats
                     {"  "}
                     <Text style={[styles.statusPill, { color: statusColor.fg, backgroundColor: statusColor.bg, borderColor: statusColor.border }]}>
                       {(v.status ?? "planned").toUpperCase()}
                     </Text>
-                    {v.season_rental?.reservation_number
-                      ? `  ·  Res ${N(v.season_rental.reservation_number)}`
+                    {reservation
+                      ? `  ·  Res ${N(reservation)}`
                       : ""}
                   </Text>
                   <Text style={styles.vehicleMeta}>
-                    {v.license_plate
-                      ? <Text style={styles.accredOk}>Plate: {N(v.license_plate)}</Text>
+                    {plate
+                      ? <Text style={styles.accredOk}>Plate: {N(plate)}</Text>
                       : <Text style={styles.accredMissing}>Plate: not entered</Text>}
                   </Text>
                   {v.notes ? <Text style={styles.vehicleMeta}>{N(v.notes)}</Text> : null}
@@ -334,7 +350,7 @@ export default function FestivalTransportExport() {
 
         const { data: vehicles, error: ve } = await supabase
           .from("festival_transport")
-          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,reservation_number,season_label)")
+          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,vehicle_type,capacity,license_plate,accreditation_pdf_path,accreditation_uploaded_at,reservation_number,season_label,ownership)")
           .eq("festival_id", festival.id)
           .order("created_at");
         if (ve) throw ve;

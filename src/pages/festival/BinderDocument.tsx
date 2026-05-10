@@ -305,15 +305,21 @@ function TransportPage({ data }: { data: BinderData }) {
         <Text style={{ width: 60 }}>Status</Text>
         <Text style={{ width: 70 }}>Accred.</Text>
       </View>
-      {transport.map((v: any) => (
-        <View key={v.id} style={s.tr} wrap={false}>
-          <Text style={{ flex: 1 }}>{N(v.vehicle_type)}</Text>
-          <Text style={[{ width: 80 }, v.license_plate ? null : s.warn]}>{v.license_plate ? N(v.license_plate) : "pending"}</Text>
-          <Text style={{ width: 50 }}>{v.capacity ?? "\u2014"}</Text>
-          <Text style={{ width: 60 }}>{v.status ?? "\u2014"}</Text>
-          <Text style={[{ width: 70 }, v.accreditation_pdf_path ? s.ok : s.warn]}>{v.accreditation_pdf_path ? "uploaded" : "missing"}</Text>
-        </View>
-      ))}
+      {transport.map((v: any) => {
+        const name = v.season_rental?.vehicle_type ?? v.vehicle_type;
+        const plate = v.season_rental?.license_plate ?? v.license_plate;
+        const capacity = v.season_rental?.capacity ?? v.capacity;
+        const accredPath = v.season_rental?.accreditation_pdf_path ?? v.accreditation_pdf_path;
+        return (
+          <View key={v.id} style={s.tr} wrap={false}>
+            <Text style={{ flex: 1 }}>{N(name)}</Text>
+            <Text style={[{ width: 80 }, plate ? null : s.warn]}>{plate ? N(plate) : "pending"}</Text>
+            <Text style={{ width: 50 }}>{capacity ?? "\u2014"}</Text>
+            <Text style={{ width: 60 }}>{v.status ?? "\u2014"}</Text>
+            <Text style={[{ width: 70 }, accredPath ? s.ok : s.warn]}>{accredPath ? "uploaded" : "missing"}</Text>
+          </View>
+        );
+      })}
 
       <Text style={[s.bold, s.small, { marginTop: 10, marginBottom: 4 }]}>LEGS</Text>
       <View style={s.th}>
@@ -326,6 +332,8 @@ function TransportPage({ data }: { data: BinderData }) {
       {transportLegs.length === 0 && <Text style={[s.small, { color: GRAY, marginTop: 4 }]}>No legs scheduled.</Text>}
       {transportLegs.map((l: any) => {
         const veh: any = vMap.get(l.transport_id) ?? {};
+        const vName = veh.season_rental?.vehicle_type ?? veh.vehicle_type;
+        const vPlate = veh.season_rental?.license_plate ?? veh.license_plate;
         const from = N(l.origin) || N(veh.pickup_location) || "TBD";
         const to = N(l.destination) || N(veh.return_location) || "Festival site";
         const time = l.leg_start_time ? String(l.leg_start_time).slice(0, 5) : "\u2014";
@@ -334,7 +342,7 @@ function TransportPage({ data }: { data: BinderData }) {
             <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
             <Text style={{ width: 40 }}>{time}</Text>
             <Text style={{ flex: 1 }}>{from}{" to "}{to}{l.leg_label ? `  ·  ${N(l.leg_label)}` : ""}</Text>
-            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}{veh.license_plate ? `  ·  ${N(veh.license_plate)}` : ""}</Text>
+            <Text style={{ width: 110 }}>{N(vName) || "\u2014"}{vPlate ? `  ·  ${N(vPlate)}` : ""}</Text>
             <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
           </View>
         );

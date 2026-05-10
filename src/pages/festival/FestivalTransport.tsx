@@ -20,7 +20,17 @@ import { cn } from "@/lib/utils";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
-type SeasonRental = { id: string; reservation_number: string | null; season_label: string | null };
+type SeasonRental = {
+  id: string;
+  vehicle_type: string | null;
+  capacity: number | null;
+  license_plate: string | null;
+  accreditation_pdf_path: string | null;
+  accreditation_uploaded_at: string | null;
+  reservation_number: string | null;
+  season_label: string | null;
+  ownership: string | null;
+};
 type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
@@ -28,6 +38,13 @@ type Vehicle = {
   license_plate: string | null;
   season_rental?: SeasonRental | null;
 };
+
+// Phase 2K-3: dual-read helpers — canonical season_rentals first, fall back to legacy festival_transport columns.
+function vName(v: Vehicle): string { return v.season_rental?.vehicle_type ?? v.vehicle_type ?? ""; }
+function vCapacity(v: Vehicle): number | null { return v.season_rental?.capacity ?? v.capacity ?? null; }
+function vPlate(v: Vehicle): string | null { return v.season_rental?.license_plate ?? v.license_plate ?? null; }
+function vAccredPath(v: Vehicle): string | null { return v.season_rental?.accreditation_pdf_path ?? v.accreditation_pdf_path ?? null; }
+function vAccredUploadedAt(v: Vehicle): string | null { return v.season_rental?.accreditation_uploaded_at ?? v.accreditation_uploaded_at ?? null; }
 type Leg = {
   id: string; transport_id: string; leg_label: string; leg_phase: string;
   leg_date: string; leg_start_time: string | null; origin: string | null;
@@ -85,7 +102,7 @@ export default function FestivalTransport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_transport")
-        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,reservation_number,season_label)")
+        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,vehicle_type,capacity,license_plate,accreditation_pdf_path,accreditation_uploaded_at,reservation_number,season_label,ownership)")
         .eq("festival_id", festival!.id)
         .order("created_at");
       if (error) throw error;
@@ -179,7 +196,7 @@ export default function FestivalTransport() {
   }, [focusLegId, legs.length]);
 
   // Aggregate stats
-  const totalSeats = vehicles.reduce((a, v) => a + (v.capacity ?? 0), 0);
+  const totalSeats = vehicles.reduce((a, v) => a + (vCapacity(v) ?? 0), 0);
   const totalAssignments = assignments.filter((a) => a.staff_id).length;
 
   // Phase summary
@@ -363,9 +380,9 @@ function VehicleBlock({
       <div className="flex items-center gap-3 p-4 border-b bg-muted/30 print:bg-white print:border-b-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-semibold">{vehicle.vehicle_type}</h3>
+            <h3 className="text-lg font-semibold">{vName(vehicle)}</h3>
             <span className="text-xs px-2 py-0.5 rounded border bg-background badge-print">
-              {vehicle.capacity ?? "?"} seats
+              {vCapacity(vehicle) ?? "?"} seats
             </span>
             <StatusPill status={vehicle.status ?? "planned"} />
             {vehicle.season_rental?.reservation_number && (
@@ -406,7 +423,7 @@ function VehicleBlock({
         onOpenChange={setAddLegOpen}
         slug={slug}
         transportId={vehicle.id}
-        defaultCapacity={vehicle.capacity}
+        defaultCapacity={vCapacity(vehicle)}
       />
     </div>
   );
@@ -745,8 +762,8 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const path = vehicle.accreditation_pdf_path;
-  const uploadedAt = vehicle.accreditation_uploaded_at;
+  const path = vAccredPath(vehicle);
+  const uploadedAt = vAccredUploadedAt(vehicle);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
 
@@ -763,10 +780,20 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
         .from("vehicle-permits")
         .upload(objectPath, file, { upsert: true, contentType: "application/pdf" });
       if (upErr) throw upErr;
-      const { error: dbErr } = await supabase
-        .from("festival_transport")
-        .update({ accreditation_pdf_path: objectPath, accreditation_uploaded_at: new Date().toISOString() })
-        .eq("id", vehicle.id);
+      // Phase 2K-3: dual-write to canonical season_rentals + legacy festival_transport.
+      const ts = new Date().toISOString();
+      const writes: Promise<any>[] = [
+        Promise.resolve(supabase.from("festival_transport")
+          .update({ accreditation_pdf_path: objectPath, accreditation_uploaded_at: ts })
+          .eq("id", vehicle.id)),
+      ];
+      if (vehicle.season_rental_id) {
+        writes.push(Promise.resolve(supabase.from("season_rentals")
+          .update({ accreditation_pdf_path: objectPath, accreditation_uploaded_at: ts })
+          .eq("id", vehicle.season_rental_id)));
+      }
+      const results = await Promise.all(writes);
+      const dbErr = results.find((r) => r.error)?.error;
       if (dbErr) throw dbErr;
       toast.success("Accreditation uploaded");
       refresh();
@@ -795,7 +822,7 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${slug}-${vehicle.vehicle_type.replace(/\s+/g, "_")}-accreditation.pdf`;
+      a.download = `${slug}-${vName(vehicle).replace(/\s+/g, "_")}-accreditation.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -811,10 +838,18 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
     try {
       const { error: rmErr } = await supabase.storage.from("vehicle-permits").remove([path]);
       if (rmErr) throw rmErr;
-      const { error: dbErr } = await supabase
-        .from("festival_transport")
-        .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
-        .eq("id", vehicle.id);
+      const writes: Promise<any>[] = [
+        Promise.resolve(supabase.from("festival_transport")
+          .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
+          .eq("id", vehicle.id)),
+      ];
+      if (vehicle.season_rental_id) {
+        writes.push(Promise.resolve(supabase.from("season_rentals")
+          .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
+          .eq("id", vehicle.season_rental_id)));
+      }
+      const results = await Promise.all(writes);
+      const dbErr = results.find((r) => r.error)?.error;
       if (dbErr) throw dbErr;
       toast.success("Accreditation removed");
       setConfirmRemove(false);
@@ -900,15 +935,17 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
 // ============================================================
 function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }) {
   const qc = useQueryClient();
-  const [plateInput, setPlateInput] = useState(vehicle.license_plate ?? "");
-  const [savedPlate, setSavedPlate] = useState(vehicle.license_plate ?? "");
+  const initial = vPlate(vehicle) ?? "";
+  const [plateInput, setPlateInput] = useState(initial);
+  const [savedPlate, setSavedPlate] = useState(initial);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
-    setPlateInput(vehicle.license_plate ?? "");
-    setSavedPlate(vehicle.license_plate ?? "");
+    const v = vPlate(vehicle) ?? "";
+    setPlateInput(v);
+    setSavedPlate(v);
     setSaveStatus("idle");
-  }, [vehicle.license_plate]);
+  }, [vehicle.license_plate, vehicle.season_rental?.license_plate]);
 
   const hasUnsavedChanges = plateInput.trim() !== savedPlate.trim();
 
@@ -916,13 +953,22 @@ function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }
     setSaveStatus("saving");
     const trimmed = plateInput.trim().slice(0, 12);
     const valueToSave = trimmed === "" ? null : trimmed;
-    const { error } = await supabase
-      .from("festival_transport")
-      .update({ license_plate: valueToSave })
-      .eq("id", vehicle.id);
-    if (error) {
+    // Phase 2K-3: dual-write — canonical season_rentals + legacy festival_transport.
+    const writes: Promise<any>[] = [
+      Promise.resolve(supabase.from("festival_transport")
+        .update({ license_plate: valueToSave })
+        .eq("id", vehicle.id)),
+    ];
+    if (vehicle.season_rental_id) {
+      writes.push(Promise.resolve(supabase.from("season_rentals")
+        .update({ license_plate: valueToSave })
+        .eq("id", vehicle.season_rental_id)));
+    }
+    const results = await Promise.all(writes);
+    const err = results.find((r) => r.error)?.error;
+    if (err) {
       setSaveStatus("error");
-      console.error("Failed to save license plate:", error);
+      console.error("Failed to save license plate:", err);
       return;
     }
     setSavedPlate(trimmed);
@@ -931,6 +977,7 @@ function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }
       setSaveStatus("idle");
     }, 2000);
     qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+    qc.invalidateQueries({ queryKey: ["festival-loading-vehicles"] });
   }
 
   const empty = !savedPlate.trim();
