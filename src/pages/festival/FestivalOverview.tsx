@@ -705,6 +705,8 @@ export default function FestivalOverview() {
           <ConceptCardGrid
             festivalId={festivalId}
             conceptData={statsQ.data?.byConcept ?? {}}
+            layout="grid"
+            hideEmoji
             renderConceptBody={(concept, data) => {
               const s = data ?? {};
               const signed = s.contractSigned;
