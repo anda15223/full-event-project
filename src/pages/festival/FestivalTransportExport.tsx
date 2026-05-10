@@ -234,6 +234,11 @@ function TransportPdf({
                       ? `  ·  Res ${N(v.season_rental.reservation_number)}`
                       : ""}
                   </Text>
+                  <Text style={styles.vehicleMeta}>
+                    {v.license_plate
+                      ? <Text style={styles.accredOk}>Plate: {N(v.license_plate)}</Text>
+                      : <Text style={styles.accredMissing}>Plate: not entered</Text>}
+                  </Text>
                   {v.notes ? <Text style={styles.vehicleMeta}>{N(v.notes)}</Text> : null}
                   <Text style={styles.vehicleMeta}>
                     {accredOk ? (
