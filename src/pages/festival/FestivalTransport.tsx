@@ -423,7 +423,7 @@ function VehicleBlock({
         onOpenChange={setAddLegOpen}
         slug={slug}
         transportId={vehicle.id}
-        defaultCapacity={vehicle.capacity}
+        defaultCapacity={vCapacity(vehicle)}
       />
     </div>
   );
