@@ -382,6 +382,7 @@ function VehicleBlock({
       </div>
 
       <AccreditationBlock vehicle={vehicle} slug={slug} />
+      <LicensePlateBlock vehicle={vehicle} slug={slug} />
 
       <LegsTable
         legs={legs}
