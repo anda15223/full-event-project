@@ -1284,19 +1284,48 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
   const [vehicleType, setVehicleType] = useState("");
   const [capacity, setCapacity] = useState(3);
   const [status, setStatus] = useState("planned");
+  const [ownership, setOwnership] = useState<"one_off_rental" | "season_rental" | "company_owned">("one_off_rental");
+  const [reservationNumber, setReservationNumber] = useState("");
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      // Step 1: create canonical vehicle row in season_rentals
+      const { data: canonical, error: cErr } = await supabase
+        .from("season_rentals")
+        .insert({
+          vehicle_type: vehicleType,
+          capacity,
+          ownership,
+          reservation_number: reservationNumber.trim() || null,
+          status: "active",
+        } as any)
+        .select()
+        .single();
+      if (cErr) throw cErr;
+
+      // Step 2: create the per-festival assignment, FK to canonical
+      const { error: aErr } = await supabase
         .from("festival_transport")
-        .insert({ festival_id: festivalId, vehicle_type: vehicleType, capacity, status });
-      if (error) throw error;
+        .insert({
+          festival_id: festivalId,
+          season_rental_id: canonical.id,
+          vehicle_type: vehicleType, // legacy mirror, dropped in 2K-5
+          capacity,                  // legacy mirror
+          status,
+        } as any);
+      if (aErr) {
+        // roll back canonical insert if assignment fails
+        await supabase.from("season_rentals").delete().eq("id", canonical.id);
+        throw aErr;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
       toast.success("Vehicle added");
       setOpen(false);
       setVehicleType("");
+      setReservationNumber("");
+      setOwnership("one_off_rental");
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
@@ -1315,6 +1344,19 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
             <Field label="Vehicle type / name">
               <Input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} placeholder="e.g. Europcar lift vehicle #4" />
             </Field>
+            <Field label="Ownership">
+              <Select value={ownership} onValueChange={(v) => setOwnership(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="one_off_rental">One-off rental</SelectItem>
+                  <SelectItem value="season_rental">Season rental</SelectItem>
+                  <SelectItem value="company_owned">Company-owned</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Reservation number (optional)">
+              <Input value={reservationNumber} onChange={(e) => setReservationNumber(e.target.value)} placeholder="e.g. 26581644" />
+            </Field>
             <Field label="Capacity">
               <Input type="number" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value) || 0)} />
             </Field>
@@ -1326,6 +1368,9 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
                 </SelectContent>
               </Select>
             </Field>
+            <p className="text-xs text-muted-foreground">
+              Creates a canonical vehicle in the fleet and assigns it to this festival. To add an existing fleet vehicle, use the picker (coming in 2K-4).
+            </p>
           </div>
           <SheetFooter>
             <Button onClick={() => create.mutate()} disabled={!vehicleType || create.isPending}>Create</Button>
