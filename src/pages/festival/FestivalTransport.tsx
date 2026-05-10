@@ -20,7 +20,17 @@ import { cn } from "@/lib/utils";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
-type SeasonRental = { id: string; reservation_number: string | null; season_label: string | null };
+type SeasonRental = {
+  id: string;
+  vehicle_type: string | null;
+  capacity: number | null;
+  license_plate: string | null;
+  accreditation_pdf_path: string | null;
+  accreditation_uploaded_at: string | null;
+  reservation_number: string | null;
+  season_label: string | null;
+  ownership: string | null;
+};
 type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
@@ -28,6 +38,13 @@ type Vehicle = {
   license_plate: string | null;
   season_rental?: SeasonRental | null;
 };
+
+// Phase 2K-3: dual-read helpers — canonical season_rentals first, fall back to legacy festival_transport columns.
+function vName(v: Vehicle): string { return v.season_rental?.vehicle_type ?? v.vehicle_type ?? ""; }
+function vCapacity(v: Vehicle): number | null { return v.season_rental?.capacity ?? v.capacity ?? null; }
+function vPlate(v: Vehicle): string | null { return v.season_rental?.license_plate ?? v.license_plate ?? null; }
+function vAccredPath(v: Vehicle): string | null { return v.season_rental?.accreditation_pdf_path ?? v.accreditation_pdf_path ?? null; }
+function vAccredUploadedAt(v: Vehicle): string | null { return v.season_rental?.accreditation_uploaded_at ?? v.accreditation_uploaded_at ?? null; }
 type Leg = {
   id: string; transport_id: string; leg_label: string; leg_phase: string;
   leg_date: string; leg_start_time: string | null; origin: string | null;
