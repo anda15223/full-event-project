@@ -5698,12 +5698,16 @@ export type Database = {
       }
       season_rentals: {
         Row: {
+          accreditation_pdf_path: string | null
+          accreditation_uploaded_at: string | null
           bilgruppe: string | null
+          capacity: number | null
           contracting_entity: string
           contracting_entity_cvr: string | null
           created_at: string | null
           customer_number: string | null
           daily_rate_dkk: number | null
+          display_name: string | null
           end_date: string
           id: string
           insurance_cdi: boolean | null
@@ -5712,30 +5716,36 @@ export type Database = {
           insurance_rsa: boolean | null
           km_included_per_period: number | null
           km_overage_rate_dkk: number | null
+          license_plate: string | null
           monthly_rate_dkk: number | null
           monthly_renewal_day: number | null
           notes: string | null
+          ownership: string
           pickup_location: string | null
           primary_driver_name: string | null
-          reservation_number: string
+          reservation_number: string | null
           return_location: string | null
           season_label: string
           selvrisiko_dkk: number | null
           start_date: string
           status: string
           supplier_id: string | null
-          supplier_name: string
+          supplier_name: string | null
           tariff_model: string | null
           updated_at: string | null
           vehicle_type: string
         }
         Insert: {
+          accreditation_pdf_path?: string | null
+          accreditation_uploaded_at?: string | null
           bilgruppe?: string | null
+          capacity?: number | null
           contracting_entity: string
           contracting_entity_cvr?: string | null
           created_at?: string | null
           customer_number?: string | null
           daily_rate_dkk?: number | null
+          display_name?: string | null
           end_date: string
           id?: string
           insurance_cdi?: boolean | null
@@ -5744,30 +5754,36 @@ export type Database = {
           insurance_rsa?: boolean | null
           km_included_per_period?: number | null
           km_overage_rate_dkk?: number | null
+          license_plate?: string | null
           monthly_rate_dkk?: number | null
           monthly_renewal_day?: number | null
           notes?: string | null
+          ownership?: string
           pickup_location?: string | null
           primary_driver_name?: string | null
-          reservation_number: string
+          reservation_number?: string | null
           return_location?: string | null
           season_label: string
           selvrisiko_dkk?: number | null
           start_date: string
           status?: string
           supplier_id?: string | null
-          supplier_name: string
+          supplier_name?: string | null
           tariff_model?: string | null
           updated_at?: string | null
           vehicle_type: string
         }
         Update: {
+          accreditation_pdf_path?: string | null
+          accreditation_uploaded_at?: string | null
           bilgruppe?: string | null
+          capacity?: number | null
           contracting_entity?: string
           contracting_entity_cvr?: string | null
           created_at?: string | null
           customer_number?: string | null
           daily_rate_dkk?: number | null
+          display_name?: string | null
           end_date?: string
           id?: string
           insurance_cdi?: boolean | null
@@ -5776,19 +5792,21 @@ export type Database = {
           insurance_rsa?: boolean | null
           km_included_per_period?: number | null
           km_overage_rate_dkk?: number | null
+          license_plate?: string | null
           monthly_rate_dkk?: number | null
           monthly_renewal_day?: number | null
           notes?: string | null
+          ownership?: string
           pickup_location?: string | null
           primary_driver_name?: string | null
-          reservation_number?: string
+          reservation_number?: string | null
           return_location?: string | null
           season_label?: string
           selvrisiko_dkk?: number | null
           start_date?: string
           status?: string
           supplier_id?: string | null
-          supplier_name?: string
+          supplier_name?: string | null
           tariff_model?: string | null
           updated_at?: string | null
           vehicle_type?: string
