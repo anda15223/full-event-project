@@ -621,7 +621,11 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
       {soborgLoading.vehicles.map((veh) => (
         <View key={veh.vehicle_id} style={{ marginBottom: 8 }} wrap={false}>
           <Text style={[s.bold, { fontSize: 11, marginBottom: 3, paddingBottom: 2, borderBottom: `0.5pt solid ${DARK}` }]}>
-            {N(veh.vehicle_type)} — {veh.car_total_items} items
+            {N(veh.vehicle_type)}
+            {veh.license_plate
+              ? <Text style={{ fontSize: 9, fontWeight: 400 }}>  ·  {N(veh.license_plate)}</Text>
+              : <Text style={[s.warn, { fontSize: 9, fontWeight: 400 }]}>  ·  (plate pending)</Text>}
+            <Text style={{ fontWeight: 400 }}> — {veh.car_total_items} items</Text>
           </Text>
           {veh.concepts.map((cg) => (
             <View key={cg.contract_id} style={{ marginTop: 3, marginBottom: 3 }}>
