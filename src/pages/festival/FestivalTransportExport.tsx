@@ -90,8 +90,16 @@ const styles = StyleSheet.create({
   cDriver: { width: "17%" },
   cPax: { width: "22%" },
   driverLine: { fontFamily: "OpenSans", fontWeight: 700 },
-  tbdLine: { fontFamily: "OpenSans", fontWeight: 700 },
+  driverTbd: { fontFamily: "OpenSans", fontWeight: 700, color: PDF_COLORS.warning },
   paxItem: { fontSize: 7, color: "#222" },
+  statusPill: {
+    fontSize: 7, fontFamily: "OpenSans", fontWeight: 700,
+    paddingTop: 2, paddingBottom: 2, paddingLeft: 5, paddingRight: 5,
+    borderRadius: 3, borderWidth: 0.5,
+  },
+  accredOk: { color: PDF_COLORS.success, fontFamily: "OpenSans", fontWeight: 700 },
+  accredMissing: { color: PDF_COLORS.critical, fontFamily: "OpenSans", fontWeight: 700 },
+  tbdInline: { color: PDF_COLORS.warning, fontFamily: "OpenSans", fontWeight: 700 },
   cancelled: { color: "#777" },
   footer: {
     position: "absolute", bottom: 18, left: 42, right: 42,
