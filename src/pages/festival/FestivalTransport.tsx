@@ -380,9 +380,9 @@ function VehicleBlock({
       <div className="flex items-center gap-3 p-4 border-b bg-muted/30 print:bg-white print:border-b-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-semibold">{vehicle.vehicle_type}</h3>
+            <h3 className="text-lg font-semibold">{vName(vehicle)}</h3>
             <span className="text-xs px-2 py-0.5 rounded border bg-background badge-print">
-              {vehicle.capacity ?? "?"} seats
+              {vCapacity(vehicle) ?? "?"} seats
             </span>
             <StatusPill status={vehicle.status ?? "planned"} />
             {vehicle.season_rental?.reservation_number && (
