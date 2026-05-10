@@ -85,7 +85,7 @@ export default function FestivalTransport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_transport")
-        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at, season_rental:season_rentals(id,reservation_number,season_label)")
+        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,reservation_number,season_label)")
         .eq("festival_id", festival!.id)
         .order("created_at");
       if (error) throw error;
