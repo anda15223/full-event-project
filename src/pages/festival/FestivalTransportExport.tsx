@@ -30,6 +30,7 @@ type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
   accreditation_pdf_path: string | null; accreditation_uploaded_at: string | null;
+  license_plate: string | null;
   season_rental?: SeasonRental | null;
 };
 type Leg = {
@@ -233,6 +234,11 @@ function TransportPdf({
                       ? `  ·  Res ${N(v.season_rental.reservation_number)}`
                       : ""}
                   </Text>
+                  <Text style={styles.vehicleMeta}>
+                    {v.license_plate
+                      ? <Text style={styles.accredOk}>Plate: {N(v.license_plate)}</Text>
+                      : <Text style={styles.accredMissing}>Plate: not entered</Text>}
+                  </Text>
                   {v.notes ? <Text style={styles.vehicleMeta}>{N(v.notes)}</Text> : null}
                   <Text style={styles.vehicleMeta}>
                     {accredOk ? (
@@ -328,7 +334,7 @@ export default function FestivalTransportExport() {
 
         const { data: vehicles, error: ve } = await supabase
           .from("festival_transport")
-          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at, season_rental:season_rentals(id,reservation_number,season_label)")
+          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,reservation_number,season_label)")
           .eq("festival_id", festival.id)
           .order("created_at");
         if (ve) throw ve;

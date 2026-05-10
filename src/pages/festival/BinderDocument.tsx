@@ -300,6 +300,7 @@ function TransportPage({ data }: { data: BinderData }) {
       <Text style={[s.bold, s.small, { marginTop: 4, marginBottom: 4 }]}>VEHICLES</Text>
       <View style={s.th}>
         <Text style={{ flex: 1 }}>Type</Text>
+        <Text style={{ width: 80 }}>Plate</Text>
         <Text style={{ width: 50 }}>Capacity</Text>
         <Text style={{ width: 60 }}>Status</Text>
         <Text style={{ width: 70 }}>Accred.</Text>
@@ -307,6 +308,7 @@ function TransportPage({ data }: { data: BinderData }) {
       {transport.map((v: any) => (
         <View key={v.id} style={s.tr} wrap={false}>
           <Text style={{ flex: 1 }}>{N(v.vehicle_type)}</Text>
+          <Text style={[{ width: 80 }, v.license_plate ? null : s.warn]}>{v.license_plate ? N(v.license_plate) : "pending"}</Text>
           <Text style={{ width: 50 }}>{v.capacity ?? "\u2014"}</Text>
           <Text style={{ width: 60 }}>{v.status ?? "\u2014"}</Text>
           <Text style={[{ width: 70 }, v.accreditation_pdf_path ? s.ok : s.warn]}>{v.accreditation_pdf_path ? "uploaded" : "missing"}</Text>
@@ -332,7 +334,7 @@ function TransportPage({ data }: { data: BinderData }) {
             <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
             <Text style={{ width: 40 }}>{time}</Text>
             <Text style={{ flex: 1 }}>{from}{" to "}{to}{l.leg_label ? `  ·  ${N(l.leg_label)}` : ""}</Text>
-            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}</Text>
+            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}{veh.license_plate ? `  ·  ${N(veh.license_plate)}` : ""}</Text>
             <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
           </View>
         );
@@ -619,7 +621,11 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
       {soborgLoading.vehicles.map((veh) => (
         <View key={veh.vehicle_id} style={{ marginBottom: 8 }} wrap={false}>
           <Text style={[s.bold, { fontSize: 11, marginBottom: 3, paddingBottom: 2, borderBottom: `0.5pt solid ${DARK}` }]}>
-            {N(veh.vehicle_type)} — {veh.car_total_items} items
+            {N(veh.vehicle_type)}
+            {veh.license_plate
+              ? <Text style={{ fontSize: 9, fontWeight: 400 }}>  ·  {N(veh.license_plate)}</Text>
+              : <Text style={[s.warn, { fontSize: 9, fontWeight: 400 }]}>  ·  (plate pending)</Text>}
+            <Text style={{ fontWeight: 400 }}> — {veh.car_total_items} items</Text>
           </Text>
           {veh.concepts.map((cg) => (
             <View key={cg.contract_id} style={{ marginTop: 3, marginBottom: 3 }}>

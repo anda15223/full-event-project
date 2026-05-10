@@ -66,7 +66,13 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
             </View>
           )}
           <View style={s.vehicleHeader}>
-            <Text style={s.vehicleTitle}>{N(veh.vehicle_type)} — {veh.car_total_items} items</Text>
+            <Text style={s.vehicleTitle}>
+              {N(veh.vehicle_type)}
+              {veh.license_plate
+                ? <Text style={{ fontSize: 10, fontWeight: 400 }}>  ·  {N(veh.license_plate)}</Text>
+                : <Text style={{ fontSize: 10, fontWeight: 400, color: "#c0392b" }}>  ·  (plate pending)</Text>}
+              <Text style={{ fontSize: 11, fontWeight: 400 }}> — {veh.car_total_items} items</Text>
+            </Text>
           </View>
           {veh.concepts.map((cg) => (
             <View key={cg.contract_id} wrap={false} style={{ marginBottom: 6 }}>

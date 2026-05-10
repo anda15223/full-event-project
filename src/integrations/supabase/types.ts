@@ -4650,6 +4650,7 @@ export type Database = {
           estimated_cost_dkk: number | null
           festival_id: string
           id: string
+          license_plate: string | null
           notes: string | null
           pickup_date: string | null
           pickup_location: string | null
@@ -4675,6 +4676,7 @@ export type Database = {
           estimated_cost_dkk?: number | null
           festival_id: string
           id?: string
+          license_plate?: string | null
           notes?: string | null
           pickup_date?: string | null
           pickup_location?: string | null
@@ -4700,6 +4702,7 @@ export type Database = {
           estimated_cost_dkk?: number | null
           festival_id?: string
           id?: string
+          license_plate?: string | null
           notes?: string | null
           pickup_date?: string | null
           pickup_location?: string | null

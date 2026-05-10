@@ -26,6 +26,7 @@ export type ConceptGroup = {
 export type VehicleGroup = {
   vehicle_id: string;
   vehicle_type: string;
+  license_plate: string | null;
   concepts: ConceptGroup[];
   car_total_items: number;
 };
@@ -90,7 +91,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
     sb.from("festival_contracts")
       .select("id, concept_id, concept_alias, assigned_vehicle_id")
       .eq("festival_id", fid),
-    sb.from("festival_transport").select("id, vehicle_type").eq("festival_id", fid),
+    sb.from("festival_transport").select("id, vehicle_type, license_plate").eq("festival_id", fid),
     sb.from("concepts").select("id, slug, name, display_order"),
     sb.from("festival_cooling_unit")
       .select("id, unit_label, cooling_model, container_type, container_count, supplier, delivery_date, pickup_date")
@@ -183,6 +184,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
       vg = {
         vehicle_id: vehId,
         vehicle_type: veh?.vehicle_type ?? "Unknown vehicle",
+        license_plate: veh?.license_plate ?? null,
         concepts: [],
         car_total_items: 0,
       };

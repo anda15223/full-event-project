@@ -25,6 +25,7 @@ type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
   accreditation_pdf_path: string | null; accreditation_uploaded_at: string | null;
+  license_plate: string | null;
   season_rental?: SeasonRental | null;
 };
 type Leg = {
@@ -84,7 +85,7 @@ export default function FestivalTransport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_transport")
-        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at, season_rental:season_rentals(id,reservation_number,season_label)")
+        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,reservation_number,season_label)")
         .eq("festival_id", festival!.id)
         .order("created_at");
       if (error) throw error;
@@ -381,6 +382,7 @@ function VehicleBlock({
       </div>
 
       <AccreditationBlock vehicle={vehicle} slug={slug} />
+      <LicensePlateBlock vehicle={vehicle} slug={slug} />
 
       <LegsTable
         legs={legs}
@@ -891,6 +893,65 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ============================================================
+function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState(vehicle.license_plate ?? "");
+  const [saving, setSaving] = useState(false);
+  const [savedTick, setSavedTick] = useState(false);
+
+  useEffect(() => {
+    setValue(vehicle.license_plate ?? "");
+  }, [vehicle.license_plate]);
+
+  async function save() {
+    const trimmed = value.trim().slice(0, 12);
+    if (trimmed === (vehicle.license_plate ?? "")) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("festival_transport")
+        .update({ license_plate: trimmed === "" ? null : trimmed })
+        .eq("id", vehicle.id);
+      if (error) throw error;
+      setValue(trimmed);
+      setSavedTick(true);
+      setTimeout(() => setSavedTick(false), 2000);
+      qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save plate");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const empty = !value.trim();
+
+  return (
+    <div className="px-4 py-3 border-b bg-background print:hidden">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          License plate
+        </div>
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          maxLength={12}
+          placeholder="AB 12 345"
+          className={cn(
+            "h-8 w-[140px] font-mono text-sm uppercase tracking-wider",
+            empty && "bg-destructive/10 border-destructive/40",
+          )}
+          disabled={saving}
+        />
+        {empty && <span className="text-xs text-destructive font-medium">Not entered</span>}
+        {savedTick && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+      </div>
     </div>
   );
 }
