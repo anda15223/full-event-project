@@ -7,7 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { formatDateRange } from "@/lib/dateFormat";
+import { normalizeForPdf as N } from "@/lib/textNormalize";
+import { PDF_COLORS, pdfStatusColor } from "@/lib/pdfTokens";
 
+// TODO Sprint 7: Open Sans v17 ligature drops affect this PDF too (fi/fl).
 // Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
 // and middle dots (·) render correctly. Built-in Helvetica only covers
 // WinAnsi and renders these as garbage glyphs. Use Open Sans from Google's
@@ -87,8 +90,16 @@ const styles = StyleSheet.create({
   cDriver: { width: "17%" },
   cPax: { width: "22%" },
   driverLine: { fontFamily: "OpenSans", fontWeight: 700 },
-  tbdLine: { fontFamily: "OpenSans", fontWeight: 700 },
+  driverTbd: { fontFamily: "OpenSans", fontWeight: 700, color: PDF_COLORS.warning },
   paxItem: { fontSize: 7, color: "#222" },
+  statusPill: {
+    fontSize: 7, fontFamily: "OpenSans", fontWeight: 700,
+    paddingTop: 2, paddingBottom: 2, paddingLeft: 5, paddingRight: 5,
+    borderRadius: 3, borderWidth: 0.5,
+  },
+  accredOk: { color: PDF_COLORS.success, fontFamily: "OpenSans", fontWeight: 700 },
+  accredMissing: { color: PDF_COLORS.critical, fontFamily: "OpenSans", fontWeight: 700 },
+  tbdInline: { color: PDF_COLORS.warning, fontFamily: "OpenSans", fontWeight: 700 },
   cancelled: { color: "#777" },
   footer: {
     position: "absolute", bottom: 18, left: 42, right: 42,
@@ -179,8 +190,8 @@ function TransportPdf({
                 {p.count} {p.count === 1 ? "vehicle" : "vehicles"} · {p.seats} seats · {p.assigned} assigned
               </Text>
               {p.tbd > 0 && (
-                <Text style={{ fontSize: 8, fontFamily: "OpenSans", fontWeight: 700, marginTop: 2 }}>
-                  {p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD
+                <Text style={{ fontSize: 8, marginTop: 2 }}>
+                  <Text style={styles.tbdInline}>{p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD</Text>
                 </Text>
               )}
             </View>
@@ -195,23 +206,40 @@ function TransportPdf({
         {vehicles.map((v) => {
           const vLegs = legs.filter((l) => l.transport_id === v.id);
           const cancelled = v.status === "cancelled";
+          const statusColor = pdfStatusColor(v.status ?? "planned");
+          const accredOk = !!v.accreditation_pdf_path;
           return (
-            <View key={v.id} style={styles.vehicleBlock} wrap={false}>
+            <View
+              key={v.id}
+              style={[
+                styles.vehicleBlock,
+                { borderLeftWidth: 4, borderLeftColor: cancelled ? PDF_COLORS.critical : statusColor.fg },
+              ]}
+              wrap={false}
+            >
               <View style={styles.vehicleHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.vehicleTitle, cancelled && styles.cancelled]}>
-                    {v.vehicle_type}
+                    {N(v.vehicle_type)}
                     {cancelled ? "  (CANCELLED)" : ""}
                   </Text>
                   <Text style={styles.vehicleMeta}>
-                    {(v.capacity ?? "?")} seats · Status: {v.status ?? "planned"}
+                    {(v.capacity ?? "?")} seats
+                    {"  "}
+                    <Text style={[styles.statusPill, { color: statusColor.fg, backgroundColor: statusColor.bg, borderColor: statusColor.border }]}>
+                      {(v.status ?? "planned").toUpperCase()}
+                    </Text>
                     {v.season_rental?.reservation_number
-                      ? `  ·  Res ${v.season_rental.reservation_number}`
+                      ? `  ·  Res ${N(v.season_rental.reservation_number)}`
                       : ""}
                   </Text>
-                  {v.notes ? <Text style={styles.vehicleMeta}>{v.notes}</Text> : null}
+                  {v.notes ? <Text style={styles.vehicleMeta}>{N(v.notes)}</Text> : null}
                   <Text style={styles.vehicleMeta}>
-                    Accreditation: {v.accreditation_pdf_path ? "✅ uploaded" : "⚠️ not uploaded"}
+                    {accredOk ? (
+                      <Text style={styles.accredOk}>Accreditation: ready</Text>
+                    ) : (
+                      <Text style={styles.accredMissing}>Accreditation: NOT UPLOADED — action needed</Text>
+                    )}
                   </Text>
                 </View>
               </View>
@@ -224,7 +252,7 @@ function TransportPdf({
                     <Text style={[styles.th, styles.cDate]}>Date</Text>
                     <Text style={[styles.th, styles.cPhase]}>Phase</Text>
                     <Text style={[styles.th, styles.cLabel]}>Label</Text>
-                    <Text style={[styles.th, styles.cRoute]}>From → To</Text>
+                    <Text style={[styles.th, styles.cRoute]}>Route</Text>
                     <Text style={[styles.th, styles.cDriver]}>Driver</Text>
                     <Text style={[styles.th, styles.cPax]}>Passengers</Text>
                   </View>
@@ -241,24 +269,24 @@ function TransportPdf({
                           {leg.leg_start_time ? `\n${leg.leg_start_time.slice(0, 5)}` : ""}
                         </Text>
                         <Text style={[styles.td, styles.cPhase]}>
-                          {PHASE_LABEL[leg.leg_phase] ?? leg.leg_phase}
+                          {N(PHASE_LABEL[leg.leg_phase] ?? leg.leg_phase)}
                         </Text>
-                        <Text style={[styles.td, styles.cLabel]}>{leg.leg_label}</Text>
+                        <Text style={[styles.td, styles.cLabel]}>{N(leg.leg_label)}</Text>
                         <Text style={[styles.td, styles.cRoute]}>
-                          {(leg.origin ?? "—")} → {(leg.destination ?? "—")}
+                          {N(`${leg.origin ?? "—"} → ${leg.destination ?? "—"}`)}
                         </Text>
                         <View style={[styles.td, styles.cDriver]}>
                           {driverName ? (
-                            <Text style={styles.driverLine}>{driverName}</Text>
+                            <Text style={styles.driverLine}>{N(driverName)}</Text>
                           ) : (
-                            <Text style={styles.tbdLine}>DRIVER: ______________</Text>
+                            <Text style={styles.driverTbd}>DRIVER: ______________</Text>
                           )}
                         </View>
                         <View style={[styles.td, styles.cPax]}>
                           <Text>{pax.length} / {cap}</Text>
                           {pax.map((a) => (
                             <Text key={a.id} style={styles.paxItem}>
-                              · {a.staff_id ? staffById[a.staff_id]?.name ?? "?" : "?"}
+                              · {a.staff_id ? N(staffById[a.staff_id]?.name ?? "?") : "?"}
                             </Text>
                           ))}
                         </View>
