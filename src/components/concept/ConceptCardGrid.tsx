@@ -31,6 +31,8 @@ interface Props {
   enableManagerEdit?: boolean;
   /** Show "Pack into: [vehicle]" dropdown on each card. Use on Power/Facade/Topskilt/Loading pages only. */
   showVehicleSelector?: boolean;
+  layout?: "stack" | "grid";
+  hideEmoji?: boolean;
 }
 
 interface ContractRow {
@@ -58,6 +60,8 @@ export function ConceptCardGrid({
   renderConceptBody,
   enableManagerEdit = true,
   showVehicleSelector = false,
+  layout = "stack",
+  hideEmoji = false,
 }: Props) {
   const qc = useQueryClient();
 
@@ -167,7 +171,7 @@ export function ConceptCardGrid({
 
   if (contractsQ.isLoading) {
     return (
-      <div className="space-y-4">
+      <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
         {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-32 w-full" />)}
       </div>
     );
@@ -182,7 +186,7 @@ export function ConceptCardGrid({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={layout === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "space-y-4"}>
       {sortedRows.map((row) => {
         if (!row.concept) return null;
         const c: Concept = {
@@ -220,7 +224,7 @@ export function ConceptCardGrid({
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl" aria-hidden>{emoji}</span>
+                  {!hideEmoji && <span className="text-2xl" aria-hidden>{emoji}</span>}
                   <h3 className="text-lg font-semibold truncate">{title}</h3>
                 </div>
                 {(subtitle || verifyQuestion) && (
