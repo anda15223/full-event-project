@@ -762,8 +762,8 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
-  const path = vehicle.accreditation_pdf_path;
-  const uploadedAt = vehicle.accreditation_uploaded_at;
+  const path = vAccredPath(vehicle);
+  const uploadedAt = vAccredUploadedAt(vehicle);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
 
