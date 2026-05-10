@@ -25,7 +25,17 @@ Font.register({
 Font.registerHyphenationCallback((word) => [word]);
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
-type SeasonRental = { id: string; reservation_number: string | null; season_label: string | null };
+type SeasonRental = {
+  id: string;
+  vehicle_type: string | null;
+  capacity: number | null;
+  license_plate: string | null;
+  accreditation_pdf_path: string | null;
+  accreditation_uploaded_at: string | null;
+  reservation_number: string | null;
+  season_label: string | null;
+  ownership: string | null;
+};
 type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
