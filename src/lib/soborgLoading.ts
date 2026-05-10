@@ -181,16 +181,22 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
       continue;
     }
     const veh = vehicleById.get(vehId);
-    let vg = vehicleMap.get(vehId);
+    // Phase 2K-3: dual-read — prefer canonical season_rentals, fall back to legacy festival_transport columns.
+    const canonicalName = veh?.season_rental?.vehicle_type ?? veh?.vehicle_type ?? "Unknown vehicle";
+    const canonicalPlate = veh?.season_rental?.license_plate ?? veh?.license_plate ?? null;
+    // Group key: prefer canonical season_rental_id so the same physical vehicle aggregates
+    // correctly even if labelling drifts. Fall back to festival_transport.id for legacy/orphan rows.
+    const groupKey: string = (veh?.season_rental?.id as string | undefined) ?? vehId;
+    let vg = vehicleMap.get(groupKey);
     if (!vg) {
       vg = {
-        vehicle_id: vehId,
-        vehicle_type: veh?.vehicle_type ?? "Unknown vehicle",
-        license_plate: veh?.license_plate ?? null,
+        vehicle_id: groupKey,
+        vehicle_type: canonicalName,
+        license_plate: canonicalPlate,
         concepts: [],
         car_total_items: 0,
       };
-      vehicleMap.set(vehId, vg);
+      vehicleMap.set(groupKey, vg);
     }
     vg.concepts.push(grp);
     vg.car_total_items += grp.total_items;
@@ -214,7 +220,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
     });
   }
 
-  // Sort vehicles by vehicle_type, concepts inside by name
+  // Sort vehicles by canonical name, concepts inside by name
   const vehicles = [...vehicleMap.values()].sort((a, b) => a.vehicle_type.localeCompare(b.vehicle_type));
   vehicles.forEach((v) => v.concepts.sort((a, b) => a.concept_name.localeCompare(b.concept_name)));
   unassigned.sort((a, b) => a.concept_name.localeCompare(b.concept_name));
