@@ -7,7 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { formatDateRange } from "@/lib/dateFormat";
+import { normalizeForPdf as N } from "@/lib/textNormalize";
+import { PDF_COLORS, pdfStatusColor } from "@/lib/pdfTokens";
 
+// TODO Sprint 7: Open Sans v17 ligature drops affect this PDF too (fi/fl).
 // Register a Unicode-capable font so arrows (→ ↔), en/em dashes (– —),
 // and middle dots (·) render correctly. Built-in Helvetica only covers
 // WinAnsi and renders these as garbage glyphs. Use Open Sans from Google's
