@@ -783,14 +783,14 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
       // Phase 2K-3: dual-write to canonical season_rentals + legacy festival_transport.
       const ts = new Date().toISOString();
       const writes: Promise<any>[] = [
-        supabase.from("festival_transport")
+        Promise.resolve(supabase.from("festival_transport")
           .update({ accreditation_pdf_path: objectPath, accreditation_uploaded_at: ts })
-          .eq("id", vehicle.id),
+          .eq("id", vehicle.id)),
       ];
       if (vehicle.season_rental_id) {
-        writes.push(supabase.from("season_rentals")
+        writes.push(Promise.resolve(supabase.from("season_rentals")
           .update({ accreditation_pdf_path: objectPath, accreditation_uploaded_at: ts })
-          .eq("id", vehicle.season_rental_id));
+          .eq("id", vehicle.season_rental_id)));
       }
       const results = await Promise.all(writes);
       const dbErr = results.find((r) => r.error)?.error;
