@@ -822,7 +822,7 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
       const url = URL.createObjectURL(data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${slug}-${vehicle.vehicle_type.replace(/\s+/g, "_")}-accreditation.pdf`;
+      a.download = `${slug}-${vName(vehicle).replace(/\s+/g, "_")}-accreditation.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
