@@ -1057,23 +1057,36 @@ function VehicleEditDrawer({
   open, onOpenChange, vehicle, slug,
 }: { open: boolean; onOpenChange: (b: boolean) => void; vehicle: Vehicle; slug: string }) {
   const qc = useQueryClient();
-  const [capacity, setCapacity] = useState(vehicle.capacity ?? 0);
+  const initialCapacity = vCapacity(vehicle) ?? 0;
+  const [capacity, setCapacity] = useState(initialCapacity);
   const [status, setStatus] = useState(vehicle.status ?? "planned");
   const [notes, setNotes] = useState(vehicle.notes ?? "");
 
   useEffect(() => {
-    setCapacity(vehicle.capacity ?? 0);
+    setCapacity(vCapacity(vehicle) ?? 0);
     setStatus(vehicle.status ?? "planned");
     setNotes(vehicle.notes ?? "");
   }, [vehicle, open]);
 
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      // Per-assignment fields stay on festival_transport. Capacity is canonical → dual-write.
+      const legacyP = supabase
         .from("festival_transport")
         .update({ capacity, status, notes, updated_at: new Date().toISOString() })
         .eq("id", vehicle.id);
-      if (error) throw error;
+      const canonicalP = vehicle.season_rental_id
+        ? supabase.from("season_rentals").update({ capacity }).eq("id", vehicle.season_rental_id)
+        : null;
+      if (!vehicle.season_rental_id) {
+        console.warn("VehicleEditDrawer: vehicle has no season_rental_id, skipping canonical capacity write", vehicle.id);
+      }
+      const [legacyRes, canonicalRes] = await Promise.all([
+        Promise.resolve(legacyP),
+        canonicalP ? Promise.resolve(canonicalP) : Promise.resolve({ error: null } as any),
+      ]);
+      if ((legacyRes as any).error) throw (legacyRes as any).error;
+      if ((canonicalRes as any).error) throw (canonicalRes as any).error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
