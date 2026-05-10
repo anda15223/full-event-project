@@ -190,8 +190,8 @@ function TransportPdf({
                 {p.count} {p.count === 1 ? "vehicle" : "vehicles"} · {p.seats} seats · {p.assigned} assigned
               </Text>
               {p.tbd > 0 && (
-                <Text style={{ fontSize: 8, fontFamily: "OpenSans", fontWeight: 700, marginTop: 2 }}>
-                  {p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD
+                <Text style={{ fontSize: 8, marginTop: 2 }}>
+                  <Text style={styles.tbdInline}>{p.tbd} driver{p.tbd === 1 ? "" : "s"} TBD</Text>
                 </Text>
               )}
             </View>
@@ -206,6 +206,8 @@ function TransportPdf({
         {vehicles.map((v) => {
           const vLegs = legs.filter((l) => l.transport_id === v.id);
           const cancelled = v.status === "cancelled";
+          const statusColor = pdfStatusColor(v.status ?? "planned");
+          const accredOk = !!v.accreditation_pdf_path;
           return (
             <View key={v.id} style={styles.vehicleBlock} wrap={false}>
               <View style={styles.vehicleHeader}>
