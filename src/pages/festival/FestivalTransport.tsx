@@ -196,7 +196,7 @@ export default function FestivalTransport() {
   }, [focusLegId, legs.length]);
 
   // Aggregate stats
-  const totalSeats = vehicles.reduce((a, v) => a + (v.capacity ?? 0), 0);
+  const totalSeats = vehicles.reduce((a, v) => a + (vCapacity(v) ?? 0), 0);
   const totalAssignments = assignments.filter((a) => a.staff_id).length;
 
   // Phase summary
