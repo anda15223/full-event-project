@@ -334,7 +334,7 @@ function TransportPage({ data }: { data: BinderData }) {
             <Text style={{ width: 50 }}>{fmt(l.leg_date)}</Text>
             <Text style={{ width: 40 }}>{time}</Text>
             <Text style={{ flex: 1 }}>{from}{" to "}{to}{l.leg_label ? `  ·  ${N(l.leg_label)}` : ""}</Text>
-            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}</Text>
+            <Text style={{ width: 110 }}>{N(veh.vehicle_type) || "\u2014"}{veh.license_plate ? `  ·  ${N(veh.license_plate)}` : ""}</Text>
             <Text style={{ width: 50 }}>{l.status ?? "\u2014"}</Text>
           </View>
         );
