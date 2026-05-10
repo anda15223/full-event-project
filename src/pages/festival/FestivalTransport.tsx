@@ -838,10 +838,18 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
     try {
       const { error: rmErr } = await supabase.storage.from("vehicle-permits").remove([path]);
       if (rmErr) throw rmErr;
-      const { error: dbErr } = await supabase
-        .from("festival_transport")
-        .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
-        .eq("id", vehicle.id);
+      const writes: Promise<any>[] = [
+        Promise.resolve(supabase.from("festival_transport")
+          .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
+          .eq("id", vehicle.id)),
+      ];
+      if (vehicle.season_rental_id) {
+        writes.push(Promise.resolve(supabase.from("season_rentals")
+          .update({ accreditation_pdf_path: null, accreditation_uploaded_at: null })
+          .eq("id", vehicle.season_rental_id)));
+      }
+      const results = await Promise.all(writes);
+      const dbErr = results.find((r) => r.error)?.error;
       if (dbErr) throw dbErr;
       toast.success("Accreditation removed");
       setConfirmRemove(false);
