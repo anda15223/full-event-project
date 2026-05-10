@@ -935,15 +935,17 @@ function AccreditationBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string 
 // ============================================================
 function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }) {
   const qc = useQueryClient();
-  const [plateInput, setPlateInput] = useState(vehicle.license_plate ?? "");
-  const [savedPlate, setSavedPlate] = useState(vehicle.license_plate ?? "");
+  const initial = vPlate(vehicle) ?? "";
+  const [plateInput, setPlateInput] = useState(initial);
+  const [savedPlate, setSavedPlate] = useState(initial);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   useEffect(() => {
-    setPlateInput(vehicle.license_plate ?? "");
-    setSavedPlate(vehicle.license_plate ?? "");
+    const v = vPlate(vehicle) ?? "";
+    setPlateInput(v);
+    setSavedPlate(v);
     setSaveStatus("idle");
-  }, [vehicle.license_plate]);
+  }, [vehicle.license_plate, vehicle.season_rental?.license_plate]);
 
   const hasUnsavedChanges = plateInput.trim() !== savedPlate.trim();
 
@@ -951,13 +953,22 @@ function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }
     setSaveStatus("saving");
     const trimmed = plateInput.trim().slice(0, 12);
     const valueToSave = trimmed === "" ? null : trimmed;
-    const { error } = await supabase
-      .from("festival_transport")
-      .update({ license_plate: valueToSave })
-      .eq("id", vehicle.id);
-    if (error) {
+    // Phase 2K-3: dual-write — canonical season_rentals + legacy festival_transport.
+    const writes: Promise<any>[] = [
+      Promise.resolve(supabase.from("festival_transport")
+        .update({ license_plate: valueToSave })
+        .eq("id", vehicle.id)),
+    ];
+    if (vehicle.season_rental_id) {
+      writes.push(Promise.resolve(supabase.from("season_rentals")
+        .update({ license_plate: valueToSave })
+        .eq("id", vehicle.season_rental_id)));
+    }
+    const results = await Promise.all(writes);
+    const err = results.find((r) => r.error)?.error;
+    if (err) {
       setSaveStatus("error");
-      console.error("Failed to save license plate:", error);
+      console.error("Failed to save license plate:", err);
       return;
     }
     setSavedPlate(trimmed);
@@ -966,6 +977,7 @@ function LicensePlateBlock({ vehicle, slug }: { vehicle: Vehicle; slug: string }
       setSaveStatus("idle");
     }, 2000);
     qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+    qc.invalidateQueries({ queryKey: ["festival-loading-vehicles"] });
   }
 
   const empty = !savedPlate.trim();
