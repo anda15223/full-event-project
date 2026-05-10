@@ -184,6 +184,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
       vg = {
         vehicle_id: vehId,
         vehicle_type: veh?.vehicle_type ?? "Unknown vehicle",
+        license_plate: veh?.license_plate ?? null,
         concepts: [],
         car_total_items: 0,
       };
