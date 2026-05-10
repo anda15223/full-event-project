@@ -1,11 +1,20 @@
 /**
- * Normalize DB-sourced strings for safe rendering inside @react-pdf/renderer.
- * - Converts literal "\u2192" escape sequences (6 chars) to real glyphs
- * - Converts smart quotes to straight ASCII
- * - Converts ASCII "->" to a real arrow (U+2192)
- * - Strips zero-width chars and emoji that the binder font cannot render
+ * Normalize text for PDF output.
  *
- * Danish (æ ø å) and Romanian (ș ț ă î â) letters are preserved.
+ * Strips ALL non-ASCII characters to ensure bulletproof rendering
+ * regardless of font fallback behavior. Trade-off: PDFs are pure
+ * ASCII; the app UI retains full Unicode.
+ *
+ * Mappings:
+ *   - Danish: æ Æ ø Ø å Å → ae Ae o O a A
+ *   - Romanian: ă â î ș ț (+ caps, + cedilla variants) → a a i s t (+ caps)
+ *   - Romance diacritics: ç é à etc → c e a etc
+ *   - Em/en-dash: — – → -
+ *   - Smart quotes: " " ' ' → " '
+ *   - Ellipsis: … → ...
+ *   - Arrows: → → " to "
+ *   - Emoji: stripped entirely
+ *   - Catch-all: any remaining non-ASCII → stripped
  */
 export function normalizeForPdf(text: string | null | undefined): string {
   if (text === null || text === undefined) return "";
@@ -14,45 +23,70 @@ export function normalizeForPdf(text: string | null | undefined): string {
   // Literal escape sequences sometimes pasted into DB content
   s = s
     .replace(/\\u2192/g, " to ")
-    .replace(/\\u00d7/g, "×")
-    .replace(/\\u2014/g, "—")
-    .replace(/\\u2013/g, "–");
+    .replace(/\\u00d7/g, "x")
+    .replace(/\\u2014/g, "-")
+    .replace(/\\u2013/g, "-");
 
-  // Glyphs Open Sans v17 cannot render cleanly
-  s = s
-    .replace(/≠/g, "!=")
-    .replace(/[\u2018\u2019\u201A\u201B`]/g, "'") // curly + backtick → straight
-    .replace(/[\u201C\u201D\u201E\u201F]/g, '"');
+  // 1. Danish characters → Latin equivalents
+  const DANISH: Record<string, string> = {
+    "æ": "ae", "Æ": "Ae",
+    "ø": "o",  "Ø": "O",
+    "å": "a",  "Å": "A",
+  };
+  s = s.replace(/[æÆøØåÅ]/g, (ch) => DANISH[ch] ?? ch);
 
-  // Strip Romance-language diacritics. Open Sans drops these glyphs.
-  // KEEP Danish characters (æ Æ ø Ø å Å) — real names depend on them.
-  const ROMANCE_FROM = "çÇêÊéÉèÈëËàÀâÂäÄáÁíÍîÎïÏóÓôÔöÖúÚùÙûÛüÜñÑ";
-  const ROMANCE_TO   = "cCeEeEeEeEaAaAaAaAiIiIiIoOoOoOuUuUuUuUnN";
-  s = s.replace(/[çÇêÊéÉèÈëËàÀâÂäÄáÁíÍîÎïÏóÓôÔöÖúÚùÙûÛüÜñÑ]/g, (ch) => {
+  // 2. Romanian characters → Latin equivalents (incl. cedilla variants)
+  const ROMANIAN: Record<string, string> = {
+    "ă": "a", "Ă": "A",
+    "â": "a", "Â": "A",
+    "î": "i", "Î": "I",
+    "ș": "s", "Ș": "S",
+    "ț": "t", "Ț": "T",
+    "ş": "s", "Ş": "S",
+    "ţ": "t", "Ţ": "T",
+  };
+  s = s.replace(/[ăĂâÂîÎșȘțȚşŞţŢ]/g, (ch) => ROMANIAN[ch] ?? ch);
+
+  // 3. Romance diacritics
+  const ROMANCE_FROM = "çÇêÊéÉèÈëËàÀäÄáÁíÍïÏóÓôÔöÖúÚùÙûÛüÜñÑ";
+  const ROMANCE_TO   = "cCeEeEeEeEaAaAaAiIiIoOoOoOuUuUuUuUnN";
+  s = s.replace(/[çÇêÊéÉèÈëËàÀäÄáÁíÍïÏóÓôÔöÖúÚùÙûÛüÜñÑ]/g, (ch) => {
     const i = ROMANCE_FROM.indexOf(ch);
     return i >= 0 ? ROMANCE_TO[i] : ch;
   });
 
-  return s
-    // Open Sans cannot render U+2192/U+2190 reliably — use plain English
+  // 4. Special punctuation → ASCII
+  s = s
+    .replace(/[\u2014\u2013]/g, "-")               // em-dash, en-dash
+    .replace(/[\u2018\u2019\u201A\u201B`]/g, "'")  // curly singles + backtick
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')   // curly doubles
+    .replace(/\u2026/g, "...")                     // ellipsis
+    .replace(/≠/g, "!=");
+
+  // 5. Arrows → plain English
+  s = s
     .replace(/\s*↔\s*/g, " to ")
     .replace(/\s*→\s*/g, " to ")
     .replace(/\s*←\s*/g, " from ")
     .replace(/->/g, " to ")
-    .replace(/<-/g, " from ")
-    // strip stray ordinal indicators that some fonts render badly
+    .replace(/<-/g, " from ");
+
+  // 6. Strip stray ordinals, zero-widths, known emoji
+  s = s
     .replace(/[\u00AA\u00BA]/g, "")
-    // zero-width / BOM
     .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
-    // common emoji icons that the binder font cannot render
     .replace(/[\u2709\uFE0F]/g, "")
     .replace(/\uD83D[\uDCE7\uDCE8\uDCF1\uDCDE\uDCF2]/g, "")
-    // strip broad emoji ranges (Misc Symbols, Dingbats, SMP emoji blocks).
-    // Danish (æ ø å U+00E5/E6/F8) and Romanian diacritics are well below U+2600 and unaffected.
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "");
+
+  // 7. FINAL catch-all: strip any remaining non-ASCII byte.
+  // Safety net for Cyrillic, CJK, unusual symbols, surrogate halves, etc.
+  s = s.replace(/[^\x00-\x7F]/g, "");
+
+  return s;
 }
 
 export function dash(v: string | number | null | undefined): string {
   const s = v === 0 || v === "0" ? "0" : v;
-  return s === null || s === undefined || s === "" ? "\u2014" : String(s);
+  return s === null || s === undefined || s === "" ? "-" : String(s);
 }
