@@ -1105,7 +1105,7 @@ function VehicleEditDrawer({
         <div className="space-y-4 py-4">
           <div>
             <Label>Vehicle</Label>
-            <p className="text-sm font-medium">{vehicle.vehicle_type}</p>
+            <p className="text-sm font-medium">{vName(vehicle)}</p>
           </div>
           <div>
             <Label>Capacity</Label>
