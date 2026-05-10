@@ -300,6 +300,7 @@ function TransportPage({ data }: { data: BinderData }) {
       <Text style={[s.bold, s.small, { marginTop: 4, marginBottom: 4 }]}>VEHICLES</Text>
       <View style={s.th}>
         <Text style={{ flex: 1 }}>Type</Text>
+        <Text style={{ width: 80 }}>Plate</Text>
         <Text style={{ width: 50 }}>Capacity</Text>
         <Text style={{ width: 60 }}>Status</Text>
         <Text style={{ width: 70 }}>Accred.</Text>
@@ -307,6 +308,7 @@ function TransportPage({ data }: { data: BinderData }) {
       {transport.map((v: any) => (
         <View key={v.id} style={s.tr} wrap={false}>
           <Text style={{ flex: 1 }}>{N(v.vehicle_type)}</Text>
+          <Text style={[{ width: 80 }, v.license_plate ? null : s.warn]}>{v.license_plate ? N(v.license_plate) : "pending"}</Text>
           <Text style={{ width: 50 }}>{v.capacity ?? "\u2014"}</Text>
           <Text style={{ width: 60 }}>{v.status ?? "\u2014"}</Text>
           <Text style={[{ width: 70 }, v.accreditation_pdf_path ? s.ok : s.warn]}>{v.accreditation_pdf_path ? "uploaded" : "missing"}</Text>
