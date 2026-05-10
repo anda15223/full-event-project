@@ -30,6 +30,7 @@ type Vehicle = {
   id: string; festival_id: string; vehicle_type: string; capacity: number | null;
   status: string | null; season_rental_id: string | null; notes: string | null;
   accreditation_pdf_path: string | null; accreditation_uploaded_at: string | null;
+  license_plate: string | null;
   season_rental?: SeasonRental | null;
 };
 type Leg = {
