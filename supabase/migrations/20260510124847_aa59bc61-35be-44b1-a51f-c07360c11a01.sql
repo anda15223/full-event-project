@@ -1,0 +1,1 @@
+ALTER TABLE public.festival_transport ADD COLUMN IF NOT EXISTS license_plate TEXT;
