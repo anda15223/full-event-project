@@ -344,7 +344,7 @@ export default function FestivalTransportExport() {
 
         const { data: vehicles, error: ve } = await supabase
           .from("festival_transport")
-          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,reservation_number,season_label)")
+          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,vehicle_type,capacity,license_plate,accreditation_pdf_path,accreditation_uploaded_at,reservation_number,season_label,ownership)")
           .eq("festival_id", festival.id)
           .order("created_at");
         if (ve) throw ve;
