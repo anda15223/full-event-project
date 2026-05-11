@@ -72,41 +72,112 @@ export function categoryLabel(cat: string): string {
 }
 
 /**
- * Phase 2P: Collapse numbered "Folding table N" + "Personnel table…" rows into one
- * "N× Folding tables" summary line for the 'table' category, and all "Stilladsbar…"
- * rows into one "N× Stilladsbar" line for the 'scaffold' category. Other items pass through.
- * DB rows remain granular; this is display-only.
+ * Phase 2P/2S: PDF display grouping. DB rows remain granular; this is display-only.
+ *
+ * - "Folding tables" aggregate (rendered under 'table' category) collects rows from
+ *   BOTH 'table' and 'prep' categories whose names match any of:
+ *     Folding table*, Personnel table*, Volunteer table*, Meat table*,
+ *     Prep table*, Sauce station*, Burger station prep*
+ * - 'prep' rows that DON'T match (e.g. "Raw fish/beer batter/flour station") stay
+ *   in the PREP TABLES section. If none remain, the section is suppressed.
+ * - 'scaffold' rows matching Stilladsbar* collapse into one "N× Stilladsbar" line.
+ * - All other categories pass through unchanged.
+ * - Any unrecognized name is left visible (defensive) and logged once.
  */
-export function displayItems(category: string, items: LoadingItem[]): LoadingItem[] {
-  if (category !== "table" && category !== "scaffold") return items;
-  const isFolding = (n: string) => /^folding table/i.test(n) || /^personnel table/i.test(n);
-  const isBar = (n: string) => /^stilladsbar/i.test(n);
-  const matcher = category === "table" ? isFolding : isBar;
-  const label = category === "table" ? "Folding tables" : "Stilladsbar";
-  const grouped: LoadingItem[] = [];
-  let total = 0;
-  let firstId: string | null = null;
-  for (const it of items) {
-    if (matcher(it.name)) {
-      total += it.quantity ?? 0;
-      if (!firstId) firstId = it.id;
+const FOLDING_PATTERNS = [
+  /^folding table/i,
+  /^personnel table/i,
+  /^volunteer table/i,
+  /^meat table/i,
+  /^prep table/i,
+  /^sauce station/i,
+  /^burger station prep/i,
+];
+const isFoldingName = (n: string) => FOLDING_PATTERNS.some((re) => re.test(n));
+const isStilladsbar = (n: string) => /^stilladsbar/i.test(n);
+const isPrepKeep = (n: string) => /^raw f(i|)sh\/beer batter/i.test(n);
+
+export function regroupForSoborgPDF(
+  items_by_category: Record<string, LoadingItem[]>,
+): Record<string, LoadingItem[]> {
+  const out: Record<string, LoadingItem[]> = {};
+  let foldingTotal = 0;
+  let foldingFirstId: string | null = null;
+
+  for (const [cat, items] of Object.entries(items_by_category)) {
+    if (cat === "table") {
+      const keep: LoadingItem[] = [];
+      for (const it of items) {
+        if (isFoldingName(it.name)) {
+          foldingTotal += it.quantity ?? 0;
+          if (!foldingFirstId) foldingFirstId = it.id;
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn("[soborgLoading] unrecognized 'table' row kept as-is:", it.name);
+          keep.push(it);
+        }
+      }
+      if (keep.length) out.table = keep;
+    } else if (cat === "prep") {
+      const keep: LoadingItem[] = [];
+      for (const it of items) {
+        if (isFoldingName(it.name)) {
+          foldingTotal += it.quantity ?? 0;
+          if (!foldingFirstId) foldingFirstId = it.id;
+        } else if (isPrepKeep(it.name)) {
+          keep.push(it);
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn("[soborgLoading] unrecognized 'prep' row kept as-is:", it.name);
+          keep.push(it);
+        }
+      }
+      if (keep.length) out.prep = keep;
+    } else if (cat === "scaffold") {
+      const keep: LoadingItem[] = [];
+      let barTotal = 0;
+      let barFirstId: string | null = null;
+      for (const it of items) {
+        if (isStilladsbar(it.name)) {
+          barTotal += it.quantity ?? 0;
+          if (!barFirstId) barFirstId = it.id;
+        } else {
+          keep.push(it);
+        }
+      }
+      if (barTotal > 0 && barFirstId) {
+        keep.unshift({
+          id: `grouped-scaffold-${barFirstId}`,
+          name: "Stilladsbar",
+          quantity: barTotal,
+          power_type: null, power_kw: null, is_shared: false, notes: null,
+          category: "scaffold",
+        });
+      }
+      if (keep.length) out.scaffold = keep;
     } else {
-      grouped.push(it);
+      out[cat] = items;
     }
   }
-  if (total > 0 && firstId) {
-    grouped.unshift({
-      id: `grouped-${category}-${firstId}`,
-      name: label,
-      quantity: total,
-      power_type: null,
-      power_kw: null,
-      is_shared: false,
-      notes: null,
-      category,
+
+  if (foldingTotal > 0 && foldingFirstId) {
+    const tableArr = out.table ?? [];
+    tableArr.unshift({
+      id: `grouped-table-${foldingFirstId}`,
+      name: "Folding tables",
+      quantity: foldingTotal,
+      power_type: null, power_kw: null, is_shared: false, notes: null,
+      category: "table",
     });
+    out.table = tableArr;
   }
-  return grouped;
+
+  return out;
+}
+
+/** Back-compat shim — identity passthrough; new callers should use regroupForSoborgPDF. */
+export function displayItems(_category: string, items: LoadingItem[]): LoadingItem[] {
+  return items;
 }
 
 export function sortedCategories(map: Record<string, LoadingItem[]>): string[] {
