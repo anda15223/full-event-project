@@ -131,6 +131,22 @@ export default function FestivalSoborgLoading() {
                       </div>
                     );
                   })}
+                  {cg.trolley_contents.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                        <ShoppingCart className="h-3.5 w-3.5" /> Trolley contents
+                      </div>
+                      <div className="space-y-0.5 pl-5">
+                        {cg.trolley_contents.map((t) => (
+                          <div key={t.id} className="text-sm flex items-baseline gap-2">
+                            <span className="font-medium tabular-nums whitespace-nowrap">{t.quantity}</span>
+                            <span>{t.item_name}</span>
+                            {t.notes && <span className="text-xs text-muted-foreground italic">— {t.notes}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               );
