@@ -344,6 +344,29 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
   vehicles.forEach((v) => v.concepts.sort((a, b) => a.concept_name.localeCompare(b.concept_name)));
   unassigned.sort((a, b) => a.concept_name.localeCompare(b.concept_name));
 
+  // Phase 2U: attach concept-level trolley packing lists
+  const allGroups: ConceptGroup[] = [
+    ...vehicles.flatMap((v) => v.concepts),
+    ...unassigned,
+  ];
+  const conceptIds = Array.from(new Set(allGroups.map((g) => g.concept_id).filter(Boolean)));
+  if (conceptIds.length) {
+    const { data: trolleyRows } = await sb
+      .from("concept_trolley_items")
+      .select("id, concept_id, item_name, quantity, notes, position")
+      .in("concept_id", conceptIds)
+      .order("position");
+    const byConcept = new Map<string, TrolleyContentItem[]>();
+    for (const r of (trolleyRows ?? []) as any[]) {
+      const arr = byConcept.get(r.concept_id) ?? [];
+      arr.push({ id: r.id, item_name: r.item_name, quantity: r.quantity, notes: r.notes ?? null });
+      byConcept.set(r.concept_id, arr);
+    }
+    for (const g of allGroups) {
+      g.trolley_contents = byConcept.get(g.concept_id) ?? [];
+    }
+  }
+
   const total_items = vehicles.reduce((s, v) => s + v.car_total_items, 0);
 
   // Cooling: delivered on-site
