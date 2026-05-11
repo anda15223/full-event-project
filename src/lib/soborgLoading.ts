@@ -260,6 +260,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
         concept_alias: k.concept_alias ?? null,
         items_by_category: {},
         total_items: 0,
+        trolley_contents: [],
       };
       conceptGroupByContract.set(contractId, grp);
     }
