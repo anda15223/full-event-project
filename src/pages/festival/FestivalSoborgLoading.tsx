@@ -7,7 +7,7 @@ import {
   Flame, Square, Anchor, ShoppingCart, CreditCard, Droplet, Tent, Type, FileImage,
 } from "lucide-react";
 import {
-  getSoborgLoadingManifest, sortedCategories, categoryLabel,
+  getSoborgLoadingManifest, sortedCategories, categoryLabel, regroupForSoborgPDF,
   type SoborgLoadingManifest, type LoadingItem,
 } from "@/lib/soborgLoading";
 
@@ -107,7 +107,9 @@ export default function FestivalSoborgLoading() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            {veh.concepts.map((cg) => (
+            {veh.concepts.map((cg) => {
+              const grouped = regroupForSoborgPDF(cg.items_by_category);
+              return (
               <div key={cg.contract_id} className="border-l-2 border-border pl-4">
                 <div className="font-medium text-sm mb-2">
                   {cg.concept_name}
@@ -115,9 +117,9 @@ export default function FestivalSoborgLoading() {
                   <span className="text-xs text-muted-foreground ml-2">({cg.total_items} items)</span>
                 </div>
                 <div className="space-y-3">
-                  {sortedCategories(cg.items_by_category).map((cat) => {
+                  {sortedCategories(grouped).map((cat) => {
                     const Icon = CATEGORY_ICON[cat] ?? Package;
-                    const items = cg.items_by_category[cat];
+                    const items = grouped[cat];
                     return (
                       <div key={cat}>
                         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
@@ -131,7 +133,8 @@ export default function FestivalSoborgLoading() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       ))}
