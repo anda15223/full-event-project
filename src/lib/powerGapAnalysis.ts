@@ -24,7 +24,7 @@ export const POWER_TYPE_LABEL: Record<PowerType, string> = {
   "32A": "32A",
   "63A": "63A",
   "125A": "125A",
-  "230V_socket": "230V socket",
+  "230V_socket": "230V regular socket",
 };
 
 export type PowerEquipmentRow = {
