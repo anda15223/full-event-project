@@ -6,7 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import {
-  getSoborgLoadingManifest, sortedCategories, categoryLabel, displayItems,
+  getSoborgLoadingManifest, sortedCategories, categoryLabel, regroupForSoborgPDF,
   type SoborgLoadingManifest,
 } from "@/lib/soborgLoading";
 import { normalizeForPdf } from "@/lib/textNormalize";
@@ -74,16 +74,18 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
               <Text style={{ fontSize: 11, fontWeight: 400 }}> — {veh.car_total_items} items</Text>
             </Text>
           </View>
-          {veh.concepts.map((cg) => (
+          {veh.concepts.map((cg) => {
+            const grouped = regroupForSoborgPDF(cg.items_by_category);
+            return (
             <View key={cg.contract_id} wrap={false} style={{ marginBottom: 6 }}>
               <Text style={s.conceptHeader}>
                 {N(cg.concept_name)}{cg.concept_alias ? ` — ${N(cg.concept_alias)}` : ""}
                 <Text style={s.small}>  ({cg.total_items} items)</Text>
               </Text>
-              {sortedCategories(cg.items_by_category).map((cat) => (
+              {sortedCategories(grouped).map((cat) => (
                 <View key={cat}>
                   <Text style={s.catLabel}>{categoryLabel(cat)}</Text>
-                  {displayItems(cat, cg.items_by_category[cat]).map((it) => {
+                  {grouped[cat].map((it) => {
                     const tags: string[] = [];
                     if (it.power_type) tags.push(it.power_type);
                     if (it.power_kw) tags.push(`${Number(it.power_kw).toFixed(1)} kW`);
@@ -99,7 +101,8 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
                 </View>
               ))}
             </View>
-          ))}
+            );
+          })}
           <View style={s.footer} fixed>
             <Text>{N(data.festival.name)} / Soborg Loading</Text>
             <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
