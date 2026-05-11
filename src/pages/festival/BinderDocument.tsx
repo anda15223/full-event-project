@@ -1,7 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
-import { sortedCategories, categoryLabel } from "@/lib/soborgLoading";
+import { sortedCategories, categoryLabel, displayItems } from "@/lib/soborgLoading";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
@@ -644,7 +644,7 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
               {sortedCategories(cg.items_by_category).map((cat) => (
                 <View key={cat} style={{ marginTop: 1 }}>
                   <Text style={[s.small, { color: GRAY, marginLeft: 6 }]}>{categoryLabel(cat)}:</Text>
-                  {cg.items_by_category[cat].map((it) => {
+                  {displayItems(cat, cg.items_by_category[cat]).map((it) => {
                     const tags: string[] = [];
                     if (it.power_type) tags.push(it.power_type);
                     if (it.power_kw) tags.push(`${Number(it.power_kw).toFixed(1)} kW`);

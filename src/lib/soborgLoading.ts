@@ -71,6 +71,44 @@ export function categoryLabel(cat: string): string {
   }
 }
 
+/**
+ * Phase 2P: Collapse numbered "Folding table N" + "Personnel table…" rows into one
+ * "N× Folding tables" summary line for the 'table' category, and all "Stilladsbar…"
+ * rows into one "N× Stilladsbar" line for the 'scaffold' category. Other items pass through.
+ * DB rows remain granular; this is display-only.
+ */
+export function displayItems(category: string, items: LoadingItem[]): LoadingItem[] {
+  if (category !== "table" && category !== "scaffold") return items;
+  const isFolding = (n: string) => /^folding table/i.test(n) || /^personnel table/i.test(n);
+  const isBar = (n: string) => /^stilladsbar/i.test(n);
+  const matcher = category === "table" ? isFolding : isBar;
+  const label = category === "table" ? "Folding tables" : "Stilladsbar";
+  const grouped: LoadingItem[] = [];
+  let total = 0;
+  let firstId: string | null = null;
+  for (const it of items) {
+    if (matcher(it.name)) {
+      total += it.quantity ?? 0;
+      if (!firstId) firstId = it.id;
+    } else {
+      grouped.push(it);
+    }
+  }
+  if (total > 0 && firstId) {
+    grouped.unshift({
+      id: `grouped-${category}-${firstId}`,
+      name: label,
+      quantity: total,
+      power_type: null,
+      power_kw: null,
+      is_shared: false,
+      notes: null,
+      category,
+    });
+  }
+  return grouped;
+}
+
 export function sortedCategories(map: Record<string, LoadingItem[]>): string[] {
   const keys = Object.keys(map);
   return keys.sort((a, b) => {

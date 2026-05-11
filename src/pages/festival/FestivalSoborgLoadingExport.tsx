@@ -6,7 +6,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import {
-  getSoborgLoadingManifest, sortedCategories, categoryLabel,
+  getSoborgLoadingManifest, sortedCategories, categoryLabel, displayItems,
   type SoborgLoadingManifest,
 } from "@/lib/soborgLoading";
 import { normalizeForPdf } from "@/lib/textNormalize";
@@ -83,7 +83,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
               {sortedCategories(cg.items_by_category).map((cat) => (
                 <View key={cat}>
                   <Text style={s.catLabel}>{categoryLabel(cat)}</Text>
-                  {cg.items_by_category[cat].map((it) => {
+                  {displayItems(cat, cg.items_by_category[cat]).map((it) => {
                     const tags: string[] = [];
                     if (it.power_type) tags.push(it.power_type);
                     if (it.power_kw) tags.push(`${Number(it.power_kw).toFixed(1)} kW`);
