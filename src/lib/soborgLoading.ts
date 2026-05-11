@@ -13,6 +13,13 @@ export type LoadingItem = {
   category: string;
 };
 
+export type TrolleyContentItem = {
+  id: string;
+  item_name: string;
+  quantity: string;
+  notes: string | null;
+};
+
 export type ConceptGroup = {
   concept_id: string;
   concept_slug: string;
@@ -21,6 +28,7 @@ export type ConceptGroup = {
   concept_alias: string | null;
   items_by_category: Record<string, LoadingItem[]>;
   total_items: number;
+  trolley_contents: TrolleyContentItem[];
 };
 
 export type VehicleGroup = {
