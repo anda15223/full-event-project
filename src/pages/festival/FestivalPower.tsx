@@ -566,7 +566,12 @@ function PowerCard({
         <EquipmentSection power={power} equipment={equipment} contractsAll={allContracts} contract={contract} festivalId={festivalId} />
 
         {/* Power match check */}
-        <PowerMatchSection power={power} equipment={equipment} />
+        <PowerMatchSection
+          power={power}
+          equipment={equipment}
+          festivalSlug={festivalSlug}
+          conceptName={contract.concept?.name ?? null}
+        />
 
         {/* Drawing */}
         <Section title="Power drawing">
