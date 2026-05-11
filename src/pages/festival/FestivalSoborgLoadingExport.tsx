@@ -101,7 +101,8 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
                 </View>
               ))}
             </View>
-          ))}
+            );
+          })}
           <View style={s.footer} fixed>
             <Text>{N(data.festival.name)} / Soborg Loading</Text>
             <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
