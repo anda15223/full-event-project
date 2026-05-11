@@ -660,6 +660,16 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
                   })}
                 </View>
               ))}
+              {cg.trolley_contents.length > 0 && (
+                <View style={{ marginTop: 1 }}>
+                  <Text style={[s.small, { color: GRAY, marginLeft: 6 }]}>Trolley contents:</Text>
+                  {cg.trolley_contents.map((t) => (
+                    <Text key={t.id} style={[s.small, { marginLeft: 16 }]}>
+                      • {N(t.quantity)}  {N(t.item_name)}
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
             );
           })}
