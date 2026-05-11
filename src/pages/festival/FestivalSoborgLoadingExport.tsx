@@ -100,6 +100,17 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
                   })}
                 </View>
               ))}
+              {cg.trolley_contents.length > 0 && (
+                <View>
+                  <Text style={s.catLabel}>Trolley contents</Text>
+                  {cg.trolley_contents.map((t) => (
+                    <Text key={t.id} style={s.item}>
+                      • {N(t.quantity)}  {N(t.item_name)}
+                      {t.notes ? `  — ${N(t.notes)}` : ""}
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
             );
           })}

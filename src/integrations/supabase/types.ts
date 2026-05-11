@@ -77,6 +77,54 @@ export type Database = {
           },
         ]
       }
+      concept_trolley_items: {
+        Row: {
+          concept_id: string
+          created_at: string
+          id: string
+          item_name: string
+          notes: string | null
+          position: number
+          quantity: string
+          updated_at: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          id?: string
+          item_name: string
+          notes?: string | null
+          position?: number
+          quantity: string
+          updated_at?: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          position?: number
+          quantity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_trolley_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concept_trolley_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+        ]
+      }
       concepts: {
         Row: {
           color_hex: string | null
