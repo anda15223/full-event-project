@@ -895,8 +895,54 @@ function TentRollup({
 // ============================================================
 // POWER MATCH SECTION
 // ============================================================
-function PowerMatchSection({ power, equipment }: { power: PowerRow; equipment: PowerEquipmentRow[] }) {
-  const rows = useMemo(() => computeGap(power, equipment), [power, equipment]);
+function PowerMatchSection({
+  power,
+  equipment,
+  festivalSlug,
+  conceptName,
+}: {
+  power: PowerRow;
+  equipment: PowerEquipmentRow[];
+  festivalSlug?: string;
+  conceptName?: string | null;
+}) {
+  // TODO post-Jelling — Phase 2L-2 rebuild:
+  // Add socket_230v_regular column to festival_power schema. Migrate Creperie's 12 from
+  // connections_16a_240v to the new column. Add per-festival pricing model
+  // (jelling=per_circuit, tinderbox=bundled, etc.). Then remove this hardcode.
+  const IS_JELLING_CREPERIE =
+    festivalSlug === "jelling-2026" && conceptName === "La Creperie";
+
+  const computedRows = useMemo(() => computeGap(power, equipment), [power, equipment]);
+
+  const rows = useMemo<GapRow[]>(() => {
+    if (!IS_JELLING_CREPERIE) return computedRows;
+    // Treat connections_16a_240v as 12× regular 230V wall sockets (not industrial CEE).
+    // Demand = sum of all equipment quantities mapped to 16A_240V or 230V_socket.
+    const demand = equipment
+      .filter((e) => e.power_type === "16A_240V" || e.power_type === "230V_socket")
+      .reduce((s, e) => {
+        const qty = Number(e.quantity ?? 0);
+        if (e.is_shared) {
+          const split = 1 + (e.shared_with_concepts?.length ?? 0);
+          return s + qty / split;
+        }
+        return s + qty;
+      }, 0);
+    const supply = power.connections_16a_240v ?? 0;
+    const gap = supply - demand;
+    const status: GapRow["status"] = gap < 0 ? "short" : gap === 0 ? "match" : "spare";
+    // Drop any phantom 16A_240V row; keep only one truthful 230V socket row,
+    // plus any non-230V/non-16A_240V rows from the computation (none expected for Creperie).
+    const others = computedRows.filter(
+      (r) => r.power_type !== "16A_240V" && r.power_type !== "230V_socket",
+    );
+    return [
+      ...others,
+      { power_type: "230V_socket", demand, supply, gap, status },
+    ];
+  }, [IS_JELLING_CREPERIE, computedRows, equipment, power]);
+
   if (equipment.length === 0) {
     return (
       <Section title="Power match check">
@@ -920,7 +966,7 @@ function PowerMatchSection({ power, equipment }: { power: PowerRow; equipment: P
           <CheckCircle2 className="h-4 w-4" /> All equipment powered correctly
         </div>
       )}
-      {!allGreen && shorts.length === 0 && spares.length > 0 && (
+      {!allGreen && shorts.length === 0 && spares.length > 0 && !IS_JELLING_CREPERIE && (
         <div className="mb-2 rounded-lg border border-yellow-500/40 bg-yellow-500/5 p-2 text-sm text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
           <Coins className="h-4 w-4" /> Refund opportunity: {spares.reduce((a, b) => a + b.gap, 0)} spare circuit{spares.reduce((a, b) => a + b.gap, 0) === 1 ? "" : "s"}
         </div>
