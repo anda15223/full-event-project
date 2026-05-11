@@ -1,7 +1,7 @@
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
-import { sortedCategories, categoryLabel, displayItems } from "@/lib/soborgLoading";
+import { sortedCategories, categoryLabel, regroupForSoborgPDF } from "@/lib/soborgLoading";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
@@ -635,16 +635,18 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
               : <Text style={[s.warn, { fontSize: 9, fontWeight: 400 }]}>  ·  (plate pending)</Text>}
             <Text style={{ fontWeight: 400 }}> — {veh.car_total_items} items</Text>
           </Text>
-          {veh.concepts.map((cg) => (
+          {veh.concepts.map((cg) => {
+            const grouped = regroupForSoborgPDF(cg.items_by_category);
+            return (
             <View key={cg.contract_id} style={{ marginTop: 3, marginBottom: 3 }}>
               <Text style={[s.small, s.bold]}>
                 {N(cg.concept_name)}{cg.concept_alias ? ` — ${N(cg.concept_alias)}` : ""}
                 <Text style={{ color: GRAY }}>  ({cg.total_items} items)</Text>
               </Text>
-              {sortedCategories(cg.items_by_category).map((cat) => (
+              {sortedCategories(grouped).map((cat) => (
                 <View key={cat} style={{ marginTop: 1 }}>
                   <Text style={[s.small, { color: GRAY, marginLeft: 6 }]}>{categoryLabel(cat)}:</Text>
-                  {displayItems(cat, cg.items_by_category[cat]).map((it) => {
+                  {grouped[cat].map((it) => {
                     const tags: string[] = [];
                     if (it.power_type) tags.push(it.power_type);
                     if (it.power_kw) tags.push(`${Number(it.power_kw).toFixed(1)} kW`);
@@ -659,7 +661,8 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
                 </View>
               ))}
             </View>
-          ))}
+            );
+          })}
         </View>
       ))}
       {soborgLoading.unassigned.concepts.length > 0 && (
