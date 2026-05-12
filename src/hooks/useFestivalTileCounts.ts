@@ -29,7 +29,8 @@ export function useFestivalTileCounts(festivalId: string | null) {
       const { data: contracts } = await sb
         .from("festival_contracts")
         .select("id")
-        .eq("festival_id", fid);
+        .eq("festival_id", fid)
+        .eq("is_active", true);
       const contractIds = (contracts ?? []).map((c: any) => c.id);
 
       const inContracts = contractIds.length > 0;

@@ -62,7 +62,7 @@ export default function FestivalFacade() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data: contracts } = await supabase.from("festival_contracts")
-        .select("id").eq("festival_id", festivalId);
+        .select("id").eq("festival_id", festivalId).eq("is_active", true);
       const ids = (contracts ?? []).map((c: any) => c.id);
       if (!ids.length) return [];
       const { data, error } = await supabase.from("festival_facade")

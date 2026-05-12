@@ -142,7 +142,7 @@ export default function FestivalActions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
-        .select("id, concept_id, concept_alias, concept:concepts(slug, name)")
+        .select("id, concept_id, concept_alias, is_active, concept:concepts(slug, name)")
         .eq("festival_id", festival!.id);
       return (data ?? []) as any[];
     },
@@ -198,8 +198,14 @@ export default function FestivalActions() {
 
   // Filtering
   const today = todayStr();
+  const inactiveContractIds = useMemo(
+    () => new Set(contracts.filter((c: any) => c.is_active === false).map((c: any) => c.id)),
+    [contracts],
+  );
   const filtered = useMemo(() => {
     return items.filter((i) => {
+      // Hide items linked to a disabled concept contract
+      if (i.contract_id && inactiveContractIds.has(i.contract_id)) return false;
       // Snoozed: hide unless tab=all or already past snooze
       if (tab !== "all" && i.snoozed_until && i.snoozed_until > today) return false;
       if (tab !== "all" && i.status !== tab) return false;

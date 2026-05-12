@@ -130,7 +130,7 @@ async function loadData(slug: string, conceptFilter: ConceptSlug | null): Promis
     supabase.from("v_attention_summary").select("*").eq("festival_id", fid).maybeSingle(),
     supabase.from("concepts").select("id, slug, name, display_order").not("display_order", "is", null).order("display_order"),
     supabase.from("festival_concept_assignments").select("concept_id, festival_staff(name)").eq("festival_id", fid).eq("role", "manager"),
-    supabase.from("festival_contracts").select("concept_id, contract_signed_date, inspection_date, site_clearance_deadline").eq("festival_id", fid),
+    supabase.from("festival_contracts").select("concept_id, contract_signed_date, inspection_date, site_clearance_deadline").eq("festival_id", fid).eq("is_active", true),
     supabase.from("festival_contacts").select("*").eq("festival_id", fid).eq("is_primary", true).order("role"),
     supabase.from("festival_service_hours").select("service_date, concept_id, open_time, close_time").eq("festival_id", fid),
     supabase.from("festival_action_items").select("title, owner, due_date, priority, status").eq("festival_id", fid).neq("status","done").gte("due_date", todayIso).lte("due_date", horizonIso).order("due_date"),

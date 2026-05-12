@@ -233,7 +233,8 @@ export default function FestivalPowerExport() {
 
       const cRes = await supabase.from("festival_contracts")
         .select("id, concept_alias, concept:concepts!concept_id(slug, name, display_order)")
-        .eq("festival_id", fid);
+        .eq("festival_id", fid)
+        .eq("is_active", true);
       const cs = (cRes.data ?? []) as unknown as Contract[];
 
       const pRes = cs.length > 0

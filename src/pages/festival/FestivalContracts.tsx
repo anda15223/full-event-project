@@ -138,6 +138,7 @@ export default function FestivalContracts() {
   const [filterStatus, setFilterStatus] = useState<(typeof STATUS_FILTERS)[number]>("all");
   const [filterEntity, setFilterEntity] = useState<string>("all");
   const [filterConcept, setFilterConcept] = useState<string>("all");
+  const [showDisabled, setShowDisabled] = useState(false);
 
   const allEntities = useMemo(() => {
     const s = new Set<string>();
@@ -147,6 +148,7 @@ export default function FestivalContracts() {
 
   const filtered = useMemo(() => {
     return (contractsQ.data ?? []).filter(c => {
+      if (!showDisabled && (c as any).is_active === false) return false;
       if (filterStatus !== "all" && c.contract_status !== filterStatus) return false;
       if (filterEntity !== "all" && c.operating_entity !== filterEntity) return false;
       if (filterConcept !== "all" && c.concept_id !== filterConcept) return false;
@@ -159,7 +161,12 @@ export default function FestivalContracts() {
       const bn = conceptById.get(b.concept_id)?.name ?? "";
       return an.localeCompare(bn);
     });
-  }, [contractsQ.data, filterStatus, filterEntity, filterConcept, conceptById]);
+  }, [contractsQ.data, filterStatus, filterEntity, filterConcept, conceptById, showDisabled]);
+
+  const disabledCount = useMemo(
+    () => (contractsQ.data ?? []).filter(c => (c as any).is_active === false).length,
+    [contractsQ.data],
+  );
 
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = { signed: 0, pending_signature: 0, in_negotiation: 0, not_started: 0, stalled: 0, cancelled: 0 };
@@ -325,6 +332,15 @@ export default function FestivalContracts() {
             {(conceptsQ.data ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        {disabledCount > 0 && (
+          <Button
+            size="sm"
+            variant={showDisabled ? "default" : "outline"}
+            onClick={() => setShowDisabled(v => !v)}
+          >
+            {showDisabled ? "Hide" : "Show"} disabled ({disabledCount})
+          </Button>
+        )}
       </div>
 
       {/* Contract cards */}
@@ -338,13 +354,16 @@ export default function FestivalContracts() {
         <div className="grid md:grid-cols-2 gap-4">
           {filtered.map(c => {
             const concept = conceptById.get(c.concept_id);
+            const isDisabled = (c as any).is_active === false;
             return (
-              <ContractCard key={c.id} contract={c} concept={concept ?? null}
-                festivalSlug={slug}
-                onEdit={() => setEditing(c)}
-                onStatus={() => setStatusFor(c)}
-                onDelete={() => setDeleteFor(c)}
-              />
+              <div key={c.id} className={isDisabled ? "opacity-60 saturate-0 ring-2 ring-red-300/40 rounded-xl" : ""}>
+                <ContractCard contract={c} concept={concept ?? null}
+                  festivalSlug={slug}
+                  onEdit={() => setEditing(c)}
+                  onStatus={() => setStatusFor(c)}
+                  onDelete={() => setDeleteFor(c)}
+                />
+              </div>
             );
           })}
         </div>
