@@ -733,8 +733,7 @@ export default function FestivalOverview() {
 
       {/* BLOCK 5 — contacts (canonical surface) */}
 
-      {/* BLOCK 5b — contracts mini-grid */}
-      {festivalId && <ContractsMiniBlock festivalId={festivalId} slug={slug} />}
+
 
       {/* BLOCK 6 — concept lineup */}
       {festivalId && (
