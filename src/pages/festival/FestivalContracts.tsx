@@ -172,9 +172,9 @@ export default function FestivalContracts() {
       const aw = a.contract_status === "stalled" ? 0 : 1;
       const bw = b.contract_status === "stalled" ? 0 : 1;
       if (aw !== bw) return aw - bw;
-      const an = conceptById.get(a.concept_id)?.name ?? "";
-      const bn = conceptById.get(b.concept_id)?.name ?? "";
-      return an.localeCompare(bn);
+      const ao = (conceptById.get(a.concept_id) as any)?.display_order ?? 999;
+      const bo = (conceptById.get(b.concept_id) as any)?.display_order ?? 999;
+      return ao - bo;
     });
   }, [contractsQ.data, filterStatus, filterEntity, filterConcept, conceptById, showDisabled]);
 
