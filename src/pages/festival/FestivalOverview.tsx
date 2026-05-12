@@ -901,6 +901,13 @@ export default function FestivalOverview() {
             );
 
             tiles.push(
+              <FestivalTile key="prices" href={`/festivals/${slug}/prices`}
+                icon={Tag} iconAccent="emerald" title="Prices"
+                primaryStat="Per concept"
+                secondaryStat="POS price lists"
+                status="gray" />
+            );
+            tiles.push(
               <FestivalTile key="staff" href="#"
                 icon={UserCog} iconAccent="slate" title="Staff"
                 primaryStat="Coming soon" disabled />
