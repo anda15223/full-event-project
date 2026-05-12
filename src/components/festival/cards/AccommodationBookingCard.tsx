@@ -43,6 +43,14 @@ export interface AccommodationRow {
   confirmation_pdf_uploaded_at: string | null;
   last_parsed_at: string | null;
   parse_summary: string | null;
+  parsed_data: {
+    _extraction_evidence?: {
+      evidence_type: "explicit_label" | "room_descriptions" | "none_found";
+      matched_text: string;
+      matched_sections: string[];
+    };
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface AccommodationRoomRow {
