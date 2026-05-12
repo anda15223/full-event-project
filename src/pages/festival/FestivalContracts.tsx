@@ -126,8 +126,8 @@ export default function FestivalContracts() {
   const conceptsQ = useQuery({
     queryKey: ["concepts-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("concepts").select("id, name, slug, color_hex").order("display_order");
-      return (data ?? []) as Concept[];
+      const { data } = await supabase.from("concepts").select("id, name, slug, color_hex, display_order").order("display_order");
+      return (data ?? []) as (Concept & { display_order: number | null })[];
     },
   });
   const conceptById = useMemo(() => new Map((conceptsQ.data ?? []).map(c => [c.id, c])), [conceptsQ.data]);
