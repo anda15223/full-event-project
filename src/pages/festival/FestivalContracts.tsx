@@ -496,6 +496,12 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
           <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Expires</div>
           <div>{c.contract_expires_at ?? "—"}</div>
         </div>
+        {c.bracelet_count != null && (
+          <div>
+            <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Bracelets</div>
+            <div className="tabular-nums">{c.bracelet_count}</div>
+          </div>
+        )}
       </div>
 
       {c.concept_variation_note && (
