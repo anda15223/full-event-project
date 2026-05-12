@@ -35,7 +35,7 @@ import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 import { DisabledConceptsBanner } from "@/components/festival/DisabledConceptsBanner";
 import { FestivalIdentityStrip } from "@/components/festival/FestivalIdentityStrip";
 import { FestivalInfoCard } from "@/components/festival/FestivalInfoCard";
-import { FestivalContractCard } from "@/components/festival/cards/FestivalContractCard";
+
 
 // ---------- helpers ----------
 
@@ -682,11 +682,6 @@ export default function FestivalOverview() {
           lng: (f as any).lng ?? null,
         }}
       />
-
-      {/* Per-concept contract card (collapsible) */}
-      {festivalId && (
-        <FestivalContractCard festivalId={festivalId} festivalSlug={slug} />
-      )}
 
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}

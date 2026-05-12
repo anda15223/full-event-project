@@ -64,6 +64,10 @@ interface Contract {
   status_changed_at: string | null;
   status_history: any[] | null;
   updated_at: string;
+  bracelet_count: number | null;
+  last_parsed_at: string | null;
+  parse_summary: string | null;
+  contract_pdf_path: string | null;
 }
 
 const STATUS_FILTERS: (ContractStatus | "all")[] = ["all", "signed", "pending_signature", "in_negotiation", "not_started", "stalled"];
@@ -88,6 +92,17 @@ function PaymentPill({ status }: { status: PaymentStatus | null }) {
       {m.label}
     </span>
   );
+}
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
 }
 
 export default function FestivalContracts() {
@@ -430,10 +445,38 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
       const path = `${festivalSlug}/${c.id}/${Date.now()}-${safe}`;
       const { error } = await supabase.storage.from("festival-contracts").upload(path, file, { upsert: false });
       if (error) throw error;
-      const { error: e2 } = await supabase.from("festival_contracts").update({ contract_file_path: path }).eq("id", c.id);
+      const { error: e2 } = await supabase.from("festival_contracts")
+        .update({ contract_file_path: path, contract_pdf_path: path, contract_pdf_uploaded_at: new Date().toISOString() } as any)
+        .eq("id", c.id);
       if (e2) throw e2;
-      toast.success("Contract uploaded");
+      toast.success("Contract uploaded — parsing with AI…");
       qc.invalidateQueries({ queryKey: ["festival-contracts"] });
+
+      // Trigger AI parse (best-effort)
+      try {
+        const { data: signed } = await supabase.storage.from("festival-contracts").createSignedUrl(path, 60 * 10);
+        if (signed?.signedUrl) {
+          const { data: parsed, error: pErr } = await supabase.functions.invoke("parse-document", {
+            body: { fileUrl: signed.signedUrl, documentType: "contract" },
+          });
+          if (pErr) throw pErr;
+          if (parsed?.ok && parsed.parsed) {
+            const p = parsed.parsed as any;
+            const updates: any = { last_parsed_at: new Date().toISOString() };
+            if (p.bracelet_count != null) updates.bracelet_count = p.bracelet_count;
+            if (p.key_obligations) updates.key_obligations = p.key_obligations;
+            if (p.contract_terms_summary) updates.contract_terms_summary = p.contract_terms_summary;
+            if (p.contract_expires_at) updates.contract_expires_at = p.contract_expires_at;
+            if (p.summary) updates.parse_summary = String(p.summary).slice(0, 500);
+            await supabase.from("festival_contracts").update(updates).eq("id", c.id);
+            toast.success("AI parse complete");
+            qc.invalidateQueries({ queryKey: ["festival-contracts"] });
+          }
+        }
+      } catch (pe: any) {
+        console.warn("parse-document failed", pe);
+        toast.message("Uploaded — AI parse skipped");
+      }
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
     } finally {
@@ -492,6 +535,12 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
           <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Expires</div>
           <div>{c.contract_expires_at ?? "—"}</div>
         </div>
+        {c.bracelet_count != null && (
+          <div>
+            <div className="text-muted-foreground text-[10px] uppercase tracking-wider">Bracelets</div>
+            <div className="tabular-nums">{c.bracelet_count}</div>
+          </div>
+        )}
       </div>
 
       {c.concept_variation_note && (
@@ -562,6 +611,12 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
         <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-2 text-[12px]">
           <div className="font-semibold text-amber-800 dark:text-amber-300 mb-0.5">Key obligation</div>
           <div>{c.key_obligations}</div>
+        </div>
+      )}
+      {c.last_parsed_at && (
+        <div className="text-[10px] text-muted-foreground italic">
+          AI parsed {timeAgo(c.last_parsed_at)}
+          {c.parse_summary && <span> · {c.parse_summary}</span>}
         </div>
       )}
 
