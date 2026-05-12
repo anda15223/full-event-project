@@ -815,7 +815,8 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
       case "safety": return 1;
       case "accommodation": return ceilDiv(data.accommodation.length, 8);
       case "soborg_loading": {
-        const items = (data.soborgLoading?.concept_groups ?? []).reduce((sum: number, cg: any) => sum + Object.values(cg.items_by_category ?? {}).flat().length, 0);
+        const sl: any = data.soborgLoading;
+        const items = (sl?.concept_groups ?? sl?.conceptGroups ?? []).reduce((sum: number, cg: any) => sum + Object.values(cg.items_by_category ?? {}).flat().length, 0);
         return ceilDiv(items, 32);
       }
       case "questions": return ceilDiv((data as any).questions?.length ?? 0, 24);
