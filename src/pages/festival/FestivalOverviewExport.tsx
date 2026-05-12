@@ -432,7 +432,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           {(conceptFilter ? concepts.filter((c) => c.slug === conceptFilter) : concepts).map((c) => (
             conceptFilter ? (
               <View key={c.id} style={{ marginTop: 2 }}>
-                <Text style={{ fontWeight: 700, fontSize: 12 }}>{c.emoji} {c.name}</Text>
+                <Text style={{ fontWeight: 700, fontSize: 12 }}>{c.name}</Text>
                 <Text>Manager: {c.manager ?? "unassigned"}</Text>
                 <Text>
                   Contract:{" "}
