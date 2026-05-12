@@ -5002,6 +5002,8 @@ export type Database = {
           festival_duration_days: number | null
           id: string
           is_active: boolean | null
+          lat: number | null
+          lng: number | null
           menu_summary: string | null
           name: string
           notes: string | null
@@ -5043,6 +5045,8 @@ export type Database = {
           festival_duration_days?: number | null
           id?: string
           is_active?: boolean | null
+          lat?: number | null
+          lng?: number | null
           menu_summary?: string | null
           name: string
           notes?: string | null
@@ -5084,6 +5088,8 @@ export type Database = {
           festival_duration_days?: number | null
           id?: string
           is_active?: boolean | null
+          lat?: number | null
+          lng?: number | null
           menu_summary?: string | null
           name?: string
           notes?: string | null
