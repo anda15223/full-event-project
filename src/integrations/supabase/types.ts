@@ -4245,6 +4245,125 @@ export type Database = {
           },
         ]
       }
+      festival_safety_zone: {
+        Row: {
+          briefing_date: string | null
+          briefing_done: boolean | null
+          created_at: string
+          display_order: number | null
+          emergency_exits_count: number | null
+          festival_id: string
+          fire_blanket_checked: boolean | null
+          fire_blanket_count: number | null
+          fire_extinguisher_checked: boolean | null
+          fire_extinguisher_count: number | null
+          first_aid_checked: boolean | null
+          first_aid_kit: boolean | null
+          id: string
+          notes: string | null
+          permits_notes: string | null
+          permits_obtained: boolean | null
+          responsible_person: string | null
+          updated_at: string
+          zone_label: string
+          zone_type: string | null
+        }
+        Insert: {
+          briefing_date?: string | null
+          briefing_done?: boolean | null
+          created_at?: string
+          display_order?: number | null
+          emergency_exits_count?: number | null
+          festival_id: string
+          fire_blanket_checked?: boolean | null
+          fire_blanket_count?: number | null
+          fire_extinguisher_checked?: boolean | null
+          fire_extinguisher_count?: number | null
+          first_aid_checked?: boolean | null
+          first_aid_kit?: boolean | null
+          id?: string
+          notes?: string | null
+          permits_notes?: string | null
+          permits_obtained?: boolean | null
+          responsible_person?: string | null
+          updated_at?: string
+          zone_label: string
+          zone_type?: string | null
+        }
+        Update: {
+          briefing_date?: string | null
+          briefing_done?: boolean | null
+          created_at?: string
+          display_order?: number | null
+          emergency_exits_count?: number | null
+          festival_id?: string
+          fire_blanket_checked?: boolean | null
+          fire_blanket_count?: number | null
+          fire_extinguisher_checked?: boolean | null
+          fire_extinguisher_count?: number | null
+          first_aid_checked?: boolean | null
+          first_aid_kit?: boolean | null
+          id?: string
+          notes?: string | null
+          permits_notes?: string | null
+          permits_obtained?: boolean | null
+          responsible_person?: string | null
+          updated_at?: string
+          zone_label?: string
+          zone_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_safety_zone_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
       festival_service_hours: {
         Row: {
           close_time: string | null
