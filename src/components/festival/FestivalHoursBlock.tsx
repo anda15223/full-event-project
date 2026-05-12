@@ -267,8 +267,8 @@ export function FestivalHoursBlock({ festivalId, festivalSlug, startDate, endDat
                   <th className="py-2 pr-3 font-medium">Date</th>
                   <th className="py-2 pr-3 font-medium">Festival Open</th>
                   <th className="py-2 pr-3 font-medium">Festival Close</th>
-                  <th className="py-2 pr-3 font-medium">Prep Open</th>
-                  <th className="py-2 pr-3 font-medium">Prep Close</th>
+                  <th className="py-2 pr-3 font-medium">{secondaryLabel} Open</th>
+                  <th className="py-2 pr-3 font-medium">{secondaryLabel} Close</th>
                   <th className="py-2 font-medium">Notes</th>
                 </tr>
               </thead>
