@@ -74,7 +74,7 @@ export default function FestivalSoborgLoading() {
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Soborg Loading Manifest</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Søborg Loading Manifest</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {data.festival.name} · {data.total_items} items total ·{" "}
             {days >= 0 ? `T-${days} days to load` : `Started ${-days} days ago`}
@@ -185,7 +185,7 @@ export default function FestivalSoborgLoading() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Snowflake className="h-4 w-4 text-blue-500" /> Delivered on-site (NOT loaded from Soborg)
+              <Snowflake className="h-4 w-4 text-blue-500" /> Delivered on-site (NOT loaded from Søborg)
             </CardTitle>
           </CardHeader>
           <CardContent>

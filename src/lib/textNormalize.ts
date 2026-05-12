@@ -1,20 +1,9 @@
 /**
  * Normalize text for PDF output.
  *
- * Strips ALL non-ASCII characters to ensure bulletproof rendering
- * regardless of font fallback behavior. Trade-off: PDFs are pure
- * ASCII; the app UI retains full Unicode.
- *
- * Mappings:
- *   - Danish: æ Æ ø Ø å Å → ae Ae o O a A
- *   - Romanian: ă â î ș ț (+ caps, + cedilla variants) → a a i s t (+ caps)
- *   - Romance diacritics: ç é à etc → c e a etc
- *   - Em/en-dash: — – → -
- *   - Smart quotes: " " ' ' → " '
- *   - Ellipsis: … → ...
- *   - Arrows: → → " to "
- *   - Emoji: stripped entirely
- *   - Catch-all: any remaining non-ASCII → stripped
+ * Preserves Danish characters (æ Æ ø Ø å Å) — the embedded PDF font
+ * supports them. Strips/transliterates Romanian and Romance diacritics
+ * for safety, plus normalizes punctuation and emoji.
  */
 export function normalizeForPdf(text: string | null | undefined): string {
   if (text === null || text === undefined) return "";
@@ -27,13 +16,7 @@ export function normalizeForPdf(text: string | null | undefined): string {
     .replace(/\\u2014/g, "-")
     .replace(/\\u2013/g, "-");
 
-  // 1. Danish characters → Latin equivalents
-  const DANISH: Record<string, string> = {
-    "æ": "ae", "Æ": "Ae",
-    "ø": "o",  "Ø": "O",
-    "å": "a",  "Å": "A",
-  };
-  s = s.replace(/[æÆøØåÅ]/g, (ch) => DANISH[ch] ?? ch);
+  // 1. Danish characters: PRESERVED (æ Æ ø Ø å Å)
 
   // 2. Romanian characters → Latin equivalents (incl. cedilla variants)
   const ROMANIAN: Record<string, string> = {
@@ -79,9 +62,9 @@ export function normalizeForPdf(text: string | null | undefined): string {
     .replace(/\uD83D[\uDCE7\uDCE8\uDCF1\uDCDE\uDCF2]/g, "")
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "");
 
-  // 7. FINAL catch-all: strip any remaining non-ASCII byte.
+  // 7. FINAL catch-all: strip any remaining non-ASCII byte EXCEPT Danish chars.
   // Safety net for Cyrillic, CJK, unusual symbols, surrogate halves, etc.
-  s = s.replace(/[^\x00-\x7F]/g, "");
+  s = s.replace(/[^\x00-\x7FæÆøØåÅ]/g, "");
 
   return s;
 }

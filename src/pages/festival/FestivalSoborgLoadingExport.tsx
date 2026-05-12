@@ -54,12 +54,12 @@ function fmt(iso?: string | null) {
 export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
   const ts = new Date().toLocaleString("en-GB");
   return (
-    <Document title={`${data.festival.name} — Soborg Loading Manifest`} author="Full Event Project">
+    <Document title={`${data.festival.name} — Søborg Loading Manifest`} author="Full Event Project">
       {data.vehicles.map((veh, vi) => (
         <Page key={veh.vehicle_id} size="A4" style={s.page} wrap>
           {vi === 0 && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={s.h1}>{N(`Soborg Loading Manifest — ${data.festival.name}`)}</Text>
+              <Text style={s.h1}>{N(`Søborg Loading Manifest — ${data.festival.name}`)}</Text>
               <Text style={s.meta}>
                 {N(formatDateRange(data.festival.start_date, data.festival.end_date))} · {data.total_items} items · Generated {ts}
               </Text>
@@ -115,7 +115,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
             );
           })}
           <View style={s.footer} fixed>
-            <Text>{N(data.festival.name)} / Soborg Loading</Text>
+            <Text>{N(data.festival.name)} / Søborg Loading</Text>
             <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
         </Page>
@@ -125,7 +125,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
         <Page size="A4" style={s.page} wrap>
           {data.vehicles.length === 0 && (
             <View style={{ marginBottom: 8 }}>
-              <Text style={s.h1}>{N(`Soborg Loading Manifest — ${data.festival.name}`)}</Text>
+              <Text style={s.h1}>{N(`Søborg Loading Manifest — ${data.festival.name}`)}</Text>
               <Text style={s.meta}>{N(formatDateRange(data.festival.start_date, data.festival.end_date))} · Generated {ts}</Text>
             </View>
           )}
@@ -142,7 +142,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
           )}
           {data.not_loaded_from_soborg.items.length > 0 && (
             <View style={{ marginTop: 12 }} wrap={false}>
-              <Text style={s.sectionTitle}>Delivered on-site (NOT loaded from Soborg)</Text>
+              <Text style={s.sectionTitle}>Delivered on-site (NOT loaded from Søborg)</Text>
               {data.not_loaded_from_soborg.items.map((u) => (
                 <Text key={u.id} style={s.item}>
                   • {u.quantity}× {N(u.unit_label)}
@@ -154,7 +154,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
             </View>
           )}
           <View style={s.footer} fixed>
-            <Text>{N(data.festival.name)} / Soborg Loading</Text>
+            <Text>{N(data.festival.name)} / Søborg Loading</Text>
             <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
           </View>
         </Page>
