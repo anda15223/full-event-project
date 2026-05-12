@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  Upload, FileText, Download, Loader2, AlertTriangle, ChevronDown, ChevronRight, Zap,
+  Upload, FileText, Download, Loader2, AlertTriangle, ChevronDown, ChevronRight,
 } from "lucide-react";
 import {
   computePowerStatus, POWER_STATUS_PILL, computeDemandKw,
