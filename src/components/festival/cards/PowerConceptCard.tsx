@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toIsoDate } from "@/lib/parseDate";
 import {
-  Upload, FileText, Download, Loader2, AlertTriangle, ChevronDown, ChevronRight,
+  Upload, FileText, Download, Loader2, AlertTriangle, ChevronDown, ChevronRight, Plus, Trash2,
 } from "lucide-react";
 import {
   computePowerStatus, POWER_STATUS_PILL, computeDemandKw,
