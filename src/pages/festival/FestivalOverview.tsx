@@ -791,13 +791,6 @@ export default function FestivalOverview() {
                 status={veh > 0 ? "green" : "gray"} />
             );
 
-            const topN = tileCounts.topskiltCount ?? 0;
-            tiles.push(
-              <FestivalTile key="topskilt" href={`/festivals/${slug}/topskilt`}
-                icon={FileText} iconAccent="violet" title="Topskilt"
-                primaryStat={`${topN} sets`}
-                status={topN > 0 ? "green" : "gray"} />
-            );
 
             const coolN = statsQ.data?.totalCooling ?? 0;
             tiles.push(
