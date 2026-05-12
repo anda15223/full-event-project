@@ -1400,6 +1400,7 @@ export type Database = {
           inspection_date: string | null
           inspection_self_paid_if_late: boolean | null
           inspection_time: string | null
+          is_active: boolean
           key_obligations: string | null
           lactose_free_required: boolean | null
           max_partout_black: number | null
@@ -1476,6 +1477,7 @@ export type Database = {
           inspection_date?: string | null
           inspection_self_paid_if_late?: boolean | null
           inspection_time?: string | null
+          is_active?: boolean
           key_obligations?: string | null
           lactose_free_required?: boolean | null
           max_partout_black?: number | null
@@ -1552,6 +1554,7 @@ export type Database = {
           inspection_date?: string | null
           inspection_self_paid_if_late?: boolean | null
           inspection_time?: string | null
+          is_active?: boolean
           key_obligations?: string | null
           lactose_free_required?: boolean | null
           max_partout_black?: number | null
