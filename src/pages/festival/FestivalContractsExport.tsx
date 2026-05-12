@@ -43,7 +43,7 @@ export default function FestivalContractsExport() {
       const { data: f } = await supabase.from("festivals")
         .select("id, name, slug, start_date, end_date").eq("slug", slug).maybeSingle();
       if (!f) { setData({ festival: null }); return; }
-      const { data: contracts } = await supabase.from("festival_contracts").select("*").eq("festival_id", f.id);
+      const { data: contracts } = await supabase.from("festival_contracts").select("*").eq("festival_id", f.id).eq("is_active", true);
       const { data: concepts } = await supabase.from("concepts").select("id, name, color_hex");
       setData({ festival: f, contracts: contracts ?? [], concepts: concepts ?? [] });
     })();

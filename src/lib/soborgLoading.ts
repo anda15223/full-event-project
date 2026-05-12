@@ -207,7 +207,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
   const [contractsRes, transportRes, conceptsRes, coolingRes] = await Promise.all([
     sb.from("festival_contracts")
       .select("id, concept_id, concept_alias, assigned_vehicle_id")
-      .eq("festival_id", fid),
+      .eq("festival_id", fid).eq("is_active", true),
     sb.from("festival_transport")
       .select("id, vehicle_type, license_plate, season_rental_id, season_rental:season_rentals(id, vehicle_type, license_plate)")
       .eq("festival_id", fid),

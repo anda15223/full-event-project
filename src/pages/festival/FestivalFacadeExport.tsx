@@ -44,7 +44,7 @@ export default function FestivalFacadeExport() {
       if (!f) { setData({ festival: null }); return; }
       const { data: contracts } = await supabase.from("festival_contracts")
         .select("id, concept_alias, concept:concepts!concept_id(name, slug, display_order)")
-        .eq("festival_id", f.id);
+        .eq("festival_id", f.id).eq("is_active", true);
       const ids = (contracts ?? []).map((c: any) => c.id);
       const { data: facades } = ids.length
         ? await supabase.from("festival_facade").select("*").in("festival_contract_id", ids)
