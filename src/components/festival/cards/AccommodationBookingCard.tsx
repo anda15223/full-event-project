@@ -308,8 +308,10 @@ export function AccommodationBookingCard({
             const upd: any = { last_parsed_at: new Date().toISOString() };
             if (!booking.provider_name && p.hotel_name) upd.provider_name = p.hotel_name;
             if (!booking.address && p.address) upd.address = p.address;
-            if (!booking.check_in_date && p.checkin_date) upd.check_in_date = p.checkin_date;
-            if (!booking.check_out_date && p.checkout_date) upd.check_out_date = p.checkout_date;
+            const ci = toIsoDate(p.checkin_date);
+            const co = toIsoDate(p.checkout_date);
+            if (ci && (!booking.check_in_date || booking.check_in_date !== ci)) upd.check_in_date = ci;
+            if (co && (!booking.check_out_date || booking.check_out_date !== co)) upd.check_out_date = co;
             if ((!booking.room_count || booking.room_count === 0) && p.room_count) upd.room_count = p.room_count;
             if ((!booking.beds_per_room || booking.beds_per_room === 0) && p.beds_per_room) upd.beds_per_room = p.beds_per_room;
             if (!booking.confirmation_number && p.booking_reference) upd.confirmation_number = p.booking_reference;
