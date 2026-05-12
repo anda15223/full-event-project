@@ -609,51 +609,88 @@ function CoolingPage({ data }: { data: BinderData }) {
 }
 
 function SafetyPage({ data }: { data: BinderData }) {
-  const { festival, safety } = data;
+  const { festival, safety, safetyZones } = data;
+  const chk = (v: boolean | null | undefined) => (v ? "✓" : "◯");
   return (
-    <Page size="A4" style={s.page} bookmark="Safety">
+    <Page size="A4" style={s.page} bookmark="Safety" wrap>
       <SectionHeader title="Safety" />
+      <Text style={[s.bold, s.small, { marginBottom: 4 }]}>FESTIVAL-WIDE CERTIFICATIONS</Text>
       {!safety && <Text style={[s.small, { color: GRAY }]}>No safety record yet.</Text>}
       {safety && (
-        <View>
-          <Text style={s.para}>Gas safety: <Text style={s.bold}>{safety.gas_safety_status ?? "—"}</Text>{safety.gas_safety_date ? ` (inspection ${fmt(safety.gas_safety_date)})` : ""}</Text>
-          <Text style={s.para}>Food authority: <Text style={s.bold}>{safety.food_authority_status ?? "—"}</Text>{safety.food_authority_inspection_date ? ` (${fmt(safety.food_authority_inspection_date)})` : ""}</Text>
-          <Text style={s.para}>Electrical certification: <Text style={s.bold}>{safety.electrical_certification_status ?? "—"}</Text></Text>
-          <Text style={s.para}>Fire safety: <Text style={s.bold}>{safety.fire_safety_status ?? "—"}</Text></Text>
-          <Text style={s.para}>Evacuation plan: <Text style={s.bold}>{safety.evacuation_plan_status ?? "—"}</Text></Text>
-          <Text style={s.para}>First aid: <Text style={s.bold}>{safety.first_aid_status ?? "—"}</Text></Text>
-          {safety.insurance_status && <Text style={s.para}>Insurance: <Text style={s.bold}>{safety.insurance_status}</Text></Text>}
-          {safety.additional_notes && <Text style={[s.small, { color: GRAY, marginTop: 6 }]}>{safety.additional_notes}</Text>}
+        <View style={{ marginBottom: 10 }}>
+          <Text style={s.small}>Gas safety: <Text style={s.bold}>{safety.gas_safety_status ?? "—"}</Text>{safety.gas_safety_date ? ` (inspection ${fmt(safety.gas_safety_date)})` : ""}</Text>
+          <Text style={s.small}>Food authority: <Text style={s.bold}>{safety.food_authority_status ?? "—"}</Text>{safety.food_authority_inspection_date ? ` (${fmt(safety.food_authority_inspection_date)})` : ""}</Text>
+          <Text style={s.small}>Electrical certification: <Text style={s.bold}>{safety.electrical_certification_status ?? "—"}</Text></Text>
+          <Text style={s.small}>Fire safety: <Text style={s.bold}>{safety.fire_safety_status ?? "—"}</Text></Text>
+          <Text style={s.small}>Evacuation plan: <Text style={s.bold}>{safety.evacuation_plan_status ?? "—"}</Text></Text>
+          <Text style={s.small}>First aid: <Text style={s.bold}>{safety.first_aid_status ?? "—"}</Text></Text>
+          {safety.insurance_status && <Text style={s.small}>Insurance: <Text style={s.bold}>{safety.insurance_status}</Text></Text>}
+          {safety.additional_notes && <Text style={[s.small, { color: GRAY, marginTop: 4 }]}>{N(safety.additional_notes)}</Text>}
         </View>
       )}
+
+      <Text style={[s.bold, s.small, { marginTop: 6, marginBottom: 4 }]}>PER-ZONE CHECKLISTS ({safetyZones?.length ?? 0})</Text>
+      {(!safetyZones || safetyZones.length === 0) && <Text style={[s.small, { color: GRAY }]}>No zones defined.</Text>}
+      {safetyZones?.map((z: any) => (
+        <View key={z.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <Text style={[s.bold, s.small]}>{N(z.zone_label)}{z.zone_type ? `  (${z.zone_type})` : ""}{z.responsible_person ? `  ·  ${N(z.responsible_person)}` : ""}</Text>
+          <Text style={s.small}>Fire extinguishers: {z.fire_extinguisher_count ?? 0} {chk(z.fire_extinguisher_checked)}{"   ·   "}Fire blankets: {z.fire_blanket_count ?? 0} {chk(z.fire_blanket_checked)}</Text>
+          <Text style={s.small}>First aid kit: {chk(z.first_aid_kit)} {z.first_aid_checked ? "verified" : "not verified"}{"   ·   "}Permits: {chk(z.permits_obtained)}{"   ·   "}Briefing: {chk(z.briefing_done)}{z.briefing_date ? ` ${fmt(z.briefing_date)}` : ""}</Text>
+          {z.emergency_exits_count != null && <Text style={s.small}>Emergency exits: {z.emergency_exits_count}</Text>}
+          {z.notes && <Text style={[s.small, { color: GRAY }]}>{N(z.notes)}</Text>}
+        </View>
+      ))}
       <SectionFooter name="Safety" festival={festival.name} />
     </Page>
   );
 }
 
 function AccommodationPage({ data }: { data: BinderData }) {
-  const { festival, accommodation } = data;
+  const { festival, accommodation, accommodationRooms } = data;
+  const roomsByAccom = new Map<string, any[]>();
+  (accommodationRooms ?? []).forEach((r: any) => {
+    const arr = roomsByAccom.get(r.accommodation_id) ?? [];
+    arr.push(r);
+    roomsByAccom.set(r.accommodation_id, arr);
+  });
   return (
     <Page size="A4" style={s.page} bookmark="Accommodation" wrap>
       <SectionHeader title="Accommodation" meta={`${accommodation.length} bookings`} />
       {accommodation.length === 0 && <Text style={[s.small, { color: GRAY }]}>No bookings yet.</Text>}
-      {accommodation.map((a: any) => (
-        <View key={a.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
-          <Text style={[s.bold, s.small]}>{a.provider_name ?? a.accommodation_type ?? "—"} ({a.accommodation_type ?? "—"})</Text>
-          <Text style={s.small}>
-            {fmt(a.check_in_date)} to {fmt(a.check_out_date)}
-            {a.capacity ? `   ·   ${a.capacity} pax` : ""}
-            {a.cost_dkk ? `   ·   ${Number(a.cost_dkk).toLocaleString()} DKK` : ""}
-            {a.payment_status ? `   ·   ${a.payment_status}` : ""}
-          </Text>
-          {a.address && <Text style={s.small}>{a.address}</Text>}
-          {(a.contact_name || a.contact_phone || a.contact_email) && (
-            <Text style={s.small}>Contact: {a.contact_name ?? "—"} · {a.contact_phone ?? "—"} · {a.contact_email ?? "—"}</Text>
-          )}
-          {a.confirmation_number && <Text style={[s.small, { color: GRAY }]}>Conf: {a.confirmation_number}</Text>}
-          {a.notes && <Text style={[s.small, { color: GRAY }]}>{a.notes}</Text>}
-        </View>
-      ))}
+      {accommodation.map((a: any) => {
+        const rooms = roomsByAccom.get(a.id) ?? [];
+        return (
+          <View key={a.id} style={{ marginBottom: 8, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, s.small]}>{N(a.provider_name) || a.accommodation_type || "—"} ({a.accommodation_type ?? "—"})</Text>
+            <Text style={s.small}>
+              {fmt(a.check_in_date)} to {fmt(a.check_out_date)}
+              {a.capacity ? `   ·   ${a.capacity} pax` : ""}
+              {a.cost_dkk ? `   ·   ${Number(a.cost_dkk).toLocaleString()} DKK` : ""}
+              {a.payment_status ? `   ·   ${a.payment_status}` : ""}
+            </Text>
+            {a.address && <Text style={s.small}>{N(a.address)}</Text>}
+            {(a.contact_name || a.contact_phone || a.contact_email) && (
+              <Text style={s.small}>Contact: {N(a.contact_name) || "—"} · {N(a.contact_phone) || "—"} · {N(a.contact_email) || "—"}</Text>
+            )}
+            {a.confirmation_number && <Text style={[s.small, { color: GRAY }]}>Conf: {a.confirmation_number}</Text>}
+            {rooms.length > 0 && (
+              <View style={{ marginTop: 3 }}>
+                {rooms.map((r: any) => {
+                  const beds = [r.bed_1_assignee, r.bed_2_assignee, r.bed_3_assignee, r.bed_4_assignee]
+                    .slice(0, r.bed_count ?? 2)
+                    .map((b, i) => `Bed ${i + 1} = ${b ? N(b) : "—"}`);
+                  return (
+                    <Text key={r.id} style={[s.small, { marginLeft: 6 }]}>
+                      Room {N(r.room_label)}: {beds.join("  ·  ")}
+                    </Text>
+                  );
+                })}
+              </View>
+            )}
+            {a.notes && <Text style={[s.small, { color: GRAY }]}>{N(a.notes)}</Text>}
+          </View>
+        );
+      })}
       <SectionFooter name="Accommodation" festival={festival.name} />
     </Page>
   );
