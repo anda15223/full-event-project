@@ -64,6 +64,10 @@ interface Contract {
   status_changed_at: string | null;
   status_history: any[] | null;
   updated_at: string;
+  bracelet_count: number | null;
+  last_parsed_at: string | null;
+  parse_summary: string | null;
+  contract_pdf_path: string | null;
 }
 
 const STATUS_FILTERS: (ContractStatus | "all")[] = ["all", "signed", "pending_signature", "in_negotiation", "not_started", "stalled"];
