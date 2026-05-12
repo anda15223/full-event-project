@@ -36,6 +36,7 @@ import FestivalQuestionsExport from "./pages/festival/FestivalQuestionsExport";
 import ConceptGridVerify from "./pages/admin/ConceptGridVerify";
 import EquipmentSeed from "./pages/admin/EquipmentSeed";
 import CardShellTest from "./pages/admin/CardShellTest";
+import ParseTest from "./pages/admin/ParseTest";
 import GlobalRules from "./pages/GlobalRules";
 import RulesExport from "./pages/RulesExport";
 import FestivalTimeline from "./pages/festival/FestivalTimeline";
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="/admin/concept-grid-verify" element={<Protected><ConceptGridVerify /></Protected>} />
             <Route path="/admin/equipment-seed" element={<Protected><EquipmentSeed /></Protected>} />
             <Route path="/admin/card-shell-test" element={<Protected><CardShellTest /></Protected>} />
+            <Route path="/admin/parse-test" element={<Protected><ParseTest /></Protected>} />
             <Route path="/rules" element={<Protected><GlobalRules /></Protected>} />
             <Route path="/rules/export" element={<Protected><RulesExport /></Protected>} />
             <Route path="/festivals/:slug/timeline" element={<Protected><FestivalTimeline /></Protected>} />
