@@ -32,6 +32,7 @@ import { FestivalHeader } from "@/components/festival/FestivalHeader";
 import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
+import { DisabledConceptsBanner } from "@/components/festival/DisabledConceptsBanner";
 
 // ---------- helpers ----------
 
@@ -726,6 +727,7 @@ export default function FestivalOverview() {
       {festivalId && (
         <section className="rounded-lg border bg-card p-4">
           <h2 className="font-heading text-lg font-semibold mb-3">Concept lineup</h2>
+          <DisabledConceptsBanner festivalId={festivalId} festivalSlug={slug} />
           <ConceptCardGrid
             festivalId={festivalId}
             festivalSlug={slug}
