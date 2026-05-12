@@ -243,10 +243,10 @@ export default function FestivalTransport() {
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> Screen print
             </Button>
-            <Button asChild size="sm">
-              <Link to={`/festivals/${slug}/transport/export`}>
+            <Button asChild size="sm" className="shrink-0">
+              <a href={`/festivals/${slug}/transport/export`} target="_blank" rel="noopener noreferrer">
                 <Download className="h-4 w-4" /> Export PDF
-              </Link>
+              </a>
             </Button>
           </div>
         </div>
