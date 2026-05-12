@@ -1360,9 +1360,13 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)} disabled={!festivalId}>
-        <Plus className="h-4 w-4" /> Add vehicle to this festival
-      </Button>
+      <button
+        onClick={() => setOpen(true)}
+        disabled={!festivalId}
+        className="w-full rounded-2xl border-2 border-dashed border-border py-4 text-sm text-muted-foreground hover:bg-muted/30 transition flex items-center justify-center gap-2 disabled:opacity-50 print:hidden"
+      >
+        <Plus className="h-4 w-4" /> Add vehicle
+      </button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent>
           <SheetHeader>
