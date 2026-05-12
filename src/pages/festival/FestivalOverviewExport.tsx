@@ -446,7 +446,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
               </View>
             ) : (
               <View key={c.id} style={s.cRow}>
-                <Text style={s.cName}>{c.emoji} {c.name}</Text>
+                <Text style={s.cName}>{c.name}</Text>
                 <Text style={s.cMgr}>Mgr: {c.manager ?? "unassigned"}</Text>
                 <Text style={[s.cContract, c.contractStatus === "signed" ? s.ok : s.warn]}>
                   Contract: {c.contractStatus}
