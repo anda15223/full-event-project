@@ -3544,6 +3544,7 @@ export type Database = {
       }
       festival_power: {
         Row: {
+          allocated_kw: number | null
           connections_125a: number | null
           connections_16a_240v: number | null
           connections_16a_400v: number | null
@@ -3551,17 +3552,23 @@ export type Database = {
           connections_63a: number | null
           cost_dkk: number | null
           created_at: string | null
+          delivery_date: string | null
           equipment_breakdown: string | null
           equipment_variant: string
           festival_contract_id: string
           id: string
+          last_parsed_at: string | null
           notes: string | null
+          order_reference: string | null
           ordered_date: string | null
+          parse_summary: string | null
+          pickup_date: string | null
           power_drawing_file_path: string | null
           power_drawing_uploaded_at: string | null
           shared_tent_with_contracts: string[] | null
           status: string
           submission_deadline: string | null
+          supplier: string | null
           tableau_count: number | null
           tableau_required: boolean | null
           tent_location: string | null
@@ -3570,6 +3577,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allocated_kw?: number | null
           connections_125a?: number | null
           connections_16a_240v?: number | null
           connections_16a_400v?: number | null
@@ -3577,17 +3585,23 @@ export type Database = {
           connections_63a?: number | null
           cost_dkk?: number | null
           created_at?: string | null
+          delivery_date?: string | null
           equipment_breakdown?: string | null
           equipment_variant?: string
           festival_contract_id: string
           id?: string
+          last_parsed_at?: string | null
           notes?: string | null
+          order_reference?: string | null
           ordered_date?: string | null
+          parse_summary?: string | null
+          pickup_date?: string | null
           power_drawing_file_path?: string | null
           power_drawing_uploaded_at?: string | null
           shared_tent_with_contracts?: string[] | null
           status?: string
           submission_deadline?: string | null
+          supplier?: string | null
           tableau_count?: number | null
           tableau_required?: boolean | null
           tent_location?: string | null
@@ -3596,6 +3610,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allocated_kw?: number | null
           connections_125a?: number | null
           connections_16a_240v?: number | null
           connections_16a_400v?: number | null
@@ -3603,17 +3618,23 @@ export type Database = {
           connections_63a?: number | null
           cost_dkk?: number | null
           created_at?: string | null
+          delivery_date?: string | null
           equipment_breakdown?: string | null
           equipment_variant?: string
           festival_contract_id?: string
           id?: string
+          last_parsed_at?: string | null
           notes?: string | null
+          order_reference?: string | null
           ordered_date?: string | null
+          parse_summary?: string | null
+          pickup_date?: string | null
           power_drawing_file_path?: string | null
           power_drawing_uploaded_at?: string | null
           shared_tent_with_contracts?: string[] | null
           status?: string
           submission_deadline?: string | null
+          supplier?: string | null
           tableau_count?: number | null
           tableau_required?: boolean | null
           tent_location?: string | null
