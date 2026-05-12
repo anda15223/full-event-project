@@ -68,6 +68,7 @@ export function useConceptToggle() {
         ["attention-items"],
         ["concept-grid", festivalSlug],
         ["festival-contracts-grid"],
+        ["disabled-concepts", festivalSlug],
       ];
       keys.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }));
     },
