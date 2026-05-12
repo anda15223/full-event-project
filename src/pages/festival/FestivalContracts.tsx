@@ -434,10 +434,38 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
       const path = `${festivalSlug}/${c.id}/${Date.now()}-${safe}`;
       const { error } = await supabase.storage.from("festival-contracts").upload(path, file, { upsert: false });
       if (error) throw error;
-      const { error: e2 } = await supabase.from("festival_contracts").update({ contract_file_path: path }).eq("id", c.id);
+      const { error: e2 } = await supabase.from("festival_contracts")
+        .update({ contract_file_path: path, contract_pdf_path: path, contract_pdf_uploaded_at: new Date().toISOString() } as any)
+        .eq("id", c.id);
       if (e2) throw e2;
-      toast.success("Contract uploaded");
+      toast.success("Contract uploaded — parsing with AI…");
       qc.invalidateQueries({ queryKey: ["festival-contracts"] });
+
+      // Trigger AI parse (best-effort)
+      try {
+        const { data: signed } = await supabase.storage.from("festival-contracts").createSignedUrl(path, 60 * 10);
+        if (signed?.signedUrl) {
+          const { data: parsed, error: pErr } = await supabase.functions.invoke("parse-document", {
+            body: { fileUrl: signed.signedUrl, documentType: "contract" },
+          });
+          if (pErr) throw pErr;
+          if (parsed?.ok && parsed.parsed) {
+            const p = parsed.parsed as any;
+            const updates: any = { last_parsed_at: new Date().toISOString() };
+            if (p.bracelet_count != null) updates.bracelet_count = p.bracelet_count;
+            if (p.key_obligations) updates.key_obligations = p.key_obligations;
+            if (p.contract_terms_summary) updates.contract_terms_summary = p.contract_terms_summary;
+            if (p.contract_expires_at) updates.contract_expires_at = p.contract_expires_at;
+            if (p.summary) updates.parse_summary = String(p.summary).slice(0, 500);
+            await supabase.from("festival_contracts").update(updates).eq("id", c.id);
+            toast.success("AI parse complete");
+            qc.invalidateQueries({ queryKey: ["festival-contracts"] });
+          }
+        }
+      } catch (pe: any) {
+        console.warn("parse-document failed", pe);
+        toast.message("Uploaded — AI parse skipped");
+      }
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
     } finally {
