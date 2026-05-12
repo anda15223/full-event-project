@@ -459,8 +459,8 @@ export function CoolingUnitCard({
           <Button size="sm" variant="outline" className="h-7" disabled={!unit.order_pdf_path} onClick={openDoc}>
             Download order
           </Button>
-          <Button size="sm" variant="outline" className="h-7" disabled title="Coming in Block 8">
-            Export report
+          <Button asChild size="sm" variant="outline" className="h-7">
+            <a href={`/festivals/${festivalSlug}/cooling/export`} target="_blank" rel="noopener noreferrer">Export report</a>
           </Button>
           <Button size="sm" variant="ghost" className="h-7 text-destructive hover:text-destructive"
             onClick={() => setDeleteOpen(true)}>

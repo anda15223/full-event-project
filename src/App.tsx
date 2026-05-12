@@ -58,6 +58,9 @@ import FestivalEquipment from "./pages/festival/FestivalEquipment";
 import FestivalPrices from "./pages/festival/FestivalPrices";
 import FestivalSoborgLoadingExport from "./pages/festival/FestivalSoborgLoadingExport";
 import FestivalSetup from "./pages/festival/FestivalSetup";
+import FestivalEquipmentExport from "./pages/festival/FestivalEquipmentExport";
+import FestivalPricesExport from "./pages/festival/FestivalPricesExport";
+import FestivalSetupExport from "./pages/festival/FestivalSetupExport";
 
 const queryClient = new QueryClient();
 
@@ -123,8 +126,11 @@ const App = () => (
             <Route path="/festivals/:slug/soborg-loading" element={<Protected><FestivalSoborgLoading /></Protected>} />
             <Route path="/festivals/:slug/soborg-loading/export" element={<Protected><FestivalSoborgLoadingExport /></Protected>} />
             <Route path="/festivals/:slug/equipment" element={<Protected><FestivalEquipment /></Protected>} />
+            <Route path="/festivals/:slug/equipment/export" element={<Protected><FestivalEquipmentExport /></Protected>} />
             <Route path="/festivals/:slug/prices" element={<Protected><FestivalPrices /></Protected>} />
+            <Route path="/festivals/:slug/prices/export" element={<Protected><FestivalPricesExport /></Protected>} />
             <Route path="/festivals/:slug/setup" element={<Protected><FestivalSetup /></Protected>} />
+            <Route path="/festivals/:slug/setup/export" element={<Protected><FestivalSetupExport /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

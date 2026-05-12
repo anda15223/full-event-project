@@ -117,9 +117,15 @@ export default function FestivalPrices() {
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
         </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <Tag className="h-7 w-7 text-emerald-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Prices</h1>
+        <div className="flex items-center justify-between gap-3 mt-2">
+          <div className="flex items-center gap-3">
+            <Tag className="h-7 w-7 text-emerald-500" />
+            <h1 className="text-3xl font-bold tracking-tight">Prices</h1>
+          </div>
+          <a href={`/festivals/${slug}/prices/export`} target="_blank" rel="noopener noreferrer"
+             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
+            Export PDF
+          </a>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Per-concept POS price lists for this festival. Upload your menu Excel and AI extracts product names + prices automatically.

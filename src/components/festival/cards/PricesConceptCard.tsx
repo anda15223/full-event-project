@@ -393,8 +393,8 @@ export function PricesConceptCard({
           <Button size="sm" variant="ghost" className="h-7" onClick={openDoc} disabled={!prices?.source_pdf_path}>
             <Download className="h-3 w-3" /> Source
           </Button>
-          <Button size="sm" variant="ghost" className="h-7" disabled title="Coming in Block 8">
-            Export menu PDF
+          <Button asChild size="sm" variant="ghost" className="h-7">
+            <a href={`/festivals/${festivalSlug}/prices/export`} target="_blank" rel="noopener noreferrer">Export menu PDF</a>
           </Button>
         </div>
       </div>

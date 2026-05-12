@@ -106,9 +106,15 @@ export default function FestivalEquipment() {
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
         </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <Wrench className="h-7 w-7 text-slate-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Equipment</h1>
+        <div className="flex items-center justify-between gap-3 mt-2">
+          <div className="flex items-center gap-3">
+            <Wrench className="h-7 w-7 text-slate-500" />
+            <h1 className="text-3xl font-bold tracking-tight">Equipment</h1>
+          </div>
+          <a href={`/festivals/${slug}/equipment/export`} target="_blank" rel="noopener noreferrer"
+             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
+            Export PDF
+          </a>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Per-concept inventory grouped by category. Powered items contribute to electricity demand.

@@ -357,8 +357,8 @@ export function FacadeConceptCard({
           <Button size="sm" variant="outline" className="h-7" disabled={!facade.spec_pdf_path} onClick={openSpec}>
             Download spec
           </Button>
-          <Button size="sm" variant="outline" className="h-7" disabled title="Coming in Block 8">
-            Export report
+          <Button asChild size="sm" variant="outline" className="h-7">
+            <a href={`/festivals/${festivalSlug}/facade/export`} target="_blank" rel="noopener noreferrer">Export report</a>
           </Button>
         </div>
       </div>

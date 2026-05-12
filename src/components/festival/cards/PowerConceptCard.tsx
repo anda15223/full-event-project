@@ -436,8 +436,8 @@ export function PowerConceptCard({
           <Button size="sm" variant="outline" className="h-7" disabled={!power.power_drawing_file_path} onClick={openDrawing}>
             Download order
           </Button>
-          <Button size="sm" variant="outline" className="h-7" disabled title="Coming in Block 8">
-            Export report
+          <Button asChild size="sm" variant="outline" className="h-7">
+            <a href={`/festivals/${festivalSlug}/power/export`} target="_blank" rel="noopener noreferrer">Export report</a>
           </Button>
         </div>
       </div>
