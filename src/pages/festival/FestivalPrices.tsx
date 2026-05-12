@@ -38,7 +38,7 @@ export default function FestivalPrices() {
       // active concepts at this festival
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("concept_id, is_active, concepts(id, slug, name, display_order)")
+        .select("concept_id, is_active, concepts!concept_id(id, slug, name, display_order)")
         .eq("festival_id", festivalId).eq("is_active", true);
       if (cErr) throw cErr;
       const concepts = (contracts ?? [])
