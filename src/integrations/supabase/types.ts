@@ -4628,19 +4628,24 @@ export type Database = {
           concept_id: string | null
           contractor_supplier_id: string | null
           created_at: string | null
+          crew_assigned: string[]
           crew_lead: string | null
           crew_size: number | null
           description: string
+          display_order: number
           estimated_cost_dkk: number | null
           festival_id: string
           id: string
           invoice_paid: boolean | null
           invoice_received: boolean | null
+          location: string | null
           notes: string | null
           scheduled_end_at: string | null
           scheduled_start_at: string | null
           status: string | null
+          tasks: string[]
           updated_at: string | null
+          vehicles_assigned: string[]
           work_type: string
         }
         Insert: {
@@ -4650,19 +4655,24 @@ export type Database = {
           concept_id?: string | null
           contractor_supplier_id?: string | null
           created_at?: string | null
+          crew_assigned?: string[]
           crew_lead?: string | null
           crew_size?: number | null
           description: string
+          display_order?: number
           estimated_cost_dkk?: number | null
           festival_id: string
           id?: string
           invoice_paid?: boolean | null
           invoice_received?: boolean | null
+          location?: string | null
           notes?: string | null
           scheduled_end_at?: string | null
           scheduled_start_at?: string | null
           status?: string | null
+          tasks?: string[]
           updated_at?: string | null
+          vehicles_assigned?: string[]
           work_type: string
         }
         Update: {
@@ -4672,19 +4682,24 @@ export type Database = {
           concept_id?: string | null
           contractor_supplier_id?: string | null
           created_at?: string | null
+          crew_assigned?: string[]
           crew_lead?: string | null
           crew_size?: number | null
           description?: string
+          display_order?: number
           estimated_cost_dkk?: number | null
           festival_id?: string
           id?: string
           invoice_paid?: boolean | null
           invoice_received?: boolean | null
+          location?: string | null
           notes?: string | null
           scheduled_end_at?: string | null
           scheduled_start_at?: string | null
           status?: string | null
+          tasks?: string[]
           updated_at?: string | null
+          vehicles_assigned?: string[]
           work_type?: string
         }
         Relationships: [
@@ -5669,6 +5684,10 @@ export type Database = {
           previous_contact_note: string | null
           project_leaders: string | null
           setup_date: string | null
+          setup_last_parsed_at: string | null
+          setup_parse_summary: string | null
+          setup_plan_pdf_path: string | null
+          setup_plan_uploaded_at: string | null
           setup_responsibility: string | null
           slug: string
           start_date: string
@@ -5712,6 +5731,10 @@ export type Database = {
           previous_contact_note?: string | null
           project_leaders?: string | null
           setup_date?: string | null
+          setup_last_parsed_at?: string | null
+          setup_parse_summary?: string | null
+          setup_plan_pdf_path?: string | null
+          setup_plan_uploaded_at?: string | null
           setup_responsibility?: string | null
           slug: string
           start_date: string
@@ -5755,6 +5778,10 @@ export type Database = {
           previous_contact_note?: string | null
           project_leaders?: string | null
           setup_date?: string | null
+          setup_last_parsed_at?: string | null
+          setup_parse_summary?: string | null
+          setup_plan_pdf_path?: string | null
+          setup_plan_uploaded_at?: string | null
           setup_responsibility?: string | null
           slug?: string
           start_date?: string
