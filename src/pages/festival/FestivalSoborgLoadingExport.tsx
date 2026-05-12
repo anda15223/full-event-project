@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
   Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font,
@@ -26,7 +27,7 @@ try {
 const N = normalizeForPdf;
 
 const s = StyleSheet.create({
-  page: { padding: 32, paddingBottom: 44, fontFamily: "OpenSans", fontSize: 9.5, color: "#111" },
+  page: { padding: 32, paddingBottom: 44, fontFamily: "Inter", fontSize: 9.5, color: "#111" },
   h1: { fontSize: 18, fontWeight: 700 },
   meta: { fontSize: 9, color: "#666", marginTop: 2 },
   vehicleHeader: { marginTop: 4, marginBottom: 8, padding: 6, backgroundColor: "#f1f1f1", borderLeft: "3pt solid #111" },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@/lib/pdfFonts";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font,
@@ -51,7 +52,7 @@ type PowerRow = {
 };
 
 const styles = StyleSheet.create({
-  page: { padding: 36, fontFamily: "OpenSans", fontSize: 10, color: "#111" },
+  page: { padding: 36, fontFamily: "Inter", fontSize: 10, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
   h2: { fontSize: 14, fontWeight: 700, marginBottom: 10 },
   meta: { fontSize: 9, color: "#555", marginTop: 2 },

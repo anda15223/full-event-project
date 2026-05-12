@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import "@/lib/pdfFonts";
 import type { BinderData, SectionKey } from "@/lib/binder";
 import { BINDER_SECTIONS } from "@/lib/binder";
 import { sortedCategories, categoryLabel, regroupForSoborgPDF } from "@/lib/soborgLoading";
@@ -28,9 +29,9 @@ const LIGHT = "#ddd";
 const DARK = "#111";
 
 const s = StyleSheet.create({
-  page: { padding: 28, paddingBottom: 44, fontFamily: "OpenSans", fontSize: 9, color: DARK },
+  page: { padding: 28, paddingBottom: 44, fontFamily: "Inter", fontSize: 9, color: DARK },
   // Cover
-  coverPage: { padding: 60, fontFamily: "OpenSans", color: DARK, justifyContent: "center", alignItems: "center" },
+  coverPage: { padding: 60, fontFamily: "Inter", color: DARK, justifyContent: "center", alignItems: "center" },
   coverEmoji: { fontSize: 64, marginBottom: 24 },
   coverTitle: { fontSize: 30, fontWeight: 700, textAlign: "center" },
   coverSub: { fontSize: 18, marginTop: 8, textAlign: "center" },

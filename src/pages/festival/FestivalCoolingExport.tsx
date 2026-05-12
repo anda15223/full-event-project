@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@/lib/pdfFonts";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font,
@@ -35,7 +36,7 @@ type Contract = {
 type Link = { cooling_unit_id: string; festival_contract_id: string };
 
 const styles = StyleSheet.create({
-  page: { padding: 36, fontFamily: "OpenSans", fontSize: 10, color: "#111" },
+  page: { padding: 36, fontFamily: "Inter", fontSize: 10, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
   meta: { fontSize: 9, color: "#555", marginTop: 2 },
   title: { fontSize: 13, fontWeight: 700, marginTop: 12, marginBottom: 8 },

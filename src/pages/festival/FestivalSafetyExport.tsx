@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import "@/lib/pdfFonts";
 import { useQuery } from "@tanstack/react-query";
 import { Document, Page, Text, View, StyleSheet, PDFViewer } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
