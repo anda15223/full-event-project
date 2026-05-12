@@ -773,84 +773,127 @@ export default function FestivalOverview() {
             const Icon = t.icon;
             const route = t.route ? t.route(slug) : `/festivals/${slug}/${t.key}`;
             const isComingSoon = t.key === "staff" || t.key === "groceries";
-            let summary: React.ReactNode = "—";
+
+            // Per-tile color theme (icon tint) + two-line summary + status dot
+            let theme = "text-slate-500 bg-slate-500/10";
+            let line1: React.ReactNode = null;
+            let line2: React.ReactNode = null;
+            // status: 'ok' (green) | 'warn' (amber) | 'empty' (gray) | 'none' (hidden)
+            let status: "ok" | "warn" | "empty" | "none" = "empty";
+
             if (t.key === "transport") {
-              summary = `${transportSummaryQ.data?.vehicleCount ?? 0} vehicles`;
-            } else if (t.key === "contracts") {
-              summary = `${contractsCountQ.data ?? 0} concepts`;
-            } else if (t.key === "contacts") {
-              summary = "Directory";
-            } else if (t.key === "action-items") {
-              const a = statsQ.data?.actionTotals;
-              if (a) {
-                const total = a.crit + a.high + a.normal;
-                summary = (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span>{total} open</span>
-                    {a.crit > 0 && (
-                      <span className="inline-flex items-center gap-1 text-destructive">
-                        <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                        {a.crit} critical
-                      </span>
-                    )}
-                  </span>
-                );
-              }
-            } else if (t.key === "cooling") {
-              const n = statsQ.data?.totalCooling;
-              if (typeof n === "number") summary = `${n} units`;
+              theme = "text-blue-600 bg-blue-500/10";
+              const n = transportSummaryQ.data?.vehicleCount ?? 0;
+              line1 = `${n} vehicles`;
+              status = n > 0 ? "ok" : "empty";
             } else if (t.key === "soborg-loading") {
+              theme = "text-violet-600 bg-violet-500/10";
               const s = soborgQ.data;
-              if (s) {
-                summary = s.vehicleCount > 0
-                  ? `${s.itemCount} items · ${s.vehicleCount} cars`
-                  : "Not configured";
+              if (s && s.vehicleCount > 0) {
+                line1 = `${s.itemCount} items`;
+                line2 = `${s.vehicleCount} cars`;
+                status = "ok";
+              } else if (s) {
+                line1 = "Not configured";
+                status = "empty";
               }
             } else if (t.key === "topskilt") {
+              theme = "text-amber-600 bg-amber-500/10";
               const n = tileCounts.topskiltCount;
-              if (typeof n === "number" && n > 0) summary = `${n} sets`;
+              if (typeof n === "number" && n > 0) { line1 = `${n} sets`; status = "ok"; }
             } else if (t.key === "setup") {
+              theme = "text-indigo-600 bg-indigo-500/10";
               const n = tileCounts.setupCount;
-              if (typeof n === "number" && n > 0) summary = `${n} phases`;
+              if (typeof n === "number" && n > 0) { line1 = `${n} phases`; status = "ok"; }
+            } else if (t.key === "cooling") {
+              theme = "text-cyan-600 bg-cyan-500/10";
+              const n = statsQ.data?.totalCooling;
+              if (typeof n === "number" && n > 0) { line1 = `${n} units`; status = "ok"; }
             } else if (t.key === "equipment") {
+              theme = "text-orange-600 bg-orange-500/10";
               const n = tileCounts.equipmentCount;
-              if (typeof n === "number" && n > 0) summary = `${n} items`;
+              if (typeof n === "number" && n > 0) { line1 = `${n} items`; status = "ok"; }
             } else if (t.key === "facade") {
+              theme = "text-pink-600 bg-pink-500/10";
               const n = tileCounts.facadeCount;
               const a = tileCounts.facadeApprovedCount;
               if (typeof n === "number" && n > 0) {
-                summary = a && a > 0 ? `${n} sets · ${a} printed` : `${n} sets`;
+                line1 = `${n} sets`;
+                if (a && a > 0) line2 = `${a} printed`;
+                status = a && a >= n ? "ok" : "warn";
               }
             } else if (t.key === "power") {
+              theme = "text-yellow-600 bg-yellow-500/10";
               const n = tileCounts.powerCount;
               const kw = tileCounts.powerTotalKw;
               if (typeof n === "number" && n > 0) {
-                summary = kw ? `${n} records · ${kw}kW` : `${n} records`;
+                line1 = `${n} records`;
+                if (kw) line2 = `${kw} kW`;
+                status = "ok";
               }
             } else if (t.key === "safety") {
+              theme = "text-red-600 bg-red-500/10";
               const n = tileCounts.safetyTotalCount;
-              if (typeof n === "number" && n > 0) summary = `${n} configured`;
+              if (typeof n === "number" && n > 0) { line1 = `${n} configured`; status = "ok"; }
+            } else if (t.key === "contracts") {
+              theme = "text-emerald-600 bg-emerald-500/10";
+              const n = contractsCountQ.data ?? 0;
+              line1 = `${n} concepts`;
+              status = n > 0 ? "ok" : "empty";
             } else if (t.key === "accommodation") {
+              theme = "text-teal-600 bg-teal-500/10";
               const n = tileCounts.accommodationCount;
               const nights = tileCounts.accommodationNights;
               if (typeof n === "number" && n > 0) {
-                summary = nights ? `${n} bookings · ${nights} nights` : `${n} bookings`;
+                line1 = `${n} bookings`;
+                if (nights) line2 = `${nights} nights`;
+                status = "ok";
+              }
+            } else if (t.key === "contacts") {
+              theme = "text-sky-600 bg-sky-500/10";
+              line1 = "Directory";
+              status = "none";
+            } else if (t.key === "action-items") {
+              theme = "text-rose-600 bg-rose-500/10";
+              const a = statsQ.data?.actionTotals;
+              if (a) {
+                const total = a.crit + a.high + a.normal;
+                line1 = `${total} open`;
+                if (a.crit > 0) line2 = `${a.crit} critical`;
+                status = a.crit > 0 ? "warn" : total > 0 ? "ok" : "empty";
               }
             } else if (isComingSoon) {
-              summary = <span className="italic">Coming soon</span>;
+              theme = "text-slate-400 bg-slate-400/10";
+              line1 = <span className="italic">Coming soon</span>;
+              status = "none";
             }
+
+            const dotCls =
+              status === "ok" ? "bg-emerald-500"
+              : status === "warn" ? "bg-amber-500"
+              : status === "empty" ? "bg-slate-300"
+              : "";
+
             return (
               <Link
                 key={t.key} to={route}
                 className={cn(
-                  "rounded-md border bg-background p-3 hover:bg-accent transition flex items-start gap-3",
+                  "group relative rounded-xl border bg-background p-4 hover:shadow-md hover:-translate-y-0.5 transition-all",
                   isComingSoon && "opacity-60 border-dashed"
                 )}
               >
-                <Icon className="h-5 w-5 mt-0.5 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <div className="font-medium text-sm">{t.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{summary}</div>
+                <div className="flex items-start justify-between mb-3">
+                  <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center", theme)}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  {status !== "none" && (
+                    <span className={cn("h-2 w-2 rounded-full mt-1.5", dotCls)} />
+                  )}
+                </div>
+                <div className="font-semibold text-sm leading-tight mb-1.5">{t.name}</div>
+                <div className="text-xs text-muted-foreground leading-snug">
+                  <div className="truncate">{line1 ?? "—"}</div>
+                  {line2 && <div className="truncate">{line2}</div>}
                 </div>
               </Link>
             );
