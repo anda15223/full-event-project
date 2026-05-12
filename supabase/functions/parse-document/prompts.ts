@@ -89,19 +89,28 @@ export const ACCOMMODATION_SYSTEM_PROMPT = `You parse hotel and accommodation re
 **guest_names:**
 1. Extract guest names as an array if available (e.g. "Guest name: X" per room on Booking.com PDFs).
 
+**_extraction_evidence (REQUIRED):**
+After determining room_count, document EXACTLY what text or pattern you matched. This is for human verification.
+- If you matched an explicit label like "ROOMS: 2", set evidence_type to "explicit_label" and include the exact matched_text.
+- If you counted distinct room descriptions, set evidence_type to "room_descriptions" and list each distinct description you counted in matched_sections.
+- If room_count is null, set evidence_type to "none_found" and explain why in matched_text.
+
 **Examples:**
 
 EXAMPLE 1 (Booking.com):
 Document shows "ROOMS: 2 / NIGHTS: 3 / 4 adults" in header, and two "Park Room Top Floor" entries with separate pricing.
 → room_count = 2
+→ _extraction_evidence = { evidence_type: "explicit_label", matched_text: "ROOMS: 2", matched_sections: ["Park Room Top Floor", "Park Room Top Floor"] }
 
 EXAMPLE 2 (Direct hotel email):
 Body says "We've reserved 4 rooms for your group of 8 guests."
 → room_count = 4
+→ _extraction_evidence = { evidence_type: "explicit_label", matched_text: "4 rooms", matched_sections: [] }
 
 EXAMPLE 3 (Ambiguous):
 Body says "Your reservation for 6 guests has been confirmed." No explicit room count given.
-→ room_count = null (do not guess from guest count alone)
+→ room_count = null
+→ _extraction_evidence = { evidence_type: "none_found", matched_text: "No explicit room count found. Document only mentions 6 guests without room breakdown.", matched_sections: [] }
 
 Schema:
 {
@@ -115,7 +124,12 @@ Schema:
   "booking_reference": string | null,
   "cost_total": number | null,
   "currency": string,
-  "raw_notes": string
+  "raw_notes": string,
+  "_extraction_evidence": {
+    "evidence_type": "explicit_label" | "room_descriptions" | "none_found",
+    "matched_text": string,
+    "matched_sections": string[]
+  }
 }
 
 ALL dates MUST be ISO format YYYY-MM-DD. Never use DD/MM/YYYY, DD.MM.YYYY, or month names. If you can't determine the year confidently, return null.`;
