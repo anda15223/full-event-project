@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { PDFViewer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { PDFViewer, PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { CONCEPT_LABELS, CONCEPT_EMOJI, ConceptSlug, CONCEPT_SLUGS } from "@/components/concept/types";
 import { formatDateRange } from "@/lib/dateFormat";
 
@@ -522,7 +522,20 @@ export default function FestivalOverviewExport() {
         <div className="text-sm font-medium">
           {conceptFilter ? `${CONCEPT_LABELS[conceptFilter]} brief` : "Festival overview"} — PDF preview
         </div>
-        <Button variant="outline" size="sm" onClick={() => window.print()}>Print</Button>
+        <div className="flex items-center gap-2">
+          <PDFDownloadLink
+            document={<Pdf data={data} conceptFilter={conceptFilter} />}
+            fileName={`${data.festival.name.replace(/\s+/g, "_")}${conceptFilter ? `_${conceptFilter}` : ""}_overview.pdf`}
+          >
+            {({ loading: dlLoading }) => (
+              <Button size="sm" disabled={dlLoading}>
+                <Download className="h-4 w-4 mr-1" />
+                {dlLoading ? "Preparing…" : "Export PDF"}
+              </Button>
+            )}
+          </PDFDownloadLink>
+          <Button variant="outline" size="sm" onClick={() => window.print()}>Print</Button>
+        </div>
       </div>
       <div className="flex-1 min-h-0">
         <PDFViewer style={{ width: "100%", height: "calc(100vh - 57px)", border: 0 }}>
