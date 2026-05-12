@@ -180,7 +180,7 @@ export default function FestivalContacts() {
           <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline inline-flex items-center gap-1">
             <ArrowLeft className="h-3 w-3" /> Back to festival
           </Link>
-          <h1 className="font-heading text-2xl font-bold mt-1">{festival.name} — Contacts</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-tight mt-1">{festival.name} — Contacts</h1>
           <div className="text-sm text-muted-foreground">
             {formatDateRange(festival.start_date, festival.end_date)} · {totalCount} {totalCount === 1 ? "contact" : "contacts"}
           </div>

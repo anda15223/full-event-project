@@ -419,7 +419,7 @@ export default function FestivalTimeline() {
                     return (
                       <div key={ev.id}
                         className={cn(
-                          "rounded-2xl border bg-card p-5 transition-shadow hover:shadow-sm",
+                          "rounded-2xl border bg-card p-6 transition-shadow hover:shadow-sm",
                           muted && "opacity-60",
                         )}>
                         <div className="flex items-start gap-4">

@@ -151,7 +151,7 @@ export function SetupPhaseCard({ festivalId, festivalSlug, phase, vehicles }: Pr
   }, [vehicles]);
 
   return (
-    <div className="rounded-2xl border bg-card p-5 space-y-4">
+    <div className="rounded-2xl border bg-card p-6 space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0 flex-1">

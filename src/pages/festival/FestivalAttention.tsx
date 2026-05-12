@@ -37,7 +37,7 @@ export default function FestivalAttention() {
     <div className="max-w-5xl mx-auto space-y-6">
       <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← {festivalName}</Link>
       <div>
-        <h1 className="text-2xl font-heading font-bold text-foreground">Attention — {festivalName}</h1>
+        <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">Attention — {festivalName}</h1>
         {bucketParam && (
           <p className="text-sm text-muted-foreground mt-1">
             Filtered: {BUCKET_EMOJI[bucketParam]} {BUCKET_LABEL[bucketParam]} ·{" "}

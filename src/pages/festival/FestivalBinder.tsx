@@ -81,7 +81,7 @@ export default function FestivalBinder() {
       <div className="flex items-start justify-between">
         <div>
           <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← Back to festival</Link>
-          <h1 className="text-2xl font-heading font-bold mt-1">{data.festival.name} Operations Binder</h1>
+          <h1 className="text-3xl font-heading font-bold tracking-tight mt-1">{data.festival.name} Operations Binder</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Single printable PDF combining every key card. {Object.values(selected).filter(Boolean).length} of {BINDER_SECTIONS.length} sections selected{includeCovers ? " · cover + back cover" : ""}.
           </p>
