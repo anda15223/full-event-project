@@ -574,6 +574,12 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
           <div>{c.key_obligations}</div>
         </div>
       )}
+      {c.last_parsed_at && (
+        <div className="text-[10px] text-muted-foreground italic">
+          AI parsed {timeAgo(c.last_parsed_at)}
+          {c.parse_summary && <span> · {c.parse_summary}</span>}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex flex-wrap gap-1 pt-1 border-t">
