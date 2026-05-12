@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { PDFViewer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
+import { PDFViewer, PDFDownloadLink, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { CONCEPT_LABELS, CONCEPT_EMOJI, ConceptSlug, CONCEPT_SLUGS } from "@/components/concept/types";
 import { formatDateRange } from "@/lib/dateFormat";
 
