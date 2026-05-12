@@ -594,7 +594,19 @@ export default function FestivalOverview() {
     queryKey: ["overview-contracts-count", festivalId],
     enabled: !!festivalId,
     queryFn: async () => {
-      const { count } = await supabase.from("festival_contracts")
+      const { data } = await supabase.from("festival_contracts")
+        .select("contract_status, is_active").eq("festival_id", festivalId!).eq("is_active", true);
+      const total = data?.length ?? 0;
+      const signed = (data ?? []).filter((c: any) => c.contract_status === "signed").length;
+      return { total, signed };
+    },
+  });
+
+  const contactsCountQ = useQuery({
+    queryKey: ["overview-contacts-count", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { count } = await supabase.from("festival_contacts")
         .select("id", { count: "exact", head: true }).eq("festival_id", festivalId!);
       return count ?? 0;
     },
