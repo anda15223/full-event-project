@@ -491,6 +491,7 @@ export type Database = {
           amenities: string[] | null
           assigned_staff: string[] | null
           assigned_staff_count: number | null
+          beds_per_room: number | null
           booking_file_path: string | null
           booking_made_by: string | null
           capacity: number | null
@@ -499,16 +500,21 @@ export type Database = {
           check_out_date: string | null
           check_out_time: string | null
           confirmation_number: string | null
+          confirmation_pdf_uploaded_at: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
           cost_dkk: number | null
           created_at: string
+          currency: string | null
           festival_id: string
           id: string
+          last_parsed_at: string | null
           notes: string | null
+          parse_summary: string | null
           payment_status: Database["public"]["Enums"]["accommodation_payment_status"]
           provider_name: string | null
+          room_count: number | null
           updated_at: string
         }
         Insert: {
@@ -517,6 +523,7 @@ export type Database = {
           amenities?: string[] | null
           assigned_staff?: string[] | null
           assigned_staff_count?: number | null
+          beds_per_room?: number | null
           booking_file_path?: string | null
           booking_made_by?: string | null
           capacity?: number | null
@@ -525,16 +532,21 @@ export type Database = {
           check_out_date?: string | null
           check_out_time?: string | null
           confirmation_number?: string | null
+          confirmation_pdf_uploaded_at?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           cost_dkk?: number | null
           created_at?: string
+          currency?: string | null
           festival_id: string
           id?: string
+          last_parsed_at?: string | null
           notes?: string | null
+          parse_summary?: string | null
           payment_status?: Database["public"]["Enums"]["accommodation_payment_status"]
           provider_name?: string | null
+          room_count?: number | null
           updated_at?: string
         }
         Update: {
@@ -543,6 +555,7 @@ export type Database = {
           amenities?: string[] | null
           assigned_staff?: string[] | null
           assigned_staff_count?: number | null
+          beds_per_room?: number | null
           booking_file_path?: string | null
           booking_made_by?: string | null
           capacity?: number | null
@@ -551,16 +564,21 @@ export type Database = {
           check_out_date?: string | null
           check_out_time?: string | null
           confirmation_number?: string | null
+          confirmation_pdf_uploaded_at?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           cost_dkk?: number | null
           created_at?: string
+          currency?: string | null
           festival_id?: string
           id?: string
+          last_parsed_at?: string | null
           notes?: string | null
+          parse_summary?: string | null
           payment_status?: Database["public"]["Enums"]["accommodation_payment_status"]
           provider_name?: string | null
+          room_count?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -729,6 +747,59 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_accommodation_room: {
+        Row: {
+          accommodation_id: string
+          bed_1_assignee: string | null
+          bed_2_assignee: string | null
+          bed_3_assignee: string | null
+          bed_4_assignee: string | null
+          bed_count: number
+          created_at: string
+          id: string
+          notes: string | null
+          position: number
+          room_label: string
+          updated_at: string
+        }
+        Insert: {
+          accommodation_id: string
+          bed_1_assignee?: string | null
+          bed_2_assignee?: string | null
+          bed_3_assignee?: string | null
+          bed_4_assignee?: string | null
+          bed_count?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          position?: number
+          room_label: string
+          updated_at?: string
+        }
+        Update: {
+          accommodation_id?: string
+          bed_1_assignee?: string | null
+          bed_2_assignee?: string | null
+          bed_3_assignee?: string | null
+          bed_4_assignee?: string | null
+          bed_count?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          position?: number
+          room_label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_accommodation_room_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "festival_accommodation"
+            referencedColumns: ["id"]
           },
         ]
       }
