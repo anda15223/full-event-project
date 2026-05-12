@@ -469,8 +469,8 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             <Text key={c.id} style={s.contactLine}>
               {c.role}: {c.full_name}
               {c.organization ? ` (${c.organization})` : ""}
-              {"   📧 "}{c.email ?? " — "}
-              {"   📱 "}{c.phone ?? " — "}
+              {"   Email: "}{c.email ?? " — "}
+              {"   Phone: "}{c.phone ?? " — "}
             </Text>
           ))}
           {contacts.length > 6 && (
