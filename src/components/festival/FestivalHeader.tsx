@@ -22,6 +22,7 @@ export interface FestivalHeaderProps {
     lng: number | null;
   };
   rightSlot?: React.ReactNode;
+  compact?: boolean;
 }
 
 function formatRange(start: string, end: string): string {
@@ -115,22 +116,30 @@ function CoordinatesDialog({
   );
 }
 
-export function FestivalHeader({ festival, rightSlot }: FestivalHeaderProps) {
+export function FestivalHeader({ festival, rightSlot, compact = false }: FestivalHeaderProps) {
   const hasCoords = festival.lat != null && festival.lng != null;
   return (
-    <header className="mb-8 space-y-4">
-      <h1 className="text-5xl font-bold tracking-tight text-foreground">
-        {festival.name}
-      </h1>
+    <header className={cn(!compact && "mb-8", "space-y-4")}>
+      {!compact && (
+        <>
+          <h1 className="text-5xl font-bold tracking-tight text-foreground">
+            {festival.name}
+          </h1>
 
-      <div className="flex flex-wrap items-center gap-4 text-lg text-muted-foreground">
-        <span className="text-foreground">
-          {formatRange(festival.date_start, festival.date_end)}
-        </span>
-        <span aria-hidden>·</span>
-        <span>{festival.location ?? "Location not set"}</span>
-        <span className="ml-auto"><CountdownPill startDate={festival.date_start} /></span>
-      </div>
+          <div className="flex flex-wrap items-center gap-4 text-lg text-muted-foreground">
+            <span className="text-foreground">
+              {formatRange(festival.date_start, festival.date_end)}
+            </span>
+            <span aria-hidden>·</span>
+            <span>{festival.location ?? "Location not set"}</span>
+            <span className="ml-auto"><CountdownPill startDate={festival.date_start} /></span>
+          </div>
+        </>
+      )}
+
+      {compact && festival.location && (
+        <div className="text-sm text-muted-foreground">{festival.location}</div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="h-64 rounded-2xl overflow-hidden shadow-md border border-border">
