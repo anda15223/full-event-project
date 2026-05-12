@@ -197,6 +197,7 @@ export function AccommodationBookingCard({
   const [uploading, setUploading] = useState(false);
   const [notesDraft, setNotesDraft] = useState(booking.notes ?? "");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const beds_total = rooms.reduce((s, r) => s + (r.bed_count ?? 0), 0);
