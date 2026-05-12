@@ -675,6 +675,11 @@ export default function FestivalOverview() {
         endDate={f.end_date}
       />
 
+      <FestivalContactsBlock
+        festivalId={(f as any).id}
+        festivalSlug={f.slug}
+      />
+
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
       {festivalId && <FestivalQuestionsStrip festivalId={festivalId} slug={slug} />}
