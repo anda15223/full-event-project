@@ -29,6 +29,7 @@ import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
 import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 import { FestivalHeader } from "@/components/festival/FestivalHeader";
+import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 
 // ---------- helpers ----------
@@ -665,6 +666,13 @@ export default function FestivalOverview() {
             festivalSlug={f.slug}
           />
         }
+      />
+
+      <FestivalHoursBlock
+        festivalId={(f as any).id}
+        festivalSlug={f.slug}
+        startDate={f.start_date}
+        endDate={f.end_date}
       />
 
       {/* BLOCK 2 — attention */}
