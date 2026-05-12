@@ -517,6 +517,66 @@ export function AccommodationBookingCard({
         </div>
       </div>
 
+      {/* AI extraction evidence panel */}
+      {booking.parsed_data?._extraction_evidence && (
+        <div className="rounded-lg border border-blue-200/60 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800/40">
+          <button
+            onClick={() => setShowEvidence((s) => !s)}
+            className="w-full flex items-center justify-between px-3 py-2 text-sm"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="font-medium text-blue-800 dark:text-blue-300">
+                AI matched {booking.parsed_data._extraction_evidence.evidence_type === "explicit_label"
+                  ? "an explicit label"
+                  : booking.parsed_data._extraction_evidence.evidence_type === "room_descriptions"
+                    ? "room descriptions"
+                    : "no room count signal"}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                → room_count = {booking.room_count ?? "null"}
+              </span>
+            </div>
+            {showEvidence ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+          {showEvidence && (
+            <div className="px-3 pb-3 space-y-2 text-sm">
+              {booking.parsed_data._extraction_evidence.matched_text && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Matched text</div>
+                  <code className="block bg-white dark:bg-black/30 rounded px-2 py-1 text-xs font-mono text-blue-800 dark:text-blue-300 border border-blue-200/50">
+                    {booking.parsed_data._extraction_evidence.matched_text}
+                  </code>
+                </div>
+              )}
+              {booking.parsed_data._extraction_evidence.matched_sections && booking.parsed_data._extraction_evidence.matched_sections.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Counted sections</div>
+                  <ul className="space-y-1">
+                    {booking.parsed_data._extraction_evidence.matched_sections.map((section, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs">
+                        <span className="shrink-0 w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">{i + 1}</span>
+                        <span className="font-mono text-blue-800 dark:text-blue-300">{section}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowEvidence(false)}
+                >
+                  <EyeOff className="h-3 w-3 mr-1" /> Hide
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Upload zone */}
       <div>
         <h4 className="text-sm font-semibold mb-2">Booking confirmation PDF / email</h4>
