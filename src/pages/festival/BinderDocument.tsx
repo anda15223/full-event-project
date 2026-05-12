@@ -796,9 +796,41 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
   const { selected, includeCovers } = options;
   const sections = BINDER_SECTIONS.filter((s) => selected[s.key]);
 
-  // Estimate ToC pages: cover (1) + ToC (1) = page 3 is first section
-  const startingPage = (includeCovers ? 1 : 0) + 1; // ToC always present
-  const tocEntries = sections.map((sec, i) => ({ ...sec, page: startingPage + 1 + i })); // rough estimate, 1 page each min
+  // Deterministic per-section page-count estimate based on row counts.
+  // Tuned for current Jelling state; safe overestimate is fine — undercount
+  // would make ToC numbers point too early. Each section is at minimum 1 page.
+  const ceilDiv = (n: number, d: number) => Math.max(1, Math.ceil(n / d));
+  const sectionPages = (key: SectionKey): number => {
+    switch (key) {
+      case "overview": return 1;
+      case "actions": return ceilDiv(data.actionItems.filter((a: any) => a.status === "open" || a.status === "in_progress").length, 32);
+      case "contacts": return ceilDiv(data.contacts.length, 28);
+      case "timeline": return ceilDiv(data.timelineEvents.length, 32);
+      case "contracts": return ceilDiv(data.contracts.length, 6);
+      case "transport": return ceilDiv(data.transport.length, 18) + ceilDiv(data.transportLegs.length, 24);
+      case "topskilt": return ceilDiv(data.topskilt.length, 12);
+      case "facade": return ceilDiv(data.facade.length, 10);
+      case "power": return ceilDiv(data.power.length, 4);
+      case "cooling": return ceilDiv(data.cooling.length, 6);
+      case "safety": return 1;
+      case "accommodation": return ceilDiv(data.accommodation.length, 8);
+      case "soborg_loading": {
+        const items = (data.soborgLoading?.concept_groups ?? []).reduce((sum: number, cg: any) => sum + Object.values(cg.items_by_category ?? {}).flat().length, 0);
+        return ceilDiv(items, 32);
+      }
+      case "questions": return ceilDiv((data as any).questions?.length ?? 0, 24);
+      case "rules": return ceilDiv((data as any).rules?.length ?? 0, 20);
+      default: return 1;
+    }
+  };
+
+  // First section starts after cover (1 if covers) + ToC (1)
+  let cursor = (includeCovers ? 1 : 0) + 1 + 1;
+  const tocEntries = sections.map((sec) => {
+    const entry = { ...sec, page: cursor };
+    cursor += sectionPages(sec.key);
+    return entry;
+  });
 
   return (
     <Document title={`${data.festival.name} — Operations Binder`} author="The Fish Project">
