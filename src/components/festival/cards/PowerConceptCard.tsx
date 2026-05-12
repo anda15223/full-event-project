@@ -337,6 +337,22 @@ export function PowerConceptCard({
           })}
         </div>
         {(() => {
+          const lines = CONNECTION_TYPES
+            .map((c) => ({ label: c.label, qty: Number((power as any)[c.key] ?? 0) }))
+            .filter((l) => l.qty > 0);
+          if (lines.length === 0) return null;
+          return (
+            <ul className="mt-2 rounded-lg border bg-muted/20 p-2 text-xs space-y-0.5">
+              {lines.map((l) => (
+                <li key={l.label} className="flex justify-between tabular-nums">
+                  <span>{l.label}</span>
+                  <span className="font-medium">×{l.qty}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
+        {(() => {
           const orderedKw = CONNECTION_TYPES.reduce(
             (sum, c) => sum + (Number((power as any)[c.key] ?? 0) * c.kw), 0,
           );
