@@ -16,8 +16,8 @@ const DOC_TYPES = [
 type ParseResult =
   | { ok: true; documentType: string; parsed: unknown; rawTextExcerpt: string;
       format: string; model: string; latencyMs: number;
-      tokensInput: number; tokensOutput: number }
-  | { ok: false; error: string; message: string; rawTextExcerpt: string | null };
+      tokensInput: number; tokensOutput: number; visionFallbackUsed?: boolean }
+  | { ok: false; error: string; message: string; rawTextExcerpt: string | null; format?: string };
 
 export default function ParseTest() {
   const [file, setFile] = useState<File | null>(null);
