@@ -94,7 +94,7 @@ export function FestivalSafetyCard({ festivalSlug, row }: Props) {
               <Input placeholder="Inspector" value={local.gas_safety_inspector ?? ""}
                 onChange={(e) => patchLocal({ gas_safety_inspector: e.target.value })}
                 onBlur={(e) => commitIfChanged("gas_safety_inspector", e.target.value || null)} className="h-8 text-sm" />
-              <DocBtn path={local.gas_safety_certificate_path} field="gas_safety_certificate_path" onView={viewDoc} onUpload={(f) => { setUploadField("gas_safety_certificate_path"); fileRef.current?.click(); }} />
+              <DocBtn path={local.gas_safety_certificate_path} field="gas_safety_certificate_path" onView={viewDoc} onUpload={() => { setUploadField("gas_safety_certificate_path"); fileRef.current?.click(); }} />
             </>
           )}
         </Block>
