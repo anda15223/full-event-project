@@ -29,6 +29,7 @@ import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
 import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 import { FestivalHeader } from "@/components/festival/FestivalHeader";
+import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 
 // ---------- helpers ----------
 
@@ -633,7 +634,18 @@ export default function FestivalOverview() {
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-      <Link to="/festivals" className="text-xs text-muted-foreground hover:underline">← Festivals</Link>
+      <div className="flex items-center justify-between">
+        <Link to="/festivals" className="text-xs text-muted-foreground hover:underline">← Festivals</Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/festivals/${slug}/binder`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-secondary"
+          >
+            📘 View binder
+          </Link>
+          <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
+        </div>
+      </div>
 
       {/* BLOCK 1 — header */}
       <FestivalHeader
@@ -648,15 +660,10 @@ export default function FestivalOverview() {
           lng: (f as any).lng ?? null,
         }}
         rightSlot={
-          <div className="flex items-center justify-end gap-2">
-            <Link
-              to={`/festivals/${slug}/binder`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-secondary"
-            >
-              📘 Binder
-            </Link>
-            <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
-          </div>
+          <LocationDocsBox
+            festivalId={(f as any).id}
+            festivalSlug={f.slug}
+          />
         }
       />
 
