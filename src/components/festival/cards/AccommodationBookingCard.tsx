@@ -332,6 +332,8 @@ export function AccommodationBookingCard({
             }
             if (p.raw_notes) summaryParts.push(String(p.raw_notes));
             if (summaryParts.length > 0) upd.parse_summary = summaryParts.join(" · ").slice(0, 800);
+            // Store full parsed data including AI evidence for verification panel
+            upd.parsed_data = p;
             await sb.from("festival_accommodation").update(upd).eq("id", booking.id);
             toast.success("AI parse complete — please review");
             invalidate();
