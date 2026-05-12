@@ -324,27 +324,73 @@ function ContactsPage({ data }: { data: BinderData }) {
 }
 
 function TimelinePage({ data }: { data: BinderData }) {
-  const { festival, timelineEvents } = data;
+  const { festival, timelineEvents, setupPhases, transport } = data;
+  const phases = setupPhases ?? [];
+  const vMap = new Map<string, string>(
+    (transport ?? []).map((v: any) => {
+      const name = v.season_rental?.vehicle_type ?? v.vehicle_type;
+      const plate = v.season_rental?.license_plate ?? v.license_plate;
+      return [v.id, `${N(name) || "vehicle"}${plate ? ` (${N(plate)})` : ""}`];
+    })
+  );
+  const phaseLabel = (wt: string) => `[ ${(wt ?? "PHASE").toUpperCase().replace(/-/g, " ")} ]`;
   return (
     <Page size="A4" style={s.page} bookmark="Setup Timeline" wrap>
-      <SectionHeader title="Setup Timeline" meta={`${timelineEvents.length} events`} />
-      <View style={s.th}>
-        <Text style={{ width: 60 }}>Date</Text>
-        <Text style={{ width: 40 }}>Time</Text>
-        <Text style={{ flex: 1 }}>Event</Text>
-        <Text style={{ width: 80 }}>Owner</Text>
-        <Text style={{ width: 50 }}>Status</Text>
-      </View>
-      {timelineEvents.length === 0 && <Text style={[s.small, { color: GRAY, marginTop: 6 }]}>No events scheduled.</Text>}
-      {timelineEvents.map((e: any) => (
-        <View key={e.id} style={s.tr} wrap={false}>
-          <Text style={{ width: 60 }}>{fmt(e.event_date)}</Text>
-          <Text style={{ width: 40 }}>{e.event_time ? String(e.event_time).slice(0, 5) : "—"}</Text>
-          <Text style={{ flex: 1 }}>{e.title}{e.location ? ` — ${e.location}` : ""}</Text>
-          <Text style={{ width: 80 }}>{e.responsible_party ?? "—"}</Text>
-          <Text style={{ width: 50 }}>{e.status}</Text>
+      <SectionHeader title="Setup Timeline" meta={`${phases.length} phases · ${timelineEvents.length} events`} />
+
+      {phases.length > 0 && (
+        <View style={{ marginBottom: 8 }}>
+          <Text style={[s.bold, s.small, { marginBottom: 4 }]}>SETUP PHASES</Text>
+          {phases.map((p: any) => {
+            const veh = (p.vehicles_assigned ?? []).map((id: string) => vMap.get(id) ?? id).filter(Boolean);
+            const tasks = (p.tasks ?? []) as string[];
+            return (
+              <View key={p.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+                <Text style={s.small}>
+                  <Text style={[s.bold, { color: ACCENT.emerald.fg }]}>{phaseLabel(p.work_type)}</Text>
+                  {p.scheduled_start_at ? `   ${fmtFull(p.scheduled_start_at)}` : ""}
+                  {p.status ? `   ·   ${p.status}` : ""}
+                </Text>
+                <Text style={[s.bold, s.small]}>{N(p.description) || "—"}{p.location ? `  ·  ${N(p.location)}` : ""}</Text>
+                {(p.crew_assigned?.length ?? 0) > 0 && (
+                  <Text style={[s.small, { color: GRAY }]}>Crew: {(p.crew_assigned as string[]).map(N).join(" · ")}</Text>
+                )}
+                {veh.length > 0 && <Text style={[s.small, { color: GRAY }]}>Vehicles: {veh.join(" · ")}</Text>}
+                {tasks.length > 0 && tasks.map((t, i) => (
+                  <Text key={i} style={[s.small, { marginLeft: 8 }]}>◯ {N(t)}</Text>
+                ))}
+                {p.notes && <Text style={[s.small, { color: GRAY }]}>{N(p.notes)}</Text>}
+              </View>
+            );
+          })}
         </View>
-      ))}
+      )}
+
+      {timelineEvents.length > 0 && (
+        <View>
+          <Text style={[s.bold, s.small, { marginTop: 4, marginBottom: 4 }]}>TIMELINE EVENTS</Text>
+          <View style={s.th}>
+            <Text style={{ width: 60 }}>Date</Text>
+            <Text style={{ width: 40 }}>Time</Text>
+            <Text style={{ flex: 1 }}>Event</Text>
+            <Text style={{ width: 80 }}>Owner</Text>
+            <Text style={{ width: 50 }}>Status</Text>
+          </View>
+          {timelineEvents.map((e: any) => (
+            <View key={e.id} style={s.tr} wrap={false}>
+              <Text style={{ width: 60 }}>{fmt(e.event_date)}</Text>
+              <Text style={{ width: 40 }}>{e.event_time ? String(e.event_time).slice(0, 5) : "—"}</Text>
+              <Text style={{ flex: 1 }}>{N(e.title)}{e.location ? ` — ${N(e.location)}` : ""}</Text>
+              <Text style={{ width: 80 }}>{e.responsible_party ?? "—"}</Text>
+              <Text style={{ width: 50 }}>{e.status}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {phases.length === 0 && timelineEvents.length === 0 && (
+        <Text style={[s.small, { color: GRAY, marginTop: 6 }]}>No phases or events scheduled.</Text>
+      )}
       <SectionFooter name="Timeline" festival={festival.name} />
     </Page>
   );
