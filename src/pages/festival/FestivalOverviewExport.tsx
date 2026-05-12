@@ -374,7 +374,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           {deadlines.length === 0 && <Text style={{ color: GRAY }}>No deadlines in next 14 days.</Text>}
           {deadlines.map((d, i) => (
             <View key={i} style={s.drow}>
-              <Text style={[s.dIcon, d.isOverdueOrToday ? s.warn : {}]}>{d.isOverdueOrToday ? "⚠" : "◆"}</Text>
+              <Text style={[s.dIcon, d.isOverdueOrToday ? s.warn : {}]}>{d.isOverdueOrToday ? "!" : "*"}</Text>
               <Text style={s.dDate}>{fmtDate(d.iso)}</Text>
               <Text style={s.dLabel}>{d.label}</Text>
               <Text style={s.dOwner}>{d.owner}</Text>
