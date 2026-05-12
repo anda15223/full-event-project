@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
   Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font,
@@ -58,7 +59,7 @@ function fmtDate(iso: string) {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 36, fontFamily: "OpenSans", fontSize: 10, color: "#111" },
+  page: { padding: 36, fontFamily: "Inter", fontSize: 10, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
   meta: { fontSize: 9, color: "#555", marginTop: 2 },
   phaseRow: { flexDirection: "row", gap: 6, marginTop: 10 },

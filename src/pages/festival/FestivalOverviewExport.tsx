@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@/lib/pdfFonts";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { PDFViewer, Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +25,7 @@ const GRAY = "#666";
 const LIGHT = "#ddd";
 
 const s = StyleSheet.create({
-  page: { padding: 28, fontFamily: "OpenSans", fontSize: 9.5, color: "#111" },
+  page: { padding: 28, fontFamily: "Inter", fontSize: 9.5, color: "#111" },
   // Header
   hRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   fName: { fontSize: 18, fontWeight: 700 },
