@@ -667,6 +667,13 @@ export default function FestivalOverview() {
         }
       />
 
+      <FestivalHoursBlock
+        festivalId={(f as any).id}
+        festivalSlug={f.slug}
+        startDate={f.start_date}
+        endDate={f.end_date}
+      />
+
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
       {festivalId && <FestivalQuestionsStrip festivalId={festivalId} slug={slug} />}
