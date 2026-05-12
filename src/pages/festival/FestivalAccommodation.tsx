@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, BedDouble, Plus } from "lucide-react";
+import { ArrowLeft, BedDouble, FileText, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -159,17 +159,26 @@ export default function FestivalAccommodation() {
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div>
-        <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
-          <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
-        </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <BedDouble className="h-7 w-7 text-blue-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Accommodation</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+            <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
+          </Link>
+          <div className="flex items-center gap-3 mt-2">
+            <BedDouble className="h-7 w-7 text-blue-500" />
+            <h1 className="text-3xl font-bold tracking-tight">Accommodation</h1>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+            Hotel bookings and bed assignments. AI-parses confirmations and auto-generates rooms. Bed assignment is free-text for now — the upcoming Staff app will replace this with a person picker.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Hotel bookings and bed assignments. AI-parses confirmations and auto-generates rooms. Bed assignment is free-text for now — the upcoming Staff app will replace this with a person picker.
-        </p>
+        {summary.bookings > 0 && (
+          <Button asChild variant="outline" size="sm" className="shrink-0">
+            <a href={`/festivals/${slug}/accommodation/export`} target="_blank" rel="noopener noreferrer">
+              <FileText className="h-4 w-4" /> Export full report ({summary.bookings})
+            </a>
+          </Button>
+        )}
       </div>
 
       {/* Summary pills */}
