@@ -112,13 +112,24 @@ export default function FestivalPower() {
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
         </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <Zap className="h-7 w-7 text-amber-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Power</h1>
+        <div className="flex items-start justify-between gap-3 mt-2">
+          <div>
+            <div className="flex items-center gap-3">
+              <Zap className="h-7 w-7 text-amber-500" />
+              <h1 className="text-3xl font-bold tracking-tight">Power</h1>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Per-concept electricity orders, AI-parsed from uploads. Demand is computed live from equipment kW.
+            </p>
+          </div>
+          <a
+            href={`/festivals/${slug}/power/export`}
+            target="_blank" rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-md border bg-card hover:bg-muted px-3 py-2 text-sm font-medium"
+          >
+            Export PDF
+          </a>
         </div>
-        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Per-concept electricity orders, AI-parsed from uploads. Demand is computed live from equipment kW.
-        </p>
       </div>
 
       {/* Summary pills */}
