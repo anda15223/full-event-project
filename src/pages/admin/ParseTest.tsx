@@ -134,20 +134,25 @@ export default function ParseTest() {
                 </pre>
               </details>
             </>
-          ) : (
-            <>
-              <div className="text-sm">
-                <div className="font-mono text-destructive">{result.error}</div>
-                <div className="text-muted-foreground mt-1">{result.message}</div>
-              </div>
-              {result.rawTextExcerpt && (
-                <details>
-                  <summary className="text-sm font-medium cursor-pointer">Raw text</summary>
-                  <pre className="mt-2 text-xs bg-muted p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">
-                    {result.rawTextExcerpt}
-                  </pre>
-                </details>
-              )}
+          ) : (() => {
+            const err = result as Extract<ParseResult, { ok: false }>;
+            return (
+              <>
+                <div className="text-sm">
+                  <div className="font-mono text-destructive">{err.error}</div>
+                  <div className="text-muted-foreground mt-1">{err.message}</div>
+                </div>
+                {err.rawTextExcerpt && (
+                  <details>
+                    <summary className="text-sm font-medium cursor-pointer">Raw text</summary>
+                    <pre className="mt-2 text-xs bg-muted p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">
+                      {err.rawTextExcerpt}
+                    </pre>
+                  </details>
+                )}
+              </>
+            );
+          })()}
             </>
           )}
         </div>
