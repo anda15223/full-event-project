@@ -345,7 +345,7 @@ export default function FestivalTransport() {
         )}
       </div>
 
-      <div className="flex justify-center print:hidden">
+      <div className="print:hidden">
         <AddVehicleButton festivalId={festival?.id ?? ""} slug={slug} />
       </div>
 
