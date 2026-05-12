@@ -30,6 +30,7 @@ import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
 import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 import { FestivalHeader } from "@/components/festival/FestivalHeader";
 import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
+import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 
 // ---------- helpers ----------
