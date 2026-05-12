@@ -216,11 +216,16 @@ export function FestivalHoursBlock({ festivalId, festivalSlug, startDate, endDat
     return `${s} – ${e}`;
   };
 
+  const isJelling = festivalSlug?.toLowerCase().includes("jelling");
+  const secondaryLabel = isJelling ? "Camping" : "Prep";
+
   return (
     <section className="rounded-2xl border bg-card p-6 my-8">
       <div className="mb-4">
         <h3 className="font-heading text-lg font-semibold">Hours</h3>
-        <p className="text-sm text-muted-foreground">Festival hours + your prep hours, per day.</p>
+        <p className="text-sm text-muted-foreground">
+          Festival hours + your {secondaryLabel.toLowerCase()} hours, per day.
+        </p>
       </div>
 
       {isLoading ? (
@@ -262,8 +267,8 @@ export function FestivalHoursBlock({ festivalId, festivalSlug, startDate, endDat
                   <th className="py-2 pr-3 font-medium">Date</th>
                   <th className="py-2 pr-3 font-medium">Festival Open</th>
                   <th className="py-2 pr-3 font-medium">Festival Close</th>
-                  <th className="py-2 pr-3 font-medium">Prep Open</th>
-                  <th className="py-2 pr-3 font-medium">Prep Close</th>
+                  <th className="py-2 pr-3 font-medium">{secondaryLabel} Open</th>
+                  <th className="py-2 pr-3 font-medium">{secondaryLabel} Close</th>
                   <th className="py-2 font-medium">Notes</th>
                 </tr>
               </thead>
