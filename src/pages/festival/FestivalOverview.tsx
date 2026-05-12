@@ -30,6 +30,7 @@ import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
 import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 import { FestivalHeader } from "@/components/festival/FestivalHeader";
 import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
+import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 
 // ---------- helpers ----------
@@ -675,6 +676,11 @@ export default function FestivalOverview() {
         endDate={f.end_date}
       />
 
+      <FestivalContactsBlock
+        festivalId={(f as any).id}
+        festivalSlug={f.slug}
+      />
+
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
       {festivalId && <FestivalQuestionsStrip festivalId={festivalId} slug={slug} />}
@@ -711,8 +717,7 @@ export default function FestivalOverview() {
         <ServiceHoursBlock festivalId={festivalId} concepts={conceptsQ.data} />
       )}
 
-      {/* BLOCK 5 — contacts */}
-      {festivalId && <ContactsBlock festivalId={festivalId} slug={slug} />}
+      {/* BLOCK 5 — contacts (canonical surface) */}
 
       {/* BLOCK 5b — contracts mini-grid */}
       {festivalId && <ContractsMiniBlock festivalId={festivalId} slug={slug} />}
