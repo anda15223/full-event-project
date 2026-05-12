@@ -334,8 +334,13 @@ export default function FestivalTransport() {
           />
         ))}
         {vehicles.length === 0 && festival && (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No vehicles allocated yet.
+          <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground space-y-4">
+            <div className="flex items-center justify-center">
+              <div className="h-12 w-12 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center">
+                <Truck className="h-6 w-6" />
+              </div>
+            </div>
+            <p>No vehicles allocated yet.</p>
           </div>
         )}
       </div>
