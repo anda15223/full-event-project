@@ -138,6 +138,7 @@ export default function FestivalContracts() {
   const [filterStatus, setFilterStatus] = useState<(typeof STATUS_FILTERS)[number]>("all");
   const [filterEntity, setFilterEntity] = useState<string>("all");
   const [filterConcept, setFilterConcept] = useState<string>("all");
+  const [showDisabled, setShowDisabled] = useState(false);
 
   const allEntities = useMemo(() => {
     const s = new Set<string>();
