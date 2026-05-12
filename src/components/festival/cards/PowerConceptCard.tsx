@@ -532,16 +532,18 @@ function EquipmentRow({ row, onChanged }: { row: PowerEquipmentRow; onChanged: (
         className="col-span-4 h-7 text-xs"
       />
       <Input
-        type="number" value={qty} onChange={(e) => setQty(e.target.value)}
+        type="text" inputMode="numeric" value={qty}
+        onChange={(e) => setQty(e.target.value.replace(/[^\d]/g, ""))}
         onBlur={() => Number(qty) !== Number(row.quantity ?? 1) && save({ quantity: Math.max(1, Math.round(Number(qty) || 1)) })}
-        className="col-span-1 h-7 text-xs text-right tabular-nums"
+        className="col-span-2 h-7 text-xs text-right tabular-nums"
       />
       <Input
-        type="number" step="0.1" value={kw} onChange={(e) => setKw(e.target.value)}
+        type="text" inputMode="decimal" value={kw}
+        onChange={(e) => setKw(e.target.value.replace(/[^\d.]/g, ""))}
         onBlur={() => Number(kw) !== Number(row.power_kw ?? 0) && save({ power_kw: Number(kw) || 0 })}
         className="col-span-2 h-7 text-xs text-right tabular-nums"
       />
-      <div className="col-span-3">
+      <div className="col-span-2">
         <Select value={row.power_type ?? "230V_socket"} onValueChange={(v) => save({ power_type: v })}>
           <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
