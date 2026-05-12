@@ -533,7 +533,6 @@ type CardTile = { key: string; name: string; icon: typeof Truck; route?: (s: str
 const CARD_TILES: CardTile[] = [
   { key: "transport", name: "Transport", icon: Truck, route: (s: string) => `/festivals/${s}/transport` },
   { key: "soborg-loading", name: "Soborg Loading", icon: Truck, route: (s: string) => `/festivals/${s}/soborg-loading` },
-  { key: "topskilt", name: "Topskilt", icon: FileText },
   { key: "setup", name: "Setup", icon: Calendar },
   { key: "cooling", name: "Cooling", icon: Snowflake },
   { key: "equipment", name: "Equipment", icon: Wrench },
@@ -792,13 +791,6 @@ export default function FestivalOverview() {
                 status={veh > 0 ? "green" : "gray"} />
             );
 
-            const topN = tileCounts.topskiltCount ?? 0;
-            tiles.push(
-              <FestivalTile key="topskilt" href={`/festivals/${slug}/topskilt`}
-                icon={FileText} iconAccent="violet" title="Topskilt"
-                primaryStat={`${topN} sets`}
-                status={topN > 0 ? "green" : "gray"} />
-            );
 
             const coolN = statsQ.data?.totalCooling ?? 0;
             tiles.push(
