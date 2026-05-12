@@ -293,7 +293,7 @@ export default function FestivalTransport() {
               <div
                 key={i}
                 className={cn(
-                  "rounded-lg border p-3 text-sm print:border-2 print:rounded-none",
+                  "rounded-2xl border p-4 text-sm print:border-2 print:rounded-none",
                   tbd
                     ? "border-destructive/40 bg-destructive/5 print:bg-white"
                     : "border-emerald-500/40 bg-emerald-500/5 print:bg-white",
