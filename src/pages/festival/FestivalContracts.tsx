@@ -254,30 +254,28 @@ export default function FestivalContracts() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" /> Festival</Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
-              <FileSignature className="h-6 w-6 text-primary" /> Contracts
-            </h1>
-            {festival && (
-              <p className="text-sm text-muted-foreground">
-                {festival.name} · {formatDateRange(festival.start_date, festival.end_date)}
-              </p>
-            )}
+      <div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+            <ArrowLeft className="h-3.5 w-3.5" /> {festival?.name ?? slug}
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/festivals/${slug}/contracts/export`} target="_blank"><FileDown className="h-4 w-4 mr-1" /> PDF</Link>
+            </Button>
+            <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" /> Add contract</Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to={`/festivals/${slug}/contracts/export`} target="_blank"><FileDown className="h-4 w-4 mr-1" /> PDF</Link>
-          </Button>
-          <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" /> Add contract</Button>
+        <div className="flex items-center gap-3 mt-2">
+          <FileSignature className="h-7 w-7 text-violet-500" />
+          <h1 className="text-3xl font-bold tracking-tight">Contracts</h1>
         </div>
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+          Per-concept contracts for this festival. Track signing status, financial terms, and stalled negotiations.
+          {festival && <> · <span className="text-foreground/80">{formatDateRange(festival.start_date, festival.end_date)}</span></>}
+        </p>
       </div>
 
       {/* Status pie summary */}
