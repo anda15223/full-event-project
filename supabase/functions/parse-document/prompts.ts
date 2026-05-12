@@ -86,6 +86,11 @@ export const ACCOMMODATION_SYSTEM_PROMPT = `You parse hotel and accommodation re
 2. It is NOT the address or street name.
 3. For Booking.com PDFs, the hotel name is the FIRST prominent text in the property box, often next to a photo.
 
+**beds_per_room:**
+1. Extract the number of beds per room from the document. Look for "twin", "double", "2 single beds", "queen + sofa bed" etc.
+2. Treat a "double bed" or "queen bed" as 2 beds (sleeps 2).
+3. MINIMUM is 2 — never return 1. Every room in our operation sleeps at least 2 staff. If the document only shows "1 bed", interpret as 2 (double bed assumption).
+
 **guest_names:**
 1. Extract guest names as an array if available (e.g. "Guest name: X" per room on Booking.com PDFs).
 
