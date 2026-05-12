@@ -390,7 +390,7 @@ function VehicleBlock({
   return (
     <div
       className={cn(
-        "vehicle-block rounded-xl border bg-card overflow-hidden print:border-2 print:rounded-none",
+        "vehicle-block rounded-2xl border bg-card overflow-hidden shadow-sm print:border-2 print:rounded-none",
         cancelled && "opacity-50 relative",
       )}
     >
@@ -402,7 +402,10 @@ function VehicleBlock({
         </div>
       )}
 
-      <div className="flex items-center gap-3 p-4 border-b bg-muted/30 print:bg-white print:border-b-2">
+      <div className="flex items-center gap-3 p-5 border-b bg-muted/30 print:bg-white print:border-b-2">
+        <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center shrink-0 print:hidden">
+          <Truck className="h-5 w-5" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-lg font-semibold">{vName(vehicle)}</h3>
