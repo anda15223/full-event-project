@@ -219,6 +219,28 @@ function OverviewPage({ data }: { data: BinderData }) {
         })}
       </View>
 
+      {data.hours && data.hours.length > 0 && (
+        <View style={{ marginBottom: 8 }}>
+          <Text style={[s.bold, s.small, { marginBottom: 4 }]}>HOURS</Text>
+          <View style={s.th}>
+            <Text style={{ width: 70 }}>Day</Text>
+            <Text style={{ flex: 1 }}>Festival</Text>
+            <Text style={{ flex: 1 }}>Prep</Text>
+          </View>
+          {data.hours.map((h: any) => (
+            <View key={h.id} style={s.tr} wrap={false}>
+              <Text style={{ width: 70 }}>{fmt(h.day_date)}</Text>
+              <Text style={{ flex: 1 }}>
+                {h.festival_open ? `${String(h.festival_open).slice(0,5)} – ${h.festival_close ? String(h.festival_close).slice(0,5) : "—"}` : "—"}
+              </Text>
+              <Text style={{ flex: 1 }}>
+                {h.prep_open ? `${String(h.prep_open).slice(0,5)} – ${h.prep_close ? String(h.prep_close).slice(0,5) : "—"}` : "—"}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={{ marginBottom: 8 }}>
         <Text style={[s.bold, s.small, { marginBottom: 4 }]}>PRIMARY CONTACTS</Text>
         {primaryContacts.length === 0 && <Text style={[s.small, { color: GRAY }]}>None marked primary.</Text>}
