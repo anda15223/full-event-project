@@ -33,6 +33,8 @@ import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 import { DisabledConceptsBanner } from "@/components/festival/DisabledConceptsBanner";
+import { FestivalIdentityStrip } from "@/components/festival/FestivalIdentityStrip";
+import { FestivalInfoCard } from "@/components/festival/FestivalInfoCard";
 
 // ---------- helpers ----------
 
@@ -650,8 +652,24 @@ export default function FestivalOverview() {
         </div>
       </div>
 
-      {/* BLOCK 1 — header */}
-      <FestivalHeader
+      {/* Always-visible identity strip */}
+      <FestivalIdentityStrip
+        festival={{
+          id: (f as any).id,
+          slug: f.slug,
+          name: f.name,
+          start_date: f.start_date,
+          end_date: f.end_date,
+        }}
+      />
+
+      {/* Always-visible disabled concepts alert */}
+      {festivalId && (
+        <DisabledConceptsBanner festivalId={festivalId} festivalSlug={slug} />
+      )}
+
+      {/* Collapsible Info card: map + location docs + hours + contacts */}
+      <FestivalInfoCard
         festival={{
           id: (f as any).id,
           slug: f.slug,
@@ -662,24 +680,6 @@ export default function FestivalOverview() {
           lat: (f as any).lat ?? null,
           lng: (f as any).lng ?? null,
         }}
-        rightSlot={
-          <LocationDocsBox
-            festivalId={(f as any).id}
-            festivalSlug={f.slug}
-          />
-        }
-      />
-
-      <FestivalHoursBlock
-        festivalId={(f as any).id}
-        festivalSlug={f.slug}
-        startDate={f.start_date}
-        endDate={f.end_date}
-      />
-
-      <FestivalContactsBlock
-        festivalId={(f as any).id}
-        festivalSlug={f.slug}
       />
 
       {/* BLOCK 2 — attention */}
