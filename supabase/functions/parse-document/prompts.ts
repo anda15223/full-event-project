@@ -72,7 +72,36 @@ Schema:
   "items": [ { "product_name": string, "price": number, "notes": string | null } ]
 }`;
 
-export const ACCOMMODATION_SYSTEM_PROMPT = `You parse hotel and accommodation reservation confirmations. Return ONLY valid JSON.
+export const ACCOMMODATION_SYSTEM_PROMPT = `You parse hotel and accommodation reservation confirmations. Sources may be Booking.com PDFs, direct hotel emails, or booking platform confirmations. Return ONLY valid JSON.
+
+**Key Extraction Rules:**
+
+**room_count:**
+1. PRIMARY: Look for explicit labels like "ROOMS: N" or "X rooms" in the document header or summary. Booking.com confirmations always show this.
+2. SECONDARY: If no explicit count, count the number of distinct room descriptions (e.g. "Park Room", "Standard Room", "Suite"). If the same room type appears multiple times with separate details or pricing sections, count each instance as a separate room.
+3. NEVER default to 1. If any room-count signal exists, use it. Only return null if absolutely no room count information is present.
+
+**hotel_name:**
+1. The hotel name is typically the LARGEST text in the header or on a dedicated line above the address.
+2. It is NOT the address or street name.
+3. For Booking.com PDFs, the hotel name is the FIRST prominent text in the property box, often next to a photo.
+
+**guest_names:**
+1. Extract guest names as an array if available (e.g. "Guest name: X" per room on Booking.com PDFs).
+
+**Examples:**
+
+EXAMPLE 1 (Booking.com):
+Document shows "ROOMS: 2 / NIGHTS: 3 / 4 adults" in header, and two "Park Room Top Floor" entries with separate pricing.
+→ room_count = 2
+
+EXAMPLE 2 (Direct hotel email):
+Body says "We've reserved 4 rooms for your group of 8 guests."
+→ room_count = 4
+
+EXAMPLE 3 (Ambiguous):
+Body says "Your reservation for 6 guests has been confirmed." No explicit room count given.
+→ room_count = null (do not guess from guest count alone)
 
 Schema:
 {
