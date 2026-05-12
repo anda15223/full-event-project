@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,6 +8,7 @@ import { Concept, ConceptManager, ConceptSlug, CONCEPT_EMOJI, CONCEPT_LABELS } f
 import { VerifyEntityBadge, useVerifyEntityQuestions } from "./VerifyEntityBadge";
 import { VehicleSelector } from "./VehicleSelector";
 import { ConceptToggle } from "./ConceptToggle";
+import { useConceptIsActive } from "@/hooks/useConceptIsActive";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 
 export interface ConceptContract {
