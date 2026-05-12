@@ -397,12 +397,12 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           </Text>
           {transport.tbdCount > 0 && (
             <Text style={s.warn}>
-              ⚠ {transport.tbdCount} drivers TBD{transport.earliestTbd ? ` from ${fmtDate(transport.earliestTbd)}` : ""}
+              ! {transport.tbdCount} drivers TBD{transport.earliestTbd ? ` from ${fmtDate(transport.earliestTbd)}` : ""}
             </Text>
           )}
           {transport.accreditationsUploaded < transport.vehicleCount && (
             <Text style={s.warn}>
-              ⚠ Accreditations: {transport.accreditationsUploaded} of {transport.vehicleCount} uploaded
+              ! Accreditations: {transport.accreditationsUploaded} of {transport.vehicleCount} uploaded
             </Text>
           )}
 
@@ -411,10 +411,10 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             {staff.total} total · {staff.soborg} from Soborg · {staff.local} local hires
           </Text>
           {staff.blankNames > 0 && (
-            <Text style={s.warn}>⚠ {staff.blankNames} of {staff.local} local names blank</Text>
+            <Text style={s.warn}>! {staff.blankNames} of {staff.local} local names blank</Text>
           )}
           {staff.missingTransport > 0 && (
-            <Text style={s.warn}>⚠ {staff.missingTransport} staff requiring transport without assignments</Text>
+            <Text style={s.warn}>! {staff.missingTransport} staff requiring transport without assignments</Text>
           )}
 
           <Text style={s.opLabel}>SERVICE HOURS</Text>
@@ -422,7 +422,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             {serviceHours.daysWithHours} of {serviceHours.festivalDays} festival days have hours set
           </Text>
           {serviceHours.daysWithHours === 0 && (
-            <Text style={s.warn}>⚠ Service hours not yet entered for any day</Text>
+            <Text style={s.warn}>! Service hours not yet entered for any day</Text>
           )}
         </View>
 
