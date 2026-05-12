@@ -65,6 +65,7 @@ export function ConceptCardGrid({
   showVehicleSelector = false,
   layout = "stack",
   hideEmoji = false,
+  festivalSlug,
 }: Props) {
   const qc = useQueryClient();
 
