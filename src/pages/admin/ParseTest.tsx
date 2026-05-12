@@ -120,6 +120,11 @@ export default function ParseTest() {
                 <span>in: <b>{result.tokensInput}</b></span>
                 <span>out: <b>{result.tokensOutput}</b></span>
                 <span>model: <b>{result.model}</b></span>
+                {result.visionFallbackUsed && (
+                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                    vision fallback
+                  </span>
+                )}
               </div>
               <details open>
                 <summary className="text-sm font-medium cursor-pointer">Parsed JSON</summary>
