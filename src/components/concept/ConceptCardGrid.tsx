@@ -250,33 +250,38 @@ export function ConceptCardGrid({
                   </div>
                 )}
               </div>
-              <div className="min-w-[220px] shrink-0">
-                {enableManagerEdit ? (
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden>👤</span>
-                    <Select
-                      value={manager?.manager_staff_id ?? "__none"}
-                      onValueChange={(v) =>
-                        upsertManager.mutate({ conceptId: c.id, staffId: v === "__none" ? null : v })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Unassigned" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none">Unassigned</SelectItem>
-                        {(staffQ.data ?? []).map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {s.name ?? "(no name)"}{s.role ? ` — ${s.role}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    👤 {manager?.manager_name ?? "Unassigned"}
-                  </div>
+              <div className="flex items-start gap-3 shrink-0">
+                <div className="min-w-[220px] shrink-0">
+                  {enableManagerEdit ? (
+                    <div className="flex items-center gap-2">
+                      <span aria-hidden>👤</span>
+                      <Select
+                        value={manager?.manager_staff_id ?? "__none"}
+                        onValueChange={(v) =>
+                          upsertManager.mutate({ conceptId: c.id, staffId: v === "__none" ? null : v })
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">Unassigned</SelectItem>
+                          {(staffQ.data ?? []).map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name ?? "(no name)"}{s.role ? ` — ${s.role}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      👤 {manager?.manager_name ?? "Unassigned"}
+                    </div>
+                  )}
+                </div>
+                {festivalSlug && (
+                  <ConceptToggle festivalSlug={festivalSlug} conceptSlug={c.slug} />
                 )}
               </div>
             </div>
