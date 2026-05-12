@@ -683,11 +683,6 @@ export default function FestivalOverview() {
         }}
       />
 
-      {/* Per-concept contract card (collapsible) */}
-      {festivalId && (
-        <FestivalContractCard festivalId={festivalId} festivalSlug={slug} />
-      )}
-
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
       {festivalId && <FestivalQuestionsStrip festivalId={festivalId} slug={slug} />}
