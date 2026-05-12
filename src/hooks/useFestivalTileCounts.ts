@@ -14,6 +14,8 @@ export type FestivalTileCounts = {
   safetyTotalCount: number | null;
   accommodationCount: number | null;
   accommodationNights: number | null;
+  pricesItemCount: number | null;
+  pricesConceptCount: number | null;
 };
 
 const sb: any = supabase;
