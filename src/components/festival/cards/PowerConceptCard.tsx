@@ -377,22 +377,44 @@ export function PowerConceptCard({
           <span className="ml-auto text-xs text-muted-foreground tabular-nums">{fmt(demand_kw)} kW</span>
         </button>
         {eqOpen && (
-          <div className="mt-2 rounded-lg border divide-y text-xs">
-            {equipment.filter((e) => e.is_powered !== false).length === 0 ? (
-              <div className="p-3 text-muted-foreground italic">No powered equipment yet — manage on /equipment.</div>
-            ) : (
-              equipment.filter((e) => e.is_powered !== false).map((e) => {
-                const total = Number(e.power_kw ?? 0) * Number(e.quantity ?? 1);
-                return (
-                  <div key={e.id} className="grid grid-cols-12 gap-2 p-2 items-center">
-                    <div className="col-span-6 truncate">{e.equipment_name}</div>
-                    <div className="col-span-2 text-right tabular-nums">×{e.quantity ?? 1}</div>
-                    <div className="col-span-2 text-right tabular-nums text-muted-foreground">{fmt(Number(e.power_kw ?? 0))} kW</div>
-                    <div className="col-span-2 text-right tabular-nums font-medium">{fmt(total)} kW</div>
-                  </div>
-                );
-              })
-            )}
+          <div className="mt-2 space-y-2">
+            <div className="rounded-lg border divide-y text-xs">
+              <div className="grid grid-cols-12 gap-2 p-2 items-center bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <div className="col-span-4">Equipment</div>
+                <div className="col-span-1 text-right">Qty</div>
+                <div className="col-span-2 text-right">kW</div>
+                <div className="col-span-3">Plug</div>
+                <div className="col-span-1 text-right">Total</div>
+                <div className="col-span-1"></div>
+              </div>
+              {equipment.filter((e) => e.is_powered !== false).length === 0 ? (
+                <div className="p-3 text-muted-foreground italic">No powered equipment yet — add one below.</div>
+              ) : (
+                equipment.filter((e) => e.is_powered !== false).map((e) => (
+                  <EquipmentRow key={e.id} row={e} onChanged={invalidate} />
+                ))
+              )}
+            </div>
+            <Button
+              size="sm" variant="outline" className="h-7 text-xs gap-1"
+              onClick={async () => {
+                const nextPos = (equipment.reduce((m, x) => Math.max(m, (x as any).position ?? 0), 0)) + 1;
+                const { error } = await supabase.from("festival_power_equipment").insert({
+                  festival_power_id: power.id,
+                  equipment_name: "New equipment",
+                  quantity: 1,
+                  power_kw: 0,
+                  power_type: "230V_socket",
+                  is_powered: true,
+                  category: "cooking",
+                  loads_from_soborg: true,
+                  position: nextPos,
+                } as any);
+                if (error) toast.error(error.message); else invalidate();
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Add equipment
+            </Button>
           </div>
         )}
       </div>
