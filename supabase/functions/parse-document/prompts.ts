@@ -37,21 +37,80 @@ Schema:
 
 If multiple connection types are listed, return one array entry per type.`;
 
-export const COOLING_SYSTEM_PROMPT = `You parse cooling equipment orders (refrigerated containers, reefer trailers, pallet rentals). Return ONLY valid JSON.
+export const COOLING_SYSTEM_PROMPT = `You parse cooling equipment orders for festivals (refrigerated containers, reefer trailers, freezer trailers, pallet rentals, mobile cold rooms). Sources may be supplier order confirmations (PDFs or emails), rental quotes from Danish suppliers (Cool Solutions, Combi Cool, KK Køl, Container Centralen, etc.), platform confirmations, or hand-written booking emails. Return ONLY valid JSON.
+
+**Key Extraction Rules:**
+
+**supplier:**
+1. The supplier/rental company name — typically the document issuer (header logo line, signature block, or "From:" in an email).
+2. NOT the customer (festival, restaurant, or "Full Event Project") — the customer is who ordered, not who you want.
+3. Strip legal suffixes only if obviously redundant ("ApS", "A/S" may stay).
+
+**unit_type:**
+1. "container" = refrigerated shipping container (10ft / 20ft / 40ft reefer, "kølecontainer", "frysecontainer").
+2. "trailer" = towed reefer trailer or freezer trailer ("kølevogn", "frysetrailer").
+3. "pallet_rental" = rented cold pallets / roll containers / pallet positions in a shared cold room.
+4. "other" = anything else (mobile cold room, ice machine).
+
+**unit_size:**
+1. Extract physical size as written: "20ft", "10ft", "40ft HC", "6m", "13m trailer", "2 EUR pallets". Keep the unit.
+2. If only volume in m³ is given, return "<n> m3".
+
+**container_type / temperature:**
+1. Detect cooling vs freezing: words like "køl", "chill", "fridge", "+2 to +8°C" → cooling. "frys", "freeze", "-18°C" → freezing.
+2. Set container_type to a short human label: "Refrigerated container 20ft", "Freezer trailer 13m", etc.
+
+**delivery_date / pickup_date:**
+1. ALL dates MUST be ISO YYYY-MM-DD. Never DD/MM/YYYY, DD.MM.YYYY, or month names. Convert.
+2. delivery_date = when the unit arrives on site / is delivered.
+3. pickup_date = when the unit is collected / returned.
+4. If a date range is given ("rental period 25/06 – 02/07/2026") the start is delivery, the end is pickup.
+5. If you can't determine the year confidently, return null.
+
+**power_required_kw:**
+1. Numeric kW required to power the unit (e.g. "3.5 kW", "16A 3-phase ~ 11 kW"). Return number only.
+2. If only amperage + phase given (e.g. "32A 3-phase 400V"), estimate kW = A × V × √3 × 0.001 (e.g. 32 × 400 × 1.732 × 0.001 ≈ 22 kW).
+
+**cost_total / currency:**
+1. Total cost incl. VAT if shown, otherwise the headline rental price for the period.
+2. currency = ISO 3-letter (DKK, EUR, USD). Default to "DKK" if amount has "kr" or no currency shown in a Danish document.
+
+**order_reference:**
+1. Order number / reservation number / booking reference / quote number — anything that would identify this order with the supplier later.
+2. Look for labels: "Ordrenummer", "Order no.", "Reservation #", "Tilbud", "Quote", "Ref:".
+
+**unit_count:**
+1. How many physical units this order covers (usually 1). If "2 x 20ft container" → 2.
+
+**_extraction_evidence (REQUIRED):**
+After extracting, document what text you matched for the most important fields.
+- evidence_type = "explicit_order" if you matched a supplier order confirmation with clear labels.
+- evidence_type = "email_body" if you inferred from a free-text email.
+- evidence_type = "partial" if only some fields are present.
+- evidence_type = "none_found" if document doesn't look like a cooling order at all.
+- matched_text: short quote of the strongest signal you found.
 
 Schema:
 {
   "supplier": string | null,
   "unit_type": "container" | "trailer" | "pallet_rental" | "other" | null,
   "unit_size": string | null,
+  "container_type": string | null,
   "unit_count": number | null,
   "delivery_date": string | null,
   "pickup_date": string | null,
   "power_required_kw": number | null,
   "cost_total": number | null,
   "currency": string,
-  "raw_notes": string
-}`;
+  "order_reference": string | null,
+  "raw_notes": string,
+  "_extraction_evidence": {
+    "evidence_type": "explicit_order" | "email_body" | "partial" | "none_found",
+    "matched_text": string
+  }
+}
+
+ALL dates MUST be ISO format YYYY-MM-DD. If you can't determine the year confidently, return null for that date.`;
 
 export const FACADE_SYSTEM_PROMPT = `You parse facade and tent dimension documents for festival booths. Return ONLY valid JSON.
 
