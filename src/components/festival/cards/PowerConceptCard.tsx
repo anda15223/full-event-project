@@ -145,11 +145,11 @@ function InlineDate({
 }
 
 const CONNECTION_TYPES = [
-  { key: "connections_16a_240v", label: "16A 240V" },
-  { key: "connections_16a_400v", label: "16A 400V" },
-  { key: "connections_32a", label: "32A" },
-  { key: "connections_63a", label: "63A" },
-  { key: "connections_125a", label: "125A" },
+  { key: "connections_16a_240v", label: "16A 240V", kw: 3.7 },   // 16 * 230 / 1000
+  { key: "connections_16a_400v", label: "16A 400V", kw: 11.0 },  // 16 * 400 * √3 / 1000
+  { key: "connections_32a", label: "32A", kw: 22.0 },            // 32 * 400 * √3 / 1000
+  { key: "connections_63a", label: "63A", kw: 43.6 },
+  { key: "connections_125a", label: "125A", kw: 86.6 },
 ] as const;
 
 export function PowerConceptCard({
@@ -322,7 +322,7 @@ export function PowerConceptCard({
 
       {/* Connections */}
       <div>
-        <h4 className="text-sm font-semibold mb-2">Connections</h4>
+        <h4 className="text-sm font-semibold mb-2">Connections ordered</h4>
         <div className="grid grid-cols-5 gap-2">
           {CONNECTION_TYPES.map((c) => {
             const v = (power as any)[c.key] as number | null;
@@ -336,6 +336,34 @@ export function PowerConceptCard({
             );
           })}
         </div>
+        {(() => {
+          const orderedKw = CONNECTION_TYPES.reduce(
+            (sum, c) => sum + (Number((power as any)[c.key] ?? 0) * c.kw), 0,
+          );
+          if (orderedKw === 0 && demand_kw === 0) return null;
+          const diff = orderedKw - demand_kw;
+          const ok = diff >= 0;
+          // Suggest extra 32A 3ph circuits if short
+          const extra32 = ok ? 0 : Math.ceil(Math.abs(diff) / 22.0);
+          return (
+            <div className={cn(
+              "mt-2 rounded-lg border p-2 text-xs flex flex-wrap items-center gap-x-3 gap-y-1",
+              ok
+                ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-200"
+                : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-200",
+            )}>
+              <span className="tabular-nums">Ordered ≈ <strong>{fmt(orderedKw)} kW</strong></span>
+              <span className="tabular-nums">Equipment needs <strong>{fmt(demand_kw)} kW</strong></span>
+              {ok ? (
+                <span className="tabular-nums">→ surplus {fmt(diff)} kW ✓</span>
+              ) : (
+                <span className="tabular-nums">
+                  → short <strong>{fmt(-diff)} kW</strong> · order ≈ {extra32}× 32A 3ph more
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Equipment */}
