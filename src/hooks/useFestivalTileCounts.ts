@@ -14,6 +14,8 @@ export type FestivalTileCounts = {
   safetyTotalCount: number | null;
   accommodationCount: number | null;
   accommodationNights: number | null;
+  pricesItemCount: number | null;
+  pricesConceptCount: number | null;
 };
 
 const sb: any = supabase;
@@ -43,6 +45,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
         power,
         safety,
         accommodation,
+        prices,
       ] = await Promise.all([
         inContracts
           ? sb.from("festival_topskilt").select("id", { count: "exact", head: true }).in("festival_contract_id", contractIds)
@@ -57,6 +60,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
           : Promise.resolve({ data: [] }),
         sb.from("festival_safety").select("id").eq("festival_id", fid),
         sb.from("festival_accommodation").select("id, check_in_date, check_out_date, capacity, assigned_staff_count").eq("festival_id", fid),
+        sb.from("festival_concept_prices").select("id, festival_concept_price_item(id)").eq("festival_id", fid),
       ]);
 
       // Equipment: sum qty
@@ -96,6 +100,13 @@ export function useFestivalTileCounts(festivalId: string | null) {
         }
       }
 
+      // Prices: count concepts with a price list + total items across them
+      const priceRows = ((prices as any).data ?? []) as any[];
+      const pricesConceptCount = priceRows.length || null;
+      const pricesItemCount = priceRows.length
+        ? priceRows.reduce((s, r) => s + ((r.festival_concept_price_item ?? []).length), 0) || null
+        : null;
+
       return {
         topskiltCount: (topskilt as any).count ?? null,
         setupCount: (setup as any).count ?? null,
@@ -109,6 +120,8 @@ export function useFestivalTileCounts(festivalId: string | null) {
         safetyTotalCount: ((safety.data ?? []) as any[]).length || null,
         accommodationCount,
         accommodationNights: anyNights ? nights : null,
+        pricesItemCount,
+        pricesConceptCount,
       };
     },
   });

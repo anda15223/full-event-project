@@ -900,12 +900,14 @@ export default function FestivalOverview() {
                 status="gray" />
             );
 
+            const prN = tileCounts.pricesConceptCount ?? 0;
+            const prItems = tileCounts.pricesItemCount ?? 0;
             tiles.push(
               <FestivalTile key="prices" href={`/festivals/${slug}/prices`}
                 icon={Tag} iconAccent="emerald" title="Prices"
-                primaryStat="Per concept"
-                secondaryStat="POS price lists"
-                status="gray" />
+                primaryStat={prN > 0 ? `${prN} concept${prN === 1 ? "" : "s"}` : "Per concept"}
+                secondaryStat={prItems > 0 ? `${prItems} items` : "POS price lists"}
+                status={prItems > 0 ? "green" : "gray"} />
             );
             tiles.push(
               <FestivalTile key="staff" href="#"

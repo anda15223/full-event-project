@@ -126,8 +126,8 @@ export default function FestivalContracts() {
   const conceptsQ = useQuery({
     queryKey: ["concepts-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("concepts").select("id, name, slug, color_hex").order("display_order");
-      return (data ?? []) as Concept[];
+      const { data } = await supabase.from("concepts").select("id, name, slug, color_hex, display_order").order("display_order");
+      return (data ?? []) as (Concept & { display_order: number | null })[];
     },
   });
   const conceptById = useMemo(() => new Map((conceptsQ.data ?? []).map(c => [c.id, c])), [conceptsQ.data]);
@@ -172,9 +172,9 @@ export default function FestivalContracts() {
       const aw = a.contract_status === "stalled" ? 0 : 1;
       const bw = b.contract_status === "stalled" ? 0 : 1;
       if (aw !== bw) return aw - bw;
-      const an = conceptById.get(a.concept_id)?.name ?? "";
-      const bn = conceptById.get(b.concept_id)?.name ?? "";
-      return an.localeCompare(bn);
+      const ao = (conceptById.get(a.concept_id) as any)?.display_order ?? 999;
+      const bo = (conceptById.get(b.concept_id) as any)?.display_order ?? 999;
+      return ao - bo;
     });
   }, [contractsQ.data, filterStatus, filterEntity, filterConcept, conceptById, showDisabled]);
 
@@ -254,30 +254,28 @@ export default function FestivalContracts() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link to={`/festivals/${slug}`}><ArrowLeft className="h-4 w-4 mr-1" /> Festival</Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-heading font-bold flex items-center gap-2">
-              <FileSignature className="h-6 w-6 text-primary" /> Contracts
-            </h1>
-            {festival && (
-              <p className="text-sm text-muted-foreground">
-                {festival.name} · {formatDateRange(festival.start_date, festival.end_date)}
-              </p>
-            )}
+      <div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+            <ArrowLeft className="h-3.5 w-3.5" /> {festival?.name ?? slug}
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/festivals/${slug}/contracts/export`} target="_blank"><FileDown className="h-4 w-4 mr-1" /> PDF</Link>
+            </Button>
+            <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" /> Add contract</Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to={`/festivals/${slug}/contracts/export`} target="_blank"><FileDown className="h-4 w-4 mr-1" /> PDF</Link>
-          </Button>
-          <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" /> Add contract</Button>
+        <div className="flex items-center gap-3 mt-2">
+          <FileSignature className="h-7 w-7 text-violet-500" />
+          <h1 className="text-3xl font-bold tracking-tight">Contracts</h1>
         </div>
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+          Per-concept contracts for this festival. Track signing status, financial terms, and stalled negotiations.
+          {festival && <> · <span className="text-foreground/80">{formatDateRange(festival.start_date, festival.end_date)}</span></>}
+        </p>
       </div>
 
       {/* Status pie summary */}
