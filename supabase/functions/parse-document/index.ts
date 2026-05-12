@@ -103,6 +103,7 @@ async function callClaude(
     headers: {
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
+      "anthropic-beta": "pdfs-2024-09-25",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -192,6 +193,8 @@ Deno.serve(async (req) => {
     let userContent: unknown[];
     let extractedText = "";
 
+    let visionFallbackUsed = false;
+
     if (format === "image") {
       const base64 = arrayBufferToBase64(buf);
       userContent = [
@@ -227,12 +230,43 @@ Deno.serve(async (req) => {
         }, 422);
       }
 
-      if (extractedText.length > MAX_TEXT_CHARS) {
-        extractedText = extractedText.slice(0, MAX_TEXT_CHARS) +
-          `\n\n[TRUNCATED: original was ${extractedText.length} chars; cut to ${MAX_TEXT_CHARS}]`;
+      const textIsUsable = !!extractedText &&
+        extractedText.replace(/\s/g, "").length > 20;
+
+      if (!textIsUsable) {
+        if (format === "pdf") {
+          // Vision fallback: send raw PDF to Claude as a document content block
+          // (Anthropic natively supports PDF document inputs — internally rendered as images + text).
+          const base64 = arrayBufferToBase64(buf);
+          userContent = [
+            {
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: base64 },
+            },
+            {
+              type: "text",
+              text: "This PDF has no extractable text layer. Read the page images and extract structured data per the system prompt.",
+            },
+          ];
+          rawTextExcerpt = "[image-only PDF — vision fallback]";
+          visionFallbackUsed = true;
+        } else {
+          return jsonResponse({
+            ok: false,
+            error: "EMPTY_DOCUMENT",
+            message: "The uploaded file appears to contain no extractable text or images. If this is a PDF, try a different file or ensure it isn't password-protected.",
+            format,
+            rawTextExcerpt: null,
+          }, 200);
+        }
+      } else {
+        if (extractedText.length > MAX_TEXT_CHARS) {
+          extractedText = extractedText.slice(0, MAX_TEXT_CHARS) +
+            `\n\n[TRUNCATED: original was ${extractedText.length} chars; cut to ${MAX_TEXT_CHARS}]`;
+        }
+        rawTextExcerpt = extractedText.slice(0, 500);
+        userContent = [{ type: "text", text: extractedText }];
       }
-      rawTextExcerpt = extractedText.slice(0, 500);
-      userContent = [{ type: "text", text: extractedText }];
     }
 
     // First Claude call
@@ -269,6 +303,7 @@ Deno.serve(async (req) => {
       latencyMs: Date.now() - start,
       tokensInput: usage.input_tokens,
       tokensOutput: usage.output_tokens,
+      visionFallbackUsed,
     });
   } catch (e) {
     console.error("parse-document error:", e);

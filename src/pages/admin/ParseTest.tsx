@@ -16,8 +16,8 @@ const DOC_TYPES = [
 type ParseResult =
   | { ok: true; documentType: string; parsed: unknown; rawTextExcerpt: string;
       format: string; model: string; latencyMs: number;
-      tokensInput: number; tokensOutput: number }
-  | { ok: false; error: string; message: string; rawTextExcerpt: string | null };
+      tokensInput: number; tokensOutput: number; visionFallbackUsed?: boolean }
+  | { ok: false; error: string; message: string; rawTextExcerpt: string | null; format?: string };
 
 export default function ParseTest() {
   const [file, setFile] = useState<File | null>(null);
@@ -120,6 +120,11 @@ export default function ParseTest() {
                 <span>in: <b>{result.tokensInput}</b></span>
                 <span>out: <b>{result.tokensOutput}</b></span>
                 <span>model: <b>{result.model}</b></span>
+                {result.visionFallbackUsed && (
+                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                    vision fallback
+                  </span>
+                )}
               </div>
               <details open>
                 <summary className="text-sm font-medium cursor-pointer">Parsed JSON</summary>
@@ -136,21 +141,28 @@ export default function ParseTest() {
             </>
           ) : (() => {
             const err = result as Extract<ParseResult, { ok: false }>;
+            const isEmpty = err.error === "EMPTY_DOCUMENT";
             return (
-              <>
+              <div className={isEmpty
+                ? "rounded-md border border-amber-300 bg-amber-50 p-4"
+                : ""}>
                 <div className="text-sm">
-                  <div className="font-mono text-destructive">{err.error}</div>
-                  <div className="text-muted-foreground mt-1">{err.message}</div>
+                  <div className="font-mono text-xs uppercase tracking-wide opacity-70">
+                    {err.error}{err.format ? ` · ${err.format}` : ""}
+                  </div>
+                  <div className={isEmpty ? "mt-1 text-amber-900" : "mt-1 text-muted-foreground"}>
+                    {err.message}
+                  </div>
                 </div>
                 {err.rawTextExcerpt && (
-                  <details>
+                  <details className="mt-2">
                     <summary className="text-sm font-medium cursor-pointer">Raw text</summary>
                     <pre className="mt-2 text-xs bg-muted p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">
                       {err.rawTextExcerpt}
                     </pre>
                   </details>
                 )}
-              </>
+              </div>
             );
           })()}
         </div>
