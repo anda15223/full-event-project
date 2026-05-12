@@ -512,6 +512,7 @@ export type Database = {
           last_parsed_at: string | null
           notes: string | null
           parse_summary: string | null
+          parsed_data: Json | null
           payment_status: Database["public"]["Enums"]["accommodation_payment_status"]
           provider_name: string | null
           room_count: number | null
@@ -544,6 +545,7 @@ export type Database = {
           last_parsed_at?: string | null
           notes?: string | null
           parse_summary?: string | null
+          parsed_data?: Json | null
           payment_status?: Database["public"]["Enums"]["accommodation_payment_status"]
           provider_name?: string | null
           room_count?: number | null
@@ -576,6 +578,7 @@ export type Database = {
           last_parsed_at?: string | null
           notes?: string | null
           parse_summary?: string | null
+          parsed_data?: Json | null
           payment_status?: Database["public"]["Enums"]["accommodation_payment_status"]
           provider_name?: string | null
           room_count?: number | null
