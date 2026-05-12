@@ -41,24 +41,27 @@ const ACCENT = {
 
 type AccentKey = keyof typeof ACCENT;
 
-// Map title → { number, accent, subtitle }
+// Map title → { number, accent, subtitle } — canonical Sprint 7.5 order
 const SECTION_META: Record<string, { num: number; accent: AccentKey; subtitle: string }> = {
-  "Festival Overview":        { num: 1,  accent: "blue",    subtitle: "Snapshot of countdown, concepts, and primary contacts" },
-  "Action Items":             { num: 2,  accent: "rose",    subtitle: "Open and in-progress tasks, sorted by priority then due date" },
-  "Key Contacts":             { num: 3,  accent: "slate",   subtitle: "Festival, concept team, and supplier contacts" },
-  "Setup Timeline":           { num: 4,  accent: "emerald", subtitle: "Setup-through-teardown event schedule" },
-  "Contracts":                { num: 5,  accent: "violet",  subtitle: "Per-concept contracts, signed status, and obligations" },
-  "Transport":                { num: 6,  accent: "blue",    subtitle: "Vehicles, accreditation, and movement legs" },
-  "Topskilt":                 { num: 7,  accent: "violet",  subtitle: "Top-sign design and print status per concept" },
-  "Facade":                   { num: 8,  accent: "rose",    subtitle: "Facade design, material, and approval status per concept" },
-  "Power":                    { num: 9,  accent: "amber",   subtitle: "Per-concept power demand, equipment, and connection allocation" },
-  "Cooling":                  { num: 10, accent: "blue",    subtitle: "Refrigerated units, delivery windows, and concept assignments" },
-  "Safety":                   { num: 11, accent: "slate",   subtitle: "Gas, food, electrical, fire, and evacuation status" },
-  "Accommodation":            { num: 12, accent: "blue",    subtitle: "Crew bookings, dates, and night counts" },
-  "Søborg Loading Manifest":  { num: 13, accent: "violet",  subtitle: "Items loaded from the Søborg warehouse, grouped by category" },
-  "Soborg Loading Manifest":  { num: 13, accent: "violet",  subtitle: "Items loaded from the Søborg warehouse, grouped by category" },
-  "Open Questions":           { num: 14, accent: "slate",   subtitle: "Unresolved questions, sorted by urgency" },
-  "Active Rules":             { num: 15, accent: "amber",   subtitle: "Critical and important business rules in effect" },
+  "Festival Overview":        { num: 1,  accent: "blue",    subtitle: "Festival identity, location, hours, contacts" },
+  "Action Items":             { num: 2,  accent: "rose",    subtitle: "Open items by priority" },
+  "Key Contacts":             { num: 3,  accent: "slate",   subtitle: "Festival, setup, and concept teams" },
+  "Setup Timeline":           { num: 4,  accent: "emerald", subtitle: "Chronological setup and teardown phases" },
+  "Contracts":                { num: 5,  accent: "violet",  subtitle: "Per-concept contract status and obligations" },
+  "Transport":                { num: 6,  accent: "blue",    subtitle: "Vehicles and transport legs" },
+  "Topskilt":                 { num: 7,  accent: "violet",  subtitle: "Top sign sets per concept" },
+  "Facade":                   { num: 8,  accent: "rose",    subtitle: "Facade sets with tent dimensions" },
+  "Power":                    { num: 9,  accent: "amber",   subtitle: "Electricity allocation and demand" },
+  "Cooling":                  { num: 10, accent: "blue",    subtitle: "Refrigerated units and concept assignments" },
+  "Equipment":                { num: 11, accent: "slate",   subtitle: "Per-concept inventory grouped by category" },
+  "Accommodation":            { num: 12, accent: "blue",    subtitle: "Hotel bookings and bed assignments" },
+  "Safety":                   { num: 13, accent: "emerald", subtitle: "Per-zone checklists and certifications" },
+  "Prices":                   { num: 14, accent: "amber",   subtitle: "Per-concept POS menu and prices" },
+  "Søborg Loading Manifest":  { num: 15, accent: "violet",  subtitle: "What goes in which vehicle" },
+  "Soborg Loading Manifest":  { num: 15, accent: "violet",  subtitle: "What goes in which vehicle" },
+  "Open Questions":           { num: 16, accent: "slate",   subtitle: "Unresolved decisions" },
+  "Active Rules":             { num: 17, accent: "amber",   subtitle: "Operational rules for this festival" },
+  "Emergency Contacts":       { num: 18, accent: "rose",    subtitle: "On-call numbers and hospital info" },
   "Contents":                 { num: 0,  accent: "slate",   subtitle: "" },
 };
 
