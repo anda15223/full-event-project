@@ -1276,6 +1276,7 @@ export type Database = {
           organization: string | null
           phone: string | null
           role: string
+          role_category: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1291,6 +1292,7 @@ export type Database = {
           organization?: string | null
           phone?: string | null
           role: string
+          role_category?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1306,6 +1308,7 @@ export type Database = {
           organization?: string | null
           phone?: string | null
           role?: string
+          role_category?: string | null
           updated_at?: string | null
         }
         Relationships: [
