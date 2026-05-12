@@ -337,8 +337,10 @@ export function AccommodationBookingCard({
             if (p.room_count != null && p.room_count > 0 && p.room_count !== booking.room_count) {
               upd.room_count = p.room_count;
             }
-            if (p.beds_per_room != null && p.beds_per_room > 0 && p.beds_per_room !== booking.beds_per_room) {
-              upd.beds_per_room = p.beds_per_room;
+            if (p.beds_per_room != null && p.beds_per_room > 0) {
+              // Floor at 2 — every room has at least 2 beds in our operation
+              const beds = Math.max(2, Number(p.beds_per_room));
+              if (beds !== booking.beds_per_room) upd.beds_per_room = beds;
             }
             if (!booking.confirmation_number && p.booking_reference) upd.confirmation_number = p.booking_reference;
             if (booking.cost_dkk == null && p.cost_total != null) upd.cost_dkk = p.cost_total;
