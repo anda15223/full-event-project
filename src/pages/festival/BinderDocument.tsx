@@ -482,6 +482,17 @@ function FacadePage({ data }: { data: BinderData }) {
             {f.material_deadline ? `   ·   Material deadline ${fmt(f.material_deadline)}` : ""}
             {f.print_deadline ? `   ·   Print deadline ${fmt(f.print_deadline)}` : ""}
           </Text>
+          {(f.tent_width_m || f.tent_depth_m || f.tent_height_m || f.facade_width_m || f.facade_height_m) && (
+            <Text style={s.small}>
+              {(f.tent_width_m || f.tent_depth_m || f.tent_height_m)
+                ? `Tent ${f.tent_width_m ?? "?"}×${f.tent_depth_m ?? "?"}×${f.tent_height_m ?? "?"} m`
+                : ""}
+              {(f.tent_width_m && (f.facade_width_m || f.facade_height_m)) ? "  ·  " : ""}
+              {(f.facade_width_m || f.facade_height_m)
+                ? `Facade ${f.facade_width_m ?? "?"}×${f.facade_height_m ?? "?"} m`
+                : ""}
+            </Text>
+          )}
           {f.festival_approval_received_at && <Text style={[s.small, s.ok]}>Festival approved {fmtFull(f.festival_approval_received_at)}</Text>}
           {f.notes && <Text style={[s.small, { color: GRAY }]}>{f.notes}</Text>}
         </View>
