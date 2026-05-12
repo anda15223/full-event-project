@@ -368,14 +368,13 @@ export function FacadeConceptCard({
 
 function PhotoTile({ photo, onDelete }: { photo: FacadePhotoRow; onDelete: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
-  const load = async () => {
-    if (url) return;
-    const { data } = await supabase.storage.from("facade-designs")
-      .createSignedUrl(photo.file_path, 3600);
-    if (data?.signedUrl) setUrl(data.signedUrl);
-  };
-  // Lazy-load on mount
-  useState(() => { load(); return null; });
+  useEffect(() => {
+    let alive = true;
+    supabase.storage.from("facade-designs")
+      .createSignedUrl(photo.file_path, 3600)
+      .then(({ data }) => { if (alive && data?.signedUrl) setUrl(data.signedUrl); });
+    return () => { alive = false; };
+  }, [photo.file_path]);
 
   return (
     <div className="relative aspect-square rounded-lg overflow-hidden bg-muted group">
