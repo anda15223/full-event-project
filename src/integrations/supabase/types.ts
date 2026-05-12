@@ -2611,22 +2611,32 @@ export type Database = {
           dimensions_h_cm: number | null
           dimensions_text: string | null
           dimensions_w_cm: number | null
+          facade_height_m: number | null
+          facade_width_m: number | null
           festival_approval_contact_id: string | null
           festival_approval_received_at: string | null
           festival_approval_required: boolean
           festival_contract_id: string
           id: string
           installation_notes: string | null
+          last_parsed_at: string | null
           material_deadline: string | null
           material_orders_status: string | null
           material_supplier: string | null
           material_type: string | null
           notes: string | null
           panel_count: number
+          parse_summary: string | null
           print_deadline: string | null
           reuse_modifications: string | null
           reused_from: string | null
+          setup_notes: string | null
+          spec_pdf_path: string | null
+          spec_pdf_uploaded_at: string | null
           status_history: Json
+          tent_depth_m: number | null
+          tent_height_m: number | null
+          tent_width_m: number | null
           updated_at: string
         }
         Insert: {
@@ -2639,22 +2649,32 @@ export type Database = {
           dimensions_h_cm?: number | null
           dimensions_text?: string | null
           dimensions_w_cm?: number | null
+          facade_height_m?: number | null
+          facade_width_m?: number | null
           festival_approval_contact_id?: string | null
           festival_approval_received_at?: string | null
           festival_approval_required?: boolean
           festival_contract_id: string
           id?: string
           installation_notes?: string | null
+          last_parsed_at?: string | null
           material_deadline?: string | null
           material_orders_status?: string | null
           material_supplier?: string | null
           material_type?: string | null
           notes?: string | null
           panel_count?: number
+          parse_summary?: string | null
           print_deadline?: string | null
           reuse_modifications?: string | null
           reused_from?: string | null
+          setup_notes?: string | null
+          spec_pdf_path?: string | null
+          spec_pdf_uploaded_at?: string | null
           status_history?: Json
+          tent_depth_m?: number | null
+          tent_height_m?: number | null
+          tent_width_m?: number | null
           updated_at?: string
         }
         Update: {
@@ -2667,22 +2687,32 @@ export type Database = {
           dimensions_h_cm?: number | null
           dimensions_text?: string | null
           dimensions_w_cm?: number | null
+          facade_height_m?: number | null
+          facade_width_m?: number | null
           festival_approval_contact_id?: string | null
           festival_approval_received_at?: string | null
           festival_approval_required?: boolean
           festival_contract_id?: string
           id?: string
           installation_notes?: string | null
+          last_parsed_at?: string | null
           material_deadline?: string | null
           material_orders_status?: string | null
           material_supplier?: string | null
           material_type?: string | null
           notes?: string | null
           panel_count?: number
+          parse_summary?: string | null
           print_deadline?: string | null
           reuse_modifications?: string | null
           reused_from?: string | null
+          setup_notes?: string | null
+          spec_pdf_path?: string | null
+          spec_pdf_uploaded_at?: string | null
           status_history?: Json
+          tent_depth_m?: number | null
+          tent_height_m?: number | null
+          tent_width_m?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2698,6 +2728,44 @@ export type Database = {
             columns: ["festival_contract_id"]
             isOneToOne: true
             referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_facade_photos: {
+        Row: {
+          caption: string | null
+          display_order: number | null
+          festival_facade_id: string
+          file_name: string
+          file_path: string
+          id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          caption?: string | null
+          display_order?: number | null
+          festival_facade_id: string
+          file_name: string
+          file_path: string
+          id?: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          caption?: string | null
+          display_order?: number | null
+          festival_facade_id?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_facade_photos_festival_facade_id_fkey"
+            columns: ["festival_facade_id"]
+            isOneToOne: false
+            referencedRelation: "festival_facade"
             referencedColumns: ["id"]
           },
         ]
