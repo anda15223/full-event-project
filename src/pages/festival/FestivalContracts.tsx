@@ -332,6 +332,15 @@ export default function FestivalContracts() {
             {(conceptsQ.data ?? []).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        {disabledCount > 0 && (
+          <Button
+            size="sm"
+            variant={showDisabled ? "default" : "outline"}
+            onClick={() => setShowDisabled(v => !v)}
+          >
+            {showDisabled ? "Hide" : "Show"} disabled ({disabledCount})
+          </Button>
+        )}
       </div>
 
       {/* Contract cards */}
