@@ -524,8 +524,8 @@ export default function FestivalOverviewExport() {
         </div>
         <Button variant="outline" size="sm" onClick={() => window.print()}>Print</Button>
       </div>
-      <div className="flex-1">
-        <PDFViewer style={{ width: "100%", height: "100%", border: 0 }}>
+      <div className="flex-1 min-h-0">
+        <PDFViewer style={{ width: "100%", height: "calc(100vh - 57px)", border: 0 }}>
           <Pdf data={data} conceptFilter={conceptFilter} />
         </PDFViewer>
       </div>
