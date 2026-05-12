@@ -297,7 +297,7 @@ export default function FestivalQuestions() {
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold">Open Questions — {festival.name}</h1>
+          <h1 className="text-3xl font-heading font-bold tracking-tight">Open Questions — {festival.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {formatDateRange(festival.start_date, festival.end_date)} ·{" "}
             <span className="tabular-nums">{daysToFestival >= 0 ? `T−${daysToFestival} days` : `${Math.abs(daysToFestival)}d ago`}</span>
