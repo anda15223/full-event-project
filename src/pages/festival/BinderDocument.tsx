@@ -883,6 +883,157 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
   );
 }
 
+function EquipmentPage({ data }: { data: BinderData }) {
+  const { festival, contracts, concepts, power, powerEquipment, transport } = data;
+  const cMap = new Map<string, any>(concepts.map((c: any) => [c.id, c]));
+  const kMap = new Map<string, any>(contracts.map((k: any) => [k.id, k]));
+  // Group equipment by concept (via festival_power.festival_contract_id)
+  const powerToConcept = new Map<string, string>();
+  power.forEach((p: any) => {
+    const k = kMap.get(p.festival_contract_id);
+    if (k?.concept_id) powerToConcept.set(p.id, k.concept_id);
+  });
+  // Vehicle label lookup (from contracts.assigned_vehicle_id)
+  const vehLabel = (vid?: string) => {
+    if (!vid) return "Unassigned";
+    const v: any = (transport ?? []).find((t: any) => t.id === vid);
+    if (!v) return "Unassigned";
+    const name = v.season_rental?.vehicle_type ?? v.vehicle_type ?? "vehicle";
+    const plate = v.season_rental?.license_plate ?? v.license_plate;
+    return plate ? `${N(name)} (${N(plate)})` : N(name);
+  };
+  // Group rows by conceptId
+  const byConcept = new Map<string, any[]>();
+  (powerEquipment ?? []).forEach((e: any) => {
+    const cid = powerToConcept.get(e.festival_power_id);
+    if (!cid) return;
+    const arr = byConcept.get(cid) ?? [];
+    arr.push(e);
+    byConcept.set(cid, arr);
+  });
+  // Active concept ordering — only concepts with active contract
+  const activeConcepts = concepts
+    .filter((c: any) => contracts.some((k: any) => k.concept_id === c.id))
+    .sort((a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99));
+
+  // Category order
+  const CATEGORY_ORDER = ["cooking", "prep", "cooling", "table", "sink", "pos", "scaffold", "trolley", "popup_tent", "facade", "topskilt", "signage", "cable", "fire_safety", "first_aid", "consumable_storage", "other"];
+  const catLabel: Record<string, string> = {
+    cooking: "Cooking", prep: "Prep", cooling: "Cooling", table: "Tables", sink: "Sinks", pos: "POS",
+    scaffold: "Scaffold", trolley: "Trolleys", popup_tent: "Pop-up Tents", facade: "Facade",
+    topskilt: "Topskilt", signage: "Signage", cable: "Cables", fire_safety: "Fire Safety",
+    first_aid: "First Aid", consumable_storage: "Storage", other: "Other",
+  };
+
+  return (
+    <Page size="A4" style={s.page} bookmark="Equipment" wrap>
+      <SectionHeader title="Equipment" meta={`${activeConcepts.length} active concepts · ${(powerEquipment ?? []).length} items`} />
+      {activeConcepts.length === 0 && <Text style={[s.small, { color: GRAY }]}>No active concepts.</Text>}
+      {activeConcepts.map((c: any) => {
+        const k = contracts.find((x: any) => x.concept_id === c.id);
+        const rows = byConcept.get(c.id) ?? [];
+        const items = rows.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+        const powered = rows.filter((r: any) => r.is_powered).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+        const kw = rows.reduce((s: number, r: any) => s + (r.is_powered ? (Number(r.power_kw) || 0) * (Number(r.quantity) || 1) : 0), 0);
+        const status = rows.length === 0
+          ? { label: "[ NO EQUIPMENT ]", color: GRAY }
+          : rows.some((r: any) => r.is_powered && (!r.power_kw || Number(r.power_kw) === 0))
+          ? { label: "[ INCOMPLETE ]", color: AMBER }
+          : { label: "[ EQUIPPED ]", color: GREEN };
+        // Group by category
+        const byCat = new Map<string, any[]>();
+        rows.forEach((r: any) => {
+          const arr = byCat.get(r.category ?? "other") ?? [];
+          arr.push(r);
+          byCat.set(r.category ?? "other", arr);
+        });
+        const cats = Array.from(byCat.keys()).sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+        return (
+          <View key={c.id} style={{ marginBottom: 16 }} wrap={false}>
+            <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
+            <Text style={[s.small, { color: status.color, fontWeight: 700 }]}>{status.label}</Text>
+            <Text style={[s.small, { color: GRAY, marginBottom: 4 }]}>
+              {items} items · {powered} powered · {kw.toFixed(1)} kW · Travels with: {vehLabel(k?.assigned_vehicle_id)}
+            </Text>
+            {cats.map((cat) => {
+              const list = byCat.get(cat) ?? [];
+              return (
+                <View key={cat} style={{ marginTop: 3 }}>
+                  <Text style={[s.small, s.bold, { textTransform: "uppercase", color: GRAY, letterSpacing: 0.5 }]}>
+                    {catLabel[cat] ?? cat}  ({list.length})
+                  </Text>
+                  {list.map((e: any) => (
+                    <Text key={e.id} style={[s.small, { marginLeft: 8 }]}>
+                      • {e.quantity ?? 1}× {N(e.equipment_name)}
+                      {e.is_powered && e.power_kw ? ` — ${Number(e.power_kw).toFixed(2)} kW` : ""}
+                      {"  "}<Text style={{ color: GRAY, textTransform: "uppercase", fontSize: 7.5 }}>{e.loads_from_soborg ? "[SØBORG]" : "[ON-SITE]"}</Text>
+                    </Text>
+                  ))}
+                </View>
+              );
+            })}
+          </View>
+        );
+      })}
+      <SectionFooter name="Equipment" festival={festival.name} />
+    </Page>
+  );
+}
+
+function PricesPage({ data }: { data: BinderData }) {
+  const { festival, contracts, concepts, conceptPrices, conceptPriceItems } = data;
+  const itemsByParent = new Map<string, any[]>();
+  (conceptPriceItems ?? []).forEach((it: any) => {
+    const arr = itemsByParent.get(it.concept_prices_id) ?? [];
+    arr.push(it);
+    itemsByParent.set(it.concept_prices_id, arr);
+  });
+  const activeConcepts = concepts
+    .filter((c: any) => contracts.some((k: any) => k.concept_id === c.id))
+    .sort((a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99));
+  return (
+    <Page size="A4" style={s.page} bookmark="Prices" wrap>
+      <SectionHeader title="Prices" meta={`${activeConcepts.length} active concepts`} />
+      {activeConcepts.map((c: any) => {
+        const parent = (conceptPrices ?? []).find((p: any) => p.concept_id === c.id);
+        const items = parent ? (itemsByParent.get(parent.id) ?? []) : [];
+        const currency = parent?.currency ?? "DKK";
+        const hasVeg = items.some((i: any) => i.is_vegetarian || i.is_vegan);
+        return (
+          <View key={c.id} style={{ marginBottom: 12, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
+            {items.length === 0 ? (
+              <Text style={[s.small, { color: GRAY }]}>No prices set yet.</Text>
+            ) : (
+              <>
+                <Text style={[s.small, { color: GRAY, marginBottom: 4 }]}>
+                  {items.length} items · {currency} · Vegetarian: {hasVeg ? "yes" : "no"}
+                </Text>
+                {items.map((it: any) => {
+                  const flags: string[] = [];
+                  if (it.is_vegetarian) flags.push("v");
+                  if (it.is_vegan) flags.push("vg");
+                  if (it.is_gluten_free) flags.push("g");
+                  return (
+                    <View key={it.id} style={{ flexDirection: "row", paddingVertical: 1.5 }}>
+                      <Text style={[s.small, { flex: 1 }]}>
+                        {N(it.product_name)}
+                        {flags.length > 0 ? <Text style={{ color: GRAY }}>{`  · ${flags.join(" · ")}`}</Text> : null}
+                      </Text>
+                      <Text style={[s.small, s.bold]}>{Number(it.price).toLocaleString()} {currency}</Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </View>
+        );
+      })}
+      <SectionFooter name="Prices" festival={festival.name} />
+    </Page>
+  );
+}
+
 function BackCoverPage({ data }: { data: BinderData }) {
   const { festival, primaryContacts } = data;
   return (
