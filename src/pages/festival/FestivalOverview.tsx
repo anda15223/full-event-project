@@ -28,6 +28,7 @@ import {
 import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
 import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
+import { FestivalHeader } from "@/components/festival/FestivalHeader";
 
 // ---------- helpers ----------
 
@@ -548,7 +549,7 @@ export default function FestivalOverview() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, slug, start_date, end_date, city, address")
+        .select("id, name, slug, start_date, end_date, city, address, lat, lng")
         .eq("slug", slug).maybeSingle();
       if (error) throw error;
       return data;
@@ -635,26 +636,29 @@ export default function FestivalOverview() {
       <Link to="/festivals" className="text-xs text-muted-foreground hover:underline">← Festivals</Link>
 
       {/* BLOCK 1 — header */}
-      <section className="rounded-lg border bg-card p-5 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground">{f.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{fmtRange(f.start_date, f.end_date)}</p>
-          {(f.city || f.address) && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {[f.address, f.city].filter(Boolean).join(", ")}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/festivals/${slug}/binder`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-secondary"
-          >
-            📘 Binder
-          </Link>
-          <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
-        </div>
-      </section>
+      <FestivalHeader
+        festival={{
+          id: (f as any).id,
+          slug: f.slug,
+          name: f.name,
+          location: [(f as any).address, (f as any).city].filter(Boolean).join(", ") || null,
+          date_start: f.start_date,
+          date_end: f.end_date,
+          lat: (f as any).lat ?? null,
+          lng: (f as any).lng ?? null,
+        }}
+        rightSlot={
+          <div className="flex items-center justify-end gap-2">
+            <Link
+              to={`/festivals/${slug}/binder`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium hover:bg-secondary"
+            >
+              📘 Binder
+            </Link>
+            <ConceptExportMenu basePath={`/festivals/${slug}/export`} />
+          </div>
+        }
+      />
 
       {/* BLOCK 2 — attention */}
       {festivalId && <FestivalActionItemsStrip festivalId={festivalId} slug={slug} />}
