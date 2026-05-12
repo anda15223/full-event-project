@@ -36,6 +36,13 @@ export type BinderData = {
   rules: any[];
   topskilt: any[];
   soborgLoading: SoborgLoadingManifest | null;
+  // Block 4-5 additions
+  hours: any[];
+  safetyZones: any[];
+  accommodationRooms: any[];
+  conceptPrices: any[];          // festival_concept_prices rows
+  conceptPriceItems: any[];      // festival_concept_price_item rows
+  setupPhases: any[];            // festival_setup rows
   // Overview-derived
   criticalCount: number;
   overdueCount: number;
