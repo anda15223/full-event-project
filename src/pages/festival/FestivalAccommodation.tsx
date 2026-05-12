@@ -183,8 +183,11 @@ export default function FestivalAccommodation() {
               🌙 {summary.totalNights} night{summary.totalNights === 1 ? "" : "s"}
             </span>
           )}
-          <span className="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30">
-            🛏 {summary.beds_total} bed{summary.beds_total === 1 ? "" : "s"}
+          <span
+            className="px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30"
+            title="Peak concurrent beds across overlapping bookings (not a sum of sequential periods)"
+          >
+            🛏 peak {summary.peak_beds || summary.beds_total} bed{(summary.peak_beds || summary.beds_total) === 1 ? "" : "s"}
           </span>
           <span className={
             "px-2.5 py-1 rounded-full border " +
