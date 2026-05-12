@@ -1368,6 +1368,7 @@ export type Database = {
           allowed_beverages: string | null
           assigned_vehicle_id: string | null
           br18_facade_compliance_required: boolean | null
+          bracelet_count: number | null
           cancelled_reason: string | null
           caravan_allowed: boolean | null
           caravan_booking_deadline: string | null
@@ -1380,6 +1381,8 @@ export type Database = {
           contract_doc_url: string | null
           contract_expires_at: string | null
           contract_file_path: string | null
+          contract_pdf_path: string | null
+          contract_pdf_uploaded_at: string | null
           contract_signed_by: string | null
           contract_signed_date: string | null
           contract_status: string | null
@@ -1406,6 +1409,7 @@ export type Database = {
           is_active: boolean
           key_obligations: string | null
           lactose_free_required: boolean | null
+          last_parsed_at: string | null
           max_partout_black: number | null
           max_partout_normal: number | null
           max_wristbands_total: number | null
@@ -1413,6 +1417,7 @@ export type Database = {
           notes: string | null
           operating_entity_cvr: string | null
           operating_hours_summary: string | null
+          parse_summary: string | null
           payment_method_cashless: boolean | null
           pos_provider: string | null
           pos_terminal_extra_cost_dkk: number | null
@@ -1445,6 +1450,7 @@ export type Database = {
           allowed_beverages?: string | null
           assigned_vehicle_id?: string | null
           br18_facade_compliance_required?: boolean | null
+          bracelet_count?: number | null
           cancelled_reason?: string | null
           caravan_allowed?: boolean | null
           caravan_booking_deadline?: string | null
@@ -1457,6 +1463,8 @@ export type Database = {
           contract_doc_url?: string | null
           contract_expires_at?: string | null
           contract_file_path?: string | null
+          contract_pdf_path?: string | null
+          contract_pdf_uploaded_at?: string | null
           contract_signed_by?: string | null
           contract_signed_date?: string | null
           contract_status?: string | null
@@ -1483,6 +1491,7 @@ export type Database = {
           is_active?: boolean
           key_obligations?: string | null
           lactose_free_required?: boolean | null
+          last_parsed_at?: string | null
           max_partout_black?: number | null
           max_partout_normal?: number | null
           max_wristbands_total?: number | null
@@ -1490,6 +1499,7 @@ export type Database = {
           notes?: string | null
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
+          parse_summary?: string | null
           payment_method_cashless?: boolean | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
@@ -1522,6 +1532,7 @@ export type Database = {
           allowed_beverages?: string | null
           assigned_vehicle_id?: string | null
           br18_facade_compliance_required?: boolean | null
+          bracelet_count?: number | null
           cancelled_reason?: string | null
           caravan_allowed?: boolean | null
           caravan_booking_deadline?: string | null
@@ -1534,6 +1545,8 @@ export type Database = {
           contract_doc_url?: string | null
           contract_expires_at?: string | null
           contract_file_path?: string | null
+          contract_pdf_path?: string | null
+          contract_pdf_uploaded_at?: string | null
           contract_signed_by?: string | null
           contract_signed_date?: string | null
           contract_status?: string | null
@@ -1560,6 +1573,7 @@ export type Database = {
           is_active?: boolean
           key_obligations?: string | null
           lactose_free_required?: boolean | null
+          last_parsed_at?: string | null
           max_partout_black?: number | null
           max_partout_normal?: number | null
           max_wristbands_total?: number | null
@@ -1567,6 +1581,7 @@ export type Database = {
           notes?: string | null
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
+          parse_summary?: string | null
           payment_method_cashless?: boolean | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
