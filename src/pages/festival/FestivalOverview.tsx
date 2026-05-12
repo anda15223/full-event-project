@@ -32,6 +32,7 @@ import { FestivalHeader } from "@/components/festival/FestivalHeader";
 import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
+import { DisabledConceptsBanner } from "@/components/festival/DisabledConceptsBanner";
 
 // ---------- helpers ----------
 
