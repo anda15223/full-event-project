@@ -381,9 +381,9 @@ export function PowerConceptCard({
             <div className="rounded-lg border divide-y text-xs">
               <div className="grid grid-cols-12 gap-2 p-2 items-center bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                 <div className="col-span-4">Equipment</div>
-                <div className="col-span-1 text-right">Qty</div>
+                <div className="col-span-2 text-right">Qty</div>
                 <div className="col-span-2 text-right">kW</div>
-                <div className="col-span-3">Plug</div>
+                <div className="col-span-2">Plug</div>
                 <div className="col-span-1 text-right">Total</div>
                 <div className="col-span-1"></div>
               </div>
