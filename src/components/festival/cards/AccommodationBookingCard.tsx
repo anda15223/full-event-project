@@ -310,8 +310,19 @@ export function AccommodationBookingCard({
       try {
         const { data: signed } = await supabase.storage.from("festival-accommodation-docs").createSignedUrl(path, 600);
         if (signed?.signedUrl) {
+          // Fetch festival dates so the AI can resolve year-less dates correctly
+          const { data: fest } = await sb.from("festivals")
+            .select("start_date,end_date,name").eq("id", festivalId).maybeSingle();
           const { data: parsed } = await supabase.functions.invoke("parse-document", {
-            body: { fileUrl: signed.signedUrl, documentType: "accommodation" },
+            body: {
+              fileUrl: signed.signedUrl,
+              documentType: "accommodation",
+              context: fest ? {
+                festival_name: fest.name,
+                festival_start: fest.start_date,
+                festival_end: fest.end_date,
+              } : undefined,
+            },
           });
           if (parsed?.ok && parsed.parsed) {
             const p = parsed.parsed as any;
@@ -322,8 +333,13 @@ export function AccommodationBookingCard({
             const co = toIsoDate(p.checkout_date);
             if (ci && (!booking.check_in_date || booking.check_in_date !== ci)) upd.check_in_date = ci;
             if (co && (!booking.check_out_date || booking.check_out_date !== co)) upd.check_out_date = co;
-            if ((!booking.room_count || booking.room_count === 0) && p.room_count) upd.room_count = p.room_count;
-            if ((!booking.beds_per_room || booking.beds_per_room === 0) && p.beds_per_room) upd.beds_per_room = p.beds_per_room;
+            // Overwrite room_count when AI returns a higher/different valid value (default of 1 should not block real extractions)
+            if (p.room_count != null && p.room_count > 0 && p.room_count !== booking.room_count) {
+              upd.room_count = p.room_count;
+            }
+            if (p.beds_per_room != null && p.beds_per_room > 0 && p.beds_per_room !== booking.beds_per_room) {
+              upd.beds_per_room = p.beds_per_room;
+            }
             if (!booking.confirmation_number && p.booking_reference) upd.confirmation_number = p.booking_reference;
             if (booking.cost_dkk == null && p.cost_total != null) upd.cost_dkk = p.cost_total;
             if (!booking.currency && p.currency) upd.currency = p.currency;

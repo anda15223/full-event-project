@@ -168,7 +168,11 @@ Deno.serve(async (req) => {
         message: "Required: fileUrl (string), documentType (string).", rawTextExcerpt: null,
       }, 400);
     }
-    const { fileUrl, documentType } = body as { fileUrl: string; documentType: string };
+    const { fileUrl, documentType, context } = body as {
+      fileUrl: string;
+      documentType: string;
+      context?: { festival_name?: string; festival_start?: string; festival_end?: string };
+    };
     if (!ALLOWED_TYPES.has(documentType)) {
       return jsonResponse({
         ok: false, error: "INVALID_DOCUMENT_TYPE",
@@ -189,7 +193,18 @@ Deno.serve(async (req) => {
     const buf = await fileRes.arrayBuffer();
     const format = detectFormat(fileUrl, contentType);
 
-    const systemPrompt = getSystemPrompt(documentType);
+    let systemPrompt = getSystemPrompt(documentType);
+    if (context && (context.festival_start || context.festival_end || context.festival_name)) {
+      const ctxLines = [
+        "",
+        "**FESTIVAL CONTEXT (use this to resolve ambiguous dates):**",
+        context.festival_name ? `- Festival: ${context.festival_name}` : "",
+        context.festival_start ? `- Festival starts: ${context.festival_start}` : "",
+        context.festival_end ? `- Festival ends: ${context.festival_end}` : "",
+        "If the document shows dates without a year (e.g. 'Sat 18 May'), assume the year that places the dates ON or NEAR the festival window above. NEVER default to a past year.",
+      ].filter(Boolean).join("\n");
+      systemPrompt = systemPrompt + "\n" + ctxLines;
+    }
     let userContent: unknown[];
     let extractedText = "";
 
