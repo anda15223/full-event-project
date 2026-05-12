@@ -148,6 +148,7 @@ export default function FestivalContracts() {
 
   const filtered = useMemo(() => {
     return (contractsQ.data ?? []).filter(c => {
+      if (!showDisabled && (c as any).is_active === false) return false;
       if (filterStatus !== "all" && c.contract_status !== filterStatus) return false;
       if (filterEntity !== "all" && c.operating_entity !== filterEntity) return false;
       if (filterConcept !== "all" && c.concept_id !== filterConcept) return false;
@@ -160,7 +161,12 @@ export default function FestivalContracts() {
       const bn = conceptById.get(b.concept_id)?.name ?? "";
       return an.localeCompare(bn);
     });
-  }, [contractsQ.data, filterStatus, filterEntity, filterConcept, conceptById]);
+  }, [contractsQ.data, filterStatus, filterEntity, filterConcept, conceptById, showDisabled]);
+
+  const disabledCount = useMemo(
+    () => (contractsQ.data ?? []).filter(c => (c as any).is_active === false).length,
+    [contractsQ.data],
+  );
 
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = { signed: 0, pending_signature: 0, in_negotiation: 0, not_started: 0, stalled: 0, cancelled: 0 };
