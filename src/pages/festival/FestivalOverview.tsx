@@ -29,6 +29,7 @@ import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
 import { useFestivalTileCounts } from "@/hooks/useFestivalTileCounts";
 import { FestivalHeader } from "@/components/festival/FestivalHeader";
+import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 
 // ---------- helpers ----------
 
