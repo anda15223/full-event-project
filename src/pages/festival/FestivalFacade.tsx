@@ -38,7 +38,7 @@ export default function FestivalFacade() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, concepts(id, slug, name)")
+        .select("id, concept_id, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId)
         .eq("is_active", true);
       if (cErr) throw cErr;

@@ -142,7 +142,7 @@ export default function FestivalActions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
-        .select("id, concept_id, concept_alias, is_active, concept:concepts(slug, name)")
+        .select("id, concept_id, concept_alias, is_active, concept:concepts!concept_id(slug, name)")
         .eq("festival_id", festival!.id);
       return (data ?? []) as any[];
     },

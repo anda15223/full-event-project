@@ -164,7 +164,7 @@ export default function FestivalTimeline() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("id, is_active, concepts(slug, name)")
+        .select("id, is_active, concepts!concept_id(slug, name)")
         .eq("festival_id", festivalId!);
       if (error) throw error;
       const rows = (data ?? []) as any[];
