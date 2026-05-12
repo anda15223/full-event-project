@@ -361,10 +361,10 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             {" · "}{criticalCount} critical items
           </Text>
           <View style={[s.buckets, hasOverdue ? s.bucketsRedBorder : {}]}>
-            <Text style={[s.bucket, hasOverdue ? s.warn : {}]}>🚨 {attention.overdue} OVERDUE</Text>
-            <Text style={s.bucket}>🔴 {attention.today} TODAY</Text>
-            <Text style={s.bucket}>🟡 {attention.this_week} THIS WEEK</Text>
-            <Text style={s.bucket}>🟢 {attention.later} LATER</Text>
+            <Text style={[s.bucket, hasOverdue ? s.warn : {}]}>{attention.overdue} OVERDUE</Text>
+            <Text style={s.bucket}>{attention.today} TODAY</Text>
+            <Text style={s.bucket}>{attention.this_week} THIS WEEK</Text>
+            <Text style={s.bucket}>{attention.later} LATER</Text>
           </View>
         </View>
 
