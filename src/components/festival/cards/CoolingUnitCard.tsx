@@ -237,8 +237,8 @@ export function CoolingUnitCard({
             if (!unit.supplier && p.supplier) upd.supplier = p.supplier;
             if (!unit.cooling_model && p.unit_type) upd.cooling_model = p.unit_type;
             if (!unit.unit_size && p.unit_size) upd.unit_size = p.unit_size;
-            if (!unit.delivery_date && p.delivery_date) upd.delivery_date = p.delivery_date;
-            if (!unit.pickup_date && p.pickup_date) upd.pickup_date = p.pickup_date;
+            { const v = toIsoDate(p.delivery_date); if (v && !unit.delivery_date) upd.delivery_date = v; }
+            { const v = toIsoDate(p.pickup_date); if (v && !unit.pickup_date) upd.pickup_date = v; }
             if (unit.power_required_kw == null && p.power_required_kw != null) upd.power_required_kw = p.power_required_kw;
             if (!unit.order_reference && p.order_reference) upd.order_reference = p.order_reference;
             if (p.raw_notes) upd.parse_summary = String(p.raw_notes).slice(0, 500);
