@@ -35,6 +35,7 @@ import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 import { DisabledConceptsBanner } from "@/components/festival/DisabledConceptsBanner";
 import { FestivalIdentityStrip } from "@/components/festival/FestivalIdentityStrip";
 import { FestivalInfoCard } from "@/components/festival/FestivalInfoCard";
+import { FestivalTile } from "@/components/festival/FestivalTile";
 
 
 // ---------- helpers ----------
