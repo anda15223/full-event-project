@@ -303,6 +303,7 @@ Deno.serve(async (req) => {
       latencyMs: Date.now() - start,
       tokensInput: usage.input_tokens,
       tokensOutput: usage.output_tokens,
+      visionFallbackUsed,
     });
   } catch (e) {
     console.error("parse-document error:", e);
