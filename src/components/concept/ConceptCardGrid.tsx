@@ -226,80 +226,164 @@ export function ConceptCardGrid({
           stall_count: row.stall_count,
         };
         return (
-          <div key={row.id} className="rounded-lg border bg-card p-4 print:break-inside-avoid">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  {!hideEmoji && <span className="text-2xl" aria-hidden>{emoji}</span>}
-                  <h3 className="text-lg font-semibold truncate">{title}</h3>
-                </div>
-                {(subtitle || verifyQuestion) && (
-                  <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                    {subtitle && <span>{subtitle}</span>}
-                    {hasFinanceAccess && verifyQuestion && (
-                      <VerifyEntityBadge
-                        question={verifyQuestion}
-                        contractId={row.id}
-                        currentEntity={financeEntity}
-                        currentCvr={row.operating_entity_cvr}
-                      />
-                    )}
-                  </div>
-                )}
-                {row.concept_variation_note && (
-                  <div className="text-xs italic text-muted-foreground mt-1">
-                    {row.concept_variation_note}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-start gap-3 shrink-0">
-                <div className="min-w-[220px] shrink-0">
-                  {enableManagerEdit ? (
-                    <div className="flex items-center gap-2">
-                      <span aria-hidden>👤</span>
-                      <Select
-                        value={manager?.manager_staff_id ?? "__none"}
-                        onValueChange={(v) =>
-                          upsertManager.mutate({ conceptId: c.id, staffId: v === "__none" ? null : v })
-                        }
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue placeholder="Unassigned" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none">Unassigned</SelectItem>
-                          {(staffQ.data ?? []).map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.name ?? "(no name)"}{s.role ? ` — ${s.role}` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">
-                      👤 {manager?.manager_name ?? "Unassigned"}
-                    </div>
-                  )}
-                </div>
-                {festivalSlug && (
-                  <ConceptToggle festivalSlug={festivalSlug} conceptSlug={c.slug} />
-                )}
-              </div>
-            </div>
-            {showVehicleSelector && (
-              <div className="mb-3">
-                <VehicleSelector
-                  festivalId={festivalId}
-                  contractId={row.id}
-                  currentVehicleId={row.assigned_vehicle_id}
-                />
-              </div>
-            )}
-            <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
-          </div>
+          <ConceptCardItem
+            key={row.id}
+            row={row}
+            concept={c}
+            title={title}
+            subtitle={subtitle}
+            emoji={emoji}
+            hideEmoji={hideEmoji}
+            manager={manager}
+            verifyQuestion={verifyQuestion}
+            financeEntity={financeEntity}
+            hasFinanceAccess={hasFinanceAccess}
+            enableManagerEdit={enableManagerEdit}
+            staff={staffQ.data ?? []}
+            onManagerChange={(staffId) => upsertManager.mutate({ conceptId: c.id, staffId })}
+            festivalSlug={festivalSlug}
+            festivalId={festivalId}
+            showVehicleSelector={showVehicleSelector}
+            renderConceptBody={renderConceptBody}
+            conceptData={conceptData}
+            contract={contract}
+          />
         );
       })}
+    </div>
+  );
+}
+
+interface ConceptCardItemProps {
+  row: ContractRow;
+  concept: Concept;
+  title: string;
+  subtitle: string;
+  emoji: string;
+  hideEmoji: boolean;
+  manager: ConceptManager | null;
+  verifyQuestion: any;
+  financeEntity: string | null;
+  hasFinanceAccess: boolean;
+  enableManagerEdit: boolean;
+  staff: { id: string; name: string | null; role: string }[];
+  onManagerChange: (staffId: string | null) => void;
+  festivalSlug?: string;
+  festivalId: string;
+  showVehicleSelector: boolean;
+  renderConceptBody: Props["renderConceptBody"];
+  conceptData: Record<string, any>;
+  contract: ConceptContract;
+}
+
+function ConceptCardItem({
+  row,
+  concept: c,
+  title,
+  subtitle,
+  emoji,
+  hideEmoji,
+  manager,
+  verifyQuestion,
+  financeEntity,
+  hasFinanceAccess,
+  enableManagerEdit,
+  staff,
+  onManagerChange,
+  festivalSlug,
+  festivalId,
+  showVehicleSelector,
+  renderConceptBody,
+  conceptData,
+  contract,
+}: ConceptCardItemProps) {
+  const { isActive } = useConceptIsActive(festivalSlug ? c.slug : undefined, festivalSlug ?? "");
+  const disabled = festivalSlug ? !isActive : false;
+
+  return (
+    <div
+      className={`rounded-lg border bg-card p-4 print:break-inside-avoid transition-all ${
+        disabled ? "opacity-60 saturate-0" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            {!hideEmoji && <span className="text-2xl" aria-hidden>{emoji}</span>}
+            <h3 className="text-lg font-semibold truncate">{title}</h3>
+            {disabled && (
+              <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 text-xs font-semibold rounded-full px-3 py-1 uppercase tracking-wide">
+                <EyeOff size={12} />
+                Hidden from reports
+              </span>
+            )}
+          </div>
+          {(subtitle || verifyQuestion) && (
+            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+              {subtitle && <span>{subtitle}</span>}
+              {hasFinanceAccess && verifyQuestion && (
+                <VerifyEntityBadge
+                  question={verifyQuestion}
+                  contractId={row.id}
+                  currentEntity={financeEntity}
+                  currentCvr={row.operating_entity_cvr}
+                />
+              )}
+            </div>
+          )}
+          {row.concept_variation_note && (
+            <div className="text-xs italic text-muted-foreground mt-1">
+              {row.concept_variation_note}
+            </div>
+          )}
+        </div>
+        <div className="flex items-start gap-3 shrink-0">
+          <div className="min-w-[220px] shrink-0">
+            {enableManagerEdit ? (
+              <div className="flex items-center gap-2">
+                <span aria-hidden>👤</span>
+                <Select
+                  value={manager?.manager_staff_id ?? "__none"}
+                  onValueChange={(v) => onManagerChange(v === "__none" ? null : v)}
+                >
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Unassigned</SelectItem>
+                    {staff.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name ?? "(no name)"}{s.role ? ` — ${s.role}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                👤 {manager?.manager_name ?? "Unassigned"}
+              </div>
+            )}
+          </div>
+          {festivalSlug && (
+            <div className="pointer-events-auto">
+              <ConceptToggle festivalSlug={festivalSlug} conceptSlug={c.slug} />
+            </div>
+          )}
+        </div>
+      </div>
+      <div className={disabled ? "pointer-events-none" : ""}>
+        {showVehicleSelector && (
+          <div className="mb-3">
+            <VehicleSelector
+              festivalId={festivalId}
+              contractId={row.id}
+              currentVehicleId={row.assigned_vehicle_id}
+            />
+          </div>
+        )}
+        <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
+      </div>
     </div>
   );
 }
