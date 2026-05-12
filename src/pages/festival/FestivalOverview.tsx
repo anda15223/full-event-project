@@ -711,8 +711,7 @@ export default function FestivalOverview() {
         <ServiceHoursBlock festivalId={festivalId} concepts={conceptsQ.data} />
       )}
 
-      {/* BLOCK 5 — contacts */}
-      {festivalId && <ContactsBlock festivalId={festivalId} slug={slug} />}
+      {/* BLOCK 5 — contacts (canonical surface) */}
 
       {/* BLOCK 5b — contracts mini-grid */}
       {festivalId && <ContractsMiniBlock festivalId={festivalId} slug={slug} />}
