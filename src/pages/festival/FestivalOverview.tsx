@@ -728,6 +728,7 @@ export default function FestivalOverview() {
           <h2 className="font-heading text-lg font-semibold mb-3">Concept lineup</h2>
           <ConceptCardGrid
             festivalId={festivalId}
+            festivalSlug={slug}
             conceptData={statsQ.data?.byConcept ?? {}}
             layout="grid"
             hideEmoji
