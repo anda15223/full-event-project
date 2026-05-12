@@ -100,6 +100,13 @@ export function useFestivalTileCounts(festivalId: string | null) {
         }
       }
 
+      // Prices: count concepts with a price list + total items across them
+      const priceRows = ((prices as any).data ?? []) as any[];
+      const pricesConceptCount = priceRows.length || null;
+      const pricesItemCount = priceRows.length
+        ? priceRows.reduce((s, r) => s + ((r.festival_concept_price_item ?? []).length), 0) || null
+        : null;
+
       return {
         topskiltCount: (topskilt as any).count ?? null,
         setupCount: (setup as any).count ?? null,
@@ -113,6 +120,8 @@ export function useFestivalTileCounts(festivalId: string | null) {
         safetyTotalCount: ((safety.data ?? []) as any[]).length || null,
         accommodationCount,
         accommodationNights: anyNights ? nights : null,
+        pricesItemCount,
+        pricesConceptCount,
       };
     },
   });
