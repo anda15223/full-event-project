@@ -354,13 +354,16 @@ export default function FestivalContracts() {
         <div className="grid md:grid-cols-2 gap-4">
           {filtered.map(c => {
             const concept = conceptById.get(c.concept_id);
+            const isDisabled = (c as any).is_active === false;
             return (
-              <ContractCard key={c.id} contract={c} concept={concept ?? null}
-                festivalSlug={slug}
-                onEdit={() => setEditing(c)}
-                onStatus={() => setStatusFor(c)}
-                onDelete={() => setDeleteFor(c)}
-              />
+              <div key={c.id} className={isDisabled ? "opacity-60 saturate-0 ring-2 ring-red-300/40 rounded-xl" : ""}>
+                <ContractCard contract={c} concept={concept ?? null}
+                  festivalSlug={slug}
+                  onEdit={() => setEditing(c)}
+                  onStatus={() => setStatusFor(c)}
+                  onDelete={() => setDeleteFor(c)}
+                />
+              </div>
             );
           })}
         </div>
