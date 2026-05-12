@@ -1929,13 +1929,20 @@ export type Database = {
           delivery_date: string | null
           festival_id: string
           id: string
+          last_parsed_at: string | null
           notes: string | null
+          order_pdf_path: string | null
+          order_pdf_uploaded_at: string | null
+          order_reference: string | null
           pallet_count_frys: number | null
           pallet_count_kol: number | null
+          parse_summary: string | null
           pickup_date: string | null
+          power_required_kw: number | null
           status: string
           supplier: string | null
           unit_label: string
+          unit_size: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1947,13 +1954,20 @@ export type Database = {
           delivery_date?: string | null
           festival_id: string
           id?: string
+          last_parsed_at?: string | null
           notes?: string | null
+          order_pdf_path?: string | null
+          order_pdf_uploaded_at?: string | null
+          order_reference?: string | null
           pallet_count_frys?: number | null
           pallet_count_kol?: number | null
+          parse_summary?: string | null
           pickup_date?: string | null
+          power_required_kw?: number | null
           status?: string
           supplier?: string | null
           unit_label: string
+          unit_size?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1965,13 +1979,20 @@ export type Database = {
           delivery_date?: string | null
           festival_id?: string
           id?: string
+          last_parsed_at?: string | null
           notes?: string | null
+          order_pdf_path?: string | null
+          order_pdf_uploaded_at?: string | null
+          order_reference?: string | null
           pallet_count_frys?: number | null
           pallet_count_kol?: number | null
+          parse_summary?: string | null
           pickup_date?: string | null
+          power_required_kw?: number | null
           status?: string
           supplier?: string | null
           unit_label?: string
+          unit_size?: string | null
           updated_at?: string | null
         }
         Relationships: [
