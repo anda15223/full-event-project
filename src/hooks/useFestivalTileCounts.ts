@@ -45,6 +45,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
         power,
         safety,
         accommodation,
+        prices,
       ] = await Promise.all([
         inContracts
           ? sb.from("festival_topskilt").select("id", { count: "exact", head: true }).in("festival_contract_id", contractIds)
@@ -59,6 +60,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
           : Promise.resolve({ data: [] }),
         sb.from("festival_safety").select("id").eq("festival_id", fid),
         sb.from("festival_accommodation").select("id, check_in_date, check_out_date, capacity, assigned_staff_count").eq("festival_id", fid),
+        sb.from("festival_concept_prices").select("id, festival_concept_price_item(id)").eq("festival_id", fid),
       ]);
 
       // Equipment: sum qty
