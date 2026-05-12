@@ -322,7 +322,7 @@ export function PowerConceptCard({
 
       {/* Connections */}
       <div>
-        <h4 className="text-sm font-semibold mb-2">Connections</h4>
+        <h4 className="text-sm font-semibold mb-2">Connections ordered</h4>
         <div className="grid grid-cols-5 gap-2">
           {CONNECTION_TYPES.map((c) => {
             const v = (power as any)[c.key] as number | null;
@@ -336,6 +336,34 @@ export function PowerConceptCard({
             );
           })}
         </div>
+        {(() => {
+          const orderedKw = CONNECTION_TYPES.reduce(
+            (sum, c) => sum + (Number((power as any)[c.key] ?? 0) * c.kw), 0,
+          );
+          if (orderedKw === 0 && demand_kw === 0) return null;
+          const diff = orderedKw - demand_kw;
+          const ok = diff >= 0;
+          // Suggest extra 32A 3ph circuits if short
+          const extra32 = ok ? 0 : Math.ceil(Math.abs(diff) / 22.0);
+          return (
+            <div className={cn(
+              "mt-2 rounded-lg border p-2 text-xs flex flex-wrap items-center gap-x-3 gap-y-1",
+              ok
+                ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-200"
+                : "bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900 text-rose-900 dark:text-rose-200",
+            )}>
+              <span className="tabular-nums">Ordered ≈ <strong>{fmt(orderedKw)} kW</strong></span>
+              <span className="tabular-nums">Equipment needs <strong>{fmt(demand_kw)} kW</strong></span>
+              {ok ? (
+                <span className="tabular-nums">→ surplus {fmt(diff)} kW ✓</span>
+              ) : (
+                <span className="tabular-nums">
+                  → short <strong>{fmt(-diff)} kW</strong> · order ≈ {extra32}× 32A 3ph more
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Equipment */}
