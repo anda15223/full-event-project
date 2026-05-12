@@ -159,7 +159,7 @@ export function ContractConceptSubCard({
       }
       if (parsed.counterparty) update.counterparty_name = String(parsed.counterparty);
 
-      await supabase.from("festival_contracts").update(update).eq("id", contract.id);
+      await supabase.from("festival_contracts").update(update as any).eq("id", contract.id);
 
       // finance write (RBAC-gated)
       if (hasFinance && (parsed.cost_to_pay != null || parsed.payment_terms || parsed.operating_entity || parsed.counterparty)) {
@@ -174,9 +174,9 @@ export function ContractConceptSubCard({
         const { data: existing } = await supabase
           .from("festival_contracts_finance").select("id").eq("contract_id", contract.id).maybeSingle();
         if (existing?.id) {
-          await supabase.from("festival_contracts_finance").update(finUpdate).eq("id", existing.id);
+          await supabase.from("festival_contracts_finance").update(finUpdate as any).eq("id", existing.id);
         } else {
-          await supabase.from("festival_contracts_finance").insert(finUpdate);
+          await supabase.from("festival_contracts_finance").insert(finUpdate as any);
         }
       }
 
@@ -199,7 +199,7 @@ export function ContractConceptSubCard({
         bracelet_count: edit.bracelets ? Number(edit.bracelets) : null,
         key_obligations: edit.obligations || null,
       };
-      const { error } = await supabase.from("festival_contracts").update(upd).eq("id", contract.id);
+      const { error } = await supabase.from("festival_contracts").update(upd as any).eq("id", contract.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Saved"); setEditing(false); refresh(); },
