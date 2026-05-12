@@ -21,69 +21,122 @@ try {
 
 const N = normalizeForPdf;
 
-const RED = "#c0392b";
-const GREEN = "#27ae60";
-const AMBER = "#d68910";
-const GRAY = "#666";
-const LIGHT = "#ddd";
-const DARK = "#111";
+const RED = "#e11d48";       // rose-600
+const GREEN = "#059669";     // emerald-600
+const AMBER = "#d97706";     // amber-600
+const GRAY = "#6b7280";      // zinc-500
+const MUTED = "#9ca3af";     // zinc-400
+const LIGHT = "#e5e7eb";     // zinc-200
+const DARK = "#111827";      // zinc-900
+
+// Section accent palette (per Sprint 7 spec)
+const ACCENT = {
+  blue:    { fg: "#2563eb", bg: "rgba(37, 99, 235, 0.12)" },
+  rose:    { fg: "#e11d48", bg: "rgba(225, 29, 72, 0.12)" },
+  slate:   { fg: "#475569", bg: "rgba(71, 85, 105, 0.12)" },
+  emerald: { fg: "#059669", bg: "rgba(5, 150, 105, 0.12)" },
+  violet:  { fg: "#7c3aed", bg: "rgba(124, 58, 237, 0.12)" },
+  amber:   { fg: "#d97706", bg: "rgba(217, 119, 6, 0.12)" },
+} as const;
+
+type AccentKey = keyof typeof ACCENT;
+
+// Map title → { number, accent, subtitle }
+const SECTION_META: Record<string, { num: number; accent: AccentKey; subtitle: string }> = {
+  "Festival Overview":        { num: 1,  accent: "blue",    subtitle: "Snapshot of countdown, concepts, and primary contacts" },
+  "Action Items":             { num: 2,  accent: "rose",    subtitle: "Open and in-progress tasks, sorted by priority then due date" },
+  "Key Contacts":             { num: 3,  accent: "slate",   subtitle: "Festival, concept team, and supplier contacts" },
+  "Setup Timeline":           { num: 4,  accent: "emerald", subtitle: "Setup-through-teardown event schedule" },
+  "Contracts":                { num: 5,  accent: "violet",  subtitle: "Per-concept contracts, signed status, and obligations" },
+  "Transport":                { num: 6,  accent: "blue",    subtitle: "Vehicles, accreditation, and movement legs" },
+  "Topskilt":                 { num: 7,  accent: "violet",  subtitle: "Top-sign design and print status per concept" },
+  "Facade":                   { num: 8,  accent: "rose",    subtitle: "Facade design, material, and approval status per concept" },
+  "Power":                    { num: 9,  accent: "amber",   subtitle: "Per-concept power demand, equipment, and connection allocation" },
+  "Cooling":                  { num: 10, accent: "blue",    subtitle: "Refrigerated units, delivery windows, and concept assignments" },
+  "Safety":                   { num: 11, accent: "slate",   subtitle: "Gas, food, electrical, fire, and evacuation status" },
+  "Accommodation":            { num: 12, accent: "blue",    subtitle: "Crew bookings, dates, and night counts" },
+  "Søborg Loading Manifest":  { num: 13, accent: "violet",  subtitle: "Items loaded from the Søborg warehouse, grouped by category" },
+  "Soborg Loading Manifest":  { num: 13, accent: "violet",  subtitle: "Items loaded from the Søborg warehouse, grouped by category" },
+  "Open Questions":           { num: 14, accent: "slate",   subtitle: "Unresolved questions, sorted by urgency" },
+  "Active Rules":             { num: 15, accent: "amber",   subtitle: "Critical and important business rules in effect" },
+  "Contents":                 { num: 0,  accent: "slate",   subtitle: "" },
+};
 
 const s = StyleSheet.create({
-  page: { padding: 28, paddingBottom: 44, fontFamily: "Inter", fontSize: 9, color: DARK },
+  page: { paddingTop: 50, paddingBottom: 56, paddingHorizontal: 36, fontFamily: "Inter", fontSize: 11, lineHeight: 1.5, color: DARK },
   // Cover
   coverPage: { padding: 60, fontFamily: "Inter", color: DARK, justifyContent: "center", alignItems: "center" },
-  coverEmoji: { fontSize: 64, marginBottom: 24 },
-  coverTitle: { fontSize: 30, fontWeight: 700, textAlign: "center" },
-  coverSub: { fontSize: 18, marginTop: 8, textAlign: "center" },
+  coverTitle: { fontSize: 38, fontWeight: 700, textAlign: "center", letterSpacing: -0.5 },
+  coverSub: { fontSize: 18, marginTop: 20, textAlign: "center", color: GRAY, fontWeight: 400 },
   coverDates: { fontSize: 14, marginTop: 16, color: GRAY, textAlign: "center" },
-  coverMeta: { fontSize: 10, marginTop: 32, color: GRAY, textAlign: "center" },
-  coverFooter: { position: "absolute", bottom: 40, left: 60, right: 60, textAlign: "center", color: GRAY, fontSize: 10 },
-  // Section
-  sectionHeader: { borderBottom: `1pt solid ${DARK}`, paddingBottom: 6, marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: 700 },
-  sectionMeta: { fontSize: 9, color: GRAY, marginTop: 2 },
-  // Footer
+  coverFooter: { position: "absolute", bottom: 50, left: 60, right: 60, textAlign: "center", color: MUTED, fontSize: 9 },
+  // Section header (numbered circle + title + subtitle + divider)
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
+  sectionCircle: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginRight: 12 },
+  sectionCircleNum: { fontSize: 13, fontWeight: 700 },
+  sectionTitle: { fontSize: 22, fontWeight: 700, letterSpacing: -0.3 },
+  sectionSubtitle: { fontSize: 10, color: GRAY, marginBottom: 10, marginLeft: 40 },
+  sectionDivider: { borderBottom: `0.5pt solid ${LIGHT}`, marginBottom: 16 },
+  // Footer (3-col, "/" separators)
   footer: {
-    position: "absolute", bottom: 18, left: 28, right: 28,
-    flexDirection: "row", justifyContent: "space-between",
-    fontSize: 8, color: GRAY, borderTop: `0.5pt solid ${LIGHT}`, paddingTop: 4,
+    position: "absolute", bottom: 24, left: 36, right: 36,
+    flexDirection: "row", borderTop: `0.5pt solid ${LIGHT}`, paddingTop: 6,
+    fontSize: 8, color: MUTED,
   },
+  footerLeft: { flex: 1, textAlign: "left" },
+  footerCenter: { flex: 1, textAlign: "center" },
+  footerRight: { flex: 1, textAlign: "right" },
   // Table
-  th: { flexDirection: "row", borderBottom: `0.5pt solid ${DARK}`, paddingBottom: 3, marginBottom: 3, fontWeight: 700, fontSize: 8.5 },
-  tr: { flexDirection: "row", borderBottom: `0.25pt solid ${LIGHT}`, paddingVertical: 3, fontSize: 8.5 },
+  th: { flexDirection: "row", borderBottom: `0.5pt solid ${DARK}`, paddingBottom: 4, marginBottom: 4, fontWeight: 700, fontSize: 9 },
+  tr: { flexDirection: "row", borderBottom: `0.25pt solid ${LIGHT}`, paddingVertical: 4, fontSize: 9 },
   // Misc
-  small: { fontSize: 8.5 },
+  small: { fontSize: 9.5, lineHeight: 1.45 },
   warn: { color: RED },
   ok: { color: GREEN },
   amber: { color: AMBER },
   bold: { fontWeight: 700 },
-  para: { marginBottom: 4 },
-  pill: { borderRadius: 2, paddingHorizontal: 4, paddingVertical: 1, fontSize: 7.5 },
+  para: { marginBottom: 5 },
   // ToC
-  tocRow: { flexDirection: "row", paddingVertical: 4, borderBottom: `0.25pt dotted ${LIGHT}` },
-  tocLabel: { flex: 1 },
-  tocPage: { width: 40, textAlign: "right", color: GRAY },
+  tocRow: { flexDirection: "row", paddingVertical: 5, alignItems: "baseline" },
+  tocNum: { width: 22, fontSize: 11, fontWeight: 600, color: GRAY },
+  tocLabel: { fontSize: 12 },
+  tocLeader: { flex: 1, marginHorizontal: 6, borderBottom: `0.5pt dotted ${LIGHT}`, alignSelf: "center", height: 1 },
+  tocPage: { fontSize: 11, color: GRAY, fontWeight: 600, minWidth: 24, textAlign: "right" },
 });
 
 const fmt = (iso?: string | null) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";
 const fmtFull = (iso?: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+const fmtCoverDate = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
 const PRIORITY_RANK: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
 function SectionFooter({ name, festival }: { name: string; festival: string }) {
   return (
     <View style={s.footer} fixed>
-      <Text>{N(festival)} / {N(name)}</Text>
-      <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
+      <Text style={s.footerLeft}>{N(festival)}</Text>
+      <Text style={s.footerCenter}>{N(name)}</Text>
+      <Text style={s.footerRight} render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`} />
     </View>
   );
 }
 
 function SectionHeader({ title, meta }: { title: string; meta?: string }) {
+  const cleanTitle = title.replace(/^Soborg/, "Søborg");
+  const m = SECTION_META[cleanTitle] ?? SECTION_META[title] ?? { num: 0, accent: "slate" as AccentKey, subtitle: "" };
+  const accent = ACCENT[m.accent];
+  const subtitle = meta || m.subtitle;
   return (
-    <View style={s.sectionHeader}>
-      <Text style={s.sectionTitle}>{title}</Text>
-      {meta && <Text style={s.sectionMeta}>{meta}</Text>}
+    <View>
+      <View style={s.sectionHeaderRow}>
+        {m.num > 0 && (
+          <View style={[s.sectionCircle, { backgroundColor: accent.bg }]}>
+            <Text style={[s.sectionCircleNum, { color: accent.fg }]}>{m.num}</Text>
+          </View>
+        )}
+        <Text style={s.sectionTitle}>{cleanTitle}</Text>
+      </View>
+      {subtitle ? <Text style={s.sectionSubtitle}>{subtitle}</Text> : null}
+      <View style={s.sectionDivider} />
     </View>
   );
 }
@@ -93,19 +146,19 @@ function SectionHeader({ title, meta }: { title: string; meta?: string }) {
 function CoverPage({ data }: { data: BinderData }) {
   const { festival, generatedAt } = data;
   const STRIP_LEAD = (s: string) => s.replace(/^[^A-Za-z0-9ÆØÅæøå]+/, "");
-  const titleString = STRIP_LEAD(N(festival.name).toUpperCase());
-  const cityString = festival.city ? STRIP_LEAD(N(festival.city)) : "";
+  const titleString = STRIP_LEAD(N(festival.name));
   const dateString = STRIP_LEAD(N(formatDateRange(festival.start_date, festival.end_date)));
-  console.log("Binder cover title codepoints", [...titleString].map((c) => c.charCodeAt(0).toString(16)));
+  const f: any = festival;
+  const addressParts = [f.address, f.city, f.country].filter(Boolean).map((p: any) => N(String(p)));
+  const addressLine = addressParts.length ? addressParts.join(", ") : "";
+  const genStr = `Generated by Full Event Project · ${fmtCoverDate(new Date(generatedAt))}`;
   return (
     <Page size="A4" style={s.coverPage}>
       <Text style={s.coverTitle}>{titleString}</Text>
-      <Text style={s.coverSub}>{N("Operations Binder")}</Text>
-      <Text style={s.coverDates}>{dateString}</Text>
-      {cityString ? <Text style={s.coverDates}>{cityString}</Text> : null}
-      <Text style={s.coverMeta}>{N(`Generated ${new Date(generatedAt).toLocaleString("en-GB")}`)}</Text>
-      <Text style={s.coverMeta}>v1.0</Text>
-      <Text style={s.coverFooter}>{N("Generated by Full Event Project")}</Text>
+      <Text style={s.coverSub}>Operations Binder</Text>
+      <Text style={[s.coverDates, { marginTop: 32, fontSize: 18, color: DARK, fontWeight: 500 }]}>{dateString}</Text>
+      {addressLine ? <Text style={[s.coverDates, { fontSize: 14, marginTop: 12 }]}>{addressLine}</Text> : null}
+      <Text style={s.coverFooter}>{N(genStr)}</Text>
     </Page>
   );
 }
@@ -113,13 +166,19 @@ function CoverPage({ data }: { data: BinderData }) {
 function ToCPage({ sections, festival }: { sections: { key: SectionKey; label: string; page: number }[]; festival: string }) {
   return (
     <Page size="A4" style={s.page} bookmark="Contents">
-      <SectionHeader title="Contents" />
-      {sections.map((sec) => (
-        <View key={sec.key} style={s.tocRow}>
-          <Text style={s.tocLabel}>{sec.label}</Text>
-          <Text style={s.tocPage}>p. {sec.page}</Text>
-        </View>
-      ))}
+      <SectionHeader title="Contents" meta="Section index for the operations binder" />
+      {sections.map((sec) => {
+        const cleanLabel = sec.label.replace(/^Soborg/, "Søborg");
+        const meta = SECTION_META[cleanLabel] ?? { num: 0 };
+        return (
+          <View key={sec.key} style={s.tocRow}>
+            <Text style={s.tocNum}>{meta.num > 0 ? `${meta.num}.` : ""}</Text>
+            <Text style={s.tocLabel}>{cleanLabel}</Text>
+            <View style={s.tocLeader} />
+            <Text style={s.tocPage}>{sec.page}</Text>
+          </View>
+        );
+      })}
       <SectionFooter name="Contents" festival={festival} />
     </Page>
   );
@@ -709,20 +768,19 @@ function BackCoverPage({ data }: { data: BinderData }) {
   const { festival, primaryContacts } = data;
   return (
     <Page size="A4" style={s.coverPage}>
-      <Text style={[s.coverTitle, { fontSize: 22 }]}>EMERGENCY CONTACTS</Text>
-      <View style={{ marginTop: 24, alignSelf: "stretch" }}>
+      <Text style={[s.coverTitle, { fontSize: 26 }]}>Emergency Contacts</Text>
+      <Text style={[s.coverSub, { marginTop: 8, fontSize: 12 }]}>Hand-carry to festival site</Text>
+      <View style={{ marginTop: 36, alignSelf: "stretch" }}>
         {primaryContacts.length === 0 && <Text style={[s.small, { color: GRAY, textAlign: "center" }]}>No primary contacts marked.</Text>}
         {primaryContacts.map((c: any) => (
-          <View key={c.id} style={{ marginBottom: 12, padding: 8, border: `1pt solid ${DARK}`, borderRadius: 4 }}>
-            <Text style={[s.bold, { fontSize: 12 }]}>{c.full_name} — {c.role}</Text>
-            {c.organization && <Text style={s.small}>{c.organization}</Text>}
-            <Text style={s.small}>Phone: {N(c.phone) || "\u2014"}     Email: {N(c.email) || "\u2014"}</Text>
+          <View key={c.id} style={{ marginBottom: 14, padding: 12, border: `0.5pt solid ${LIGHT}`, borderRadius: 6 }}>
+            <Text style={[s.bold, { fontSize: 12 }]}>{N(c.full_name)} — {N(c.role)}</Text>
+            {c.organization && <Text style={[s.small, { color: GRAY }]}>{N(c.organization)}</Text>}
+            <Text style={[s.small, { marginTop: 4 }]}>Phone: {N(c.phone) || "\u2014"}     Email: {N(c.email) || "\u2014"}</Text>
           </View>
         ))}
       </View>
-      <Text style={[s.coverMeta, { marginTop: 24 }]}>Generated for hand-carry to festival site</Text>
-      <Text style={s.coverMeta}>{N(festival.name)} / v1.0</Text>
-      <Text style={s.coverFooter}>{N("Generated by Full Event Project")}</Text>
+      <Text style={s.coverFooter}>{N(`${festival.name} / v1.0`)}</Text>
     </Page>
   );
 }
@@ -738,9 +796,42 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
   const { selected, includeCovers } = options;
   const sections = BINDER_SECTIONS.filter((s) => selected[s.key]);
 
-  // Estimate ToC pages: cover (1) + ToC (1) = page 3 is first section
-  const startingPage = (includeCovers ? 1 : 0) + 1; // ToC always present
-  const tocEntries = sections.map((sec, i) => ({ ...sec, page: startingPage + 1 + i })); // rough estimate, 1 page each min
+  // Deterministic per-section page-count estimate based on row counts.
+  // Tuned for current Jelling state; safe overestimate is fine — undercount
+  // would make ToC numbers point too early. Each section is at minimum 1 page.
+  const ceilDiv = (n: number, d: number) => Math.max(1, Math.ceil(n / d));
+  const sectionPages = (key: SectionKey): number => {
+    switch (key) {
+      case "overview": return 1;
+      case "actions": return ceilDiv(data.actionItems.filter((a: any) => a.status === "open" || a.status === "in_progress").length, 32);
+      case "contacts": return ceilDiv(data.contacts.length, 28);
+      case "timeline": return ceilDiv(data.timelineEvents.length, 32);
+      case "contracts": return ceilDiv(data.contracts.length, 6);
+      case "transport": return ceilDiv(data.transport.length, 18) + ceilDiv(data.transportLegs.length, 24);
+      case "topskilt": return ceilDiv(data.topskilt.length, 12);
+      case "facade": return ceilDiv(data.facade.length, 10);
+      case "power": return ceilDiv(data.power.length, 4);
+      case "cooling": return ceilDiv(data.cooling.length, 6);
+      case "safety": return 1;
+      case "accommodation": return ceilDiv(data.accommodation.length, 8);
+      case "soborg_loading": {
+        const sl: any = data.soborgLoading;
+        const items = (sl?.concept_groups ?? sl?.conceptGroups ?? []).reduce((sum: number, cg: any) => sum + Object.values(cg.items_by_category ?? {}).flat().length, 0);
+        return ceilDiv(items, 32);
+      }
+      case "questions": return ceilDiv((data as any).questions?.length ?? 0, 24);
+      case "rules": return ceilDiv((data as any).rules?.length ?? 0, 20);
+      default: return 1;
+    }
+  };
+
+  // First section starts after cover (1 if covers) + ToC (1)
+  let cursor = (includeCovers ? 1 : 0) + 1 + 1;
+  const tocEntries = sections.map((sec) => {
+    const entry = { ...sec, page: cursor };
+    cursor += sectionPages(sec.key);
+    return entry;
+  });
 
   return (
     <Document title={`${data.festival.name} — Operations Binder`} author="The Fish Project">
