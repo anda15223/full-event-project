@@ -87,7 +87,9 @@ Schema:
   "cost_total": number | null,
   "currency": string,
   "raw_notes": string
-}`;
+}
+
+ALL dates MUST be ISO format YYYY-MM-DD. Never use DD/MM/YYYY, DD.MM.YYYY, or month names. If you can't determine the year confidently, return null.`;
 
 export const SETUP_SYSTEM_PROMPT = `You parse festival setup logistics documents. Return ONLY valid JSON. No markdown.
 

@@ -9,6 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { toIsoDate } from "@/lib/parseDate";
 import {
   Upload, FileText, Download, Loader2, AlertTriangle, ChevronDown, ChevronRight,
 } from "lucide-react";
@@ -208,8 +209,8 @@ export function PowerConceptCard({
             const upd: any = { last_parsed_at: new Date().toISOString() };
             if (p.supplier && !power.supplier) upd.supplier = String(p.supplier).slice(0, 200);
             if (p.order_reference && !power.order_reference) upd.order_reference = String(p.order_reference).slice(0, 100);
-            if (p.delivery_date && !power.delivery_date) upd.delivery_date = p.delivery_date;
-            if (p.pickup_date && !power.pickup_date) upd.pickup_date = p.pickup_date;
+            { const v = toIsoDate(p.delivery_date); if (v && !power.delivery_date) upd.delivery_date = v; }
+            { const v = toIsoDate(p.pickup_date); if (v && !power.pickup_date) upd.pickup_date = v; }
             if (p.total_kw_allocated != null && (!power.allocated_kw || power.allocated_kw === 0)) {
               upd.allocated_kw = Number(p.total_kw_allocated);
             }
