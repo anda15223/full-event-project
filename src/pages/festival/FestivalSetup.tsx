@@ -225,12 +225,18 @@ export default function FestivalSetup() {
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
         </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <Calendar className="h-7 w-7 text-emerald-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Setup</h1>
-          <span className={cn("ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border", SETUP_STATUS_PILL[status.status])}>
-            {status.label}
-          </span>
+        <div className="flex items-center justify-between gap-3 mt-2">
+          <div className="flex items-center gap-3">
+            <Calendar className="h-7 w-7 text-emerald-500" />
+            <h1 className="text-3xl font-bold tracking-tight">Setup</h1>
+            <span className={cn("ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border", SETUP_STATUS_PILL[status.status])}>
+              {status.label}
+            </span>
+          </div>
+          <a href={`/festivals/${slug}/setup/export`} target="_blank" rel="noopener noreferrer"
+             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
+            Export PDF
+          </a>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Setup phases from load-out at Søborg through teardown and return. Crew and vehicles per phase. Ask the planner AI for suggestions.
