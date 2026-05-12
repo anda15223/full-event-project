@@ -495,3 +495,70 @@ export function PowerConceptCard({
     </div>
   );
 }
+
+const PLUG_OPTIONS = [
+  { value: "230V_socket", label: "230V plug (Schuko)" },
+  { value: "16A_240V", label: "16A 240V (1ph)" },
+  { value: "16A_400V", label: "16A 400V (3ph)" },
+  { value: "32A", label: "32A (3ph)" },
+  { value: "63A", label: "63A (3ph)" },
+  { value: "125A", label: "125A (3ph)" },
+] as const;
+
+function EquipmentRow({ row, onChanged }: { row: PowerEquipmentRow; onChanged: () => void }) {
+  const [name, setName] = useState(row.equipment_name);
+  const [qty, setQty] = useState<string>(String(row.quantity ?? 1));
+  const [kw, setKw] = useState<string>(String(row.power_kw ?? 0));
+  const total = (Number(kw) || 0) * (Number(qty) || 0);
+
+  const save = async (patch: Partial<PowerEquipmentRow>) => {
+    const { error } = await supabase.from("festival_power_equipment")
+      .update(patch as any).eq("id", row.id);
+    if (error) toast.error(error.message); else onChanged();
+  };
+
+  const remove = async () => {
+    if (!confirm(`Delete "${row.equipment_name}"?`)) return;
+    const { error } = await supabase.from("festival_power_equipment")
+      .delete().eq("id", row.id);
+    if (error) toast.error(error.message); else onChanged();
+  };
+
+  return (
+    <div className="grid grid-cols-12 gap-2 p-2 items-center">
+      <Input
+        value={name} onChange={(e) => setName(e.target.value)}
+        onBlur={() => name !== row.equipment_name && save({ equipment_name: name || "Unnamed" })}
+        className="col-span-4 h-7 text-xs"
+      />
+      <Input
+        type="number" value={qty} onChange={(e) => setQty(e.target.value)}
+        onBlur={() => Number(qty) !== Number(row.quantity ?? 1) && save({ quantity: Math.max(1, Math.round(Number(qty) || 1)) })}
+        className="col-span-1 h-7 text-xs text-right tabular-nums"
+      />
+      <Input
+        type="number" step="0.1" value={kw} onChange={(e) => setKw(e.target.value)}
+        onBlur={() => Number(kw) !== Number(row.power_kw ?? 0) && save({ power_kw: Number(kw) || 0 })}
+        className="col-span-2 h-7 text-xs text-right tabular-nums"
+      />
+      <div className="col-span-3">
+        <Select value={row.power_type ?? "230V_socket"} onValueChange={(v) => save({ power_type: v })}>
+          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {PLUG_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="col-span-1 text-right tabular-nums font-medium">{fmt(total)} kW</div>
+      <button
+        onClick={remove}
+        className="col-span-1 justify-self-end text-muted-foreground hover:text-destructive p-1"
+        title="Delete"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
