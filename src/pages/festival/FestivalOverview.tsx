@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import {
   Truck, FileText, Calendar, Snowflake, Wrench, Image as ImageIcon, Zap,
   ShieldAlert, FileSignature, BedDouble, Users, ListChecks, UserCog, ShoppingCart,
-  Plus, Mail, Phone,
+  Plus, Mail, Phone, Tag,
 } from "lucide-react";
 import { formatDueDate, priorityChipClasses } from "@/lib/attention";
 import { getSoborgLoadingManifest } from "@/lib/soborgLoading";
@@ -546,6 +546,7 @@ const CARD_TILES: CardTile[] = [
   { key: "action-items", name: "Action Items", icon: ListChecks, route: (s: string) => `/festivals/${s}/actions` },
   { key: "staff", name: "Staff", icon: UserCog },
   { key: "groceries", name: "Groceries", icon: ShoppingCart },
+  { key: "prices", name: "Prices", icon: Tag, route: (s: string) => `/festivals/${s}/prices` },
 ];
 
 export default function FestivalOverview() {
