@@ -145,11 +145,11 @@ function InlineDate({
 }
 
 const CONNECTION_TYPES = [
-  { key: "connections_16a_240v", label: "16A 240V" },
-  { key: "connections_16a_400v", label: "16A 400V" },
-  { key: "connections_32a", label: "32A" },
-  { key: "connections_63a", label: "63A" },
-  { key: "connections_125a", label: "125A" },
+  { key: "connections_16a_240v", label: "16A 240V", kw: 3.7 },   // 16 * 230 / 1000
+  { key: "connections_16a_400v", label: "16A 400V", kw: 11.0 },  // 16 * 400 * √3 / 1000
+  { key: "connections_32a", label: "32A", kw: 22.0 },            // 32 * 400 * √3 / 1000
+  { key: "connections_63a", label: "63A", kw: 43.6 },
+  { key: "connections_125a", label: "125A", kw: 86.6 },
 ] as const;
 
 export function PowerConceptCard({
