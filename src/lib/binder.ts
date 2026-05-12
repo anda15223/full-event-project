@@ -36,6 +36,13 @@ export type BinderData = {
   rules: any[];
   topskilt: any[];
   soborgLoading: SoborgLoadingManifest | null;
+  // Block 4-5 additions
+  hours: any[];
+  safetyZones: any[];
+  accommodationRooms: any[];
+  conceptPrices: any[];          // festival_concept_prices rows
+  conceptPriceItems: any[];      // festival_concept_price_item rows
+  setupPhases: any[];            // festival_setup rows
   // Overview-derived
   criticalCount: number;
   overdueCount: number;
@@ -102,12 +109,28 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
       : Promise.resolve({ data: [] }),
   ]);
 
-  // Power equipment — second hop, keyed by festival_power.id
+  // Power equipment — second hop, keyed by festival_power.id (ALL items, not just powered — Equipment section needs full inventory)
   const powerIds = (powerRes.data ?? []).map((p: any) => p.id);
   const peRes = powerIds.length
     ? await sb.from("festival_power_equipment")
-        .select("id, festival_power_id, equipment_name, quantity, power_type, power_kw, is_shared, notes, position")
-        .in("festival_power_id", powerIds).eq("is_powered", true).order("position")
+        .select("id, festival_power_id, equipment_name, quantity, power_type, power_kw, is_shared, is_powered, category, loads_from_soborg, linked_facade_id, linked_topskilt_id, notes, position")
+        .in("festival_power_id", powerIds).order("position")
+    : { data: [] };
+
+  const accomIds = (accomRes.data ?? []).map((a: any) => a.id);
+  const [hoursRes, safetyZonesRes, accomRoomsRes, conceptPricesRes, setupRes] = await Promise.all([
+    sb.from("festival_hours").select("*").eq("festival_id", fid).order("day_date"),
+    sb.from("festival_safety_zone").select("*").eq("festival_id", fid).order("display_order").order("zone_label"),
+    accomIds.length
+      ? sb.from("festival_accommodation_room").select("*").in("accommodation_id", accomIds).order("position")
+      : Promise.resolve({ data: [] }),
+    sb.from("festival_concept_prices").select("*").eq("festival_id", fid),
+    sb.from("festival_setup").select("*").eq("festival_id", fid).order("scheduled_start_at", { nullsFirst: false }).order("display_order"),
+  ]);
+
+  const priceParentIds = (conceptPricesRes.data ?? []).map((p: any) => p.id);
+  const priceItemsRes = priceParentIds.length
+    ? await sb.from("festival_concept_price_item").select("*").in("concept_prices_id", priceParentIds).order("display_order")
     : { data: [] };
 
   const soborgLoading = await getSoborgLoadingManifest(slug);
@@ -139,6 +162,12 @@ export async function loadBinderData(slug: string): Promise<BinderData | null> {
     rules: (rulesRes.data ?? []) as any[],
     topskilt: topskiltRes.data ?? [],
     soborgLoading,
+    hours: hoursRes.data ?? [],
+    safetyZones: safetyZonesRes.data ?? [],
+    accommodationRooms: accomRoomsRes.data ?? [],
+    conceptPrices: conceptPricesRes.data ?? [],
+    conceptPriceItems: priceItemsRes.data ?? [],
+    setupPhases: setupRes.data ?? [],
     criticalCount,
     overdueCount,
   };
@@ -155,8 +184,10 @@ export const BINDER_SECTIONS = [
   { key: "facade", label: "Facade" },
   { key: "power", label: "Power" },
   { key: "cooling", label: "Cooling" },
-  { key: "safety", label: "Safety" },
+  { key: "equipment", label: "Equipment" },
   { key: "accommodation", label: "Accommodation" },
+  { key: "safety", label: "Safety" },
+  { key: "prices", label: "Prices" },
   { key: "soborg_loading", label: "Soborg Loading Manifest" },
   { key: "questions", label: "Open Questions" },
   { key: "rules", label: "Active Rules" },

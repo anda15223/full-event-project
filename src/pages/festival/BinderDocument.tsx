@@ -41,24 +41,27 @@ const ACCENT = {
 
 type AccentKey = keyof typeof ACCENT;
 
-// Map title → { number, accent, subtitle }
+// Map title → { number, accent, subtitle } — canonical Sprint 7.5 order
 const SECTION_META: Record<string, { num: number; accent: AccentKey; subtitle: string }> = {
-  "Festival Overview":        { num: 1,  accent: "blue",    subtitle: "Snapshot of countdown, concepts, and primary contacts" },
-  "Action Items":             { num: 2,  accent: "rose",    subtitle: "Open and in-progress tasks, sorted by priority then due date" },
-  "Key Contacts":             { num: 3,  accent: "slate",   subtitle: "Festival, concept team, and supplier contacts" },
-  "Setup Timeline":           { num: 4,  accent: "emerald", subtitle: "Setup-through-teardown event schedule" },
-  "Contracts":                { num: 5,  accent: "violet",  subtitle: "Per-concept contracts, signed status, and obligations" },
-  "Transport":                { num: 6,  accent: "blue",    subtitle: "Vehicles, accreditation, and movement legs" },
-  "Topskilt":                 { num: 7,  accent: "violet",  subtitle: "Top-sign design and print status per concept" },
-  "Facade":                   { num: 8,  accent: "rose",    subtitle: "Facade design, material, and approval status per concept" },
-  "Power":                    { num: 9,  accent: "amber",   subtitle: "Per-concept power demand, equipment, and connection allocation" },
-  "Cooling":                  { num: 10, accent: "blue",    subtitle: "Refrigerated units, delivery windows, and concept assignments" },
-  "Safety":                   { num: 11, accent: "slate",   subtitle: "Gas, food, electrical, fire, and evacuation status" },
-  "Accommodation":            { num: 12, accent: "blue",    subtitle: "Crew bookings, dates, and night counts" },
-  "Søborg Loading Manifest":  { num: 13, accent: "violet",  subtitle: "Items loaded from the Søborg warehouse, grouped by category" },
-  "Soborg Loading Manifest":  { num: 13, accent: "violet",  subtitle: "Items loaded from the Søborg warehouse, grouped by category" },
-  "Open Questions":           { num: 14, accent: "slate",   subtitle: "Unresolved questions, sorted by urgency" },
-  "Active Rules":             { num: 15, accent: "amber",   subtitle: "Critical and important business rules in effect" },
+  "Festival Overview":        { num: 1,  accent: "blue",    subtitle: "Festival identity, location, hours, contacts" },
+  "Action Items":             { num: 2,  accent: "rose",    subtitle: "Open items by priority" },
+  "Key Contacts":             { num: 3,  accent: "slate",   subtitle: "Festival, setup, and concept teams" },
+  "Setup Timeline":           { num: 4,  accent: "emerald", subtitle: "Chronological setup and teardown phases" },
+  "Contracts":                { num: 5,  accent: "violet",  subtitle: "Per-concept contract status and obligations" },
+  "Transport":                { num: 6,  accent: "blue",    subtitle: "Vehicles and transport legs" },
+  "Topskilt":                 { num: 7,  accent: "violet",  subtitle: "Top sign sets per concept" },
+  "Facade":                   { num: 8,  accent: "rose",    subtitle: "Facade sets with tent dimensions" },
+  "Power":                    { num: 9,  accent: "amber",   subtitle: "Electricity allocation and demand" },
+  "Cooling":                  { num: 10, accent: "blue",    subtitle: "Refrigerated units and concept assignments" },
+  "Equipment":                { num: 11, accent: "slate",   subtitle: "Per-concept inventory grouped by category" },
+  "Accommodation":            { num: 12, accent: "blue",    subtitle: "Hotel bookings and bed assignments" },
+  "Safety":                   { num: 13, accent: "emerald", subtitle: "Per-zone checklists and certifications" },
+  "Prices":                   { num: 14, accent: "amber",   subtitle: "Per-concept POS menu and prices" },
+  "Søborg Loading Manifest":  { num: 15, accent: "violet",  subtitle: "What goes in which vehicle" },
+  "Soborg Loading Manifest":  { num: 15, accent: "violet",  subtitle: "What goes in which vehicle" },
+  "Open Questions":           { num: 16, accent: "slate",   subtitle: "Unresolved decisions" },
+  "Active Rules":             { num: 17, accent: "amber",   subtitle: "Operational rules for this festival" },
+  "Emergency Contacts":       { num: 18, accent: "rose",    subtitle: "On-call numbers and hospital info" },
   "Contents":                 { num: 0,  accent: "slate",   subtitle: "" },
 };
 
@@ -216,6 +219,28 @@ function OverviewPage({ data }: { data: BinderData }) {
         })}
       </View>
 
+      {data.hours && data.hours.length > 0 && (
+        <View style={{ marginBottom: 8 }}>
+          <Text style={[s.bold, s.small, { marginBottom: 4 }]}>HOURS</Text>
+          <View style={s.th}>
+            <Text style={{ width: 70 }}>Day</Text>
+            <Text style={{ flex: 1 }}>Festival</Text>
+            <Text style={{ flex: 1 }}>Prep</Text>
+          </View>
+          {data.hours.map((h: any) => (
+            <View key={h.id} style={s.tr} wrap={false}>
+              <Text style={{ width: 70 }}>{fmt(h.day_date)}</Text>
+              <Text style={{ flex: 1 }}>
+                {h.festival_open ? `${String(h.festival_open).slice(0,5)} – ${h.festival_close ? String(h.festival_close).slice(0,5) : "—"}` : "—"}
+              </Text>
+              <Text style={{ flex: 1 }}>
+                {h.prep_open ? `${String(h.prep_open).slice(0,5)} – ${h.prep_close ? String(h.prep_close).slice(0,5) : "—"}` : "—"}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <View style={{ marginBottom: 8 }}>
         <Text style={[s.bold, s.small, { marginBottom: 4 }]}>PRIMARY CONTACTS</Text>
         {primaryContacts.length === 0 && <Text style={[s.small, { color: GRAY }]}>None marked primary.</Text>}
@@ -299,27 +324,73 @@ function ContactsPage({ data }: { data: BinderData }) {
 }
 
 function TimelinePage({ data }: { data: BinderData }) {
-  const { festival, timelineEvents } = data;
+  const { festival, timelineEvents, setupPhases, transport } = data;
+  const phases = setupPhases ?? [];
+  const vMap = new Map<string, string>(
+    (transport ?? []).map((v: any) => {
+      const name = v.season_rental?.vehicle_type ?? v.vehicle_type;
+      const plate = v.season_rental?.license_plate ?? v.license_plate;
+      return [v.id, `${N(name) || "vehicle"}${plate ? ` (${N(plate)})` : ""}`];
+    })
+  );
+  const phaseLabel = (wt: string) => `[ ${(wt ?? "PHASE").toUpperCase().replace(/-/g, " ")} ]`;
   return (
     <Page size="A4" style={s.page} bookmark="Setup Timeline" wrap>
-      <SectionHeader title="Setup Timeline" meta={`${timelineEvents.length} events`} />
-      <View style={s.th}>
-        <Text style={{ width: 60 }}>Date</Text>
-        <Text style={{ width: 40 }}>Time</Text>
-        <Text style={{ flex: 1 }}>Event</Text>
-        <Text style={{ width: 80 }}>Owner</Text>
-        <Text style={{ width: 50 }}>Status</Text>
-      </View>
-      {timelineEvents.length === 0 && <Text style={[s.small, { color: GRAY, marginTop: 6 }]}>No events scheduled.</Text>}
-      {timelineEvents.map((e: any) => (
-        <View key={e.id} style={s.tr} wrap={false}>
-          <Text style={{ width: 60 }}>{fmt(e.event_date)}</Text>
-          <Text style={{ width: 40 }}>{e.event_time ? String(e.event_time).slice(0, 5) : "—"}</Text>
-          <Text style={{ flex: 1 }}>{e.title}{e.location ? ` — ${e.location}` : ""}</Text>
-          <Text style={{ width: 80 }}>{e.responsible_party ?? "—"}</Text>
-          <Text style={{ width: 50 }}>{e.status}</Text>
+      <SectionHeader title="Setup Timeline" meta={`${phases.length} phases · ${timelineEvents.length} events`} />
+
+      {phases.length > 0 && (
+        <View style={{ marginBottom: 8 }}>
+          <Text style={[s.bold, s.small, { marginBottom: 4 }]}>SETUP PHASES</Text>
+          {phases.map((p: any) => {
+            const veh = (p.vehicles_assigned ?? []).map((id: string) => vMap.get(id) ?? id).filter(Boolean);
+            const tasks = (p.tasks ?? []) as string[];
+            return (
+              <View key={p.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+                <Text style={s.small}>
+                  <Text style={[s.bold, { color: ACCENT.emerald.fg }]}>{phaseLabel(p.work_type)}</Text>
+                  {p.scheduled_start_at ? `   ${fmtFull(p.scheduled_start_at)}` : ""}
+                  {p.status ? `   ·   ${p.status}` : ""}
+                </Text>
+                <Text style={[s.bold, s.small]}>{N(p.description) || "—"}{p.location ? `  ·  ${N(p.location)}` : ""}</Text>
+                {(p.crew_assigned?.length ?? 0) > 0 && (
+                  <Text style={[s.small, { color: GRAY }]}>Crew: {(p.crew_assigned as string[]).map(N).join(" · ")}</Text>
+                )}
+                {veh.length > 0 && <Text style={[s.small, { color: GRAY }]}>Vehicles: {veh.join(" · ")}</Text>}
+                {tasks.length > 0 && tasks.map((t, i) => (
+                  <Text key={i} style={[s.small, { marginLeft: 8 }]}>◯ {N(t)}</Text>
+                ))}
+                {p.notes && <Text style={[s.small, { color: GRAY }]}>{N(p.notes)}</Text>}
+              </View>
+            );
+          })}
         </View>
-      ))}
+      )}
+
+      {timelineEvents.length > 0 && (
+        <View>
+          <Text style={[s.bold, s.small, { marginTop: 4, marginBottom: 4 }]}>TIMELINE EVENTS</Text>
+          <View style={s.th}>
+            <Text style={{ width: 60 }}>Date</Text>
+            <Text style={{ width: 40 }}>Time</Text>
+            <Text style={{ flex: 1 }}>Event</Text>
+            <Text style={{ width: 80 }}>Owner</Text>
+            <Text style={{ width: 50 }}>Status</Text>
+          </View>
+          {timelineEvents.map((e: any) => (
+            <View key={e.id} style={s.tr} wrap={false}>
+              <Text style={{ width: 60 }}>{fmt(e.event_date)}</Text>
+              <Text style={{ width: 40 }}>{e.event_time ? String(e.event_time).slice(0, 5) : "—"}</Text>
+              <Text style={{ flex: 1 }}>{N(e.title)}{e.location ? ` — ${N(e.location)}` : ""}</Text>
+              <Text style={{ width: 80 }}>{e.responsible_party ?? "—"}</Text>
+              <Text style={{ width: 50 }}>{e.status}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {phases.length === 0 && timelineEvents.length === 0 && (
+        <Text style={[s.small, { color: GRAY, marginTop: 6 }]}>No phases or events scheduled.</Text>
+      )}
       <SectionFooter name="Timeline" festival={festival.name} />
     </Page>
   );
@@ -457,6 +528,17 @@ function FacadePage({ data }: { data: BinderData }) {
             {f.material_deadline ? `   ·   Material deadline ${fmt(f.material_deadline)}` : ""}
             {f.print_deadline ? `   ·   Print deadline ${fmt(f.print_deadline)}` : ""}
           </Text>
+          {(f.tent_width_m || f.tent_depth_m || f.tent_height_m || f.facade_width_m || f.facade_height_m) && (
+            <Text style={s.small}>
+              {(f.tent_width_m || f.tent_depth_m || f.tent_height_m)
+                ? `Tent ${f.tent_width_m ?? "?"}×${f.tent_depth_m ?? "?"}×${f.tent_height_m ?? "?"} m`
+                : ""}
+              {(f.tent_width_m && (f.facade_width_m || f.facade_height_m)) ? "  ·  " : ""}
+              {(f.facade_width_m || f.facade_height_m)
+                ? `Facade ${f.facade_width_m ?? "?"}×${f.facade_height_m ?? "?"} m`
+                : ""}
+            </Text>
+          )}
           {f.festival_approval_received_at && <Text style={[s.small, s.ok]}>Festival approved {fmtFull(f.festival_approval_received_at)}</Text>}
           {f.notes && <Text style={[s.small, { color: GRAY }]}>{f.notes}</Text>}
         </View>
@@ -573,51 +655,88 @@ function CoolingPage({ data }: { data: BinderData }) {
 }
 
 function SafetyPage({ data }: { data: BinderData }) {
-  const { festival, safety } = data;
+  const { festival, safety, safetyZones } = data;
+  const chk = (v: boolean | null | undefined) => (v ? "✓" : "◯");
   return (
-    <Page size="A4" style={s.page} bookmark="Safety">
+    <Page size="A4" style={s.page} bookmark="Safety" wrap>
       <SectionHeader title="Safety" />
+      <Text style={[s.bold, s.small, { marginBottom: 4 }]}>FESTIVAL-WIDE CERTIFICATIONS</Text>
       {!safety && <Text style={[s.small, { color: GRAY }]}>No safety record yet.</Text>}
       {safety && (
-        <View>
-          <Text style={s.para}>Gas safety: <Text style={s.bold}>{safety.gas_safety_status ?? "—"}</Text>{safety.gas_safety_date ? ` (inspection ${fmt(safety.gas_safety_date)})` : ""}</Text>
-          <Text style={s.para}>Food authority: <Text style={s.bold}>{safety.food_authority_status ?? "—"}</Text>{safety.food_authority_inspection_date ? ` (${fmt(safety.food_authority_inspection_date)})` : ""}</Text>
-          <Text style={s.para}>Electrical certification: <Text style={s.bold}>{safety.electrical_certification_status ?? "—"}</Text></Text>
-          <Text style={s.para}>Fire safety: <Text style={s.bold}>{safety.fire_safety_status ?? "—"}</Text></Text>
-          <Text style={s.para}>Evacuation plan: <Text style={s.bold}>{safety.evacuation_plan_status ?? "—"}</Text></Text>
-          <Text style={s.para}>First aid: <Text style={s.bold}>{safety.first_aid_status ?? "—"}</Text></Text>
-          {safety.insurance_status && <Text style={s.para}>Insurance: <Text style={s.bold}>{safety.insurance_status}</Text></Text>}
-          {safety.additional_notes && <Text style={[s.small, { color: GRAY, marginTop: 6 }]}>{safety.additional_notes}</Text>}
+        <View style={{ marginBottom: 10 }}>
+          <Text style={s.small}>Gas safety: <Text style={s.bold}>{safety.gas_safety_status ?? "—"}</Text>{safety.gas_safety_date ? ` (inspection ${fmt(safety.gas_safety_date)})` : ""}</Text>
+          <Text style={s.small}>Food authority: <Text style={s.bold}>{safety.food_authority_status ?? "—"}</Text>{safety.food_authority_inspection_date ? ` (${fmt(safety.food_authority_inspection_date)})` : ""}</Text>
+          <Text style={s.small}>Electrical certification: <Text style={s.bold}>{safety.electrical_certification_status ?? "—"}</Text></Text>
+          <Text style={s.small}>Fire safety: <Text style={s.bold}>{safety.fire_safety_status ?? "—"}</Text></Text>
+          <Text style={s.small}>Evacuation plan: <Text style={s.bold}>{safety.evacuation_plan_status ?? "—"}</Text></Text>
+          <Text style={s.small}>First aid: <Text style={s.bold}>{safety.first_aid_status ?? "—"}</Text></Text>
+          {safety.insurance_status && <Text style={s.small}>Insurance: <Text style={s.bold}>{safety.insurance_status}</Text></Text>}
+          {safety.additional_notes && <Text style={[s.small, { color: GRAY, marginTop: 4 }]}>{N(safety.additional_notes)}</Text>}
         </View>
       )}
+
+      <Text style={[s.bold, s.small, { marginTop: 6, marginBottom: 4 }]}>PER-ZONE CHECKLISTS ({safetyZones?.length ?? 0})</Text>
+      {(!safetyZones || safetyZones.length === 0) && <Text style={[s.small, { color: GRAY }]}>No zones defined.</Text>}
+      {safetyZones?.map((z: any) => (
+        <View key={z.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <Text style={[s.bold, s.small]}>{N(z.zone_label)}{z.zone_type ? `  (${z.zone_type})` : ""}{z.responsible_person ? `  ·  ${N(z.responsible_person)}` : ""}</Text>
+          <Text style={s.small}>Fire extinguishers: {z.fire_extinguisher_count ?? 0} {chk(z.fire_extinguisher_checked)}{"   ·   "}Fire blankets: {z.fire_blanket_count ?? 0} {chk(z.fire_blanket_checked)}</Text>
+          <Text style={s.small}>First aid kit: {chk(z.first_aid_kit)} {z.first_aid_checked ? "verified" : "not verified"}{"   ·   "}Permits: {chk(z.permits_obtained)}{"   ·   "}Briefing: {chk(z.briefing_done)}{z.briefing_date ? ` ${fmt(z.briefing_date)}` : ""}</Text>
+          {z.emergency_exits_count != null && <Text style={s.small}>Emergency exits: {z.emergency_exits_count}</Text>}
+          {z.notes && <Text style={[s.small, { color: GRAY }]}>{N(z.notes)}</Text>}
+        </View>
+      ))}
       <SectionFooter name="Safety" festival={festival.name} />
     </Page>
   );
 }
 
 function AccommodationPage({ data }: { data: BinderData }) {
-  const { festival, accommodation } = data;
+  const { festival, accommodation, accommodationRooms } = data;
+  const roomsByAccom = new Map<string, any[]>();
+  (accommodationRooms ?? []).forEach((r: any) => {
+    const arr = roomsByAccom.get(r.accommodation_id) ?? [];
+    arr.push(r);
+    roomsByAccom.set(r.accommodation_id, arr);
+  });
   return (
     <Page size="A4" style={s.page} bookmark="Accommodation" wrap>
       <SectionHeader title="Accommodation" meta={`${accommodation.length} bookings`} />
       {accommodation.length === 0 && <Text style={[s.small, { color: GRAY }]}>No bookings yet.</Text>}
-      {accommodation.map((a: any) => (
-        <View key={a.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
-          <Text style={[s.bold, s.small]}>{a.provider_name ?? a.accommodation_type ?? "—"} ({a.accommodation_type ?? "—"})</Text>
-          <Text style={s.small}>
-            {fmt(a.check_in_date)} to {fmt(a.check_out_date)}
-            {a.capacity ? `   ·   ${a.capacity} pax` : ""}
-            {a.cost_dkk ? `   ·   ${Number(a.cost_dkk).toLocaleString()} DKK` : ""}
-            {a.payment_status ? `   ·   ${a.payment_status}` : ""}
-          </Text>
-          {a.address && <Text style={s.small}>{a.address}</Text>}
-          {(a.contact_name || a.contact_phone || a.contact_email) && (
-            <Text style={s.small}>Contact: {a.contact_name ?? "—"} · {a.contact_phone ?? "—"} · {a.contact_email ?? "—"}</Text>
-          )}
-          {a.confirmation_number && <Text style={[s.small, { color: GRAY }]}>Conf: {a.confirmation_number}</Text>}
-          {a.notes && <Text style={[s.small, { color: GRAY }]}>{a.notes}</Text>}
-        </View>
-      ))}
+      {accommodation.map((a: any) => {
+        const rooms = roomsByAccom.get(a.id) ?? [];
+        return (
+          <View key={a.id} style={{ marginBottom: 8, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, s.small]}>{N(a.provider_name) || a.accommodation_type || "—"} ({a.accommodation_type ?? "—"})</Text>
+            <Text style={s.small}>
+              {fmt(a.check_in_date)} to {fmt(a.check_out_date)}
+              {a.capacity ? `   ·   ${a.capacity} pax` : ""}
+              {a.cost_dkk ? `   ·   ${Number(a.cost_dkk).toLocaleString()} DKK` : ""}
+              {a.payment_status ? `   ·   ${a.payment_status}` : ""}
+            </Text>
+            {a.address && <Text style={s.small}>{N(a.address)}</Text>}
+            {(a.contact_name || a.contact_phone || a.contact_email) && (
+              <Text style={s.small}>Contact: {N(a.contact_name) || "—"} · {N(a.contact_phone) || "—"} · {N(a.contact_email) || "—"}</Text>
+            )}
+            {a.confirmation_number && <Text style={[s.small, { color: GRAY }]}>Conf: {a.confirmation_number}</Text>}
+            {rooms.length > 0 && (
+              <View style={{ marginTop: 3 }}>
+                {rooms.map((r: any) => {
+                  const beds = [r.bed_1_assignee, r.bed_2_assignee, r.bed_3_assignee, r.bed_4_assignee]
+                    .slice(0, r.bed_count ?? 2)
+                    .map((b, i) => `Bed ${i + 1} = ${b ? N(b) : "—"}`);
+                  return (
+                    <Text key={r.id} style={[s.small, { marginLeft: 6 }]}>
+                      Room {N(r.room_label)}: {beds.join("  ·  ")}
+                    </Text>
+                  );
+                })}
+              </View>
+            )}
+            {a.notes && <Text style={[s.small, { color: GRAY }]}>{N(a.notes)}</Text>}
+          </View>
+        );
+      })}
       <SectionFooter name="Accommodation" festival={festival.name} />
     </Page>
   );
@@ -764,6 +883,157 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
   );
 }
 
+function EquipmentPage({ data }: { data: BinderData }) {
+  const { festival, contracts, concepts, power, powerEquipment, transport } = data;
+  const cMap = new Map<string, any>(concepts.map((c: any) => [c.id, c]));
+  const kMap = new Map<string, any>(contracts.map((k: any) => [k.id, k]));
+  // Group equipment by concept (via festival_power.festival_contract_id)
+  const powerToConcept = new Map<string, string>();
+  power.forEach((p: any) => {
+    const k = kMap.get(p.festival_contract_id);
+    if (k?.concept_id) powerToConcept.set(p.id, k.concept_id);
+  });
+  // Vehicle label lookup (from contracts.assigned_vehicle_id)
+  const vehLabel = (vid?: string) => {
+    if (!vid) return "Unassigned";
+    const v: any = (transport ?? []).find((t: any) => t.id === vid);
+    if (!v) return "Unassigned";
+    const name = v.season_rental?.vehicle_type ?? v.vehicle_type ?? "vehicle";
+    const plate = v.season_rental?.license_plate ?? v.license_plate;
+    return plate ? `${N(name)} (${N(plate)})` : N(name);
+  };
+  // Group rows by conceptId
+  const byConcept = new Map<string, any[]>();
+  (powerEquipment ?? []).forEach((e: any) => {
+    const cid = powerToConcept.get(e.festival_power_id);
+    if (!cid) return;
+    const arr = byConcept.get(cid) ?? [];
+    arr.push(e);
+    byConcept.set(cid, arr);
+  });
+  // Active concept ordering — only concepts with active contract
+  const activeConcepts = concepts
+    .filter((c: any) => contracts.some((k: any) => k.concept_id === c.id))
+    .sort((a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99));
+
+  // Category order
+  const CATEGORY_ORDER = ["cooking", "prep", "cooling", "table", "sink", "pos", "scaffold", "trolley", "popup_tent", "facade", "topskilt", "signage", "cable", "fire_safety", "first_aid", "consumable_storage", "other"];
+  const catLabel: Record<string, string> = {
+    cooking: "Cooking", prep: "Prep", cooling: "Cooling", table: "Tables", sink: "Sinks", pos: "POS",
+    scaffold: "Scaffold", trolley: "Trolleys", popup_tent: "Pop-up Tents", facade: "Facade",
+    topskilt: "Topskilt", signage: "Signage", cable: "Cables", fire_safety: "Fire Safety",
+    first_aid: "First Aid", consumable_storage: "Storage", other: "Other",
+  };
+
+  return (
+    <Page size="A4" style={s.page} bookmark="Equipment" wrap>
+      <SectionHeader title="Equipment" meta={`${activeConcepts.length} active concepts · ${(powerEquipment ?? []).length} items`} />
+      {activeConcepts.length === 0 && <Text style={[s.small, { color: GRAY }]}>No active concepts.</Text>}
+      {activeConcepts.map((c: any) => {
+        const k = contracts.find((x: any) => x.concept_id === c.id);
+        const rows = byConcept.get(c.id) ?? [];
+        const items = rows.reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+        const powered = rows.filter((r: any) => r.is_powered).reduce((s: number, r: any) => s + (Number(r.quantity) || 0), 0);
+        const kw = rows.reduce((s: number, r: any) => s + (r.is_powered ? (Number(r.power_kw) || 0) * (Number(r.quantity) || 1) : 0), 0);
+        const status = rows.length === 0
+          ? { label: "[ NO EQUIPMENT ]", color: GRAY }
+          : rows.some((r: any) => r.is_powered && (!r.power_kw || Number(r.power_kw) === 0))
+          ? { label: "[ INCOMPLETE ]", color: AMBER }
+          : { label: "[ EQUIPPED ]", color: GREEN };
+        // Group by category
+        const byCat = new Map<string, any[]>();
+        rows.forEach((r: any) => {
+          const arr = byCat.get(r.category ?? "other") ?? [];
+          arr.push(r);
+          byCat.set(r.category ?? "other", arr);
+        });
+        const cats = Array.from(byCat.keys()).sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+        return (
+          <View key={c.id} style={{ marginBottom: 16 }} wrap={false}>
+            <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
+            <Text style={[s.small, { color: status.color, fontWeight: 700 }]}>{status.label}</Text>
+            <Text style={[s.small, { color: GRAY, marginBottom: 4 }]}>
+              {items} items · {powered} powered · {kw.toFixed(1)} kW · Travels with: {vehLabel(k?.assigned_vehicle_id)}
+            </Text>
+            {cats.map((cat) => {
+              const list = byCat.get(cat) ?? [];
+              return (
+                <View key={cat} style={{ marginTop: 3 }}>
+                  <Text style={[s.small, s.bold, { textTransform: "uppercase", color: GRAY, letterSpacing: 0.5 }]}>
+                    {catLabel[cat] ?? cat}  ({list.length})
+                  </Text>
+                  {list.map((e: any) => (
+                    <Text key={e.id} style={[s.small, { marginLeft: 8 }]}>
+                      • {e.quantity ?? 1}× {N(e.equipment_name)}
+                      {e.is_powered && e.power_kw ? ` — ${Number(e.power_kw).toFixed(2)} kW` : ""}
+                      {"  "}<Text style={{ color: GRAY, textTransform: "uppercase", fontSize: 7.5 }}>{e.loads_from_soborg ? "[SØBORG]" : "[ON-SITE]"}</Text>
+                    </Text>
+                  ))}
+                </View>
+              );
+            })}
+          </View>
+        );
+      })}
+      <SectionFooter name="Equipment" festival={festival.name} />
+    </Page>
+  );
+}
+
+function PricesPage({ data }: { data: BinderData }) {
+  const { festival, contracts, concepts, conceptPrices, conceptPriceItems } = data;
+  const itemsByParent = new Map<string, any[]>();
+  (conceptPriceItems ?? []).forEach((it: any) => {
+    const arr = itemsByParent.get(it.concept_prices_id) ?? [];
+    arr.push(it);
+    itemsByParent.set(it.concept_prices_id, arr);
+  });
+  const activeConcepts = concepts
+    .filter((c: any) => contracts.some((k: any) => k.concept_id === c.id))
+    .sort((a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99));
+  return (
+    <Page size="A4" style={s.page} bookmark="Prices" wrap>
+      <SectionHeader title="Prices" meta={`${activeConcepts.length} active concepts`} />
+      {activeConcepts.map((c: any) => {
+        const parent = (conceptPrices ?? []).find((p: any) => p.concept_id === c.id);
+        const items = parent ? (itemsByParent.get(parent.id) ?? []) : [];
+        const currency = parent?.currency ?? "DKK";
+        const hasVeg = items.some((i: any) => i.is_vegetarian || i.is_vegan);
+        return (
+          <View key={c.id} style={{ marginBottom: 12, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+            <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
+            {items.length === 0 ? (
+              <Text style={[s.small, { color: GRAY }]}>No prices set yet.</Text>
+            ) : (
+              <>
+                <Text style={[s.small, { color: GRAY, marginBottom: 4 }]}>
+                  {items.length} items · {currency} · Vegetarian: {hasVeg ? "yes" : "no"}
+                </Text>
+                {items.map((it: any) => {
+                  const flags: string[] = [];
+                  if (it.is_vegetarian) flags.push("v");
+                  if (it.is_vegan) flags.push("vg");
+                  if (it.is_gluten_free) flags.push("g");
+                  return (
+                    <View key={it.id} style={{ flexDirection: "row", paddingVertical: 1.5 }}>
+                      <Text style={[s.small, { flex: 1 }]}>
+                        {N(it.product_name)}
+                        {flags.length > 0 ? <Text style={{ color: GRAY }}>{`  · ${flags.join(" · ")}`}</Text> : null}
+                      </Text>
+                      <Text style={[s.small, s.bold]}>{Number(it.price).toLocaleString()} {currency}</Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+          </View>
+        );
+      })}
+      <SectionFooter name="Prices" festival={festival.name} />
+    </Page>
+  );
+}
+
 function BackCoverPage({ data }: { data: BinderData }) {
   const { festival, primaryContacts } = data;
   return (
@@ -812,8 +1082,10 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
       case "facade": return ceilDiv(data.facade.length, 10);
       case "power": return ceilDiv(data.power.length, 4);
       case "cooling": return ceilDiv(data.cooling.length, 6);
-      case "safety": return 1;
+      case "equipment": return ceilDiv((data.powerEquipment ?? []).length, 20);
       case "accommodation": return ceilDiv(data.accommodation.length, 8);
+      case "safety": return 1 + ceilDiv((data.safetyZones ?? []).length, 6);
+      case "prices": return ceilDiv((data.conceptPriceItems ?? []).length, 30);
       case "soborg_loading": {
         const sl: any = data.soborgLoading;
         const items = (sl?.concept_groups ?? sl?.conceptGroups ?? []).reduce((sum: number, cg: any) => sum + Object.values(cg.items_by_category ?? {}).flat().length, 0);
@@ -851,6 +1123,8 @@ export function BinderDocument({ data, options }: { data: BinderData; options: B
           case "cooling": return <CoolingPage key={sec.key} data={data} />;
           case "safety": return <SafetyPage key={sec.key} data={data} />;
           case "accommodation": return <AccommodationPage key={sec.key} data={data} />;
+          case "equipment": return <EquipmentPage key={sec.key} data={data} />;
+          case "prices": return <PricesPage key={sec.key} data={data} />;
           case "soborg_loading": return <SoborgLoadingPage key={sec.key} data={data} />;
           case "questions": return <QuestionsPage key={sec.key} data={data} />;
           case "rules": return <RulesPage key={sec.key} data={data} />;
