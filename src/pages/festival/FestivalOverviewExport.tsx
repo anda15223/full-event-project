@@ -361,10 +361,10 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             {" · "}{criticalCount} critical items
           </Text>
           <View style={[s.buckets, hasOverdue ? s.bucketsRedBorder : {}]}>
-            <Text style={[s.bucket, hasOverdue ? s.warn : {}]}>🚨 {attention.overdue} OVERDUE</Text>
-            <Text style={s.bucket}>🔴 {attention.today} TODAY</Text>
-            <Text style={s.bucket}>🟡 {attention.this_week} THIS WEEK</Text>
-            <Text style={s.bucket}>🟢 {attention.later} LATER</Text>
+            <Text style={[s.bucket, hasOverdue ? s.warn : {}]}>{attention.overdue} OVERDUE</Text>
+            <Text style={s.bucket}>{attention.today} TODAY</Text>
+            <Text style={s.bucket}>{attention.this_week} THIS WEEK</Text>
+            <Text style={s.bucket}>{attention.later} LATER</Text>
           </View>
         </View>
 
@@ -374,7 +374,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           {deadlines.length === 0 && <Text style={{ color: GRAY }}>No deadlines in next 14 days.</Text>}
           {deadlines.map((d, i) => (
             <View key={i} style={s.drow}>
-              <Text style={[s.dIcon, d.isOverdueOrToday ? s.warn : {}]}>{d.isOverdueOrToday ? "⚠" : "◆"}</Text>
+              <Text style={[s.dIcon, d.isOverdueOrToday ? s.warn : {}]}>{d.isOverdueOrToday ? "!" : "*"}</Text>
               <Text style={s.dDate}>{fmtDate(d.iso)}</Text>
               <Text style={s.dLabel}>{d.label}</Text>
               <Text style={s.dOwner}>{d.owner}</Text>
@@ -397,12 +397,12 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           </Text>
           {transport.tbdCount > 0 && (
             <Text style={s.warn}>
-              ⚠ {transport.tbdCount} drivers TBD{transport.earliestTbd ? ` from ${fmtDate(transport.earliestTbd)}` : ""}
+              ! {transport.tbdCount} drivers TBD{transport.earliestTbd ? ` from ${fmtDate(transport.earliestTbd)}` : ""}
             </Text>
           )}
           {transport.accreditationsUploaded < transport.vehicleCount && (
             <Text style={s.warn}>
-              ⚠ Accreditations: {transport.accreditationsUploaded} of {transport.vehicleCount} uploaded
+              ! Accreditations: {transport.accreditationsUploaded} of {transport.vehicleCount} uploaded
             </Text>
           )}
 
@@ -411,10 +411,10 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             {staff.total} total · {staff.soborg} from Soborg · {staff.local} local hires
           </Text>
           {staff.blankNames > 0 && (
-            <Text style={s.warn}>⚠ {staff.blankNames} of {staff.local} local names blank</Text>
+            <Text style={s.warn}>! {staff.blankNames} of {staff.local} local names blank</Text>
           )}
           {staff.missingTransport > 0 && (
-            <Text style={s.warn}>⚠ {staff.missingTransport} staff requiring transport without assignments</Text>
+            <Text style={s.warn}>! {staff.missingTransport} staff requiring transport without assignments</Text>
           )}
 
           <Text style={s.opLabel}>SERVICE HOURS</Text>
@@ -422,7 +422,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             {serviceHours.daysWithHours} of {serviceHours.festivalDays} festival days have hours set
           </Text>
           {serviceHours.daysWithHours === 0 && (
-            <Text style={s.warn}>⚠ Service hours not yet entered for any day</Text>
+            <Text style={s.warn}>! Service hours not yet entered for any day</Text>
           )}
         </View>
 
@@ -432,7 +432,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
           {(conceptFilter ? concepts.filter((c) => c.slug === conceptFilter) : concepts).map((c) => (
             conceptFilter ? (
               <View key={c.id} style={{ marginTop: 2 }}>
-                <Text style={{ fontWeight: 700, fontSize: 12 }}>{c.emoji} {c.name}</Text>
+                <Text style={{ fontWeight: 700, fontSize: 12 }}>{c.name}</Text>
                 <Text>Manager: {c.manager ?? "unassigned"}</Text>
                 <Text>
                   Contract:{" "}
@@ -446,7 +446,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
               </View>
             ) : (
               <View key={c.id} style={s.cRow}>
-                <Text style={s.cName}>{c.emoji} {c.name}</Text>
+                <Text style={s.cName}>{c.name}</Text>
                 <Text style={s.cMgr}>Mgr: {c.manager ?? "unassigned"}</Text>
                 <Text style={[s.cContract, c.contractStatus === "signed" ? s.ok : s.warn]}>
                   Contract: {c.contractStatus}
@@ -469,8 +469,8 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
             <Text key={c.id} style={s.contactLine}>
               {c.role}: {c.full_name}
               {c.organization ? ` (${c.organization})` : ""}
-              {"   📧 "}{c.email ?? " — "}
-              {"   📱 "}{c.phone ?? " — "}
+              {"   Email: "}{c.email ?? " — "}
+              {"   Phone: "}{c.phone ?? " — "}
             </Text>
           ))}
           {contacts.length > 6 && (
