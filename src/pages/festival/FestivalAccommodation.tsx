@@ -208,6 +208,33 @@ export default function FestivalAccommodation() {
         </div>
       )}
 
+      {/* Per-period bed breakdown */}
+      {summary.bookings > 0 && summary.segments.length > 1 && (
+        <div className="rounded-xl border bg-muted/30 p-3">
+          <div className="text-xs font-medium text-muted-foreground mb-2">
+            Beds per period (concurrent occupancy — these are sequential, not added together)
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {summary.segments.map((s) => (
+              <span
+                key={s.start + s.end}
+                className={
+                  "px-2.5 py-1 rounded-full border " +
+                  (s.beds === summary.peak_beds
+                    ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40 font-medium"
+                    : "bg-background text-foreground/80 border-border")
+                }
+              >
+                {fmtRange(s.start, s.end)}: {s.beds} bed{s.beds === 1 ? "" : "s"}
+              </span>
+            ))}
+            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+              peak: {summary.peak_beds} bed{summary.peak_beds === 1 ? "" : "s"}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Body */}
       {pageQ.isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
