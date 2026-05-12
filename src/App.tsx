@@ -57,6 +57,7 @@ import FestivalSoborgLoading from "./pages/festival/FestivalSoborgLoading";
 import FestivalEquipment from "./pages/festival/FestivalEquipment";
 import FestivalPrices from "./pages/festival/FestivalPrices";
 import FestivalSoborgLoadingExport from "./pages/festival/FestivalSoborgLoadingExport";
+import FestivalSetup from "./pages/festival/FestivalSetup";
 
 const queryClient = new QueryClient();
 
@@ -123,6 +124,7 @@ const App = () => (
             <Route path="/festivals/:slug/soborg-loading/export" element={<Protected><FestivalSoborgLoadingExport /></Protected>} />
             <Route path="/festivals/:slug/equipment" element={<Protected><FestivalEquipment /></Protected>} />
             <Route path="/festivals/:slug/prices" element={<Protected><FestivalPrices /></Protected>} />
+            <Route path="/festivals/:slug/setup" element={<Protected><FestivalSetup /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

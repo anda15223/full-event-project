@@ -89,16 +89,29 @@ Schema:
   "raw_notes": string
 }`;
 
-export const SETUP_SYSTEM_PROMPT = `You parse festival setup logistics documents. Return ONLY valid JSON.
+export const SETUP_SYSTEM_PROMPT = `You parse festival setup logistics documents. Return ONLY valid JSON. No markdown.
 
 Schema:
 {
   "setup_date": string | null,
   "teardown_date": string | null,
+  "phases": [
+    {
+      "phase_type": "load" | "drive" | "setup" | "opening" | "teardown" | "return" | "other",
+      "title": string,
+      "scheduled_at": string | null,
+      "location": string | null,
+      "crew_assigned": string[],
+      "tasks": string[],
+      "notes": string | null
+    }
+  ],
   "vehicles": [ { "label": string, "driver": string | null, "departure_time": string | null, "departure_location": string | null } ],
   "crew_members": string[],
   "raw_notes": string
-}`;
+}
+
+Phases must be chronological. Dates as ISO. If unsure, leave null.`;
 
 export const GENERIC_SYSTEM_PROMPT = `You parse a document related to festival operations. The user has not specified type. Extract any structured information that seems relevant. Return ONLY valid JSON with:
 {
