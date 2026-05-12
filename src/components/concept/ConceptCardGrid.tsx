@@ -34,6 +34,8 @@ interface Props {
   showVehicleSelector?: boolean;
   layout?: "stack" | "grid";
   hideEmoji?: boolean;
+  /** When provided, renders an active/inactive toggle on each card header. */
+  festivalSlug?: string;
 }
 
 interface ContractRow {
