@@ -108,10 +108,41 @@ export default function FestivalAccommodation() {
     }).length;
     const total_cost = bookings.reduce((s, b) => s + Number(b.cost_dkk ?? 0), 0);
     const currency = (bookings.find((b) => b.currency)?.currency) ?? "DKK";
+
+    // Sweep-line: beds per distinct date segment (concurrent occupancy)
+    type Seg = { start: string; end: string; beds: number };
+    const segments: Seg[] = [];
+    const dated = bookings.filter((b) => b.check_in_date && b.check_out_date);
+    const breakpoints = Array.from(
+      new Set(dated.flatMap((b) => [b.check_in_date!, b.check_out_date!]))
+    ).sort();
+    for (let i = 0; i < breakpoints.length - 1; i++) {
+      const start = breakpoints[i];
+      const end = breakpoints[i + 1];
+      const beds = dated.reduce((s, b) => {
+        const overlaps = b.check_in_date! <= start && b.check_out_date! >= end;
+        if (!overlaps) return s;
+        const rc = Math.max(1, Number(b.room_count ?? 1));
+        const bpr = Math.max(1, Number(b.beds_per_room ?? 2));
+        return s + rc * bpr;
+      }, 0);
+      if (beds > 0) segments.push({ start, end, beds });
+    }
+    const peak_beds = segments.reduce((m, s) => Math.max(m, s.beds), 0);
+
     return {
       bookings: bookings.length, totalNights, beds_total, beds_assigned, paid_count, total_cost, currency,
+      segments, peak_beds,
     };
   }, [pageQ.data]);
+
+  const fmtRange = (start: string, end: string) => {
+    const f = (d: string) => {
+      const dt = new Date(d + "T00:00:00");
+      return dt.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    };
+    return `${f(start)}–${f(end)}`;
+  };
 
   if (festivalQ.isLoading) {
     return <div className="p-6 max-w-6xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
