@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertCircle, CheckCircle2, Download, FileUp, Pencil, Plus, Printer, Trash2, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Download, FileUp, Pencil, Plus, Printer, Trash2, Truck, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
@@ -198,6 +198,7 @@ export default function FestivalTransport() {
   // Aggregate stats
   const totalSeats = vehicles.reduce((a, v) => a + (vCapacity(v) ?? 0), 0);
   const totalAssignments = assignments.filter((a) => a.staff_id).length;
+  const driverCount = useMemo(() => new Set(assignments.filter((a) => a.role === "driver" && a.staff_id).map((a) => a.staff_id!)).size, [assignments]);
 
   // Phase summary
   const phaseSummary = useMemo(() => {
@@ -221,7 +222,7 @@ export default function FestivalTransport() {
   }, [legs, assignments]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 print:max-w-full print:space-y-4">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 print:max-w-full print:space-y-4">
       {/* Print header (only in print) */}
       <div className="hidden print:block print-header">
         <div className="text-sm font-bold">
@@ -232,37 +233,56 @@ export default function FestivalTransport() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 print:hidden">
-        <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">
-          ← Back to festival
-        </Link>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" /> Screen print
-          </Button>
-          <Button asChild size="sm">
-            <Link to={`/festivals/${slug}/transport/export`}>
-              <Download className="h-4 w-4" /> Export PDF
-            </Link>
-          </Button>
+      {/* Header */}
+      <div>
+        <div className="flex items-center justify-between gap-2 print:hidden">
+          <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+            <ArrowLeft className="h-3.5 w-3.5" /> {festival?.name ?? slug}
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" /> Screen print
+            </Button>
+            <Button asChild size="sm">
+              <Link to={`/festivals/${slug}/transport/export`}>
+                <Download className="h-4 w-4" /> Export PDF
+              </Link>
+            </Button>
+          </div>
         </div>
+        <div className="flex items-center gap-3 mt-2">
+          <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <Truck className="h-5 w-5" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Transport</h1>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+          Festival vehicles and transport legs. Vehicles are assigned to concepts on the Equipment page.
+        </p>
       </div>
 
-      {/* Header band */}
-      <div className="rounded-xl border bg-card p-5 print:border-2 print:rounded-none print:p-3">
-        <h1 className="text-2xl font-bold tracking-tight">{festival?.name ?? slug}</h1>
-        {festival && (
-          <p className="text-sm text-muted-foreground">
-            {fmtDateLong(festival.start_date)} – {fmtDateLong(festival.end_date)}
-          </p>
-        )}
-        <div className="mt-3 flex flex-wrap gap-4 text-sm">
-          <Stat label="Vehicles" value={vehicles.length} />
-          <Stat label="Total seats" value={totalSeats} />
-          <Stat label="Assignments" value={totalAssignments} />
-          <Stat label="Legs" value={legs.length} />
+      {/* Summary pills */}
+      {vehicles.length > 0 && (
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground border">
+            {vehicles.length} vehicle{vehicles.length === 1 ? "" : "s"}
+          </span>
+          <span className={cn(
+            "px-2.5 py-1 rounded-full border",
+            totalAssignments > 0
+              ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30"
+              : "bg-muted text-muted-foreground"
+          )}>
+            {totalAssignments} assignment{totalAssignments === 1 ? "" : "s"}
+          </span>
+          <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground border">
+            {legs.length} leg{legs.length === 1 ? "" : "s"}
+          </span>
+          <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground border">
+            {driverCount} driver{driverCount === 1 ? "" : "s"}
+          </span>
         </div>
-      </div>
+      )}
 
       {/* Phase summary */}
       {phaseSummary.length > 0 && (
@@ -273,7 +293,7 @@ export default function FestivalTransport() {
               <div
                 key={i}
                 className={cn(
-                  "rounded-lg border p-3 text-sm print:border-2 print:rounded-none",
+                  "rounded-2xl border p-4 text-sm print:border-2 print:rounded-none",
                   tbd
                     ? "border-destructive/40 bg-destructive/5 print:bg-white"
                     : "border-emerald-500/40 bg-emerald-500/5 print:bg-white",
@@ -314,13 +334,18 @@ export default function FestivalTransport() {
           />
         ))}
         {vehicles.length === 0 && festival && (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No vehicles allocated yet.
+          <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground space-y-4">
+            <div className="flex items-center justify-center">
+              <div className="h-12 w-12 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center">
+                <Truck className="h-6 w-6" />
+              </div>
+            </div>
+            <p>No vehicles allocated yet.</p>
           </div>
         )}
       </div>
 
-      <div className="flex justify-center print:hidden">
+      <div className="print:hidden">
         <AddVehicleButton festivalId={festival?.id ?? ""} slug={slug} />
       </div>
 
@@ -365,7 +390,7 @@ function VehicleBlock({
   return (
     <div
       className={cn(
-        "vehicle-block rounded-xl border bg-card overflow-hidden print:border-2 print:rounded-none",
+        "vehicle-block rounded-2xl border bg-card overflow-hidden shadow-sm print:border-2 print:rounded-none",
         cancelled && "opacity-50 relative",
       )}
     >
@@ -377,7 +402,10 @@ function VehicleBlock({
         </div>
       )}
 
-      <div className="flex items-center gap-3 p-4 border-b bg-muted/30 print:bg-white print:border-b-2">
+      <div className="flex items-center gap-3 p-5 border-b bg-muted/30 print:bg-white print:border-b-2">
+        <div className="h-10 w-10 rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center shrink-0 print:hidden">
+          <Truck className="h-5 w-5" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-lg font-semibold">{vName(vehicle)}</h3>
@@ -1332,9 +1360,13 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)} disabled={!festivalId}>
-        <Plus className="h-4 w-4" /> Add vehicle to this festival
-      </Button>
+      <button
+        onClick={() => setOpen(true)}
+        disabled={!festivalId}
+        className="w-full rounded-2xl border-2 border-dashed border-border py-4 text-sm text-muted-foreground hover:bg-muted/30 transition flex items-center justify-center gap-2 disabled:opacity-50 print:hidden"
+      >
+        <Plus className="h-4 w-4" /> Add vehicle
+      </button>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent>
           <SheetHeader>
