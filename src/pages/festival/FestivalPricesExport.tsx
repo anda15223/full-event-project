@@ -58,13 +58,11 @@ export default function FestivalPricesExport() {
   const concepts = data.concepts as any[];
   let totalItems = 0; let vegConcepts = 0;
   const conceptBlocks = concepts.map((cn: any) => {
-    const k = data.contracts.find((x: any) => x.concept_id === cn.id);
-    const list = data.priceLists.find((p: any) => p.festival_contract_id === k?.id);
-    const items = list ? (data.itemsByList.get(list.id) ?? []) : [];
+    const items = data.itemsByConcept.get(cn.id) ?? [];
     totalItems += items.length;
     const hasVeg = items.some((it: any) => it.is_vegetarian || it.is_vegan);
     if (hasVeg) vegConcepts += 1;
-    return { concept: cn, currency: list?.currency ?? "DKK", items, hasVeg };
+    return { concept: cn, currency: data.currencyByConcept.get(cn.id) ?? "DKK", items, hasVeg };
   });
 
   const summary = (
