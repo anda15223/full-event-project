@@ -168,6 +168,27 @@ export function PricesConceptCard({
     onSuccess: invalidate,
   });
 
+  const deleteUpload = useMutation({
+    mutationFn: async () => {
+      if (!prices?.id) return;
+      if (prices.source_pdf_path) {
+        await supabase.storage.from(BUCKET).remove([prices.source_pdf_path]);
+      }
+      const { error: delErr } = await sb.from("festival_concept_price_item")
+        .delete().eq("concept_prices_id", prices.id);
+      if (delErr) throw delErr;
+      const { error: updErr } = await sb.from("festival_concept_prices").update({
+        source_pdf_path: null,
+        source_pdf_uploaded_at: null,
+        last_parsed_at: null,
+        parse_summary: null,
+      }).eq("id", prices.id);
+      if (updErr) throw updErr;
+    },
+    onSuccess: () => { toast.success("Uploaded file and parsed prices removed"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
+  });
+
   const handleFile = async (file: File) => {
     setUploading(true);
     try {
@@ -315,6 +336,19 @@ export function PricesConceptCard({
             </Button>
             <Button size="sm" variant="ghost" className="h-7" onClick={() => fileRef.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />} Replace
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+              disabled={deleteUpload.isPending}
+              onClick={() => {
+                if (confirm("Delete the uploaded file AND all parsed price items for this concept? This cannot be undone.")) {
+                  deleteUpload.mutate();
+                }
+              }}
+            >
+              {deleteUpload.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
             </Button>
           </div>
         </div>
