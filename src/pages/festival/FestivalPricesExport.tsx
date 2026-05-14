@@ -20,29 +20,35 @@ export default function FestivalPricesExport() {
 
       const { data: contracts } = await supabase.from("festival_contracts")
         .select("id, concept_id").eq("festival_id", f.id).eq("is_active", true);
-      const contractIds = (contracts ?? []).map((k: any) => k.id);
       const conceptIds = (contracts ?? []).map((k: any) => k.concept_id);
 
-      const { data: priceLists } = contractIds.length
-        ? await sb.from("festival_prices").select("id, festival_contract_id, currency").in("festival_contract_id", contractIds)
-        : { data: [] as any[] };
+      const { data: priceLists } = await sb.from("festival_concept_prices")
+        .select("id, concept_id, currency").eq("festival_id", f.id);
       const priceListIds = (priceLists ?? []).map((p: any) => p.id);
 
       const { data: items } = priceListIds.length
-        ? await sb.from("festival_price_items").select("*").in("festival_prices_id", priceListIds)
+        ? await sb.from("festival_concept_price_item").select("*")
+            .in("concept_prices_id", priceListIds)
+            .order("display_order", { ascending: true })
         : { data: [] as any[] };
 
       const { data: concepts } = conceptIds.length
         ? await supabase.from("concepts").select("id, name, slug, color_hex").in("id", conceptIds)
         : { data: [] as any[] };
 
-      const itemsByList = new Map<string, any[]>();
+      const itemsByConcept = new Map<string, any[]>();
+      const currencyByConcept = new Map<string, string>();
+      (priceLists ?? []).forEach((p: any) => currencyByConcept.set(p.concept_id, p.currency ?? "DKK"));
+      const listToConcept = new Map<string, string>();
+      (priceLists ?? []).forEach((p: any) => listToConcept.set(p.id, p.concept_id));
       (items ?? []).forEach((it: any) => {
-        const arr = itemsByList.get(it.festival_prices_id) ?? [];
-        arr.push(it); itemsByList.set(it.festival_prices_id, arr);
+        const cId = listToConcept.get(it.concept_prices_id);
+        if (!cId) return;
+        const arr = itemsByConcept.get(cId) ?? [];
+        arr.push(it); itemsByConcept.set(cId, arr);
       });
 
-      setData({ festival: f, concepts: concepts ?? [], contracts: contracts ?? [], priceLists: priceLists ?? [], itemsByList });
+      setData({ festival: f, concepts: concepts ?? [], itemsByConcept, currencyByConcept });
     })();
   }, [slug]);
 
@@ -52,13 +58,11 @@ export default function FestivalPricesExport() {
   const concepts = data.concepts as any[];
   let totalItems = 0; let vegConcepts = 0;
   const conceptBlocks = concepts.map((cn: any) => {
-    const k = data.contracts.find((x: any) => x.concept_id === cn.id);
-    const list = data.priceLists.find((p: any) => p.festival_contract_id === k?.id);
-    const items = list ? (data.itemsByList.get(list.id) ?? []) : [];
+    const items = data.itemsByConcept.get(cn.id) ?? [];
     totalItems += items.length;
     const hasVeg = items.some((it: any) => it.is_vegetarian || it.is_vegan);
     if (hasVeg) vegConcepts += 1;
-    return { concept: cn, currency: list?.currency ?? "DKK", items, hasVeg };
+    return { concept: cn, currency: data.currencyByConcept.get(cn.id) ?? "DKK", items, hasVeg };
   });
 
   const summary = (
