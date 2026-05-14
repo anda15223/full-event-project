@@ -11,6 +11,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
@@ -81,6 +85,7 @@ export function PricesConceptCard({
   const [previewItems, setPreviewItems] = useState<{ product_name: string; price: number; notes: string | null; checked: boolean }[]>([]);
   const [previewCurrency, setPreviewCurrency] = useState<string>("DKK");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const currency = prices?.currency ?? "DKK";
   const status = computePricesStatus({
@@ -342,11 +347,7 @@ export function PricesConceptCard({
               variant="ghost"
               className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
               disabled={deleteUpload.isPending}
-              onClick={() => {
-                if (confirm("Delete the uploaded file AND all parsed price items for this concept? This cannot be undone.")) {
-                  deleteUpload.mutate();
-                }
-              }}
+              onClick={() => setConfirmDeleteOpen(true)}
             >
               {deleteUpload.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
             </Button>
@@ -466,6 +467,26 @@ export function PricesConceptCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete uploaded prices?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the uploaded file and all {items.length} parsed price item{items.length === 1 ? "" : "s"} for {conceptName}. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { setConfirmDeleteOpen(false); deleteUpload.mutate(); }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
