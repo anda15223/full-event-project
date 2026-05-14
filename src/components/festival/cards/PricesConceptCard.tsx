@@ -347,11 +347,7 @@ export function PricesConceptCard({
               variant="ghost"
               className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
               disabled={deleteUpload.isPending}
-              onClick={() => {
-                if (confirm("Delete the uploaded file AND all parsed price items for this concept? This cannot be undone.")) {
-                  deleteUpload.mutate();
-                }
-              }}
+              onClick={() => setConfirmDeleteOpen(true)}
             >
               {deleteUpload.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />} Delete
             </Button>
