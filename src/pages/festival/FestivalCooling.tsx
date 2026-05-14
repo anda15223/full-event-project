@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Snowflake, Plus, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Snowflake, Plus, AlertTriangle, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -147,9 +147,16 @@ export default function FestivalCooling() {
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
         </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <Snowflake className="h-7 w-7 text-blue-500" />
-          <h1 className="text-3xl font-bold tracking-tight">Cooling</h1>
+        <div className="flex items-center justify-between gap-3 mt-2">
+          <div className="flex items-center gap-3">
+            <Snowflake className="h-7 w-7 text-blue-500" />
+            <h1 className="text-3xl font-bold tracking-tight">Cooling</h1>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/festivals/${slug}/cooling/export`} target="_blank" rel="noopener noreferrer">
+              <Download className="h-4 w-4" /> Export PDF
+            </a>
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Refrigerated containers, trailers, and pallet rentals. Cooling units are festival-level resources shared across concepts. Delivered to site — not loaded from Søborg.
