@@ -168,6 +168,27 @@ export function PricesConceptCard({
     onSuccess: invalidate,
   });
 
+  const deleteUpload = useMutation({
+    mutationFn: async () => {
+      if (!prices?.id) return;
+      if (prices.source_pdf_path) {
+        await supabase.storage.from(BUCKET).remove([prices.source_pdf_path]);
+      }
+      const { error: delErr } = await sb.from("festival_concept_price_item")
+        .delete().eq("concept_prices_id", prices.id);
+      if (delErr) throw delErr;
+      const { error: updErr } = await sb.from("festival_concept_prices").update({
+        source_pdf_path: null,
+        source_pdf_uploaded_at: null,
+        last_parsed_at: null,
+        parse_summary: null,
+      }).eq("id", prices.id);
+      if (updErr) throw updErr;
+    },
+    onSuccess: () => { toast.success("Uploaded file and parsed prices removed"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
+  });
+
   const handleFile = async (file: File) => {
     setUploading(true);
     try {
