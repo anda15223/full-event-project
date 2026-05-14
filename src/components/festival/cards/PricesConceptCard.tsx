@@ -85,6 +85,7 @@ export function PricesConceptCard({
   const [previewItems, setPreviewItems] = useState<{ product_name: string; price: number; notes: string | null; checked: boolean }[]>([]);
   const [previewCurrency, setPreviewCurrency] = useState<string>("DKK");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const currency = prices?.currency ?? "DKK";
   const status = computePricesStatus({
