@@ -169,6 +169,27 @@ export default function FestivalSetup() {
   });
   const phases = phasesQ.data ?? [];
 
+  /* ---------- Phase sources ---------- */
+  const phaseIds = phases.map((p) => p.id);
+  const sourcesQ = useQuery({
+    queryKey: ["setup-phase-sources", run?.id, phaseIds.join(",")],
+    enabled: !!run?.id && phaseIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await sb.from("setup_phase_sources")
+        .select("*").in("setup_phase_id", phaseIds).order("position");
+      if (error) throw error;
+      return (data ?? []) as PhaseSource[];
+    },
+  });
+  const sourcesByPhase = useMemo(() => {
+    const m = new Map<string, PhaseSource[]>();
+    (sourcesQ.data ?? []).forEach((s) => {
+      const arr = m.get(s.setup_phase_id) ?? [];
+      arr.push(s); m.set(s.setup_phase_id, arr);
+    });
+    return m;
+  }, [sourcesQ.data]);
+
   /* ---------- Attachments ---------- */
   const attQ = useQuery({
     queryKey: ["setup-attachments", run?.id],
