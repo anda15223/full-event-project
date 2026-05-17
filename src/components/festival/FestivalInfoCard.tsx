@@ -60,11 +60,15 @@ export function FestivalInfoCard({ festival, defaultOpen = false }: FestivalInfo
           </span>
         </button>
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
-            <Link to={`/festivals/${festival.slug}/info/export`} target="_blank" rel="noopener noreferrer">
-              <FileDown className="h-4 w-4 mr-1" /> Export
-            </Link>
-          </Button>
+          <a
+            href={`/festivals/${festival.slug}/info/export`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition"
+          >
+            <FileDown className="h-4 w-4" /> Export
+          </a>
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
