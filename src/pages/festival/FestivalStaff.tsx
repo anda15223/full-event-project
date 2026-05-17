@@ -202,7 +202,10 @@ export default function FestivalStaff() {
   const [accomFilter, setAccomFilter] = useState<"any" | "yes" | "no">("any");
 
   const cityOptions = Array.from(
-    new Set(allRows.map((s) => (s.home_location ?? "").trim()).filter(Boolean))
+    new Set([
+      "Aarhus",
+      ...allRows.map((s) => (s.home_location ?? "").trim()).filter(Boolean),
+    ])
   ).sort((a, b) => a.localeCompare(b));
 
   const rows = allRows
