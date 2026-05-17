@@ -58,6 +58,8 @@ type SetupPhase = {
   concept: Concept | null;
   transport_allocation_id: string | null;
   planned_time: string | null;
+  from_location: string | null;
+  to_location: string | null;
   notes: string | null;
 };
 
