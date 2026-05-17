@@ -285,7 +285,7 @@ export function FacadeConceptCard({
             onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}>
             {uploadingPhotos ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "+ Add photos"}
           </Button>
-          <input ref={photoInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic"
+          <input ref={photoInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp"
             className="hidden" onChange={(e) => e.target.files && uploadPhotos(e.target.files)} />
         </div>
         {photos.length === 0 ? (
@@ -296,7 +296,7 @@ export function FacadeConceptCard({
           >
             <ImageIcon className="h-5 w-5 mx-auto mb-1 opacity-50" />
             Drop facade photos or click to upload
-            <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic"
+            <input type="file" multiple accept="image/jpeg,image/png,image/webp"
               className="hidden" onChange={(e) => e.target.files && uploadPhotos(e.target.files)} />
           </label>
         ) : (
