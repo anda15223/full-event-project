@@ -570,6 +570,8 @@ function LegsTable({
               key={leg.id}
               leg={leg}
               assignments={assignments.filter((a) => a.leg_id === leg.id)}
+              vehicleLegs={legs}
+              vehicleAssignments={assignments}
               staff={staff}
               staffById={staffById}
               festivalId={festivalId}
