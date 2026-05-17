@@ -40,6 +40,7 @@ export function normalizeForPdf(text: string | null | undefined): string {
 
   // 4. Special punctuation → ASCII
   s = s
+    .replace(/[\u00A0\u2007\u202F]/g, " ")         // non-breaking / figure / narrow no-break spaces
     .replace(/[\u2014\u2013]/g, "-")               // em-dash, en-dash
     .replace(/[\u2018\u2019\u201A\u201B`]/g, "'")  // curly singles + backtick
     .replace(/[\u201C\u201D\u201E\u201F]/g, '"')   // curly doubles
