@@ -242,6 +242,9 @@ export default function FestivalSetupExport() {
       {a.isImage && a.signedUrl ? (
         <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 400, objectFit: "contain" }} />
       ) : null}
+      {a.pageImages.map((src, i) => (
+        <Image key={i} src={src} style={{ width: "100%", maxHeight: 520, objectFit: "contain", marginTop: 4 }} />
+      ))}
       {a.ai_summary && (
         <Text style={[r.small, { marginTop: 4, fontStyle: "italic", color: "#444" }]}>
           AI summary: {a.ai_summary}
