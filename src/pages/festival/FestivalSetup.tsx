@@ -13,10 +13,22 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, Calendar, Upload, Loader2, FileText, Plus, Trash2,
+  ArrowLeft, Calendar, CalendarIcon, Upload, Loader2, FileText, Plus, Trash2,
   ArrowUp, ArrowDown, AlertCircle,
 } from "lucide-react";
+
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 15) {
+    out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+  return out;
+})();
 
 const sb = supabase as any;
 const BUCKET = "festival-setup-docs";
