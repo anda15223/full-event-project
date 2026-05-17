@@ -454,12 +454,13 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 // ============================================================
 function VehicleBlock({
-  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIdsByDate,
+  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIdsByDate, returnHomeAssignedIds,
 }: {
   vehicle: Vehicle; legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; slug: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
   assignedIdsByDate: Map<string, Set<string>>;
+  returnHomeAssignedIds: Set<string>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [addLegOpen, setAddLegOpen] = useState(false);
