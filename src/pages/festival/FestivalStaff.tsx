@@ -29,6 +29,8 @@ type Staff = {
   name: string | null;
   home_location: string | null;
   confirmed: boolean | null;
+  needs_accommodation: boolean | null;
+  concept_id: string | null;
   works_thursday: boolean | null;
   works_friday: boolean | null;
   works_saturday: boolean | null;
@@ -37,6 +39,8 @@ type Staff = {
   role: string;
   notes: string | null;
 };
+
+type Concept = { id: string; name: string };
 
 const SOURCE_OPTIONS = [
   { value: "soborg", label: "Søborg" },
