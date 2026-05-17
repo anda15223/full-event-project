@@ -272,7 +272,10 @@ export default function FestivalStaff() {
                         />
                         <span>{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
                       </span>
-                      <span className="text-xs text-muted-foreground">{p.home_location ?? ""}</span>
+                      <span className="text-xs text-muted-foreground flex items-center gap-2">
+                        {p.station && <span className="px-1.5 py-0.5 rounded bg-muted">{STATION_LABEL[p.station] ?? p.station}</span>}
+                        <span>{p.home_location ?? ""}</span>
+                      </span>
                     </li>
                   ))}
                 </ul>
