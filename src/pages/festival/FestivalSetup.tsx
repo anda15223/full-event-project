@@ -19,8 +19,18 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft, Calendar, CalendarIcon, Upload, Loader2, FileText, Plus, Trash2,
-  ArrowUp, ArrowDown, AlertCircle,
+  ArrowUp, ArrowDown, AlertCircle, Link2, X,
 } from "lucide-react";
+import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
+
+type PhaseSource = {
+  id: string;
+  setup_phase_id: string;
+  source_table: string;
+  source_id: string;
+  label: string | null;
+  detail: string | null;
+};
 
 const TIME_OPTIONS: string[] = (() => {
   const out: string[] = [];
@@ -159,6 +169,27 @@ export default function FestivalSetup() {
   });
   const phases = phasesQ.data ?? [];
 
+  /* ---------- Phase sources ---------- */
+  const phaseIds = phases.map((p) => p.id);
+  const sourcesQ = useQuery({
+    queryKey: ["setup-phase-sources", run?.id, phaseIds.join(",")],
+    enabled: !!run?.id && phaseIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await sb.from("setup_phase_sources")
+        .select("*").in("setup_phase_id", phaseIds).order("position");
+      if (error) throw error;
+      return (data ?? []) as PhaseSource[];
+    },
+  });
+  const sourcesByPhase = useMemo(() => {
+    const m = new Map<string, PhaseSource[]>();
+    (sourcesQ.data ?? []).forEach((s) => {
+      const arr = m.get(s.setup_phase_id) ?? [];
+      arr.push(s); m.set(s.setup_phase_id, arr);
+    });
+    return m;
+  }, [sourcesQ.data]);
+
   /* ---------- Attachments ---------- */
   const attQ = useQuery({
     queryKey: ["setup-attachments", run?.id],
@@ -247,7 +278,46 @@ export default function FestivalSetup() {
     onSuccess: invalidatePhases,
   });
 
-  /* ---------- Correction (writes to Transport master) ---------- */
+  /* ---------- Source picker ---------- */
+  const [pickerPhaseId, setPickerPhaseId] = useState<string | null>(null);
+  const invalidateSources = () => qc.invalidateQueries({ queryKey: ["setup-phase-sources", run?.id] });
+
+  const applySource = useMutation({
+    mutationFn: async ({ phaseId, patch, snap }: { phaseId: string; patch: PhasePatch; snap: SourceSnapshot }) => {
+      const phase = phases.find((p) => p.id === phaseId);
+      // Only overwrite phase_name if currently empty/default
+      const cleanPatch: any = { ...patch };
+      if (phase && phase.phase_name && phase.phase_name !== "New phase") delete cleanPatch.phase_name;
+      if (phase?.from_location) delete cleanPatch.from_location;
+      if (phase?.to_location) delete cleanPatch.to_location;
+      if (phase?.planned_time) delete cleanPatch.planned_time;
+
+      if (Object.keys(cleanPatch).length) {
+        const { error } = await sb.from("setup_phases").update(cleanPatch).eq("id", phaseId);
+        if (error) throw error;
+      }
+      const existing = sourcesByPhase.get(phaseId) ?? [];
+      const { error: insErr } = await sb.from("setup_phase_sources").insert({
+        setup_phase_id: phaseId,
+        source_table: snap.source_table,
+        source_id: snap.source_id,
+        label: snap.label,
+        detail: snap.detail,
+        position: existing.length,
+      });
+      if (insErr) throw insErr;
+    },
+    onSuccess: () => { invalidatePhases(); invalidateSources(); toast.success("Source attached"); },
+    onError: (e: any) => toast.error(e?.message ?? "Attach failed"),
+  });
+
+  const removeSource = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sb.from("setup_phase_sources").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidateSources,
+  });
   const [correctingAllocId, setCorrectingAllocId] = useState<string | null>(null);
   const [pickedDriver, setPickedDriver] = useState<string>("");
 
@@ -518,6 +588,25 @@ export default function FestivalSetup() {
                         </Select>
                       </Field>
                     </div>
+
+                    {/* Row 4: attached sources */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      {(sourcesByPhase.get(p.id) ?? []).map((s) => (
+                        <span key={s.id}
+                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-muted/40">
+                          <span className="font-medium">{s.label}</span>
+                          {s.detail ? <span className="text-muted-foreground">· {s.detail}</span> : null}
+                          <button onClick={() => removeSource.mutate(s.id)}
+                            className="ml-0.5 text-muted-foreground hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                      <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
+                        onClick={() => setPickerPhaseId(p.id)}>
+                        <Link2 className="h-3 w-3 mr-1" /> Attach source
+                      </Button>
+                    </div>
                   </div>
 
                   <button onClick={() => { if (confirm("Delete this phase?")) deletePhase.mutate(p.id); }}
@@ -631,6 +720,20 @@ export default function FestivalSetup() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Source picker */}
+      <SetupSourcePicker
+        open={!!pickerPhaseId}
+        onOpenChange={(o) => { if (!o) setPickerPhaseId(null); }}
+        festivalId={festivalId}
+        soborgDefault="Søborg HQ"
+        destinationDefault={run?.destination_address ?? ""}
+        currentNotes={pickerPhaseId ? (phases.find((p) => p.id === pickerPhaseId)?.notes ?? null) : null}
+        onApply={(patch, snap) => {
+          if (!pickerPhaseId) return;
+          applySource.mutate({ phaseId: pickerPhaseId, patch, snap });
+        }}
+      />
     </div>
   );
 }

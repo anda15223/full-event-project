@@ -6623,6 +6623,47 @@ export type Database = {
           },
         ]
       }
+      setup_phase_sources: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          label: string | null
+          position: number
+          setup_phase_id: string
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          label?: string | null
+          position?: number
+          setup_phase_id: string
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          label?: string | null
+          position?: number
+          setup_phase_id?: string
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setup_phase_sources_setup_phase_id_fkey"
+            columns: ["setup_phase_id"]
+            isOneToOne: false
+            referencedRelation: "setup_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       setup_phases: {
         Row: {
           concept: string | null
