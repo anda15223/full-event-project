@@ -382,6 +382,7 @@ export default function FestivalTransport() {
             slug={slug}
             focusLegId={focusLegId}
             conflictByLeg={conflictByLeg}
+            assignedIds={globalAssignedIds}
           />
         ))}
         {vehicles.length === 0 && festival && (
