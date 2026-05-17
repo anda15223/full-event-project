@@ -517,6 +517,7 @@ function VehicleBlock({
         focusLegId={focusLegId}
         conflictByLeg={conflictByLeg}
         assignedIdsByDate={assignedIdsByDate}
+        returnHomeAssignedIds={returnHomeAssignedIds}
       />
 
       <div className="p-3 border-t print:hidden">
