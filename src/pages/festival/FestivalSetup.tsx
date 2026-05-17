@@ -779,14 +779,14 @@ export default function FestivalSetup() {
                   </button>
                 </div>
 
-                {alloc && (
+                {isDrive && alloc && (
                   <div className="text-xs text-muted-foreground pl-7">
                     Vehicle: <strong>{alloc.vehicle_name}</strong>
                     {" · "}Driver: {alloc.driver_name ?? <em className="text-rose-600">unallocated</em>}
                   </div>
                 )}
 
-                {driverMissing && (
+                {isDrive && driverMissing && (
                   <div className="ml-7 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300">
                       <AlertCircle className="h-4 w-4 shrink-0" />
