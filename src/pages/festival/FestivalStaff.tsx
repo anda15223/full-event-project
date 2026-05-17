@@ -73,6 +73,7 @@ const CONCEPT_STATION_PLAN: { match: (name: string) => boolean; slots: { station
       { station: "cash_register", count: 2 },
       { station: "pita_wrapper", count: 2 },
       { station: "assembly", count: 3 },
+      { station: "fryer", count: 1 },
       { station: "oven", count: 1 },
       { station: "pita_griddle", count: 1 },
     ],
