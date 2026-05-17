@@ -587,13 +587,16 @@ function LegsTable({
 }
 
 function LegRow({
-  leg, assignments, staff, staffById, festivalId, highlighted, conflictStaffIds, assignedIds,
+  leg, assignments, vehicleLegs, vehicleAssignments, staff, staffById, festivalId, highlighted, conflictStaffIds, assignedIds,
 }: {
-  leg: Leg; assignments: Assignment[]; staff: Staff[];
+  leg: Leg; assignments: Assignment[];
+  vehicleLegs: Leg[]; vehicleAssignments: Assignment[];
+  staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; highlighted: boolean;
   conflictStaffIds: Set<string>;
   assignedIds: Set<string>;
 }) {
+  const qc = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const driver = assignments.find((a) => a.role === "driver");
@@ -601,6 +604,41 @@ function LegRow({
   const cap = leg.effective_capacity ?? 0;
   const assignedCount = assignments.filter((a) => a.staff_id).length;
   const overCapacity = assignedCount > cap;
+
+  // For return_home legs, find a source outbound leg of the same vehicle to copy from
+  const isReturn = leg.leg_phase === "return_home";
+  const sourceLeg = useMemo(() => {
+    if (!isReturn) return null;
+    const candidates = vehicleLegs
+      .filter((l) => l.id !== leg.id && l.leg_phase !== "return_home" && l.leg_date <= leg.leg_date)
+      .filter((l) => vehicleAssignments.some((a) => a.leg_id === l.id && a.staff_id))
+      .sort((a, b) => b.leg_date.localeCompare(a.leg_date));
+    return candidates[0] ?? null;
+  }, [isReturn, vehicleLegs, vehicleAssignments, leg.id, leg.leg_date]);
+
+  const copyFromSource = useMutation({
+    mutationFn: async () => {
+      if (!sourceLeg) throw new Error("No outbound leg to copy from");
+      const src = vehicleAssignments.filter((a) => a.leg_id === sourceLeg.id && a.staff_id);
+      // Existing staff on the target leg — skip duplicates
+      const existing = new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!));
+      // If target already has a driver assigned, don't overwrite
+      const hasDriver = !!driver?.staff_id;
+      const rows = src
+        .filter((a) => !existing.has(a.staff_id!))
+        .filter((a) => !(a.role === "driver" && hasDriver))
+        .map((a) => ({ leg_id: leg.id, role: a.role, staff_id: a.staff_id }));
+      if (rows.length === 0) return 0;
+      const { error } = await supabase.from("transport_leg_assignments").insert(rows);
+      if (error) throw error;
+      return rows.length;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["transport-assignments-all"] });
+      toast.success(n ? `Copied ${n} assignment${n === 1 ? "" : "s"} from outbound` : "Nothing new to copy");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to copy"),
+  });
 
   return (
     <>
