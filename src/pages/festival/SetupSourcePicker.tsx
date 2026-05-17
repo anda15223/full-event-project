@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Truck, Snowflake, Package, Store } from "lucide-react";
+import { Truck, Snowflake, Package, Store, Image as ImageIcon, Zap } from "lucide-react";
 
 const sb = supabase as any;
 
@@ -81,7 +81,7 @@ export default function SetupSourcePicker({
     },
   });
 
-  /* Concepts (active contracts) */
+  /* Concepts (active contracts) + façade + power joined */
   const conceptsQ = useQuery({
     enabled: open && !!festivalId,
     queryKey: ["picker-concepts", festivalId],
@@ -98,6 +98,44 @@ export default function SetupSourcePicker({
       return (contracts ?? []).map((c: any) => ({
         ...c,
         concept_name: c.concept_id ? nameMap.get(c.concept_id) ?? "Concept" : (c.concept_alias ?? "Concept"),
+      }));
+    },
+  });
+
+  /* Façade — one per active concept */
+  const facadeQ = useQuery({
+    enabled: open && !!festivalId && !!conceptsQ.data,
+    queryKey: ["picker-facade", festivalId, (conceptsQ.data ?? []).map((c: any) => c.id).join(",")],
+    queryFn: async () => {
+      const contractIds = (conceptsQ.data ?? []).map((c: any) => c.id);
+      if (!contractIds.length) return [];
+      const { data } = await sb.from("festival_facade")
+        .select("id, festival_contract_id, design_status, material_type, material_supplier, dimensions_text, dimensions_w_cm, dimensions_h_cm, panel_count, print_deadline")
+        .in("festival_contract_id", contractIds);
+      const byContract = new Map<string, string>();
+      (conceptsQ.data ?? []).forEach((c: any) => byContract.set(c.id, c.concept_name));
+      return (data ?? []).map((f: any) => ({
+        ...f,
+        concept_name: byContract.get(f.festival_contract_id) ?? "Concept",
+      }));
+    },
+  });
+
+  /* Power — one per active concept */
+  const powerQ = useQuery({
+    enabled: open && !!festivalId && !!conceptsQ.data,
+    queryKey: ["picker-power", festivalId, (conceptsQ.data ?? []).map((c: any) => c.id).join(",")],
+    queryFn: async () => {
+      const contractIds = (conceptsQ.data ?? []).map((c: any) => c.id);
+      if (!contractIds.length) return [];
+      const { data } = await sb.from("festival_power")
+        .select("id, festival_contract_id, status, total_kw_estimate, total_amp_estimate, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, tableau_required, tableau_count, tent_location, power_drawing_file_path, submission_deadline")
+        .in("festival_contract_id", contractIds);
+      const byContract = new Map<string, string>();
+      (conceptsQ.data ?? []).forEach((c: any) => byContract.set(c.id, c.concept_name));
+      return (data ?? []).map((p: any) => ({
+        ...p,
+        concept_name: byContract.get(p.festival_contract_id) ?? "Concept",
       }));
     },
   });
@@ -193,6 +231,51 @@ export default function SetupSourcePicker({
     close();
   };
 
+  const pickFacade = (f: any) => {
+    const dims = f.dimensions_text
+      ?? (f.dimensions_w_cm && f.dimensions_h_cm ? `${f.dimensions_w_cm}×${f.dimensions_h_cm} cm` : null);
+    onApply(
+      {
+        phase_name: `Façade install — ${f.concept_name}`,
+        from_location: leaving,
+        to_location: `${dest} — ${f.concept_name}`,
+        notes: appendNote(`Façade: ${f.concept_name} · ${f.material_type ?? "—"}${dims ? ` · ${dims}` : ""}${f.panel_count ? ` · ${f.panel_count} panel(s)` : ""}${f.material_supplier ? ` · ${f.material_supplier}` : ""} · status ${f.design_status ?? "n/a"}`),
+      },
+      {
+        source_table: "festival_facade",
+        source_id: f.id,
+        label: `Façade — ${f.concept_name}`,
+        detail: [f.material_type, dims].filter(Boolean).join(" · "),
+      },
+    );
+    close();
+  };
+
+  const pickPower = (p: any) => {
+    const conns = [
+      p.connections_16a_240v ? `${p.connections_16a_240v}×16A/240` : null,
+      p.connections_16a_400v ? `${p.connections_16a_400v}×16A/400` : null,
+      p.connections_32a ? `${p.connections_32a}×32A` : null,
+      p.connections_63a ? `${p.connections_63a}×63A` : null,
+      p.connections_125a ? `${p.connections_125a}×125A` : null,
+    ].filter(Boolean).join(", ");
+    onApply(
+      {
+        phase_name: `Power hookup — ${p.concept_name}`,
+        from_location: leaving,
+        to_location: p.tent_location ? `${dest} — ${p.tent_location}` : `${dest} — ${p.concept_name}`,
+        notes: appendNote(`Electricity: ${p.concept_name}${p.total_kw_estimate ? ` · ${p.total_kw_estimate} kW` : ""}${p.total_amp_estimate ? ` / ${p.total_amp_estimate} A` : ""}${conns ? ` · ${conns}` : ""}${p.tableau_required ? ` · tableau ×${p.tableau_count ?? 1}` : ""}${p.power_drawing_file_path ? " · drawing attached" : ""}`),
+      },
+      {
+        source_table: "festival_power",
+        source_id: p.id,
+        label: `Power — ${p.concept_name}`,
+        detail: [p.total_kw_estimate ? `${p.total_kw_estimate} kW` : null, conns || null].filter(Boolean).join(" · "),
+      },
+    );
+    close();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -204,10 +287,12 @@ export default function SetupSourcePicker({
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-6 w-full">
             <TabsTrigger value="transport"><Truck className="h-3.5 w-3.5 mr-1" />Transport</TabsTrigger>
             <TabsTrigger value="cooling"><Snowflake className="h-3.5 w-3.5 mr-1" />Cooling</TabsTrigger>
             <TabsTrigger value="equipment"><Package className="h-3.5 w-3.5 mr-1" />Equipment</TabsTrigger>
+            <TabsTrigger value="facade"><ImageIcon className="h-3.5 w-3.5 mr-1" />Façade</TabsTrigger>
+            <TabsTrigger value="power"><Zap className="h-3.5 w-3.5 mr-1" />Power</TabsTrigger>
             <TabsTrigger value="concepts"><Store className="h-3.5 w-3.5 mr-1" />Concepts</TabsTrigger>
           </TabsList>
 
@@ -254,6 +339,46 @@ export default function SetupSourcePicker({
                   </div>
                 </button>
               ))}
+          </TabsContent>
+
+          <TabsContent value="facade" className="max-h-[50vh] overflow-y-auto space-y-1.5">
+            {facadeQ.isLoading ? <Skeleton className="h-20 w-full" /> :
+              (facadeQ.data ?? []).length === 0 ? <Empty msg="No façade plans yet — add them in the Façade card." /> :
+              (facadeQ.data ?? []).map((f: any) => {
+                const dims = f.dimensions_text ?? (f.dimensions_w_cm && f.dimensions_h_cm ? `${f.dimensions_w_cm}×${f.dimensions_h_cm} cm` : null);
+                return (
+                  <button key={f.id} onClick={() => pickFacade(f)}
+                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm">
+                    <div className="font-medium">Façade — {f.concept_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {f.material_type ?? "—"}{dims ? ` · ${dims}` : ""}{f.panel_count ? ` · ${f.panel_count} panel(s)` : ""} · {f.design_status ?? "n/a"}
+                    </div>
+                  </button>
+                );
+              })}
+          </TabsContent>
+
+          <TabsContent value="power" className="max-h-[50vh] overflow-y-auto space-y-1.5">
+            {powerQ.isLoading ? <Skeleton className="h-20 w-full" /> :
+              (powerQ.data ?? []).length === 0 ? <Empty msg="No electricity plan yet — add it in the Power card." /> :
+              (powerQ.data ?? []).map((p: any) => {
+                const conns = [
+                  p.connections_16a_240v ? `${p.connections_16a_240v}×16A/240` : null,
+                  p.connections_16a_400v ? `${p.connections_16a_400v}×16A/400` : null,
+                  p.connections_32a ? `${p.connections_32a}×32A` : null,
+                  p.connections_63a ? `${p.connections_63a}×63A` : null,
+                  p.connections_125a ? `${p.connections_125a}×125A` : null,
+                ].filter(Boolean).join(", ");
+                return (
+                  <button key={p.id} onClick={() => pickPower(p)}
+                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm">
+                    <div className="font-medium">Power — {p.concept_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.total_kw_estimate ? `${p.total_kw_estimate} kW` : "—"}{conns ? ` · ${conns}` : ""}{p.tableau_required ? ` · tableau ×${p.tableau_count ?? 1}` : ""}{p.power_drawing_file_path ? " · drawing" : ""}
+                    </div>
+                  </button>
+                );
+              })}
           </TabsContent>
 
           <TabsContent value="concepts" className="max-h-[50vh] overflow-y-auto space-y-1.5">
