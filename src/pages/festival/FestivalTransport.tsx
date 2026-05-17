@@ -539,12 +539,12 @@ function StatusPill({ status }: { status: string }) {
 
 // ============================================================
 function LegsTable({
-  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIds,
+  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIdsByDate,
 }: {
   legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
-  assignedIds: Set<string>;
+  assignedIdsByDate: Map<string, Set<string>>;
 }) {
   if (legs.length === 0) {
     return <div className="p-4 text-sm text-muted-foreground italic">No legs scheduled.</div>;
@@ -575,7 +575,7 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
-              assignedIds={assignedIds}
+              assignedIds={assignedIdsByDate.get(leg.leg_date) ?? new Set()}
             />
           ))}
         </tbody>
