@@ -231,6 +231,51 @@ export default function SetupSourcePicker({
     close();
   };
 
+  const pickFacade = (f: any) => {
+    const dims = f.dimensions_text
+      ?? (f.dimensions_w_cm && f.dimensions_h_cm ? `${f.dimensions_w_cm}×${f.dimensions_h_cm} cm` : null);
+    onApply(
+      {
+        phase_name: `Façade install — ${f.concept_name}`,
+        from_location: leaving,
+        to_location: `${dest} — ${f.concept_name}`,
+        notes: appendNote(`Façade: ${f.concept_name} · ${f.material_type ?? "—"}${dims ? ` · ${dims}` : ""}${f.panel_count ? ` · ${f.panel_count} panel(s)` : ""}${f.material_supplier ? ` · ${f.material_supplier}` : ""} · status ${f.design_status ?? "n/a"}`),
+      },
+      {
+        source_table: "festival_facade",
+        source_id: f.id,
+        label: `Façade — ${f.concept_name}`,
+        detail: [f.material_type, dims].filter(Boolean).join(" · "),
+      },
+    );
+    close();
+  };
+
+  const pickPower = (p: any) => {
+    const conns = [
+      p.connections_16a_240v ? `${p.connections_16a_240v}×16A/240` : null,
+      p.connections_16a_400v ? `${p.connections_16a_400v}×16A/400` : null,
+      p.connections_32a ? `${p.connections_32a}×32A` : null,
+      p.connections_63a ? `${p.connections_63a}×63A` : null,
+      p.connections_125a ? `${p.connections_125a}×125A` : null,
+    ].filter(Boolean).join(", ");
+    onApply(
+      {
+        phase_name: `Power hookup — ${p.concept_name}`,
+        from_location: leaving,
+        to_location: p.tent_location ? `${dest} — ${p.tent_location}` : `${dest} — ${p.concept_name}`,
+        notes: appendNote(`Electricity: ${p.concept_name}${p.total_kw_estimate ? ` · ${p.total_kw_estimate} kW` : ""}${p.total_amp_estimate ? ` / ${p.total_amp_estimate} A` : ""}${conns ? ` · ${conns}` : ""}${p.tableau_required ? ` · tableau ×${p.tableau_count ?? 1}` : ""}${p.power_drawing_file_path ? " · drawing attached" : ""}`),
+      },
+      {
+        source_table: "festival_power",
+        source_id: p.id,
+        label: `Power — ${p.concept_name}`,
+        detail: [p.total_kw_estimate ? `${p.total_kw_estimate} kW` : null, conns || null].filter(Boolean).join(" · "),
+      },
+    );
+    close();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
