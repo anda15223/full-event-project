@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { ChevronDown, Info } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ChevronDown, Info, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { FestivalHeader } from "@/components/festival/FestivalHeader";
 import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
@@ -44,26 +46,39 @@ export function FestivalInfoCard({ festival, defaultOpen = false }: FestivalInfo
         !open && "hover:bg-muted/50",
       )}
     >
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-4 text-left"
-        aria-expanded={open}
-      >
-        <div className="flex items-center gap-3">
+      <div className="w-full flex items-center justify-between p-4">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex-1 flex items-center gap-3 text-left"
+          aria-expanded={open}
+        >
           <Info className="h-4 w-4 text-primary" />
           <span className="font-heading text-base font-semibold">Info</span>
           <span className="text-xs text-muted-foreground hidden sm:inline">
             Map, location docs, hours, contacts
           </span>
+        </button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+            <Link to={`/festivals/${festival.slug}/info/export`} target="_blank" rel="noopener noreferrer">
+              <FileDown className="h-4 w-4 mr-1" /> Export
+            </Link>
+          </Button>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={open ? "Collapse" : "Expand"}
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                open && "rotate-180",
+              )}
+            />
+          </button>
         </div>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform duration-200",
-            open && "rotate-180",
-          )}
-        />
-      </button>
+      </div>
 
       <div
         className={cn(
