@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { PDFViewer } from "@react-pdf/renderer";
 import { Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
@@ -12,6 +12,8 @@ const sb = supabase as any;
 
 export default function FestivalEquipmentExport() {
   const { slug = "" } = useParams();
+  const [sp] = useSearchParams();
+  const conceptFilter = sp.get("concept") ?? "";
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
@@ -60,7 +62,10 @@ export default function FestivalEquipmentExport() {
   if (!data) return <div className="p-12 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF…</div>;
   if (!data.festival) return <div className="p-12">Festival not found.</div>;
 
-  const concepts = data.concepts as any[];
+  const allConcepts = data.concepts as any[];
+  const concepts = conceptFilter
+    ? allConcepts.filter((cn: any) => cn.slug === conceptFilter)
+    : allConcepts;
   let totalItems = 0, totalPowered = 0, totalKw = 0;
   concepts.forEach((cn: any) => {
     const sum = summarizeConceptEquipment(data.eqByConcept.get(cn.id) ?? []);
