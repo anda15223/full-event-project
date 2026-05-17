@@ -232,6 +232,29 @@ export default function FestivalStaff() {
   );
 }
 
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1 rounded-full border text-xs transition ${
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-background hover:bg-muted border-border text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function StaffRow({
   staff,
   index,
