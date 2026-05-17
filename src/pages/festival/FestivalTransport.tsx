@@ -758,6 +758,15 @@ function DriverCell({
 
   const upsertDriver = useMutation({
     mutationFn: async (staffId: string | null) => {
+      // "__none__" / null clears the assignment entirely
+      if (staffId === null) {
+        if (driver) {
+          const { error } = await supabase
+            .from("transport_leg_assignments").delete().eq("id", driver.id);
+          if (error) throw error;
+        }
+        return;
+      }
       if (driver) {
         const { error } = await supabase
           .from("transport_leg_assignments")
@@ -777,6 +786,8 @@ function DriverCell({
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
+
+  const handleSelect = (v: string) => upsertDriver.mutate(v === "__none__" ? null : v);
 
   // Print: just text
   const printName = driver?.staff_id ? staffById[driver.staff_id]?.name ?? "?" : "__________________";
@@ -804,11 +815,12 @@ function DriverCell({
       <>
         <div className="hidden print:block text-xs">DRIVER: __________________</div>
         <div className="print:hidden">
-          <Select onValueChange={(v) => upsertDriver.mutate(v)}>
+          <Select onValueChange={handleSelect}>
             <SelectTrigger className="h-8 text-xs border-destructive/50 bg-destructive/5 text-destructive">
               <SelectValue placeholder="🚨 TBD — Assign driver" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__none__" className="text-muted-foreground italic">— None —</SelectItem>
               <StaffOptions staff={staff} assignedIds={assignedIds} />
             </SelectContent>
           </Select>
@@ -821,11 +833,12 @@ function DriverCell({
     <>
       <div className="hidden print:block text-xs font-medium">DRIVER: {printName}</div>
       <div className="print:hidden">
-        <Select value={driver.staff_id} onValueChange={(v) => upsertDriver.mutate(v)}>
+        <Select value={driver.staff_id} onValueChange={handleSelect}>
           <SelectTrigger className="h-8 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="__none__" className="text-muted-foreground italic">— None (clear) —</SelectItem>
             <StaffOptions staff={staff} assignedIds={assignedIds} currentId={driver.staff_id} />
           </SelectContent>
         </Select>
