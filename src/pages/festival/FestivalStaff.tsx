@@ -83,6 +83,23 @@ export default function FestivalStaff() {
     },
   });
 
+  const conceptsQ = useQuery({
+    queryKey: ["festival-concepts-for-staff", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_contracts")
+        .select("concept_id, concepts:concept_id(id, name)")
+        .eq("festival_id", festivalId!)
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? [])
+        .map((r: any) => r.concepts)
+        .filter(Boolean) as Concept[];
+    },
+  });
+  const concepts = conceptsQ.data ?? [];
+
   const updateStaff = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Staff> }) => {
       const { error } = await supabase.from("festival_staff").update(patch).eq("id", id);
