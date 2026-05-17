@@ -171,6 +171,8 @@ export default function FestivalStaff() {
               <TableHead className="w-10">#</TableHead>
               <TableHead className="min-w-[180px]">Name</TableHead>
               <TableHead className="min-w-[140px]">Location</TableHead>
+              <TableHead className="min-w-[140px]">Concept</TableHead>
+              <TableHead className="text-center">Accom.</TableHead>
               <TableHead className="min-w-[120px]">Source</TableHead>
               <TableHead className="text-center">Thu</TableHead>
               <TableHead className="text-center">Fri</TableHead>
@@ -187,6 +189,7 @@ export default function FestivalStaff() {
                 key={s.id}
                 staff={s}
                 index={i + 1}
+                concepts={concepts}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
                   if (confirm(`Delete ${s.name || "this person"}?`)) deleteStaff.mutate(s.id);
@@ -195,7 +198,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
