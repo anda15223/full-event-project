@@ -281,8 +281,24 @@ export default function FestivalStaff() {
 
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by concept</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
+
+        {(() => {
+          const assignmentMap = new Map<string, { conceptName: string; stationLabel: string }>();
+          allRows.forEach((p) => {
+            if (p.role === "management") {
+              assignmentMap.set(p.id, { conceptName: "Management", stationLabel: "" });
+            } else if (p.concept_id && p.station) {
+              const cName = concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
+              assignmentMap.set(p.id, {
+                conceptName: cName,
+                stationLabel: STATION_LABEL[p.station] ?? p.station,
+              });
+            }
+          });
+
+          const crewPool = allRows.filter((s) => s.role !== "management");
+
+          const groups = [
             { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
             ...concepts.map((c) => ({
               id: c.id,
@@ -290,108 +306,149 @@ export default function FestivalStaff() {
               people: allRows.filter((s) => s.concept_id === c.id && s.role !== "management"),
             })),
             { id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
-          ].map((group) => {
-            const isMgmt = group.id === "__mgmt__";
-            const isNone = group.id === "__none__";
-            const plan = !isMgmt && !isNone
-              ? CONCEPT_STATION_PLAN.find((p) => p.match(group.name.toLowerCase()))
-              : undefined;
-            const renderPerson = (p: Staff) => (
-              <span className="flex items-center gap-2 min-w-0">
-                <span
-                  className={`inline-block h-2 w-2 rounded-full shrink-0 ${
-                    p.confirmed ? "bg-emerald-500" : "bg-amber-400"
-                  }`}
-                  title={p.confirmed ? "Confirmed" : "Unconfirmed"}
-                />
-                <span className="truncate">{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
-                {p.home_location && (
-                  <span className="text-xs text-muted-foreground shrink-0">· {p.home_location}</span>
-                )}
-              </span>
-            );
-            return (
-              <div key={group.id} className="rounded-lg border bg-card p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-sm">{group.name}</h3>
-                  <span className="text-xs text-muted-foreground">{group.people.length}</span>
-                </div>
-                {plan ? (
-                  (() => {
-                    const used = new Set<string>();
-                    return (
-                      <div className="space-y-2">
-                        {plan.slots.map((slot) => {
-                          const pool = group.people.filter((p) => p.station === slot.station && !used.has(p.id));
-                          const filled = pool.slice(0, slot.count);
-                          filled.forEach((p) => used.add(p.id));
-                          const empties = slot.count - filled.length;
-                          return (
-                            <div key={slot.station}>
-                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
-                                {STATION_LABEL[slot.station]} · {filled.length}/{slot.count}
-                              </div>
-                              <ul className="space-y-1">
-                                {filled.map((p) => (
-                                  <li key={p.id} className="text-sm">{renderPerson(p)}</li>
-                                ))}
-                                {Array.from({ length: empties }).map((_, i) => (
-                                  <li key={`empty-${i}`} className="text-sm text-muted-foreground italic flex items-center gap-2">
-                                    <span className="inline-block h-2 w-2 rounded-full border border-dashed border-muted-foreground/50" />
-                                    Empty slot
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          );
-                        })}
-                        {(() => {
-                          const extras = group.people.filter((p) => !used.has(p.id));
-                          if (extras.length === 0) return null;
-                          return (
-                            <div>
-                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
-                                Extra / unassigned station · {extras.length}
-                              </div>
-                              <ul className="space-y-1">
-                                {extras.map((p) => (
-                                  <li key={p.id} className="text-sm flex items-center justify-between gap-2">
-                                    {renderPerson(p)}
-                                    {p.station && (
-                                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted shrink-0">
-                                        {STATION_LABEL[p.station] ?? p.station}
-                                      </span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    );
-                  })()
-                ) : group.people.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No one assigned</p>
-                ) : (
-                  <ul className="space-y-1">
-                    {group.people.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between text-sm gap-2">
-                        {renderPerson(p)}
-                        {p.station && (
-                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted shrink-0">
-                            {STATION_LABEL[p.station] ?? p.station}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
-        </div>
+          ];
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {groups.map((group) => {
+                const isMgmt = group.id === "__mgmt__";
+                const isNone = group.id === "__none__";
+                const plan = !isMgmt && !isNone
+                  ? CONCEPT_STATION_PLAN.find((p) => p.match(group.name.toLowerCase()))
+                  : undefined;
+
+                const totalSlots = plan?.slots.reduce((a, s) => a + s.count, 0) ?? 0;
+                const filledTotal = plan
+                  ? plan.slots.reduce((acc, slot) => {
+                      const count = group.people.filter((p) => p.station === slot.station).length;
+                      return acc + Math.min(count, slot.count);
+                    }, 0)
+                  : group.people.length;
+
+                return (
+                  <div key={group.id} className="rounded-xl border bg-card p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                      <h3 className="font-heading font-semibold text-base">{group.name}</h3>
+                      {plan ? (
+                        <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                          {filledTotal}/{totalSlots}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {group.people.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {plan ? (
+                      (() => {
+                        const usedHere = new Set<string>();
+                        return (
+                          <div className="space-y-3">
+                            {plan.slots.map((slot) => {
+                              const occupants = group.people
+                                .filter((p) => p.station === slot.station)
+                                .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                              return (
+                                <div key={slot.station} className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                      {STATION_LABEL[slot.station]}
+                                    </div>
+                                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                                      {Math.min(occupants.length, slot.count)}/{slot.count}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    {Array.from({ length: slot.count }).map((_, idx) => {
+                                      const current = occupants[idx];
+                                      if (current) usedHere.add(current.id);
+                                      return (
+                                        <SlotPicker
+                                          key={`${slot.station}-${idx}`}
+                                          current={current}
+                                          crewPool={crewPool}
+                                          assignmentMap={assignmentMap}
+                                          onAssign={(personId) => {
+                                            if (personId === "__empty__") {
+                                              if (current) {
+                                                updateStaff.mutate({
+                                                  id: current.id,
+                                                  patch: { station: null, concept_id: null },
+                                                });
+                                              }
+                                              return;
+                                            }
+                                            updateStaff.mutate({
+                                              id: personId,
+                                              patch: {
+                                                concept_id: group.id,
+                                                station: slot.station,
+                                                role: "crew",
+                                              },
+                                            });
+                                          }}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {(() => {
+                              const extras = group.people.filter((p) => !usedHere.has(p.id));
+                              if (extras.length === 0) return null;
+                              return (
+                                <div className="pt-2 border-t">
+                                  <div className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-1">
+                                    Extra · {extras.length}
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {extras.map((p) => (
+                                      <li key={p.id} className="text-sm flex items-center justify-between gap-2">
+                                        <span className="truncate">{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted shrink-0">
+                                          {p.station ? (STATION_LABEL[p.station] ?? p.station) : "no station"}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        );
+                      })()
+                    ) : group.people.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No one assigned</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {group.people.map((p) => (
+                          <li key={p.id} className="flex items-center justify-between text-sm gap-2">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={`inline-block h-2 w-2 rounded-full shrink-0 ${
+                                  p.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                                }`}
+                              />
+                              <span className="truncate">{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                            </span>
+                            {p.home_location && (
+                              <span className="text-[10px] text-muted-foreground shrink-0">{p.home_location}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
+
 
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
