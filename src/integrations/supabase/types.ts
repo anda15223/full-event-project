@@ -6585,6 +6585,131 @@ export type Database = {
           },
         ]
       }
+      setup_attachments: {
+        Row: {
+          concept: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          mime_type: string | null
+          setup_run_id: string
+        }
+        Insert: {
+          concept?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          mime_type?: string | null
+          setup_run_id: string
+        }
+        Update: {
+          concept?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          mime_type?: string | null
+          setup_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setup_attachments_setup_run_id_fkey"
+            columns: ["setup_run_id"]
+            isOneToOne: false
+            referencedRelation: "setup_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setup_phases: {
+        Row: {
+          concept: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          phase_name: string
+          planned_time: string | null
+          setup_run_id: string
+          sort_order: number
+          transport_allocation_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          concept?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phase_name: string
+          planned_time?: string | null
+          setup_run_id: string
+          sort_order?: number
+          transport_allocation_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          concept?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          phase_name?: string
+          planned_time?: string | null
+          setup_run_id?: string
+          sort_order?: number
+          transport_allocation_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setup_phases_setup_run_id_fkey"
+            columns: ["setup_run_id"]
+            isOneToOne: false
+            referencedRelation: "setup_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setup_phases_transport_allocation_id_fkey"
+            columns: ["transport_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setup_runs: {
+        Row: {
+          arrival_time: string | null
+          created_at: string
+          destination_address: string | null
+          festival_id: string
+          id: string
+          setup_date: string | null
+          soborg_meet_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          arrival_time?: string | null
+          created_at?: string
+          destination_address?: string | null
+          festival_id: string
+          id?: string
+          setup_date?: string | null
+          soborg_meet_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          arrival_time?: string | null
+          created_at?: string
+          destination_address?: string | null
+          festival_id?: string
+          id?: string
+          setup_date?: string | null
+          soborg_meet_time?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff: {
         Row: {
           created_at: string | null
