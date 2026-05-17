@@ -49,7 +49,7 @@ const EVENT_TYPES = [
 ] as const;
 
 const TYPE_LABEL: Record<string, string> = {
-  load_soborg: "Load Soborg", drive_to_festival: "Drive to festival",
+  load_soborg: "Load Søborg", drive_to_festival: "Drive to festival",
   arrival_on_site: "Arrival on site", supplier_delivery: "Supplier delivery",
   setup_start: "Setup start", setup_complete: "Setup complete",
   festival_open: "Festival open", festival_close: "Festival close",
