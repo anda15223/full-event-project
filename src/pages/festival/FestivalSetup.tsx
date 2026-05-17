@@ -599,52 +599,56 @@ export default function FestivalSetup() {
                       </Select>
                     </div>
 
-                    {/* Row 2: leaving point → destination point */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Field label="Leaving from">
-                        <Input
-                          className="h-9 text-xs"
-                          defaultValue={p.from_location ?? ""}
-                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.from_location) updatePhase.mutate({ id: p.id, patch: { from_location: v } }); }}
-                          placeholder="e.g. Søborg HQ"
-                        />
-                      </Field>
-                      <Field label="Destination">
-                        <Input
-                          className="h-9 text-xs"
-                          defaultValue={p.to_location ?? ""}
-                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.to_location) updatePhase.mutate({ id: p.id, patch: { to_location: v } }); }}
-                          placeholder="e.g. Jelling site – Fish stand"
-                        />
-                      </Field>
-                    </div>
+                    {/* Row 2: leaving point → destination point (drive only) */}
+                    {isDrive && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Field label="Leaving from">
+                          <Input
+                            className="h-9 text-xs"
+                            defaultValue={p.from_location ?? ""}
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== p.from_location) updatePhase.mutate({ id: p.id, patch: { from_location: v } }); }}
+                            placeholder="e.g. Søborg HQ"
+                          />
+                        </Field>
+                        <Field label="Destination">
+                          <Input
+                            className="h-9 text-xs"
+                            defaultValue={p.to_location ?? ""}
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== p.to_location) updatePhase.mutate({ id: p.id, patch: { to_location: v } }); }}
+                            placeholder="e.g. Jelling site – Fish stand"
+                          />
+                        </Field>
+                      </div>
+                    )}
 
-                    {/* Row 3: vehicle + driver name + time */}
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                      <Field label="Car">
-                        <Select
-                          value={p.transport_allocation_id ?? "__none__"}
-                          onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
-                        >
-                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— No vehicle —</SelectItem>
-                            {allocations.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.vehicle_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                      <Field label="Driver name">
-                        <Input
-                          className="h-9 text-xs sm:col-span-2"
-                          defaultValue={p.driver_name ?? ""}
-                          placeholder="Type driver name…"
-                          onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
-                        />
-                      </Field>
+                    {/* Row 3: vehicle + driver (drive only) + date + time */}
+                    <div className={cn("grid grid-cols-1 gap-2", isDrive ? "sm:grid-cols-5" : "sm:grid-cols-2")}>
+                      {isDrive && (
+                        <>
+                          <Field label="Car">
+                            <Select
+                              value={p.transport_allocation_id ?? "__none__"}
+                              onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
+                            >
+                              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">— No vehicle —</SelectItem>
+                                {allocations.map((a) => (
+                                  <SelectItem key={a.id} value={a.id}>{a.vehicle_name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field label="Driver name">
+                            <Input
+                              className="h-9 text-xs sm:col-span-2"
+                              defaultValue={p.driver_name ?? ""}
+                              placeholder="Type driver name…"
+                              onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
+                            />
+                          </Field>
+                        </>
+                      )}
                       <Field label="Planned date">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -685,6 +689,69 @@ export default function FestivalSetup() {
                         </Select>
                       </Field>
                     </div>
+
+                    {/* Setup-phase block: electricity summary + per-phase plan files */}
+                    {!isDrive && (
+                      <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        {showPower && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-1.5 font-semibold">
+                              ⚡ Electricity (from Power card)
+                            </div>
+                            {powerRows.length === 0 ? (
+                              <div className="text-[11px] text-muted-foreground">No power data yet.</div>
+                            ) : (
+                              <div className="space-y-1">
+                                {powerRows.map((pw: any) => (
+                                  <div key={pw.festival_contract_id} className="text-[11px] flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                    <span className="font-semibold capitalize">{pw.concept_name}</span>
+                                    {pw.total_kw_estimate ? <span>{pw.total_kw_estimate} kW</span> : null}
+                                    {pw.connections_16a_240v ? <span>16A/240V × {pw.connections_16a_240v}</span> : null}
+                                    {pw.connections_16a_400v ? <span>16A/400V × {pw.connections_16a_400v}</span> : null}
+                                    {pw.connections_32a ? <span>32A × {pw.connections_32a}</span> : null}
+                                    {pw.connections_63a ? <span>63A × {pw.connections_63a}</span> : null}
+                                    {pw.connections_125a ? <span>125A × {pw.connections_125a}</span> : null}
+                                    {pw.tableau_required ? <span>· Tableau × {pw.tableau_count || 1}</span> : null}
+                                    <span className="text-muted-foreground">· {pw.status}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">
+                              📎 Plan files (setup / electricity) — printed in full in report
+                            </div>
+                            <label className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border bg-card cursor-pointer hover:bg-muted">
+                              <Upload className="h-3 w-3" />
+                              Upload
+                              <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, p.id); e.currentTarget.value = ""; }} />
+                            </label>
+                          </div>
+                          {phaseAttachments.length === 0 ? (
+                            <div className="text-[11px] text-muted-foreground">No plan files yet.</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {phaseAttachments.map((a) => (
+                                <div key={a.id} className="flex items-center justify-between gap-2 text-[11px] px-2 py-1 rounded border bg-card">
+                                  <button className="flex items-center gap-1.5 min-w-0 flex-1 text-left hover:underline" onClick={() => openAttachment(a)}>
+                                    <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                    <span className="truncate">{a.file_name}</span>
+                                  </button>
+                                  <button onClick={() => deleteAttachment.mutate(a)} className="text-muted-foreground hover:text-destructive">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Row 4: attached sources */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
