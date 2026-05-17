@@ -688,9 +688,23 @@ function LegRow({
           <StatusPill status={leg.status} />
         </td>
         <td className="p-3 print:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {isReturn && sourceLeg && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-[11px] gap-1"
+                title={`Copy driver + passengers from ${PHASE_LABEL[sourceLeg.leg_phase] ?? sourceLeg.leg_phase} (${fmtDate(sourceLeg.leg_date)})`}
+                onClick={() => copyFromSource.mutate()}
+                disabled={copyFromSource.isPending}
+              >
+                Copy from outbound
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </div>
         </td>
       </tr>
       {/* Print-only passenger list */}
