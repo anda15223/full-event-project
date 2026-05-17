@@ -822,11 +822,7 @@ function PassengersCell({
             </SelectTrigger>
             <SelectContent>
               {available.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">No staff available</div>}
-              {available.map((s) => (
-                <SelectItem key={s.id} value={s.id} className={cn(conflictStaffIds.has(s.id) && "text-destructive")}>
-                  {s.name ?? "(unnamed)"} · {s.role}
-                </SelectItem>
-              ))}
+              <StaffOptions staff={available} assignedIds={assignedIds} />
             </SelectContent>
           </Select>
         </div>
