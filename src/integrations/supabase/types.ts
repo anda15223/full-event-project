@@ -4943,6 +4943,7 @@ export type Database = {
           home_location: string | null
           id: string
           name: string | null
+          needs_accommodation: boolean
           notes: string | null
           requires_transport: boolean
           role: string
@@ -4964,6 +4965,7 @@ export type Database = {
           home_location?: string | null
           id?: string
           name?: string | null
+          needs_accommodation?: boolean
           notes?: string | null
           requires_transport?: boolean
           role: string
@@ -4985,6 +4987,7 @@ export type Database = {
           home_location?: string | null
           id?: string
           name?: string | null
+          needs_accommodation?: boolean
           notes?: string | null
           requires_transport?: boolean
           role?: string

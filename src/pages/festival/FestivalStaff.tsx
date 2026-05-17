@@ -29,6 +29,8 @@ type Staff = {
   name: string | null;
   home_location: string | null;
   confirmed: boolean | null;
+  needs_accommodation: boolean | null;
+  concept_id: string | null;
   works_thursday: boolean | null;
   works_friday: boolean | null;
   works_saturday: boolean | null;
@@ -37,6 +39,8 @@ type Staff = {
   role: string;
   notes: string | null;
 };
+
+type Concept = { id: string; name: string };
 
 const SOURCE_OPTIONS = [
   { value: "soborg", label: "Søborg" },
@@ -78,6 +82,23 @@ export default function FestivalStaff() {
       return (data ?? []) as Staff[];
     },
   });
+
+  const conceptsQ = useQuery({
+    queryKey: ["festival-concepts-for-staff", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_contracts")
+        .select("concept_id, concepts:concept_id(id, name)")
+        .eq("festival_id", festivalId!)
+        .eq("is_active", true);
+      if (error) throw error;
+      return (data ?? [])
+        .map((r: any) => r.concepts)
+        .filter(Boolean) as Concept[];
+    },
+  });
+  const concepts = conceptsQ.data ?? [];
 
   const updateStaff = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Staff> }) => {
@@ -150,6 +171,8 @@ export default function FestivalStaff() {
               <TableHead className="w-10">#</TableHead>
               <TableHead className="min-w-[180px]">Name</TableHead>
               <TableHead className="min-w-[140px]">Location</TableHead>
+              <TableHead className="min-w-[140px]">Concept</TableHead>
+              <TableHead className="text-center">Accom.</TableHead>
               <TableHead className="min-w-[120px]">Source</TableHead>
               <TableHead className="text-center">Thu</TableHead>
               <TableHead className="text-center">Fri</TableHead>
@@ -166,6 +189,7 @@ export default function FestivalStaff() {
                 key={s.id}
                 staff={s}
                 index={i + 1}
+                concepts={concepts}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
                   if (confirm(`Delete ${s.name || "this person"}?`)) deleteStaff.mutate(s.id);
@@ -174,7 +198,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
@@ -193,11 +217,13 @@ export default function FestivalStaff() {
 function StaffRow({
   staff,
   index,
+  concepts,
   onPatch,
   onDelete,
 }: {
   staff: Staff;
   index: number;
+  concepts: Concept[];
   onPatch: (patch: Partial<Staff>) => void;
   onDelete: () => void;
 }) {
@@ -228,6 +254,28 @@ function StaffRow({
           }}
           placeholder="e.g. Copenhaga"
           className="h-8"
+        />
+      </TableCell>
+      <TableCell>
+        <Select
+          value={staff.concept_id ?? "__none__"}
+          onValueChange={(v) => onPatch({ concept_id: v === "__none__" ? null : v })}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
+            {concepts.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="text-center">
+        <Checkbox
+          checked={!!staff.needs_accommodation}
+          onCheckedChange={(c) => onPatch({ needs_accommodation: !!c })}
         />
       </TableCell>
       <TableCell>
