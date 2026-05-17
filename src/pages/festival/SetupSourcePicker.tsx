@@ -44,24 +44,15 @@ export default function SetupSourcePicker({
   const leaving = soborgDefault || SOBORG;
   const dest = destinationDefault || "Festival site";
 
-  /* Transport — festival_staff_vehicles + driver names */
+  /* Transport — festival_transport */
   const transportQ = useQuery({
     enabled: open && !!festivalId,
     queryKey: ["picker-transport", festivalId],
     queryFn: async () => {
-      const { data: vehicles } = await sb.from("festival_staff_vehicles")
-        .select("id, vehicle_name, driver_staff_id")
-        .eq("festival_id", festivalId).order("vehicle_name");
-      const ids = (vehicles ?? []).map((v: any) => v.driver_staff_id).filter(Boolean);
-      const nameMap = new Map<string, string>();
-      if (ids.length) {
-        const { data: staff } = await sb.from("festival_staff").select("id, name").in("id", ids);
-        (staff ?? []).forEach((s: any) => nameMap.set(s.id, s.name ?? "Unnamed"));
-      }
-      return (vehicles ?? []).map((v: any) => ({
-        ...v,
-        driver_name: v.driver_staff_id ? nameMap.get(v.driver_staff_id) ?? null : null,
-      }));
+      const { data } = await sb.from("festival_transport")
+        .select("id, vehicle_type, vehicle_purpose, rental_supplier, pickup_date, pickup_time, pickup_location, return_date, status, capacity, license_plate, notes")
+        .eq("festival_id", festivalId).order("pickup_date");
+      return data ?? [];
     },
   });
 
@@ -116,15 +107,18 @@ export default function SetupSourcePicker({
     [currentNotes, extra].filter(Boolean).join("\n");
 
   const pickTransport = (v: any) => {
-    const label = `${v.vehicle_name}${v.driver_name ? ` · ${v.driver_name}` : " · (no driver)"}`;
+    const label = `${v.vehicle_type ?? "Vehicle"}${v.license_plate ? ` (${v.license_plate})` : ""}`;
+    const driverMatch = (v.notes ?? "").match(/Driver[^:]*:\s*([^.\n\[]+)/i);
+    const driver = driverMatch ? driverMatch[1].trim() : null;
     onApply(
       {
-        phase_name: `Drive ${v.vehicle_name}`,
-        from_location: leaving,
+        phase_name: `Drive ${v.vehicle_type ?? "vehicle"}`,
+        from_location: v.pickup_location || leaving,
         to_location: dest,
-        notes: appendNote(`Vehicle: ${label}`),
+        planned_time: v.pickup_time ? v.pickup_time.slice(0, 5) : null,
+        notes: appendNote(`Vehicle: ${label}${driver ? ` · driver ${driver}` : ""}${v.vehicle_purpose ? ` — ${v.vehicle_purpose}` : ""}`),
       },
-      { source_table: "festival_staff_vehicles", source_id: v.id, label: v.vehicle_name, detail: v.driver_name ?? "no driver" },
+      { source_table: "festival_transport", source_id: v.id, label, detail: driver ?? v.rental_supplier ?? "" },
     );
     close();
   };
@@ -190,12 +184,12 @@ export default function SetupSourcePicker({
               (transportQ.data ?? []).length === 0 ? <Empty msg="No vehicles in Transport card." /> :
               (transportQ.data ?? []).map((v: any) => (
                 <button key={v.id} onClick={() => pickTransport(v)}
-                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{v.vehicle_name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {v.driver_name ?? <span className="text-rose-600">no driver</span>}
-                    </div>
+                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm">
+                  <div className="font-medium">{v.vehicle_type ?? "Vehicle"}{v.license_plate ? ` · ${v.license_plate}` : ""}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {v.vehicle_purpose ?? v.rental_supplier ?? "—"}
+                    {v.pickup_date ? ` · ${v.pickup_date}` : ""}
+                    {v.pickup_time ? ` ${String(v.pickup_time).slice(0,5)}` : ""}
                   </div>
                 </button>
               ))}
