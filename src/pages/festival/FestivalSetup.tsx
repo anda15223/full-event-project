@@ -278,7 +278,46 @@ export default function FestivalSetup() {
     onSuccess: invalidatePhases,
   });
 
-  /* ---------- Correction (writes to Transport master) ---------- */
+  /* ---------- Source picker ---------- */
+  const [pickerPhaseId, setPickerPhaseId] = useState<string | null>(null);
+  const invalidateSources = () => qc.invalidateQueries({ queryKey: ["setup-phase-sources", run?.id] });
+
+  const applySource = useMutation({
+    mutationFn: async ({ phaseId, patch, snap }: { phaseId: string; patch: PhasePatch; snap: SourceSnapshot }) => {
+      const phase = phases.find((p) => p.id === phaseId);
+      // Only overwrite phase_name if currently empty/default
+      const cleanPatch: any = { ...patch };
+      if (phase && phase.phase_name && phase.phase_name !== "New phase") delete cleanPatch.phase_name;
+      if (phase?.from_location) delete cleanPatch.from_location;
+      if (phase?.to_location) delete cleanPatch.to_location;
+      if (phase?.planned_time) delete cleanPatch.planned_time;
+
+      if (Object.keys(cleanPatch).length) {
+        const { error } = await sb.from("setup_phases").update(cleanPatch).eq("id", phaseId);
+        if (error) throw error;
+      }
+      const existing = sourcesByPhase.get(phaseId) ?? [];
+      const { error: insErr } = await sb.from("setup_phase_sources").insert({
+        setup_phase_id: phaseId,
+        source_table: snap.source_table,
+        source_id: snap.source_id,
+        label: snap.label,
+        detail: snap.detail,
+        position: existing.length,
+      });
+      if (insErr) throw insErr;
+    },
+    onSuccess: () => { invalidatePhases(); invalidateSources(); toast.success("Source attached"); },
+    onError: (e: any) => toast.error(e?.message ?? "Attach failed"),
+  });
+
+  const removeSource = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sb.from("setup_phase_sources").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidateSources,
+  });
   const [correctingAllocId, setCorrectingAllocId] = useState<string | null>(null);
   const [pickedDriver, setPickedDriver] = useState<string>("");
 
