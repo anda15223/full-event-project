@@ -244,6 +244,21 @@ export default function FestivalTransport() {
     return map;
   }, [legs, assignments]);
 
+  // Staff assigned to ANY return_home leg, regardless of date. Used on return legs
+  // so nobody is "left at the hotel" — once they have a return ride, they appear
+  // as taken in every other return leg dropdown.
+  const returnHomeAssignedIds = useMemo(() => {
+    const legById = new Map(legs.map((l) => [l.id, l]));
+    const set = new Set<string>();
+    assignments.forEach((a) => {
+      if (!a.staff_id) return;
+      const l = legById.get(a.leg_id);
+      if (!l || l.leg_phase !== "return_home") return;
+      set.add(a.staff_id);
+    });
+    return set;
+  }, [legs, assignments]);
+
   // Scroll to focused leg
   useEffect(() => {
     if (!focusLegId || legs.length === 0) return;
