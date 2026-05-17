@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { PDFViewer, Text, View, Image } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
+import { Buffer } from "buffer";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ReportTemplate, reportStyles as r, fmtFilename } from "@/components/pdf/ReportTemplate";
+
+(globalThis as any).Buffer ||= Buffer;
 
 const sb = supabase as any;
 const BUCKET = "festival-setup-docs";
