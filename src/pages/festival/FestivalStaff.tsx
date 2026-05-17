@@ -281,6 +281,52 @@ export default function FestivalStaff() {
         </div>
       </div>
 
+      <div>
+        <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            ...STATION_OPTIONS.map((s) => ({
+              id: s.value,
+              name: s.label,
+              people: allRows.filter((p) => p.station === s.value),
+            })),
+            { id: "__none__", name: "No station", people: allRows.filter((p) => !p.station) },
+          ].map((group) => (
+            <div key={group.id} className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-sm">{group.name}</h3>
+                <span className="text-xs text-muted-foreground">{group.people.length}</span>
+              </div>
+              {group.people.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No one assigned</p>
+              ) : (
+                <ul className="space-y-1">
+                  {group.people.map((p) => {
+                    const conceptName =
+                      p.role === "management"
+                        ? "Management"
+                        : concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
+                    return (
+                      <li key={p.id} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={`inline-block h-2 w-2 rounded-full ${
+                              p.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                            }`}
+                          />
+                          <span>{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">{conceptName}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <p className="text-xs text-muted-foreground">
         This list is shared across Transport, Setup and other festival sections.
       </p>
