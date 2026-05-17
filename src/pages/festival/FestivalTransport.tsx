@@ -758,6 +758,15 @@ function DriverCell({
 
   const upsertDriver = useMutation({
     mutationFn: async (staffId: string | null) => {
+      // "__none__" / null clears the assignment entirely
+      if (staffId === null) {
+        if (driver) {
+          const { error } = await supabase
+            .from("transport_leg_assignments").delete().eq("id", driver.id);
+          if (error) throw error;
+        }
+        return;
+      }
       if (driver) {
         const { error } = await supabase
           .from("transport_leg_assignments")
@@ -777,6 +786,8 @@ function DriverCell({
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
+
+  const handleSelect = (v: string) => upsertDriver.mutate(v === "__none__" ? null : v);
 
   // Print: just text
   const printName = driver?.staff_id ? staffById[driver.staff_id]?.name ?? "?" : "__________________";
