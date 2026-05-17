@@ -374,6 +374,22 @@ function StaffRow({
           </SelectContent>
         </Select>
       </TableCell>
+      <TableCell>
+        <Select
+          value={staff.station ?? "__none__"}
+          onValueChange={(v) => onPatch({ station: v === "__none__" ? null : v })}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
+            {STATION_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
       <TableCell className="text-center">
         <Checkbox
           checked={!!staff.needs_accommodation}
