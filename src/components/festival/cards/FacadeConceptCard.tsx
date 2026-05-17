@@ -10,7 +10,11 @@ import {
   Upload, FileText, Download, Image as ImageIcon, X, Loader2,
 } from "lucide-react";
 import { computeFacadeStatus, FACADE_STATUS_PILL } from "@/lib/facadeStatus";
+import { FACADE_STATUSES, FACADE_STATUS_META } from "@/lib/facade";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 export interface FacadeRow {
   id: string;
@@ -216,12 +220,25 @@ export function FacadeConceptCard({
           <h3 className="text-xl font-bold truncate">{conceptName}</h3>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={cn(
-            "inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border",
-            FACADE_STATUS_PILL[status.status],
-          )}>
-            <span aria-hidden>{status.emoji}</span>{status.label}
-          </span>
+          <Select
+            value={facade.design_status ?? "not_started"}
+            onValueChange={(v) => updateFacade.mutate({ design_status: v })}
+          >
+            <SelectTrigger className={cn(
+              "h-auto py-1 px-3 rounded-full text-sm font-medium border w-auto gap-1.5",
+              FACADE_STATUS_PILL[status.status],
+            )}>
+              <span aria-hidden>{status.emoji}</span>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FACADE_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {FACADE_STATUS_META[s].emoji} {FACADE_STATUS_META[s].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded-full px-2 py-0.5">
             Reusable
           </span>
