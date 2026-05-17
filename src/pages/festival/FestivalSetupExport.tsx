@@ -33,7 +33,7 @@ async function renderPdfToImages(url: string): Promise<string[]> {
     const loadingTask = pdfjs.getDocument({ url, disableRange: true, disableStream: true });
     const pdf = await loadingTask.promise;
     const out: string[] = [];
-    const maxPages = Math.min(pdf.numPages, 10);
+    const maxPages = pdf.numPages;
     for (let i = 1; i <= maxPages; i++) {
       const page = await pdf.getPage(i);
       const viewport = page.getViewport({ scale: 2 });
