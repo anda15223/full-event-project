@@ -314,6 +314,8 @@ export default function FestivalAccommodation() {
                 festivalSlug={slug}
                 booking={b}
                 rooms={groupedRooms.get(b.id) ?? []}
+                staffList={staffQ.data ?? []}
+                assignmentMap={assignmentMap}
               />
             ))}
           </div>
