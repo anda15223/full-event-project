@@ -287,10 +287,12 @@ export default function SetupSourcePicker({
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-6 w-full">
             <TabsTrigger value="transport"><Truck className="h-3.5 w-3.5 mr-1" />Transport</TabsTrigger>
             <TabsTrigger value="cooling"><Snowflake className="h-3.5 w-3.5 mr-1" />Cooling</TabsTrigger>
             <TabsTrigger value="equipment"><Package className="h-3.5 w-3.5 mr-1" />Equipment</TabsTrigger>
+            <TabsTrigger value="facade"><ImageIcon className="h-3.5 w-3.5 mr-1" />Façade</TabsTrigger>
+            <TabsTrigger value="power"><Zap className="h-3.5 w-3.5 mr-1" />Power</TabsTrigger>
             <TabsTrigger value="concepts"><Store className="h-3.5 w-3.5 mr-1" />Concepts</TabsTrigger>
           </TabsList>
 
