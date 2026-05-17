@@ -398,17 +398,42 @@ export default function FestivalSetup() {
       const path = `${festivalId}/${run.id}/${crypto.randomUUID()}-${safe}`;
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file);
       if (upErr) throw upErr;
-      const { error: insErr } = await sb.from("setup_attachments").insert({
+      const { data: inserted, error: insErr } = await sb.from("setup_attachments").insert({
         setup_run_id: run.id,
         setup_phase_id: phaseId,
         concept: phaseId ? null : uploadConcept,
         file_path: path,
         file_name: file.name,
         mime_type: file.type,
-      });
+      }).select("id").single();
       if (insErr) throw insErr;
-      toast.success("Attachment uploaded");
+      toast.success("Uploaded — parsing with AI…");
       invalidateAtt();
+
+      // Background AI parse
+      (async () => {
+        try {
+          const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(path, 600);
+          if (!signed?.signedUrl) return;
+          const { data: parsed } = await supabase.functions.invoke("parse-document", {
+            body: { fileUrl: signed.signedUrl, documentType: "setup" },
+          });
+          if (parsed?.ok) {
+            const p = parsed.parsed ?? {};
+            const summary = String(p.summary ?? p.raw_notes ?? "").slice(0, 1200);
+            const fullText = String(parsed.extractedText ?? p.full_text ?? "").slice(0, 20000);
+            await sb.from("setup_attachments").update({
+              ai_summary: summary || null,
+              extracted_text: fullText || null,
+              parsed_at: new Date().toISOString(),
+            }).eq("id", inserted.id);
+            toast.success("AI parse complete");
+            invalidateAtt();
+          }
+        } catch (pe) {
+          console.warn("parse-document failed", pe);
+        }
+      })();
     } catch (e: any) {
       toast.error(e?.message ?? "Upload failed");
     } finally {
