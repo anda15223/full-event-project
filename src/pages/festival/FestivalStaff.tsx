@@ -268,10 +268,56 @@ export default function FestivalStaff() {
         <FilterChip active={filter === "unassigned"} onClick={() => setFilter("unassigned")}>
           Not assigned <span className="opacity-60">({unassignedCount})</span>
         </FilterChip>
+
+        <div className="h-5 w-px bg-border mx-1" />
+
+        <Select value={cityFilter} onValueChange={setCityFilter}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="All cities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All cities</SelectItem>
+            {cityOptions.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <FilterChip active={accomFilter === "any"} onClick={() => setAccomFilter("any")}>
+          Any accom.
+        </FilterChip>
+        <FilterChip active={accomFilter === "yes"} onClick={() => setAccomFilter("yes")}>
+          Needs accom.
+        </FilterChip>
+        <FilterChip active={accomFilter === "no"} onClick={() => setAccomFilter("no")}>
+          No accom.
+        </FilterChip>
+
         <span className="ml-auto text-muted-foreground">
           ✓ {confirmedCount} confirmed
         </span>
       </div>
+
+      {totalEmpty > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/50 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-amber-900">
+              Empty slots · {totalEmpty}
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {emptySlots.map((e, i) => (
+              <span
+                key={i}
+                className="text-xs px-2 py-1 rounded bg-white border border-amber-200"
+              >
+                <strong>{e.conceptName}</strong> · {e.stationLabel} ×{e.missing}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
