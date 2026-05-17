@@ -335,67 +335,104 @@ type Bundle = {
 
 export default function FestivalTransportExport() {
   const { slug = "" } = useParams();
-  const [data, setData] = useState<Bundle | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const { data: festival, error: fe } = await supabase
-          .from("festivals")
-          .select("id,slug,name,start_date,end_date")
-          .eq("slug", slug).maybeSingle();
-        if (fe) throw fe;
-        if (!festival) throw new Error("Festival not found");
+  const festivalQ = useQuery({
+    queryKey: ["transport-export-festival", slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festivals")
+        .select("id,slug,name,start_date,end_date")
+        .eq("slug", slug).maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Festival not found");
+      return data as Festival;
+    },
+    enabled: !!slug,
+  });
+  const festivalId = festivalQ.data?.id;
 
-        const { data: vehicles, error: ve } = await supabase
-          .from("festival_transport")
-          .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,vehicle_type,capacity,license_plate,accreditation_pdf_path,accreditation_uploaded_at,reservation_number,season_label,ownership)")
-          .eq("festival_id", festival.id)
-          .order("created_at");
-        if (ve) throw ve;
+  const vehiclesQ = useQuery({
+    queryKey: ["transport-vehicles", slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_transport")
+        .select("id,festival_id,vehicle_type,capacity,status,season_rental_id,notes,accreditation_pdf_path,accreditation_uploaded_at,license_plate, season_rental:season_rentals(id,vehicle_type,capacity,license_plate,accreditation_pdf_path,accreditation_uploaded_at,reservation_number,season_label,ownership)")
+        .eq("festival_id", festivalId!)
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as any as Vehicle[];
+    },
+    enabled: !!festivalId,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
 
-        const vehicleIds = (vehicles ?? []).map((v: any) => v.id);
-        const [legsRes, staffRes] = await Promise.all([
-          vehicleIds.length
-            ? supabase.from("transport_legs").select("*").in("transport_id", vehicleIds).order("leg_date").order("leg_start_time")
-            : Promise.resolve({ data: [], error: null }),
-          supabase.from("festival_staff").select("id,name,role").eq("festival_id", festival.id).order("name"),
-        ]);
-        if (legsRes.error) throw legsRes.error;
-        if (staffRes.error) throw staffRes.error;
+  const vehicleIds = (vehiclesQ.data ?? []).map((v) => v.id);
+  const legsQ = useQuery({
+    queryKey: ["transport-legs", slug, vehicleIds.join(",")],
+    queryFn: async () => {
+      if (!vehicleIds.length) return [] as Leg[];
+      const { data, error } = await supabase
+        .from("transport_legs").select("*")
+        .in("transport_id", vehicleIds)
+        .order("leg_date").order("leg_start_time");
+      if (error) throw error;
+      return (data ?? []) as any as Leg[];
+    },
+    enabled: !!vehicleIds.length,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
 
-        const legIds = (legsRes.data ?? []).map((l: any) => l.id);
-        const assRes = legIds.length
-          ? await supabase.from("transport_leg_assignments").select("*").in("leg_id", legIds)
-          : { data: [], error: null };
-        if (assRes.error) throw assRes.error;
+  const legIds = (legsQ.data ?? []).map((l) => l.id);
+  const assignmentsQ = useQuery({
+    queryKey: ["transport-assignments-all", slug, legIds.join(",")],
+    queryFn: async () => {
+      if (!legIds.length) return [] as Assignment[];
+      const { data, error } = await supabase
+        .from("transport_leg_assignments").select("*")
+        .in("leg_id", legIds);
+      if (error) throw error;
+      return (data ?? []) as any as Assignment[];
+    },
+    enabled: !!legIds.length,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
 
-        if (!alive) return;
-        setData({
-          festival: festival as Festival,
-          vehicles: (vehicles ?? []) as any,
-          legs: (legsRes.data ?? []) as any,
-          assignments: (assRes.data ?? []) as any,
-          staff: (staffRes.data ?? []) as any,
-        });
-      } catch (e: any) {
-        if (alive) setError(e.message ?? String(e));
-      }
-    })();
-    return () => { alive = false; };
-  }, [slug]);
+  const staffQ = useQuery({
+    queryKey: ["transport-export-staff", slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_staff").select("id,name,role")
+        .eq("festival_id", festivalId!).order("name");
+      if (error) throw error;
+      return (data ?? []) as any as Staff[];
+    },
+    enabled: !!festivalId,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const error = festivalQ.error ?? vehiclesQ.error ?? legsQ.error ?? assignmentsQ.error ?? staffQ.error;
+  const loading = festivalQ.isLoading || vehiclesQ.isLoading || (vehicleIds.length > 0 && legsQ.isLoading) || (legIds.length > 0 && assignmentsQ.isLoading) || staffQ.isLoading;
+
+  const refetchAll = () => {
+    vehiclesQ.refetch();
+    legsQ.refetch();
+    assignmentsQ.refetch();
+    staffQ.refetch();
+  };
 
   if (error) {
     return (
       <div className="p-8 text-sm text-destructive">
-        Failed to load: {error}
+        Failed to load: {(error as any).message ?? String(error)}
       </div>
     );
   }
 
-  if (!data) {
+  if (loading || !festivalQ.data) {
     return (
       <div className="p-8 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading transport data…
