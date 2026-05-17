@@ -365,8 +365,8 @@ export default function FestivalSetup() {
                       !dateVal && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                    {dateVal ? format(dateVal, "PPP") : "Pick a date"}
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{dateVal ? format(dateVal, "PP") : "Pick a date"}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
