@@ -902,9 +902,10 @@ export default function FestivalOverview() {
                 status={prItems > 0 ? "green" : "gray"} />
             );
             tiles.push(
-              <FestivalTile key="staff" href="#"
+              <FestivalTile key="staff" href={`/festivals/${slug}/staff`}
                 icon={UserCog} iconAccent="slate" title="Staff"
-                primaryStat="Coming soon" disabled />
+                primaryStat="Crew list"
+                secondaryStat="Names, days, locations" status="gray" />
             );
             tiles.push(
               <FestivalTile key="groceries" href="#"
