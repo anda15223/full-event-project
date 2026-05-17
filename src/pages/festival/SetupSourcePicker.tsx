@@ -341,6 +341,46 @@ export default function SetupSourcePicker({
               ))}
           </TabsContent>
 
+          <TabsContent value="facade" className="max-h-[50vh] overflow-y-auto space-y-1.5">
+            {facadeQ.isLoading ? <Skeleton className="h-20 w-full" /> :
+              (facadeQ.data ?? []).length === 0 ? <Empty msg="No façade plans yet — add them in the Façade card." /> :
+              (facadeQ.data ?? []).map((f: any) => {
+                const dims = f.dimensions_text ?? (f.dimensions_w_cm && f.dimensions_h_cm ? `${f.dimensions_w_cm}×${f.dimensions_h_cm} cm` : null);
+                return (
+                  <button key={f.id} onClick={() => pickFacade(f)}
+                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm">
+                    <div className="font-medium">Façade — {f.concept_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {f.material_type ?? "—"}{dims ? ` · ${dims}` : ""}{f.panel_count ? ` · ${f.panel_count} panel(s)` : ""} · {f.design_status ?? "n/a"}
+                    </div>
+                  </button>
+                );
+              })}
+          </TabsContent>
+
+          <TabsContent value="power" className="max-h-[50vh] overflow-y-auto space-y-1.5">
+            {powerQ.isLoading ? <Skeleton className="h-20 w-full" /> :
+              (powerQ.data ?? []).length === 0 ? <Empty msg="No electricity plan yet — add it in the Power card." /> :
+              (powerQ.data ?? []).map((p: any) => {
+                const conns = [
+                  p.connections_16a_240v ? `${p.connections_16a_240v}×16A/240` : null,
+                  p.connections_16a_400v ? `${p.connections_16a_400v}×16A/400` : null,
+                  p.connections_32a ? `${p.connections_32a}×32A` : null,
+                  p.connections_63a ? `${p.connections_63a}×63A` : null,
+                  p.connections_125a ? `${p.connections_125a}×125A` : null,
+                ].filter(Boolean).join(", ");
+                return (
+                  <button key={p.id} onClick={() => pickPower(p)}
+                    className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm">
+                    <div className="font-medium">Power — {p.concept_name}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {p.total_kw_estimate ? `${p.total_kw_estimate} kW` : "—"}{conns ? ` · ${conns}` : ""}{p.tableau_required ? ` · tableau ×${p.tableau_count ?? 1}` : ""}{p.power_drawing_file_path ? " · drawing" : ""}
+                    </div>
+                  </button>
+                );
+              })}
+          </TabsContent>
+
           <TabsContent value="concepts" className="max-h-[50vh] overflow-y-auto space-y-1.5">
             {conceptsQ.isLoading ? <Skeleton className="h-20 w-full" /> :
               (conceptsQ.data ?? []).length === 0 ? <Empty msg="No active concept contracts." /> :
