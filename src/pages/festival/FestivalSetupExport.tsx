@@ -23,7 +23,33 @@ const fmtTime = (t?: string | null) => (t ? t.slice(0, 5) : "");
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-type AttRender = { id: string; file_name: string; concept: string | null; setup_phase_id: string | null; signedUrl: string | null; isImage: boolean; ai_summary: string | null; extracted_text: string | null };
+type AttRender = { id: string; file_name: string; concept: string | null; setup_phase_id: string | null; signedUrl: string | null; isImage: boolean; isPdf: boolean; pageImages: string[]; ai_summary: string | null; extracted_text: string | null };
+
+async function renderPdfToImages(url: string): Promise<string[]> {
+  try {
+    const pdfjs: any = await import("pdfjs-dist/build/pdf");
+    const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.js?url")).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    const loadingTask = pdfjs.getDocument({ url, disableRange: true, disableStream: true });
+    const pdf = await loadingTask.promise;
+    const out: string[] = [];
+    const maxPages = Math.min(pdf.numPages, 10);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      out.push(canvas.toDataURL("image/jpeg", 0.85));
+    }
+    return out;
+  } catch (e) {
+    console.error("PDF render failed", e);
+    return [];
+  }
+}
 
 export default function FestivalSetupExport() {
   const { slug = "" } = useParams();
@@ -75,7 +101,12 @@ export default function FestivalSetupExport() {
         const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(a.file_path, 1800);
         const isImage = (a.mime_type ?? "").startsWith("image/")
           || /\.(png|jpe?g|webp)$/i.test(a.file_name);
-        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage, ai_summary: a.ai_summary ?? null, extracted_text: a.extracted_text ?? null };
+        const isPdf = (a.mime_type ?? "").includes("pdf") || /\.pdf$/i.test(a.file_name);
+        let pageImages: string[] = [];
+        if (isPdf && signed?.signedUrl) {
+          pageImages = await renderPdfToImages(signed.signedUrl);
+        }
+        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage, isPdf, pageImages, ai_summary: a.ai_summary ?? null, extracted_text: a.extracted_text ?? null };
       }));
 
       // Power summary for setup phases
@@ -182,6 +213,9 @@ export default function FestivalSetupExport() {
                 {a.isImage && a.signedUrl ? (
                   <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 360, objectFit: "contain", marginTop: 2 }} />
                 ) : null}
+                {a.pageImages.map((src, i) => (
+                  <Image key={i} src={src} style={{ width: "100%", maxHeight: 500, objectFit: "contain", marginTop: 4 }} />
+                ))}
                 {a.ai_summary && (
                   <Text style={[r.small, { marginTop: 3, fontStyle: "italic", color: "#444" }]}>
                     AI summary: {a.ai_summary}
@@ -208,6 +242,9 @@ export default function FestivalSetupExport() {
       {a.isImage && a.signedUrl ? (
         <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 400, objectFit: "contain" }} />
       ) : null}
+      {a.pageImages.map((src, i) => (
+        <Image key={i} src={src} style={{ width: "100%", maxHeight: 520, objectFit: "contain", marginTop: 4 }} />
+      ))}
       {a.ai_summary && (
         <Text style={[r.small, { marginTop: 4, fontStyle: "italic", color: "#444" }]}>
           AI summary: {a.ai_summary}
