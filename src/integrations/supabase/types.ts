@@ -6605,32 +6605,41 @@ export type Database = {
       }
       setup_attachments: {
         Row: {
+          ai_summary: string | null
           concept: string | null
           created_at: string
+          extracted_text: string | null
           file_name: string
           file_path: string
           id: string
           mime_type: string | null
+          parsed_at: string | null
           setup_phase_id: string | null
           setup_run_id: string
         }
         Insert: {
+          ai_summary?: string | null
           concept?: string | null
           created_at?: string
+          extracted_text?: string | null
           file_name: string
           file_path: string
           id?: string
           mime_type?: string | null
+          parsed_at?: string | null
           setup_phase_id?: string | null
           setup_run_id: string
         }
         Update: {
+          ai_summary?: string | null
           concept?: string | null
           created_at?: string
+          extracted_text?: string | null
           file_name?: string
           file_path?: string
           id?: string
           mime_type?: string | null
+          parsed_at?: string | null
           setup_phase_id?: string | null
           setup_run_id?: string
         }
