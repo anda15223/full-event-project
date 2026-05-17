@@ -841,7 +841,7 @@ export default function FestivalOverview() {
             const sb = soborgQ.data;
             tiles.push(
               <FestivalTile key="soborg" href={`/festivals/${slug}/soborg-loading`}
-                icon={Truck} iconAccent="violet" title="Soborg Loading"
+                icon={Truck} iconAccent="violet" title="Søborg Loading"
                 primaryStat={sb ? `${sb.itemCount} items` : "—"}
                 secondaryStat={sb && sb.vehicleCount > 0 ? `${sb.vehicleCount} cars` : undefined}
                 status={sb && sb.vehicleCount > 0 ? "green" : "gray"} />
