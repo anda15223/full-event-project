@@ -75,10 +75,23 @@ export default function FestivalSetupExport() {
         const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(a.file_path, 1800);
         const isImage = (a.mime_type ?? "").startsWith("image/")
           || /\.(png|jpe?g|webp)$/i.test(a.file_name);
-        return { id: a.id, file_name: a.file_name, concept: a.concept, signedUrl: signed?.signedUrl ?? null, isImage };
+        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage };
       }));
 
-      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender });
+      // Power summary for setup phases
+      const { data: contracts } = await sb.from("festival_contracts")
+        .select("id, concept_name, is_active").eq("festival_id", f.id).eq("is_active", true);
+      const cIds = (contracts ?? []).map((c: any) => c.id);
+      let powerRows: any[] = [];
+      if (cIds.length) {
+        const { data: pw } = await sb.from("festival_power")
+          .select("festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, tableau_required, tableau_count, status")
+          .in("festival_contract_id", cIds);
+        const byId = new Map((contracts ?? []).map((c: any) => [c.id, c.concept_name]));
+        powerRows = (pw ?? []).map((p: any) => ({ ...p, concept_name: byId.get(p.festival_contract_id) ?? "—" }));
+      }
+
+      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender, powerRows });
     })();
   }, [slug]);
 
