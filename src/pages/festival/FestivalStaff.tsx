@@ -225,6 +225,48 @@ export default function FestivalStaff() {
         </Table>
       </div>
 
+      <div>
+        <h2 className="font-heading text-lg font-semibold mb-3">Crew by concept</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
+            ...concepts.map((c) => ({
+              id: c.id,
+              name: c.name,
+              people: allRows.filter((s) => s.concept_id === c.id && s.role !== "management"),
+            })),
+            { id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
+          ].map((group) => (
+            <div key={group.id} className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-sm">{group.name}</h3>
+                <span className="text-xs text-muted-foreground">{group.people.length}</span>
+              </div>
+              {group.people.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No one assigned</p>
+              ) : (
+                <ul className="space-y-1">
+                  {group.people.map((p) => (
+                    <li key={p.id} className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${
+                            p.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                          }`}
+                          title={p.confirmed ? "Confirmed" : "Unconfirmed"}
+                        />
+                        <span>{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground">{p.home_location ?? ""}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
       <p className="text-xs text-muted-foreground">
         This list is shared across Transport, Setup and other festival sections.
       </p>
