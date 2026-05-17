@@ -100,17 +100,25 @@ export default function FestivalSetupExport() {
 
   const renderPhase = (p: any) => {
     const alloc = p.transport_allocation_id ? allocMap.get(p.transport_allocation_id) : null;
+    const driverDisplay = p.driver_name || alloc?.driver_name || null;
+    const route = [p.from_location, p.to_location].filter(Boolean).join(" → ");
     return (
       <View key={p.id} style={r.card} wrap={false}>
         <View style={r.cardHeader}>
           <Text style={r.cardTitle}>{p.phase_name}</Text>
           <Text style={r.small}>{p.planned_time ? fmtTime(p.planned_time) : ""}</Text>
         </View>
-        {alloc && (
+        {route && (
+          <View style={r.row}>
+            <Text style={r.label}>Route</Text>
+            <Text style={r.value}>{route}</Text>
+          </View>
+        )}
+        {(alloc || driverDisplay) && (
           <View style={r.row}>
             <Text style={r.label}>Vehicle</Text>
             <Text style={r.value}>
-              {alloc.vehicle_name} · Driver: {alloc.driver_name ?? "🔴 UNALLOCATED"}
+              {alloc?.vehicle_name ?? "—"} · Driver: {driverDisplay ?? "🔴 UNALLOCATED"}
             </Text>
           </View>
         )}
