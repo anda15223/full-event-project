@@ -666,3 +666,71 @@ function StaffRow({
     </TableRow>
   );
 }
+
+function SlotPicker({
+  current,
+  crewPool,
+  assignmentMap,
+  onAssign,
+}: {
+  current?: Staff;
+  crewPool: Staff[];
+  assignmentMap: Map<string, { conceptName: string; stationLabel: string }>;
+  onAssign: (personId: string) => void;
+}) {
+  const value = current?.id ?? "__empty__";
+  const sorted = [...crewPool].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  return (
+    <Select value={value} onValueChange={onAssign}>
+      <SelectTrigger
+        className={`h-8 text-sm ${
+          current ? "border-emerald-300 bg-emerald-50/50" : "border-dashed text-muted-foreground"
+        }`}
+      >
+        <SelectValue placeholder="— Empty slot —">
+          {current ? (
+            <span className="flex items-center gap-2">
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${
+                  current.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                }`}
+              />
+              <span className="truncate">{current.name || "Unnamed"}</span>
+            </span>
+          ) : (
+            <span className="italic">— Empty slot —</span>
+          )}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent className="max-h-72">
+        <SelectItem value="__empty__">
+          <span className="italic text-muted-foreground">— Empty slot —</span>
+        </SelectItem>
+        {sorted.map((p) => {
+          const assigned = assignmentMap.get(p.id);
+          const isCurrent = current?.id === p.id;
+          const isElsewhere = !!assigned && !isCurrent;
+          return (
+            <SelectItem key={p.id} value={p.id}>
+              <span className="flex items-center gap-2">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    p.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                  }`}
+                />
+                <span className={isElsewhere ? "text-destructive line-through" : ""}>
+                  {p.name || "Unnamed"}
+                </span>
+                {isElsewhere && (
+                  <span className="text-[10px] text-destructive ml-1">
+                    ({assigned!.conceptName}{assigned!.stationLabel ? ` · ${assigned!.stationLabel}` : ""})
+                  </span>
+                )}
+              </span>
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+}
