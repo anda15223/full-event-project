@@ -76,6 +76,33 @@ const styles = StyleSheet.create({
   pill: { borderWidth: 0.5, borderColor: "#666", padding: "1pt 4pt", fontSize: 8, borderRadius: 2 },
   row: { fontSize: 9, marginBottom: 2 },
   notes: { marginTop: 6, fontSize: 9, color: "#333" },
+  // Equipment table
+  tableWrap: { marginTop: 6, borderWidth: 0.5, borderColor: "#888", borderRadius: 2 },
+  tHead: {
+    flexDirection: "row", backgroundColor: "#eee",
+    borderBottomWidth: 0.5, borderBottomColor: "#888",
+    paddingVertical: 3, paddingHorizontal: 4,
+    fontSize: 8, fontWeight: 700, color: "#222",
+  },
+  tRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.25, borderBottomColor: "#ccc",
+    paddingVertical: 2.5, paddingHorizontal: 4,
+    fontSize: 9,
+  },
+  tRowAlt: { backgroundColor: "#fafafa" },
+  tRowLast: { borderBottomWidth: 0 },
+  tFoot: {
+    flexDirection: "row",
+    borderTopWidth: 0.5, borderTopColor: "#888",
+    backgroundColor: "#f3f3f3",
+    paddingVertical: 3, paddingHorizontal: 4,
+    fontSize: 9, fontWeight: 700,
+  },
+  colName: { flex: 1, paddingRight: 4 },
+  colQty:  { width: 32, textAlign: "right", paddingRight: 4 },
+  colKw:   { width: 56, textAlign: "right", paddingRight: 4 },
+  colTot:  { width: 64, textAlign: "right" },
   sumBox: { marginTop: 16, padding: 8, borderWidth: 1, borderColor: "#333", backgroundColor: "#f3f3f3" },
   sumTitle: { fontSize: 11, fontWeight: 700, marginBottom: 4 },
   footer: {
@@ -198,16 +225,50 @@ function PowerDoc({
                 <Text style={styles.row}>{N(`Total Amp: ${p.total_amp_estimate}`)}</Text>
               )}
 
-              <Text style={[styles.row, { marginTop: 6, fontWeight: 700 }]}>
-                {N(`Equipment (${poweredEq.length} powered items)`)}
+              <Text style={[styles.row, { marginTop: 8, fontWeight: 700 }]}>
+                {N(`Powered equipment (${poweredEq.length})`)}
               </Text>
-              {poweredEq.length === 0
-                ? <Text style={styles.row}>—</Text>
-                : poweredEq.map((e) => (
-                    <Text key={e.id} style={styles.row}>
-                      {N(`• ${e.equipment_name} × ${e.quantity ?? 1} — ${(Number(e.power_kw ?? 0)).toFixed(2)} kW`)}
+              {poweredEq.length === 0 ? (
+                <Text style={styles.row}>—</Text>
+              ) : (
+                <View style={styles.tableWrap}>
+                  <View style={styles.tHead}>
+                    <Text style={styles.colName}>Equipment</Text>
+                    <Text style={styles.colQty}>Qty</Text>
+                    <Text style={styles.colKw}>kW each</Text>
+                    <Text style={styles.colTot}>Total kW</Text>
+                  </View>
+                  {poweredEq.map((e, idx) => {
+                    const qty = Number(e.quantity ?? 1);
+                    const kwEach = Number(e.power_kw ?? 0);
+                    const total = qty * kwEach;
+                    const isLast = idx === poweredEq.length - 1;
+                    return (
+                      <View
+                        key={e.id}
+                        style={[
+                          styles.tRow,
+                          idx % 2 === 1 ? styles.tRowAlt : {},
+                          isLast ? styles.tRowLast : {},
+                        ]}
+                      >
+                        <Text style={styles.colName}>{N(e.equipment_name)}</Text>
+                        <Text style={styles.colQty}>{qty}</Text>
+                        <Text style={styles.colKw}>{kwEach.toFixed(2)}</Text>
+                        <Text style={styles.colTot}>{total.toFixed(2)}</Text>
+                      </View>
+                    );
+                  })}
+                  <View style={styles.tFoot}>
+                    <Text style={styles.colName}>Total</Text>
+                    <Text style={styles.colQty}>
+                      {poweredEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
                     </Text>
-                  ))}
+                    <Text style={styles.colKw}></Text>
+                    <Text style={styles.colTot}>{demandKw.toFixed(2)}</Text>
+                  </View>
+                </View>
+              )}
 
               {canSeeFinance ? (
                 <Text style={[styles.row, { marginTop: 6 }]}>
