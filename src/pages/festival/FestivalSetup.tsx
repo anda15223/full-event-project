@@ -299,17 +299,18 @@ export default function FestivalSetup() {
   };
 
   /* ---------- Render ---------- */
+  const allocLookup = useMemo(() => {
+    const m = new Map<string, Allocation>();
+    allocations.forEach((a) => m.set(a.id, a));
+    return m;
+  }, [allocations]);
+
   if (festivalQ.isLoading || runQ.isLoading) {
     return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
   const phaseCount = phases.length;
-  const allocLookup = useMemo(() => {
-    const m = new Map<string, Allocation>();
-    allocations.forEach((a) => m.set(a.id, a));
-    return m;
-  }, [allocations]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
