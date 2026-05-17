@@ -587,6 +587,14 @@ export default function FestivalSetup() {
                           onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
                         />
                       </Field>
+                      <Field label="Planned date">
+                        <Input
+                          type="date"
+                          className="h-9 text-xs"
+                          defaultValue={p.planned_date ?? ""}
+                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.planned_date) updatePhase.mutate({ id: p.id, patch: { planned_date: v } }); }}
+                        />
+                      </Field>
                       <Field label="Planned time">
                         <Select
                           value={p.planned_time ? p.planned_time.slice(0, 5) : undefined}
