@@ -408,7 +408,7 @@ function Pdf({ data, conceptFilter }: { data: CoverData; conceptFilter: ConceptS
 
           <Text style={s.opLabel}>STAFF</Text>
           <Text style={s.opLine}>
-            {staff.total} total · {staff.soborg} from Soborg · {staff.local} local hires
+            {staff.total} total · {staff.soborg} from Søborg · {staff.local} local hires
           </Text>
           {staff.blankNames > 0 && (
             <Text style={s.warn}>! {staff.blankNames} of {staff.local} local names blank</Text>
