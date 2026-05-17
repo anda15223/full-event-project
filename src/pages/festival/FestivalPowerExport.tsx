@@ -11,6 +11,18 @@ import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
+import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
+
+type EquipmentRow = {
+  id: string;
+  festival_power_id: string;
+  equipment_name: string;
+  quantity: number | null;
+  power_kw: number | null;
+  is_powered: boolean | null;
+  category: string | null;
+  position: number | null;
+};
 
 // TODO Sprint 7: Open Sans v17 drops fi/fl ligatures ("confrmed" / "fxed").
 // Plan to swap to a font with full ligature support (Inter, IBM Plex Sans).
@@ -43,6 +55,7 @@ type PowerRow = {
   tableau_count: number | null;
   total_kw_estimate: number | null;
   total_amp_estimate: number | null;
+  allocated_kw: number | null;
   equipment_breakdown: string | null;
   status: string;
   power_drawing_file_path: string | null;
