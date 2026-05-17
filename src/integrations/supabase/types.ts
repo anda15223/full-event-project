@@ -6691,6 +6691,7 @@ export type Database = {
           id: string
           notes: string | null
           phase_name: string
+          planned_date: string | null
           planned_time: string | null
           setup_run_id: string
           sort_order: number
@@ -6706,6 +6707,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phase_name: string
+          planned_date?: string | null
           planned_time?: string | null
           setup_run_id: string
           sort_order?: number
@@ -6721,6 +6723,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phase_name?: string
+          planned_date?: string | null
           planned_time?: string | null
           setup_run_id?: string
           sort_order?: number
