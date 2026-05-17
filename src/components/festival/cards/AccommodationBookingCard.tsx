@@ -66,11 +66,21 @@ export interface AccommodationRoomRow {
   position: number;
 }
 
+export interface StaffPickOption {
+  id: string;
+  name: string;
+  home_location: string | null;
+  confirmed: boolean | null;
+}
+
 interface Props {
   festivalId: string;
   festivalSlug: string;
   booking: AccommodationRow;
   rooms: AccommodationRoomRow[];
+  staffList?: StaffPickOption[];
+  /** lowercased assignee name -> "Booking · Room X · Bed Y" */
+  assignmentMap?: Map<string, string>;
 }
 
 const PAYMENT_OPTIONS = [
@@ -190,9 +200,112 @@ function BedInput({
   );
 }
 
+function BedPicker({
+  value, onSave, label, staffList, assignmentMap,
+}: {
+  value: string | null;
+  onSave: (v: string | null) => void;
+  label: string;
+  staffList: StaffPickOption[];
+  assignmentMap: Map<string, string>;
+}) {
+  const current = value?.trim() || "";
+  const currentLower = current.toLowerCase();
+  const matchesStaff = staffList.some((s) => s.name.trim().toLowerCase() === currentLower);
+  const orphan = current && !matchesStaff;
+
+  // collect non-staff assignees across all bookings (e.g. legacy free-text names)
+  const nonStaffAssigned = Array.from(assignmentMap.keys()).filter(
+    (k) => !staffList.some((s) => s.name.trim().toLowerCase() === k)
+  );
+
+  const selectValue = current ? `__name__:${current}` : "__empty__";
+
+  return (
+    <div className="flex items-center gap-1 text-sm min-w-0">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">{label}</span>
+      <Select
+        value={selectValue}
+        onValueChange={(v) => {
+          if (v === "__empty__") return onSave(null);
+          const name = v.startsWith("__name__:") ? v.slice(9) : v;
+          onSave(name);
+        }}
+      >
+        <SelectTrigger
+          className={cn(
+            "h-7 text-sm min-w-[7rem] max-w-[10rem] border-0 bg-transparent focus:bg-muted px-2 py-0",
+            !current && "text-muted-foreground",
+            orphan && "text-destructive font-medium"
+          )}
+        >
+          <SelectValue placeholder="Assign…">
+            {current ? (
+              <span className={cn("truncate", orphan && "line-through")}>{current}</span>
+            ) : (
+              <span className="italic">Assign…</span>
+            )}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectItem value="__empty__">
+            <span className="italic text-muted-foreground">— Clear —</span>
+          </SelectItem>
+          {staffList.map((s) => {
+            const lower = s.name.trim().toLowerCase();
+            const assignedTo = assignmentMap.get(lower);
+            const isCurrent = lower === currentLower;
+            const isElsewhere = !!assignedTo && !isCurrent;
+            return (
+              <SelectItem key={s.id} value={`__name__:${s.name}`}>
+                <span className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "inline-block h-2 w-2 rounded-full shrink-0",
+                      s.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                    )}
+                  />
+                  <span className={isElsewhere ? "text-destructive line-through" : ""}>
+                    {s.name}
+                  </span>
+                  {isElsewhere && (
+                    <span className="text-[10px] text-destructive ml-1">({assignedTo})</span>
+                  )}
+                  {s.home_location && !isElsewhere && (
+                    <span className="text-[10px] text-muted-foreground ml-1">{s.home_location}</span>
+                  )}
+                </span>
+              </SelectItem>
+            );
+          })}
+          {nonStaffAssigned.length > 0 && (
+            <>
+              <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-destructive border-t mt-1">
+                Outside staff list
+              </div>
+              {nonStaffAssigned.map((n) => {
+                const display = n; // already lowercased; use raw mapped value
+                return (
+                  <SelectItem key={`other:${n}`} value={`__name__:${display}`}>
+                    <span className="text-destructive">{display}</span>
+                    <span className="text-[10px] text-destructive ml-2">
+                      ({assignmentMap.get(n)})
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function AccommodationBookingCard({
-  festivalId, festivalSlug, booking, rooms,
+  festivalId, festivalSlug, booking, rooms, staffList = [], assignmentMap,
 }: Props) {
+  const effectiveAssignmentMap = assignmentMap ?? new Map<string, string>();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [notesDraft, setNotesDraft] = useState(booking.notes ?? "");
@@ -487,11 +600,13 @@ export function AccommodationBookingCard({
                   {Array.from({ length: room.bed_count }).map((_, i) => {
                     const key = (`bed_${i + 1}_assignee`) as keyof AccommodationRoomRow;
                     return (
-                      <BedInput
+                      <BedPicker
                         key={i}
                         label={`Bed ${i + 1}`}
                         value={(room[key] as string | null) ?? null}
                         onSave={(v) => updateRoom.mutate({ id: room.id, patch: { [key]: v } as any })}
+                        staffList={staffList}
+                        assignmentMap={effectiveAssignmentMap}
                       />
                     );
                   })}
