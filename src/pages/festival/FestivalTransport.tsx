@@ -566,6 +566,7 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
+              assignedIds={assignedIds}
             />
           ))}
         </tbody>
