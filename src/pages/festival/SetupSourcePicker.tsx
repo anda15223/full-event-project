@@ -16,6 +16,7 @@ export type PhasePatch = {
   to_location?: string | null;
   planned_time?: string | null;
   notes?: string | null;
+  driver_name?: string | null;
 };
 
 export type SourceSnapshot = {
