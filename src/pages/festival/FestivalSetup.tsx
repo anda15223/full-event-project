@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   ArrowLeft, Calendar, Upload, Loader2, FileText, Plus, Trash2,
-  ArrowUp, ArrowDown, AlertCircle, Download,
+  ArrowUp, ArrowDown, AlertCircle,
 } from "lucide-react";
 
 const sb = supabase as any;
