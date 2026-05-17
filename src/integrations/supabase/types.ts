@@ -6611,6 +6611,7 @@ export type Database = {
           file_path: string
           id: string
           mime_type: string | null
+          setup_phase_id: string | null
           setup_run_id: string
         }
         Insert: {
@@ -6620,6 +6621,7 @@ export type Database = {
           file_path: string
           id?: string
           mime_type?: string | null
+          setup_phase_id?: string | null
           setup_run_id: string
         }
         Update: {
@@ -6629,9 +6631,17 @@ export type Database = {
           file_path?: string
           id?: string
           mime_type?: string | null
+          setup_phase_id?: string | null
           setup_run_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "setup_attachments_setup_phase_id_fkey"
+            columns: ["setup_phase_id"]
+            isOneToOne: false
+            referencedRelation: "setup_phases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "setup_attachments_setup_run_id_fkey"
             columns: ["setup_run_id"]
