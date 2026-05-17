@@ -46,6 +46,16 @@ const BUCKET = "festival-setup-docs";
 const CONCEPTS = ["fish", "gyros", "creperie", "chicks", "all"] as const;
 type Concept = typeof CONCEPTS[number];
 
+const SEQUENCE_PRESETS = [
+  "Drive to festival",
+  "Setup at festival",
+  "Arriving cooling",
+  "Arriving goods",
+  "Place goods in freezers",
+  "Wrap up",
+  "Driving home",
+] as const;
+
 type Festival = {
   id: string; slug: string; name: string;
   address?: string | null; city?: string | null;
