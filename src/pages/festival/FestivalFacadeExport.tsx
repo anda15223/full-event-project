@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { useParams } from "react-router-dom";
-import { Document, Page, Text, View, StyleSheet, PDFViewer, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet, PDFViewer, Font } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { FACADE_STATUS_META, fmtDate, type FacadeRow } from "@/lib/facade";
+import { FACADE_STATUS_META } from "@/lib/facade";
 import { Loader2 } from "lucide-react";
 
 try {
@@ -19,20 +19,26 @@ try {
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontFamily: "Inter", fontSize: 9, color: "#111" },
-  h1: { fontSize: 16, fontWeight: 700 },
-  meta: { fontSize: 9, color: "#555", marginTop: 2, marginBottom: 10 },
-  summary: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10, padding: 6, backgroundColor: "#f6f6f6", borderRadius: 3 },
+  h1: { fontSize: 18, fontWeight: 700 },
+  meta: { fontSize: 9, color: "#555", marginTop: 2, marginBottom: 12 },
+  summary: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12, padding: 6, backgroundColor: "#f6f6f6", borderRadius: 3 },
   summaryItem: { marginRight: 12, fontSize: 9 },
-  card: { border: "0.5pt solid #ddd", borderRadius: 3, padding: 8, marginBottom: 6 },
-  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  name: { fontSize: 11, fontWeight: 700 },
+  card: { border: "0.5pt solid #ddd", borderRadius: 4, padding: 10, marginBottom: 10 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  name: { fontSize: 13, fontWeight: 700 },
   badge: { fontSize: 8, padding: "2 6", borderRadius: 8, backgroundColor: "#eee" },
-  row: { flexDirection: "row", marginTop: 2 },
-  label: { width: 100, color: "#555", fontSize: 8 },
-  value: { flex: 1, fontSize: 9 },
-  note: { marginTop: 3, fontSize: 8, color: "#444", fontStyle: "italic" },
+  grid: { flexDirection: "row", flexWrap: "wrap", marginTop: 4, marginBottom: 4 },
+  field: { width: "50%", paddingRight: 6, marginBottom: 4 },
+  label: { color: "#777", fontSize: 7, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 1 },
+  value: { fontSize: 9 },
+  sectionTitle: { fontSize: 9, fontWeight: 700, marginTop: 6, marginBottom: 3, color: "#333" },
+  notes: { fontSize: 9, color: "#333", lineHeight: 1.35 },
+  photosRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
+  photo: { width: 140, height: 105, marginRight: 6, marginBottom: 6, objectFit: "cover", border: "0.5pt solid #ccc", borderRadius: 2 },
   footer: { position: "absolute", bottom: 16, left: 32, right: 32, fontSize: 7, color: "#888", flexDirection: "row", justifyContent: "space-between" },
 });
+
+type Photo = { id: string; festival_facade_id: string; file_path: string; file_name: string; signedUrl?: string };
 
 export default function FestivalFacadeExport() {
   const { slug = "" } = useParams();
@@ -50,15 +56,34 @@ export default function FestivalFacadeExport() {
       const { data: facades } = ids.length
         ? await supabase.from("festival_facade").select("*").in("festival_contract_id", ids)
         : { data: [] };
-      setData({ festival: f, contracts: contracts ?? [], facades: facades ?? [] });
+      const facadeIds = (facades ?? []).map((x: any) => x.id);
+      const { data: photos } = facadeIds.length
+        ? await supabase.from("festival_facade_photos").select("*").in("festival_facade_id", facadeIds).order("display_order", { ascending: true })
+        : { data: [] };
+
+      // Sign photo URLs
+      const signed: Photo[] = [];
+      for (const p of (photos ?? []) as Photo[]) {
+        const { data: s } = await supabase.storage.from("facade-designs").createSignedUrl(p.file_path, 3600);
+        signed.push({ ...p, signedUrl: s?.signedUrl });
+      }
+
+      setData({ festival: f, contracts: contracts ?? [], facades: facades ?? [], photos: signed });
     })();
   }, [slug]);
 
   if (!data) return <div className="p-12 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF…</div>;
   if (!data.festival) return <div className="p-12">Festival not found.</div>;
 
-  const fById = new Map<string, FacadeRow>();
-  (data.facades as FacadeRow[]).forEach((f) => fById.set(f.festival_contract_id, f));
+  const fById = new Map<string, any>();
+  (data.facades as any[]).forEach((f) => fById.set(f.festival_contract_id, f));
+
+  const photosByFacade = new Map<string, Photo[]>();
+  (data.photos as Photo[]).forEach((p) => {
+    const arr = photosByFacade.get(p.festival_facade_id) ?? [];
+    arr.push(p);
+    photosByFacade.set(p.festival_facade_id, arr);
+  });
 
   const sorted = [...data.contracts].sort((a: any, b: any) => {
     const ao = a.concept?.display_order ?? 999;
@@ -67,41 +92,92 @@ export default function FestivalFacadeExport() {
   });
 
   const counts: Record<string, number> = {};
-  (data.facades as FacadeRow[]).forEach((f) => { counts[f.design_status] = (counts[f.design_status] ?? 0) + 1; });
+  (data.facades as any[]).forEach((f) => { if (f.design_status) counts[f.design_status] = (counts[f.design_status] ?? 0) + 1; });
+
+  const dim = (v: any) => (v == null || v === "" ? "—" : String(v));
 
   return (
     <PDFViewer style={{ width: "100vw", height: "100vh", border: 0 }}>
       <Document>
         <Page size="A4" style={styles.page}>
-          <Text style={styles.h1}>Facade Status — {data.festival.name}</Text>
+          <Text style={styles.h1}>Facade Report — {data.festival.name}</Text>
           <Text style={styles.meta}>{formatDateRange(data.festival.start_date, data.festival.end_date)}</Text>
 
-          <View style={styles.summary}>
-            {Object.entries(counts).map(([k, v]) => (
-              <Text key={k} style={styles.summaryItem}>{FACADE_STATUS_META[k as keyof typeof FACADE_STATUS_META]?.label ?? k}: {v}</Text>
-            ))}
-          </View>
+          {Object.keys(counts).length > 0 && (
+            <View style={styles.summary}>
+              {Object.entries(counts).map(([k, v]) => (
+                <Text key={k} style={styles.summaryItem}>
+                  {FACADE_STATUS_META[k as keyof typeof FACADE_STATUS_META]?.label ?? k}: {v}
+                </Text>
+              ))}
+            </View>
+          )}
 
           {sorted.map((c: any) => {
             const facade = fById.get(c.id);
-            const meta = facade ? FACADE_STATUS_META[facade.design_status] : null;
+            const meta = facade?.design_status ? FACADE_STATUS_META[facade.design_status as keyof typeof FACADE_STATUS_META] : null;
+            const photos = facade ? photosByFacade.get(facade.id) ?? [] : [];
             return (
               <View key={c.id} style={styles.card} wrap={false}>
                 <View style={styles.header}>
-                  <Text style={styles.name}>{c.concept?.name ?? "—"}{c.concept_alias ? ` — ${c.concept_alias}` : ""}</Text>
+                  <Text style={styles.name}>
+                    {c.concept?.name ?? "—"}{c.concept_alias ? ` — ${c.concept_alias}` : ""}
+                  </Text>
                   {meta && <Text style={styles.badge}>{meta.label}</Text>}
                 </View>
-                {!facade && <Text style={styles.note}>No facade record.</Text>}
+
+                {!facade && <Text style={styles.notes}>No facade record.</Text>}
                 {facade && (
                   <>
-                    <View style={styles.row}><Text style={styles.label}>Material</Text><Text style={styles.value}>{facade.material_type ?? "—"} · {facade.material_supplier ?? "—"}</Text></View>
-                    <View style={styles.row}><Text style={styles.label}>Dimensions</Text><Text style={styles.value}>{facade.dimensions_text ?? (facade.dimensions_w_cm && facade.dimensions_h_cm ? `${facade.dimensions_w_cm}×${facade.dimensions_h_cm} cm` : "—")} · {facade.panel_count} panels</Text></View>
-                    <View style={styles.row}><Text style={styles.label}>Material deadline</Text><Text style={styles.value}>{fmtDate(facade.material_deadline)}</Text></View>
-                    <View style={styles.row}><Text style={styles.label}>Print deadline</Text><Text style={styles.value}>{fmtDate(facade.print_deadline)}</Text></View>
-                    <View style={styles.row}><Text style={styles.label}>Approval</Text><Text style={styles.value}>{facade.festival_approval_required ? (facade.festival_approval_received_at ? `Approved ${fmtDate(facade.festival_approval_received_at.slice(0,10))}` : "Required — pending") : "Not required"}</Text></View>
-                    {facade.reused_from && <View style={styles.row}><Text style={styles.label}>Reused from</Text><Text style={styles.value}>{facade.reused_from}</Text></View>}
-                    {facade.design_concept_note && <Text style={styles.note}>{facade.design_concept_note}</Text>}
-                    {facade.notes && <Text style={styles.note}>Note: {facade.notes}</Text>}
+                    <View style={styles.grid}>
+                      <View style={styles.field}>
+                        <Text style={styles.label}>Tent (W × D × H)</Text>
+                        <Text style={styles.value}>
+                          {dim(facade.tent_width_m)} × {dim(facade.tent_depth_m)} × {dim(facade.tent_height_m)} m
+                        </Text>
+                      </View>
+                      <View style={styles.field}>
+                        <Text style={styles.label}>Facade (W × H)</Text>
+                        <Text style={styles.value}>
+                          {dim(facade.facade_width_m)} × {dim(facade.facade_height_m)} m
+                        </Text>
+                      </View>
+                      <View style={styles.field}>
+                        <Text style={styles.label}>Material</Text>
+                        <Text style={styles.value}>{dim(facade.material_type)}</Text>
+                      </View>
+                      <View style={styles.field}>
+                        <Text style={styles.label}>Print deadline</Text>
+                        <Text style={styles.value}>{dim(facade.print_deadline)}</Text>
+                      </View>
+                    </View>
+
+                    {facade.setup_notes && (
+                      <>
+                        <Text style={styles.sectionTitle}>Setup notes</Text>
+                        <Text style={styles.notes}>{facade.setup_notes}</Text>
+                      </>
+                    )}
+
+                    {facade.parse_summary && (
+                      <>
+                        <Text style={styles.sectionTitle}>AI summary</Text>
+                        <Text style={styles.notes}>{facade.parse_summary}</Text>
+                      </>
+                    )}
+
+                    {photos.length > 0 && (
+                      <>
+                        <Text style={styles.sectionTitle}>Photos ({photos.length})</Text>
+                        <View style={styles.photosRow}>
+                          {photos.map((p) =>
+                            p.signedUrl ? (
+                              <Image key={p.id} src={p.signedUrl} style={styles.photo} />
+                            ) : null
+                          )}
+                        </View>
+                      </>
+                    )}
                   </>
                 )}
               </View>
