@@ -44,24 +44,15 @@ export default function SetupSourcePicker({
   const leaving = soborgDefault || SOBORG;
   const dest = destinationDefault || "Festival site";
 
-  /* Transport — festival_staff_vehicles + driver names */
+  /* Transport — festival_transport */
   const transportQ = useQuery({
     enabled: open && !!festivalId,
     queryKey: ["picker-transport", festivalId],
     queryFn: async () => {
-      const { data: vehicles } = await sb.from("festival_staff_vehicles")
-        .select("id, vehicle_name, driver_staff_id")
-        .eq("festival_id", festivalId).order("vehicle_name");
-      const ids = (vehicles ?? []).map((v: any) => v.driver_staff_id).filter(Boolean);
-      const nameMap = new Map<string, string>();
-      if (ids.length) {
-        const { data: staff } = await sb.from("festival_staff").select("id, name").in("id", ids);
-        (staff ?? []).forEach((s: any) => nameMap.set(s.id, s.name ?? "Unnamed"));
-      }
-      return (vehicles ?? []).map((v: any) => ({
-        ...v,
-        driver_name: v.driver_staff_id ? nameMap.get(v.driver_staff_id) ?? null : null,
-      }));
+      const { data } = await sb.from("festival_transport")
+        .select("id, vehicle_type, vehicle_purpose, rental_supplier, pickup_date, pickup_time, pickup_location, return_date, status, capacity, license_plate, notes")
+        .eq("festival_id", festivalId).order("pickup_date");
+      return data ?? [];
     },
   });
 
