@@ -16,6 +16,7 @@ export type PhasePatch = {
   to_location?: string | null;
   planned_time?: string | null;
   notes?: string | null;
+  driver_name?: string | null;
 };
 
 export type SourceSnapshot = {
@@ -106,16 +107,47 @@ export default function SetupSourcePicker({
   const appendNote = (extra: string) =>
     [currentNotes, extra].filter(Boolean).join("\n");
 
-  const pickTransport = (v: any) => {
+  const pickTransport = async (v: any) => {
     const label = `${v.vehicle_type ?? "Vehicle"}${v.license_plate ? ` (${v.license_plate})` : ""}`;
-    const driverMatch = (v.notes ?? "").match(/Driver[^:]*:\s*([^.\n\[]+)/i);
-    const driver = driverMatch ? driverMatch[1].trim() : null;
+
+    // Resolve assigned driver from transport_legs → transport_leg_assignments → festival_staff
+    let driver: string | null = null;
+    try {
+      const { data: legs } = await sb.from("transport_legs")
+        .select("id, leg_phase, leg_date")
+        .eq("transport_id", v.id)
+        .order("leg_date", { ascending: true });
+      const legIds = (legs ?? []).map((l: any) => l.id);
+      if (legIds.length) {
+        const { data: assigns } = await sb.from("transport_leg_assignments")
+          .select("leg_id, staff_id, role")
+          .in("leg_id", legIds)
+          .eq("role", "driver");
+        // Prefer setup_outbound leg's driver, else any
+        const setupLegIds = new Set((legs ?? []).filter((l: any) => l.leg_phase === "setup_outbound").map((l: any) => l.id));
+        const preferred = (assigns ?? []).find((a: any) => a.staff_id && setupLegIds.has(a.leg_id))
+          ?? (assigns ?? []).find((a: any) => a.staff_id);
+        if (preferred?.staff_id) {
+          const { data: s } = await sb.from("festival_staff")
+            .select("name").eq("id", preferred.staff_id).maybeSingle();
+          if (s?.name) driver = s.name;
+        }
+      }
+    } catch { /* non-blocking */ }
+
+    // Fallback: legacy notes regex
+    if (!driver) {
+      const m = (v.notes ?? "").match(/Driver[^:]*:\s*([^.\n\[]+)/i);
+      if (m) driver = m[1].trim();
+    }
+
     onApply(
       {
         phase_name: `Drive ${v.vehicle_type ?? "vehicle"}`,
         from_location: v.pickup_location || leaving,
         to_location: dest,
         planned_time: v.pickup_time ? v.pickup_time.slice(0, 5) : null,
+        driver_name: driver,
         notes: appendNote(`Vehicle: ${label}${driver ? ` · driver ${driver}` : ""}${v.vehicle_purpose ? ` — ${v.vehicle_purpose}` : ""}`),
       },
       { source_table: "festival_transport", source_id: v.id, label, detail: driver ?? v.rental_supplier ?? "" },

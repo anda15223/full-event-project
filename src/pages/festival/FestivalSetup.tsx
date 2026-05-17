@@ -292,6 +292,7 @@ export default function FestivalSetup() {
       if (phase?.from_location) delete cleanPatch.from_location;
       if (phase?.to_location) delete cleanPatch.to_location;
       if (phase?.planned_time) delete cleanPatch.planned_time;
+      if (phase?.driver_name) delete cleanPatch.driver_name;
 
       if (Object.keys(cleanPatch).length) {
         const { error } = await sb.from("setup_phases").update(cleanPatch).eq("id", phaseId);
