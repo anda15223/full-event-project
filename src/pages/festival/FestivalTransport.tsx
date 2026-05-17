@@ -229,11 +229,20 @@ export default function FestivalTransport() {
     return result;
   }, [legs, assignments]);
 
-  // Global set of staff currently assigned to ANY leg (any role).
-  const globalAssignedIds = useMemo(
-    () => new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!)),
-    [assignments],
-  );
+  // Per-date set of staff currently assigned (any role) to ANY leg on that date.
+  // A driver assigned on the 21st is still "available" on the 18th.
+  const assignedIdsByDate = useMemo(() => {
+    const legById = new Map(legs.map((l) => [l.id, l]));
+    const map = new Map<string, Set<string>>();
+    assignments.forEach((a) => {
+      if (!a.staff_id) return;
+      const l = legById.get(a.leg_id);
+      if (!l) return;
+      if (!map.has(l.leg_date)) map.set(l.leg_date, new Set());
+      map.get(l.leg_date)!.add(a.staff_id);
+    });
+    return map;
+  }, [legs, assignments]);
 
   // Scroll to focused leg
   useEffect(() => {
