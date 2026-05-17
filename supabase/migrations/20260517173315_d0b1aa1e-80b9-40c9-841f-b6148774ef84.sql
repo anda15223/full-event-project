@@ -1,0 +1,1 @@
+ALTER TABLE public.setup_phases ADD COLUMN IF NOT EXISTS driver_name text;

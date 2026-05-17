@@ -70,6 +70,7 @@ type SetupPhase = {
   planned_time: string | null;
   from_location: string | null;
   to_location: string | null;
+  driver_name: string | null;
   notes: string | null;
 };
 
@@ -558,23 +559,31 @@ export default function FestivalSetup() {
                       </Field>
                     </div>
 
-                    {/* Row 3: vehicle/driver + time */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <Field label="Car · Driver">
+                    {/* Row 3: vehicle + driver name + time */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <Field label="Car">
                         <Select
                           value={p.transport_allocation_id ?? "__none__"}
                           onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
                         >
-                          <SelectTrigger className="sm:col-span-2 h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
+                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">— No vehicle —</SelectItem>
                             {allocations.map((a) => (
                               <SelectItem key={a.id} value={a.id}>
-                                {a.vehicle_name}{a.driver_name ? ` · ${a.driver_name}` : " · (no driver)"}
+                                {a.vehicle_name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                      </Field>
+                      <Field label="Driver name">
+                        <Input
+                          className="h-9 text-xs sm:col-span-2"
+                          defaultValue={p.driver_name ?? ""}
+                          placeholder="Type driver name…"
+                          onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
+                        />
                       </Field>
                       <Field label="Planned time">
                         <Select

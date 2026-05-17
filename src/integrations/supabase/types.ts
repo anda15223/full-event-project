@@ -6668,6 +6668,7 @@ export type Database = {
         Row: {
           concept: string | null
           created_at: string
+          driver_name: string | null
           from_location: string | null
           id: string
           notes: string | null
@@ -6682,6 +6683,7 @@ export type Database = {
         Insert: {
           concept?: string | null
           created_at?: string
+          driver_name?: string | null
           from_location?: string | null
           id?: string
           notes?: string | null
@@ -6696,6 +6698,7 @@ export type Database = {
         Update: {
           concept?: string | null
           created_at?: string
+          driver_name?: string | null
           from_location?: string | null
           id?: string
           notes?: string | null
