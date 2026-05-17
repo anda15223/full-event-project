@@ -35,11 +35,22 @@ type Staff = {
   works_friday: boolean | null;
   works_saturday: boolean | null;
   works_sunday: boolean | null;
+  accom_thursday: boolean | null;
+  accom_friday: boolean | null;
+  accom_saturday: boolean | null;
+  accom_sunday: boolean | null;
   staff_source: string;
   role: string;
   station: string | null;
   notes: string | null;
 };
+
+const ACCOM_DAYS = [
+  { key: "accom_thursday", label: "Thu" },
+  { key: "accom_friday", label: "Fri" },
+  { key: "accom_saturday", label: "Sat" },
+  { key: "accom_sunday", label: "Sun" },
+] as const;
 
 type Concept = { id: string; name: string };
 
@@ -331,7 +342,7 @@ export default function FestivalStaff() {
               <TableHead className="min-w-[140px]">Location</TableHead>
               <TableHead className="min-w-[140px]">Concept</TableHead>
               <TableHead className="min-w-[140px]">Station</TableHead>
-              <TableHead className="text-center">Accom.</TableHead>
+              <TableHead className="text-center min-w-[150px]">Accom. (Thu/Fri/Sat/Sun)</TableHead>
               <TableHead className="min-w-[120px]">Source</TableHead>
               <TableHead className="text-center">Thu</TableHead>
               <TableHead className="text-center">Fri</TableHead>
@@ -583,7 +594,142 @@ export default function FestivalStaff() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      {/* ===================== REPORT ===================== */}
+      <div className="rounded-xl border-2 border-primary/30 bg-card p-4 md:p-5 space-y-5 print:border-0 print:p-0">
+        <div className="flex items-center justify-between gap-2 print:hidden">
+          <h2 className="font-heading text-xl font-semibold">Staff report</h2>
+          <Button size="sm" variant="outline" onClick={() => window.print()}>
+            Print / PDF
+          </Button>
+        </div>
+
+        {/* Per-concept fulfilment */}
+        <section className="space-y-3">
+          <h3 className="font-heading text-base font-semibold">Employees per concept · slots</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {concepts.map((c) => {
+              const plan = CONCEPT_STATION_PLAN.find((p) => p.match(c.name.toLowerCase()));
+              const people = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
+              const totalPlanned = plan?.slots.reduce((a, s) => a + s.count, 0) ?? 0;
+              const filledTotal = plan
+                ? plan.slots.reduce((acc, slot) => {
+                    const n = people.filter((p) => p.station === slot.station).length;
+                    return acc + Math.min(n, slot.count);
+                  }, 0)
+                : people.length;
+              const missing = Math.max(0, totalPlanned - filledTotal);
+              return (
+                <div key={c.id} className="rounded-lg border p-3 space-y-2 bg-background">
+                  <div className="flex items-center justify-between border-b pb-1.5">
+                    <span className="font-semibold text-sm">{c.name}</span>
+                    <span className={`text-xs font-medium tabular-nums ${
+                      missing === 0 ? "text-emerald-700" : "text-amber-700"
+                    }`}>
+                      {filledTotal}/{totalPlanned || people.length}
+                      {missing > 0 && ` · ${missing} missing`}
+                    </span>
+                  </div>
+                  {plan ? (
+                    <ul className="text-xs space-y-1">
+                      {plan.slots.map((slot) => {
+                        const occ = people.filter((p) => p.station === slot.station);
+                        const ok = occ.length >= slot.count;
+                        return (
+                          <li key={slot.station} className="flex items-start justify-between gap-2">
+                            <span className="text-muted-foreground shrink-0">
+                              {STATION_LABEL[slot.station]} ({Math.min(occ.length, slot.count)}/{slot.count})
+                            </span>
+                            <span className={`text-right ${ok ? "" : "text-amber-700 font-medium"}`}>
+                              {occ.length === 0
+                                ? "— empty —"
+                                : occ.map((p) => p.name || "Unnamed").join(", ")}
+                              {!ok && ` · need ${slot.count - occ.length} more`}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {people.length === 0 ? "No one assigned" : people.map((p) => p.name || "Unnamed").join(", ")}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Not assigned */}
+        {(() => {
+          const unassigned = allRows.filter((s) => !s.concept_id && s.role !== "management");
+          return (
+            <section className="space-y-2">
+              <h3 className="font-heading text-base font-semibold">
+                Not assigned <span className="text-muted-foreground font-normal">· {unassigned.length}</span>
+              </h3>
+              {unassigned.length === 0 ? (
+                <p className="text-xs text-emerald-700">Everyone is assigned ✓</p>
+              ) : (
+                <ul className="text-sm grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                  {unassigned.map((p) => (
+                    <li key={p.id} className="flex justify-between border-b py-1">
+                      <span>{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {p.home_location || "—"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })()}
+
+        {/* Accommodation by day */}
+        <section className="space-y-2">
+          <h3 className="font-heading text-base font-semibold">Accommodation needs by day</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {ACCOM_DAYS.map((d) => {
+              const people = allRows
+                .filter((s) => !!s[d.key])
+                .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+              return (
+                <div key={d.key} className="rounded-lg border p-3 bg-background">
+                  <div className="flex items-center justify-between border-b pb-1 mb-2">
+                    <span className="font-semibold text-sm">{d.label}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {people.length} bed{people.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  {people.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">—</p>
+                  ) : (
+                    <ul className="text-xs space-y-0.5">
+                      {people.map((p) => (
+                        <li key={p.id} className="flex justify-between gap-2">
+                          <span className="truncate">{p.name || "Unnamed"}</span>
+                          {p.home_location && (
+                            <span className="text-muted-foreground shrink-0">{p.home_location}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Total bed-nights:{" "}
+            <strong className="text-foreground">
+              {ACCOM_DAYS.reduce((acc, d) => acc + allRows.filter((s) => !!s[d.key]).length, 0)}
+            </strong>
+          </p>
+        </section>
+      </div>
+
+      <p className="text-xs text-muted-foreground print:hidden">
         This list is shared across Transport, Setup and other festival sections.
       </p>
     </div>
@@ -692,11 +838,35 @@ function StaffRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell className="text-center">
-        <Checkbox
-          checked={!!staff.needs_accommodation}
-          onCheckedChange={(c) => onPatch({ needs_accommodation: !!c })}
-        />
+      <TableCell>
+        <div className="flex items-center justify-center gap-1.5">
+          {ACCOM_DAYS.map((d) => {
+            const checked = !!staff[d.key];
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => {
+                  const next = { [d.key]: !checked } as Partial<Staff>;
+                  // keep summary boolean in sync
+                  const anyOther = ACCOM_DAYS.some(
+                    (x) => x.key !== d.key && !!staff[x.key]
+                  );
+                  next.needs_accommodation = !checked || anyOther;
+                  onPatch(next);
+                }}
+                className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
+                  checked
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+                title={`Needs accommodation on ${d.label}`}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
       </TableCell>
       <TableCell>
         <Select

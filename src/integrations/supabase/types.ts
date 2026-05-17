@@ -4936,6 +4936,10 @@ export type Database = {
       }
       festival_staff: {
         Row: {
+          accom_friday: boolean
+          accom_saturday: boolean
+          accom_sunday: boolean
+          accom_thursday: boolean
           concept_id: string | null
           confirmed: boolean | null
           created_at: string | null
@@ -4959,6 +4963,10 @@ export type Database = {
           wristband_type: string | null
         }
         Insert: {
+          accom_friday?: boolean
+          accom_saturday?: boolean
+          accom_sunday?: boolean
+          accom_thursday?: boolean
           concept_id?: string | null
           confirmed?: boolean | null
           created_at?: string | null
@@ -4982,6 +4990,10 @@ export type Database = {
           wristband_type?: string | null
         }
         Update: {
+          accom_friday?: boolean
+          accom_saturday?: boolean
+          accom_sunday?: boolean
+          accom_thursday?: boolean
           concept_id?: string | null
           confirmed?: boolean | null
           created_at?: string | null
