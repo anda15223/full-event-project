@@ -4949,6 +4949,7 @@ export type Database = {
           role: string
           staff_source: string
           staff_type: string | null
+          station: string | null
           total_hours_planned: number | null
           updated_at: string | null
           works_friday: boolean | null
@@ -4971,6 +4972,7 @@ export type Database = {
           role: string
           staff_source: string
           staff_type?: string | null
+          station?: string | null
           total_hours_planned?: number | null
           updated_at?: string | null
           works_friday?: boolean | null
@@ -4993,6 +4995,7 @@ export type Database = {
           role?: string
           staff_source?: string
           staff_type?: string | null
+          station?: string | null
           total_hours_planned?: number | null
           updated_at?: string | null
           works_friday?: boolean | null
