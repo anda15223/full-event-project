@@ -532,7 +532,7 @@ function useConceptStats(festivalId: string | null) {
 type CardTile = { key: string; name: string; icon: typeof Truck; route?: (s: string) => string };
 const CARD_TILES: CardTile[] = [
   { key: "transport", name: "Transport", icon: Truck, route: (s: string) => `/festivals/${s}/transport` },
-  { key: "soborg-loading", name: "Soborg Loading", icon: Truck, route: (s: string) => `/festivals/${s}/soborg-loading` },
+  { key: "soborg-loading", name: "Søborg Loading", icon: Truck, route: (s: string) => `/festivals/${s}/soborg-loading` },
   { key: "setup", name: "Setup", icon: Calendar },
   { key: "cooling", name: "Cooling", icon: Snowflake },
   { key: "equipment", name: "Equipment", icon: Wrench },
@@ -841,7 +841,7 @@ export default function FestivalOverview() {
             const sb = soborgQ.data;
             tiles.push(
               <FestivalTile key="soborg" href={`/festivals/${slug}/soborg-loading`}
-                icon={Truck} iconAccent="violet" title="Soborg Loading"
+                icon={Truck} iconAccent="violet" title="Søborg Loading"
                 primaryStat={sb ? `${sb.itemCount} items` : "—"}
                 secondaryStat={sb && sb.vehicleCount > 0 ? `${sb.vehicleCount} cars` : undefined}
                 status={sb && sb.vehicleCount > 0 ? "green" : "gray"} />
