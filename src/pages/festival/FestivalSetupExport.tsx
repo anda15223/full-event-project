@@ -23,7 +23,33 @@ const fmtTime = (t?: string | null) => (t ? t.slice(0, 5) : "");
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-type AttRender = { id: string; file_name: string; concept: string | null; setup_phase_id: string | null; signedUrl: string | null; isImage: boolean; ai_summary: string | null; extracted_text: string | null };
+type AttRender = { id: string; file_name: string; concept: string | null; setup_phase_id: string | null; signedUrl: string | null; isImage: boolean; isPdf: boolean; pageImages: string[]; ai_summary: string | null; extracted_text: string | null };
+
+async function renderPdfToImages(url: string): Promise<string[]> {
+  try {
+    const pdfjs: any = await import("pdfjs-dist/build/pdf");
+    const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.js?url")).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+    const loadingTask = pdfjs.getDocument({ url, disableRange: true, disableStream: true });
+    const pdf = await loadingTask.promise;
+    const out: string[] = [];
+    const maxPages = Math.min(pdf.numPages, 10);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2 });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d")!;
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      out.push(canvas.toDataURL("image/jpeg", 0.85));
+    }
+    return out;
+  } catch (e) {
+    console.error("PDF render failed", e);
+    return [];
+  }
+}
 
 export default function FestivalSetupExport() {
   const { slug = "" } = useParams();
