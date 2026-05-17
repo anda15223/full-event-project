@@ -177,11 +177,21 @@ export default function FestivalSetupExport() {
           <View style={{ marginTop: 6 }}>
             <Text style={[r.small, { fontWeight: 700, marginBottom: 2 }]}>Plan files</Text>
             {myAtts.map((a) => (
-              <View key={a.id} style={{ marginBottom: 6 }} wrap={false}>
+              <View key={a.id} style={{ marginBottom: 8 }}>
                 <Text style={r.small}>📎 {a.file_name}</Text>
                 {a.isImage && a.signedUrl ? (
                   <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 360, objectFit: "contain", marginTop: 2 }} />
                 ) : null}
+                {a.ai_summary && (
+                  <Text style={[r.small, { marginTop: 3, fontStyle: "italic", color: "#444" }]}>
+                    AI summary: {a.ai_summary}
+                  </Text>
+                )}
+                {a.extracted_text && (
+                  <Text style={[r.small, { marginTop: 3, color: "#222" }]}>
+                    {a.extracted_text}
+                  </Text>
+                )}
               </View>
             ))}
           </View>
@@ -191,14 +201,25 @@ export default function FestivalSetupExport() {
   };
 
   const renderAttachment = (a: AttRender) => (
-    <View key={a.id} style={r.card} wrap={false}>
+    <View key={a.id} style={r.card}>
       <Text style={[r.small, { fontWeight: 700, marginBottom: 4 }]}>
         Layout plan: {a.file_name} ({a.concept ?? "—"})
       </Text>
       {a.isImage && a.signedUrl ? (
         <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 400, objectFit: "contain" }} />
-      ) : (
-        <Text style={r.small}>{a.signedUrl ?? "(no preview)"}</Text>
+      ) : null}
+      {a.ai_summary && (
+        <Text style={[r.small, { marginTop: 4, fontStyle: "italic", color: "#444" }]}>
+          AI summary: {a.ai_summary}
+        </Text>
+      )}
+      {a.extracted_text && (
+        <Text style={[r.small, { marginTop: 4, color: "#222" }]}>
+          {a.extracted_text}
+        </Text>
+      )}
+      {!a.isImage && !a.ai_summary && !a.extracted_text && (
+        <Text style={r.small}>(parsing pending — re-open report shortly)</Text>
       )}
     </View>
   );
