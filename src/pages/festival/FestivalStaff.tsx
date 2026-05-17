@@ -56,12 +56,51 @@ const STATION_OPTIONS = [
   { value: "fryer", label: "Fryer" },
   { value: "oven", label: "Oven" },
   { value: "pita_wrapper", label: "Pita wrapper" },
+  { value: "pita_griddle", label: "Pita griddle" },
   { value: "burger", label: "Burger" },
+  { value: "burger_bun_grill", label: "Burger bun grill" },
   { value: "crepes", label: "Crepes" },
 ];
 const STATION_LABEL: Record<string, string> = Object.fromEntries(
   STATION_OPTIONS.map((s) => [s.value, s.label])
 );
+
+// Required station slots per concept (matched by lowercased concept name substring)
+const CONCEPT_STATION_PLAN: { match: (name: string) => boolean; slots: { station: string; count: number }[] }[] = [
+  {
+    match: (n) => n.includes("gyros"),
+    slots: [
+      { station: "cash_register", count: 2 },
+      { station: "pita_wrapper", count: 2 },
+      { station: "assembly", count: 3 },
+      { station: "oven", count: 1 },
+      { station: "pita_griddle", count: 1 },
+    ],
+  },
+  {
+    match: (n) => n.includes("fish"),
+    slots: [
+      { station: "cash_register", count: 2 },
+      { station: "assembly", count: 1 },
+      { station: "fryer", count: 1 },
+    ],
+  },
+  {
+    match: (n) => n.includes("chick") || n.includes("buns"),
+    slots: [
+      { station: "cash_register", count: 2 },
+      { station: "fryer", count: 2 },
+      { station: "assembly", count: 2 },
+      { station: "burger", count: 3 },
+      { station: "burger_bun_grill", count: 1 },
+    ],
+  },
+  {
+    match: (n) => n.includes("crepe"),
+    slots: [{ station: "crepes", count: 4 }],
+  },
+];
+
 
 export default function FestivalStaff() {
   const { slug = "" } = useParams();
@@ -251,37 +290,106 @@ export default function FestivalStaff() {
               people: allRows.filter((s) => s.concept_id === c.id && s.role !== "management"),
             })),
             { id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
-          ].map((group) => (
-            <div key={group.id} className="rounded-lg border bg-card p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium text-sm">{group.name}</h3>
-                <span className="text-xs text-muted-foreground">{group.people.length}</span>
+          ].map((group) => {
+            const isMgmt = group.id === "__mgmt__";
+            const isNone = group.id === "__none__";
+            const plan = !isMgmt && !isNone
+              ? CONCEPT_STATION_PLAN.find((p) => p.match(group.name.toLowerCase()))
+              : undefined;
+            const renderPerson = (p: Staff) => (
+              <span className="flex items-center gap-2 min-w-0">
+                <span
+                  className={`inline-block h-2 w-2 rounded-full shrink-0 ${
+                    p.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                  }`}
+                  title={p.confirmed ? "Confirmed" : "Unconfirmed"}
+                />
+                <span className="truncate">{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                {p.home_location && (
+                  <span className="text-xs text-muted-foreground shrink-0">· {p.home_location}</span>
+                )}
+              </span>
+            );
+            return (
+              <div key={group.id} className="rounded-lg border bg-card p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium text-sm">{group.name}</h3>
+                  <span className="text-xs text-muted-foreground">{group.people.length}</span>
+                </div>
+                {plan ? (
+                  (() => {
+                    const used = new Set<string>();
+                    return (
+                      <div className="space-y-2">
+                        {plan.slots.map((slot) => {
+                          const pool = group.people.filter((p) => p.station === slot.station && !used.has(p.id));
+                          const filled = pool.slice(0, slot.count);
+                          filled.forEach((p) => used.add(p.id));
+                          const empties = slot.count - filled.length;
+                          return (
+                            <div key={slot.station}>
+                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                                {STATION_LABEL[slot.station]} · {filled.length}/{slot.count}
+                              </div>
+                              <ul className="space-y-1">
+                                {filled.map((p) => (
+                                  <li key={p.id} className="text-sm">{renderPerson(p)}</li>
+                                ))}
+                                {Array.from({ length: empties }).map((_, i) => (
+                                  <li key={`empty-${i}`} className="text-sm text-muted-foreground italic flex items-center gap-2">
+                                    <span className="inline-block h-2 w-2 rounded-full border border-dashed border-muted-foreground/50" />
+                                    Empty slot
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })}
+                        {(() => {
+                          const extras = group.people.filter((p) => !used.has(p.id));
+                          if (extras.length === 0) return null;
+                          return (
+                            <div>
+                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                                Extra / unassigned station · {extras.length}
+                              </div>
+                              <ul className="space-y-1">
+                                {extras.map((p) => (
+                                  <li key={p.id} className="text-sm flex items-center justify-between gap-2">
+                                    {renderPerson(p)}
+                                    {p.station && (
+                                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted shrink-0">
+                                        {STATION_LABEL[p.station] ?? p.station}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  })()
+                ) : group.people.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No one assigned</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {group.people.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between text-sm gap-2">
+                        {renderPerson(p)}
+                        {p.station && (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted shrink-0">
+                            {STATION_LABEL[p.station] ?? p.station}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {group.people.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No one assigned</p>
-              ) : (
-                <ul className="space-y-1">
-                  {group.people.map((p) => (
-                    <li key={p.id} className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span
-                          className={`inline-block h-2 w-2 rounded-full ${
-                            p.confirmed ? "bg-emerald-500" : "bg-amber-400"
-                          }`}
-                          title={p.confirmed ? "Confirmed" : "Unconfirmed"}
-                        />
-                        <span>{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
-                      </span>
-                      <span className="text-xs text-muted-foreground flex items-center gap-2">
-                        {p.station && <span className="px-1.5 py-0.5 rounded bg-muted">{STATION_LABEL[p.station] ?? p.station}</span>}
-                        <span>{p.home_location ?? ""}</span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
