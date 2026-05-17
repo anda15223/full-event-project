@@ -50,7 +50,7 @@ export default function SetupSourcePicker({
     queryKey: ["picker-transport", festivalId],
     queryFn: async () => {
       const { data: vehicles } = await sb.from("festival_staff_vehicles")
-        .select("id, vehicle_name, driver_staff_id, departure_time")
+        .select("id, vehicle_name, driver_staff_id")
         .eq("festival_id", festivalId).order("vehicle_name");
       const ids = (vehicles ?? []).map((v: any) => v.driver_staff_id).filter(Boolean);
       const nameMap = new Map<string, string>();
