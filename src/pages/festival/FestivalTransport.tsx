@@ -229,6 +229,12 @@ export default function FestivalTransport() {
     return result;
   }, [legs, assignments]);
 
+  // Global set of staff currently assigned to ANY leg (any role).
+  const globalAssignedIds = useMemo(
+    () => new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!)),
+    [assignments],
+  );
+
   // Scroll to focused leg
   useEffect(() => {
     if (!focusLegId || legs.length === 0) return;
