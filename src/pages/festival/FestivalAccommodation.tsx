@@ -54,6 +54,21 @@ export default function FestivalAccommodation() {
     },
   });
 
+  const staffQ = useQuery({
+    queryKey: ["accommodation-staff", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await sb.from("festival_staff")
+        .select("id, name, home_location, confirmed")
+        .eq("festival_id", festivalId)
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).filter((s: any) => (s.name ?? "").trim()) as {
+        id: string; name: string; home_location: string | null; confirmed: boolean | null;
+      }[];
+    },
+  });
+
   const create = useMutation({
     mutationFn: async () => {
       const { error } = await sb.from("festival_accommodation").insert({
