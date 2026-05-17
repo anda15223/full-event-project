@@ -11,6 +11,18 @@ import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
+import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
+
+type EquipmentRow = {
+  id: string;
+  festival_power_id: string;
+  equipment_name: string;
+  quantity: number | null;
+  power_kw: number | null;
+  is_powered: boolean | null;
+  category: string | null;
+  position: number | null;
+};
 
 // TODO Sprint 7: Open Sans v17 drops fi/fl ligatures ("confrmed" / "fxed").
 // Plan to swap to a font with full ligature support (Inter, IBM Plex Sans).
@@ -43,6 +55,7 @@ type PowerRow = {
   tableau_count: number | null;
   total_kw_estimate: number | null;
   total_amp_estimate: number | null;
+  allocated_kw: number | null;
   equipment_breakdown: string | null;
   status: string;
   power_drawing_file_path: string | null;
@@ -91,11 +104,12 @@ function trunc(s: string | null, n: number) {
 }
 
 function PowerDoc({
-  festival, rows, contractsById, filterLabel, canSeeFinance,
+  festival, rows, contractsById, equipmentByPower, filterLabel, canSeeFinance,
 }: {
   festival: Festival;
   rows: PowerRow[];
   contractsById: Map<string, Contract>;
+  equipmentByPower: Map<string, EquipmentRow[]>;
   filterLabel: string | null;
   canSeeFinance: boolean;
 }) {
@@ -109,11 +123,12 @@ function PowerDoc({
       t.c32 += p.connections_32a ?? 0;
       t.c63 += p.connections_63a ?? 0;
       t.c125 += p.connections_125a ?? 0;
-      t.kw += Number(p.total_kw_estimate ?? 0);
+      t.allocated += Number(p.allocated_kw ?? 0);
+      t.demand += computeDemandKw(equipmentByPower.get(p.id) ?? []);
       t.cost += Number(p.cost_dkk ?? 0);
       return t;
     },
-    { c16_240: 0, c16_400: 0, c32: 0, c63: 0, c125: 0, kw: 0, cost: 0 },
+    { c16_240: 0, c16_400: 0, c32: 0, c63: 0, c125: 0, allocated: 0, demand: 0, cost: 0 },
   );
 
   const Footer = () => (
@@ -139,6 +154,13 @@ function PowerDoc({
       {rows.map((p) => {
         const c = contractsById.get(p.festival_contract_id);
         const conceptTitle = c ? contractText(c) : "—";
+        const eq = equipmentByPower.get(p.id) ?? [];
+        const demandKw = computeDemandKw(eq);
+        const allocatedKw = Number(p.allocated_kw ?? 0);
+        const liveStatus = computePowerStatus({
+          status: p.status, allocated_kw: p.allocated_kw, demand_kw: demandKw,
+        });
+
         const lines: string[] = [];
         if ((p.connections_16a_240v ?? 0) > 0) lines.push(`16A 240V: ${p.connections_16a_240v}`);
         if ((p.connections_16a_400v ?? 0) > 0) lines.push(`16A 400V: ${p.connections_16a_400v}`);
@@ -146,6 +168,10 @@ function PowerDoc({
         if ((p.connections_63a ?? 0) > 0) lines.push(`63A: ${p.connections_63a}`);
         if ((p.connections_125a ?? 0) > 0) lines.push(`125A: ${p.connections_125a}`);
         if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
+
+        const poweredEq = eq
+          .filter((e) => e.is_powered && (e.power_kw ?? 0) > 0)
+          .sort((a, b) => (b.power_kw ?? 0) * (b.quantity ?? 1) - (a.power_kw ?? 0) * (a.quantity ?? 1));
 
         return (
           <Page key={p.id} size="A4" style={styles.page}>
@@ -155,7 +181,7 @@ function PowerDoc({
             <View style={styles.unit}>
               <Text style={styles.unitTitle}>{N(conceptTitle)}</Text>
               <View style={styles.pillRow}>
-                <Text style={styles.pill}>{N(`status: ${p.status}`)}</Text>
+                <Text style={styles.pill}>{N(`status: ${liveStatus.label}`)}</Text>
                 <Text style={styles.pill}>
                   {N(`drawing: ${p.power_drawing_file_path ? "uploaded" : "missing"}`)}
                 </Text>
@@ -166,11 +192,25 @@ function PowerDoc({
                 : lines.map((l, i) => <Text key={i} style={styles.row}>{N(l)}</Text>)}
 
               <Text style={styles.row}>
-                {N(`Total kW: ${p.total_kw_estimate ?? "—"}   ·   Total Amp: ${p.total_amp_estimate ?? "—"}`)}
+                {N(`Allocated: ${allocatedKw.toFixed(1)} kW   ·   Demand (live): ${demandKw.toFixed(1)} kW`)}
               </Text>
-              <Text style={styles.row}>{N(`Equipment: ${trunc(p.equipment_breakdown, 400)}`)}</Text>
+              {p.total_amp_estimate != null && (
+                <Text style={styles.row}>{N(`Total Amp: ${p.total_amp_estimate}`)}</Text>
+              )}
+
+              <Text style={[styles.row, { marginTop: 6, fontWeight: 700 }]}>
+                {N(`Equipment (${poweredEq.length} powered items)`)}
+              </Text>
+              {poweredEq.length === 0
+                ? <Text style={styles.row}>—</Text>
+                : poweredEq.map((e) => (
+                    <Text key={e.id} style={styles.row}>
+                      {N(`• ${e.equipment_name} × ${e.quantity ?? 1} — ${(Number(e.power_kw ?? 0)).toFixed(2)} kW`)}
+                    </Text>
+                  ))}
+
               {canSeeFinance ? (
-                <Text style={styles.row}>
+                <Text style={[styles.row, { marginTop: 6 }]}>
                   {N(
                     `Ordered: ${fmtDate(p.ordered_date)}   ·   Cost: ${
                       p.cost_dkk != null ? Number(p.cost_dkk).toLocaleString("da-DK") + " DKK" : "—"
@@ -178,7 +218,7 @@ function PowerDoc({
                   )}
                 </Text>
               ) : (
-                <Text style={styles.row}>{N(`Ordered: ${fmtDate(p.ordered_date)}`)}</Text>
+                <Text style={[styles.row, { marginTop: 6 }]}>{N(`Ordered: ${fmtDate(p.ordered_date)}`)}</Text>
               )}
               {p.notes && <Text style={styles.notes}>{N(`Notes: ${trunc(p.notes, 600)}`)}</Text>}
             </View>
@@ -198,7 +238,9 @@ function PowerDoc({
             <Text style={styles.sumTitle}>Festival summary</Text>
             <Text style={styles.row}>{N(`16A 240V: ${totals.c16_240}   ·   16A 400V: ${totals.c16_400}`)}</Text>
             <Text style={styles.row}>{N(`32A: ${totals.c32}   ·   63A: ${totals.c63}   ·   125A: ${totals.c125}`)}</Text>
-            <Text style={styles.row}>{N(`Total kW: ${totals.kw}`)}</Text>
+            <Text style={styles.row}>
+              {N(`Allocated: ${totals.allocated.toFixed(1)} kW   ·   Demand (live): ${totals.demand.toFixed(1)} kW`)}
+            </Text>
             {canSeeFinance && (
               <Text style={styles.row}>{N(`Total cost: ${totals.cost.toLocaleString("da-DK")} DKK`)}</Text>
             )}
@@ -221,6 +263,7 @@ export default function FestivalPowerExport() {
   const [festival, setFestival] = useState<Festival | null>(null);
   const [rows, setRows] = useState<PowerRow[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -242,10 +285,16 @@ export default function FestivalPowerExport() {
         ? await supabase.from("festival_power").select("*").in("festival_contract_id", cs.map((c) => c.id))
         : { data: [] as any[] };
 
+      const powerRows = (pRes.data ?? []) as PowerRow[];
+      const eqRes = powerRows.length > 0
+        ? await supabase.from("festival_power_equipment").select("*").in("festival_power_id", powerRows.map((p) => p.id))
+        : { data: [] as any[] };
+
       if (!alive) return;
       setFestival(f.data as Festival);
       setContracts(cs);
-      setRows((pRes.data ?? []) as PowerRow[]);
+      setRows(powerRows);
+      setEquipment((eqRes.data ?? []) as EquipmentRow[]);
       setLoading(false);
     })();
     return () => { alive = false; };
@@ -282,11 +331,19 @@ export default function FestivalPowerExport() {
     return (ca?.concept?.display_order ?? 999) - (cb?.concept?.display_order ?? 999);
   });
 
+  const equipmentByPower = new Map<string, EquipmentRow[]>();
+  equipment.forEach((e) => {
+    const arr = equipmentByPower.get(e.festival_power_id) ?? [];
+    arr.push(e);
+    equipmentByPower.set(e.festival_power_id, arr);
+  });
+
   const doc = (
     <PowerDoc
       festival={festival}
       rows={sortedRows}
       contractsById={contractsById}
+      equipmentByPower={equipmentByPower}
       filterLabel={filterLabel}
       canSeeFinance={canSeeFinance}
     />
