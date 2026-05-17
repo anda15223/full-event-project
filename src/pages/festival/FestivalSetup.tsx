@@ -56,6 +56,9 @@ const SEQUENCE_PRESETS = [
   "Driving home",
 ] as const;
 
+const DRIVE_PRESETS = new Set<string>(["Drive to festival", "Driving home"]);
+const isDrivePhase = (name: string | null) => !name || DRIVE_PRESETS.has(name) || !SEQUENCE_PRESETS.includes(name as any);
+
 type Festival = {
   id: string; slug: string; name: string;
   address?: string | null; city?: string | null;
@@ -95,6 +98,7 @@ type Allocation = {
 type Attachment = {
   id: string;
   setup_run_id: string;
+  setup_phase_id: string | null;
   concept: Concept | null;
   file_path: string;
   file_name: string;
@@ -213,7 +217,37 @@ export default function FestivalSetup() {
       return (data ?? []) as Attachment[];
     },
   });
-  const attachments = attQ.data ?? [];
+  const allAttachments = attQ.data ?? [];
+  const attachments = allAttachments.filter((a) => !a.setup_phase_id);
+  const attachmentsByPhase = useMemo(() => {
+    const m = new Map<string, Attachment[]>();
+    allAttachments.forEach((a) => {
+      if (!a.setup_phase_id) return;
+      const arr = m.get(a.setup_phase_id) ?? [];
+      arr.push(a); m.set(a.setup_phase_id, arr);
+    });
+    return m;
+  }, [allAttachments]);
+
+  /* ---------- Electricity (Power) summary for this festival ---------- */
+  const powerQ = useQuery({
+    queryKey: ["setup-power-summary", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data: contracts, error: cErr } = await sb.from("festival_contracts")
+        .select("id, concept_name, is_active").eq("festival_id", festivalId).eq("is_active", true);
+      if (cErr) throw cErr;
+      const ids = (contracts ?? []).map((c: any) => c.id);
+      if (!ids.length) return [] as any[];
+      const { data: power, error: pErr } = await sb.from("festival_power")
+        .select("festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, tableau_required, tableau_count, status, power_drawing_file_path, notes")
+        .in("festival_contract_id", ids);
+      if (pErr) throw pErr;
+      const byContract = new Map((contracts ?? []).map((c: any) => [c.id, c.concept_name]));
+      return (power ?? []).map((p: any) => ({ ...p, concept_name: byContract.get(p.festival_contract_id) ?? "—" }));
+    },
+  });
+  const powerRows = powerQ.data ?? [];
 
   /* ---------- Staff (driver picker) ---------- */
   const staffQ = useQuery({
@@ -356,7 +390,7 @@ export default function FestivalSetup() {
   const [uploadConcept, setUploadConcept] = useState<Concept>("all");
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, phaseId: string | null = null) => {
     if (!run) return;
     setUploading(true);
     try {
@@ -366,7 +400,8 @@ export default function FestivalSetup() {
       if (upErr) throw upErr;
       const { error: insErr } = await sb.from("setup_attachments").insert({
         setup_run_id: run.id,
-        concept: uploadConcept,
+        setup_phase_id: phaseId,
+        concept: phaseId ? null : uploadConcept,
         file_path: path,
         file_name: file.name,
         mime_type: file.type,
@@ -517,6 +552,9 @@ export default function FestivalSetup() {
           phases.map((p, idx) => {
             const alloc = p.transport_allocation_id ? allocLookup.get(p.transport_allocation_id) : null;
             const driverMissing = !!alloc && !alloc.driver_staff_id;
+            const isDrive = isDrivePhase(p.phase_name);
+            const showPower = p.phase_name === "Setup at festival";
+            const phaseAttachments = attachmentsByPhase.get(p.id) ?? [];
             return (
               <div key={p.id} className="rounded-2xl border bg-card p-4 space-y-3">
                 <div className="flex items-start gap-2">
@@ -561,52 +599,56 @@ export default function FestivalSetup() {
                       </Select>
                     </div>
 
-                    {/* Row 2: leaving point → destination point */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Field label="Leaving from">
-                        <Input
-                          className="h-9 text-xs"
-                          defaultValue={p.from_location ?? ""}
-                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.from_location) updatePhase.mutate({ id: p.id, patch: { from_location: v } }); }}
-                          placeholder="e.g. Søborg HQ"
-                        />
-                      </Field>
-                      <Field label="Destination">
-                        <Input
-                          className="h-9 text-xs"
-                          defaultValue={p.to_location ?? ""}
-                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.to_location) updatePhase.mutate({ id: p.id, patch: { to_location: v } }); }}
-                          placeholder="e.g. Jelling site – Fish stand"
-                        />
-                      </Field>
-                    </div>
+                    {/* Row 2: leaving point → destination point (drive only) */}
+                    {isDrive && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <Field label="Leaving from">
+                          <Input
+                            className="h-9 text-xs"
+                            defaultValue={p.from_location ?? ""}
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== p.from_location) updatePhase.mutate({ id: p.id, patch: { from_location: v } }); }}
+                            placeholder="e.g. Søborg HQ"
+                          />
+                        </Field>
+                        <Field label="Destination">
+                          <Input
+                            className="h-9 text-xs"
+                            defaultValue={p.to_location ?? ""}
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== p.to_location) updatePhase.mutate({ id: p.id, patch: { to_location: v } }); }}
+                            placeholder="e.g. Jelling site – Fish stand"
+                          />
+                        </Field>
+                      </div>
+                    )}
 
-                    {/* Row 3: vehicle + driver name + time */}
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                      <Field label="Car">
-                        <Select
-                          value={p.transport_allocation_id ?? "__none__"}
-                          onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
-                        >
-                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">— No vehicle —</SelectItem>
-                            {allocations.map((a) => (
-                              <SelectItem key={a.id} value={a.id}>
-                                {a.vehicle_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                      <Field label="Driver name">
-                        <Input
-                          className="h-9 text-xs sm:col-span-2"
-                          defaultValue={p.driver_name ?? ""}
-                          placeholder="Type driver name…"
-                          onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
-                        />
-                      </Field>
+                    {/* Row 3: vehicle + driver (drive only) + date + time */}
+                    <div className={cn("grid grid-cols-1 gap-2", isDrive ? "sm:grid-cols-5" : "sm:grid-cols-2")}>
+                      {isDrive && (
+                        <>
+                          <Field label="Car">
+                            <Select
+                              value={p.transport_allocation_id ?? "__none__"}
+                              onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
+                            >
+                              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">— No vehicle —</SelectItem>
+                                {allocations.map((a) => (
+                                  <SelectItem key={a.id} value={a.id}>{a.vehicle_name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field label="Driver name">
+                            <Input
+                              className="h-9 text-xs sm:col-span-2"
+                              defaultValue={p.driver_name ?? ""}
+                              placeholder="Type driver name…"
+                              onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
+                            />
+                          </Field>
+                        </>
+                      )}
                       <Field label="Planned date">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -648,6 +690,69 @@ export default function FestivalSetup() {
                       </Field>
                     </div>
 
+                    {/* Setup-phase block: electricity summary + per-phase plan files */}
+                    {!isDrive && (
+                      <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                        {showPower && (
+                          <div>
+                            <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-1.5 font-semibold">
+                              ⚡ Electricity (from Power card)
+                            </div>
+                            {powerRows.length === 0 ? (
+                              <div className="text-[11px] text-muted-foreground">No power data yet.</div>
+                            ) : (
+                              <div className="space-y-1">
+                                {powerRows.map((pw: any) => (
+                                  <div key={pw.festival_contract_id} className="text-[11px] flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                                    <span className="font-semibold capitalize">{pw.concept_name}</span>
+                                    {pw.total_kw_estimate ? <span>{pw.total_kw_estimate} kW</span> : null}
+                                    {pw.connections_16a_240v ? <span>16A/240V × {pw.connections_16a_240v}</span> : null}
+                                    {pw.connections_16a_400v ? <span>16A/400V × {pw.connections_16a_400v}</span> : null}
+                                    {pw.connections_32a ? <span>32A × {pw.connections_32a}</span> : null}
+                                    {pw.connections_63a ? <span>63A × {pw.connections_63a}</span> : null}
+                                    {pw.connections_125a ? <span>125A × {pw.connections_125a}</span> : null}
+                                    {pw.tableau_required ? <span>· Tableau × {pw.tableau_count || 1}</span> : null}
+                                    <span className="text-muted-foreground">· {pw.status}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="text-[10px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">
+                              📎 Plan files (setup / electricity) — printed in full in report
+                            </div>
+                            <label className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border bg-card cursor-pointer hover:bg-muted">
+                              <Upload className="h-3 w-3" />
+                              Upload
+                              <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f, p.id); e.currentTarget.value = ""; }} />
+                            </label>
+                          </div>
+                          {phaseAttachments.length === 0 ? (
+                            <div className="text-[11px] text-muted-foreground">No plan files yet.</div>
+                          ) : (
+                            <div className="space-y-1">
+                              {phaseAttachments.map((a) => (
+                                <div key={a.id} className="flex items-center justify-between gap-2 text-[11px] px-2 py-1 rounded border bg-card">
+                                  <button className="flex items-center gap-1.5 min-w-0 flex-1 text-left hover:underline" onClick={() => openAttachment(a)}>
+                                    <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                    <span className="truncate">{a.file_name}</span>
+                                  </button>
+                                  <button onClick={() => deleteAttachment.mutate(a)} className="text-muted-foreground hover:text-destructive">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Row 4: attached sources */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
                       {(sourcesByPhase.get(p.id) ?? []).map((s) => (
@@ -674,14 +779,14 @@ export default function FestivalSetup() {
                   </button>
                 </div>
 
-                {alloc && (
+                {isDrive && alloc && (
                   <div className="text-xs text-muted-foreground pl-7">
                     Vehicle: <strong>{alloc.vehicle_name}</strong>
                     {" · "}Driver: {alloc.driver_name ?? <em className="text-rose-600">unallocated</em>}
                   </div>
                 )}
 
-                {driverMissing && (
+                {isDrive && driverMissing && (
                   <div className="ml-7 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300">
                       <AlertCircle className="h-4 w-4 shrink-0" />

@@ -11,11 +11,19 @@ const BUCKET = "festival-setup-docs";
 
 const CONCEPT_ORDER = ["fish", "gyros", "creperie", "chicks"] as const;
 
+const DRIVE_PRESETS = new Set<string>(["Drive to festival", "Driving home"]);
+const SEQUENCE_PRESETS = new Set<string>([
+  "Drive to festival", "Setup at festival", "Arriving cooling", "Arriving goods",
+  "Place goods in freezers", "Wrap up", "Driving home",
+]);
+const isDrivePhase = (name: string | null) =>
+  !name || DRIVE_PRESETS.has(name) || !SEQUENCE_PRESETS.has(name);
+
 const fmtTime = (t?: string | null) => (t ? t.slice(0, 5) : "");
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-type AttRender = { id: string; file_name: string; concept: string | null; signedUrl: string | null; isImage: boolean };
+type AttRender = { id: string; file_name: string; concept: string | null; setup_phase_id: string | null; signedUrl: string | null; isImage: boolean };
 
 export default function FestivalSetupExport() {
   const { slug = "" } = useParams();
@@ -67,10 +75,23 @@ export default function FestivalSetupExport() {
         const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(a.file_path, 1800);
         const isImage = (a.mime_type ?? "").startsWith("image/")
           || /\.(png|jpe?g|webp)$/i.test(a.file_name);
-        return { id: a.id, file_name: a.file_name, concept: a.concept, signedUrl: signed?.signedUrl ?? null, isImage };
+        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage };
       }));
 
-      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender });
+      // Power summary for setup phases
+      const { data: contracts } = await sb.from("festival_contracts")
+        .select("id, concept_name, is_active").eq("festival_id", f.id).eq("is_active", true);
+      const cIds = (contracts ?? []).map((c: any) => c.id);
+      let powerRows: any[] = [];
+      if (cIds.length) {
+        const { data: pw } = await sb.from("festival_power")
+          .select("festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, tableau_required, tableau_count, status")
+          .in("festival_contract_id", cIds);
+        const byId = new Map((contracts ?? []).map((c: any) => [c.id, c.concept_name]));
+        powerRows = (pw ?? []).map((p: any) => ({ ...p, concept_name: byId.get(p.festival_contract_id) ?? "—" }));
+      }
+
+      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender, powerRows });
     })();
   }, [slug]);
 
@@ -82,7 +103,10 @@ export default function FestivalSetupExport() {
   const run = data.run;
   const phases: any[] = data.phases;
   const attachments: AttRender[] = data.attachments;
+  const runAttachments = attachments.filter((a) => !a.setup_phase_id);
+  const phaseAttachments = attachments.filter((a) => a.setup_phase_id);
   const allocMap: Map<string, { vehicle_name: string; driver_name: string | null }> = data.allocMap;
+  const powerRows: any[] = data.powerRows ?? [];
 
   const header = (
     <View>
@@ -95,26 +119,31 @@ export default function FestivalSetupExport() {
   );
 
   const phasesByConcept = (c: string) => phases.filter((p) => p.concept === c);
-  const allTagged = attachments.filter((a) => a.concept === "all");
-  const attByConcept = (c: string) => attachments.filter((a) => a.concept === c);
+  const allTagged = runAttachments.filter((a) => a.concept === "all");
+  const attByConcept = (c: string) => runAttachments.filter((a) => a.concept === c);
 
   const renderPhase = (p: any) => {
     const alloc = p.transport_allocation_id ? allocMap.get(p.transport_allocation_id) : null;
     const driverDisplay = p.driver_name || alloc?.driver_name || null;
     const route = [p.from_location, p.to_location].filter(Boolean).join(" → ");
+    const isDrive = isDrivePhase(p.phase_name);
+    const showPower = p.phase_name === "Setup at festival";
+    const myAtts = phaseAttachments.filter((a) => a.setup_phase_id === p.id);
     return (
-      <View key={p.id} style={r.card} wrap={false}>
+      <View key={p.id} style={r.card}>
         <View style={r.cardHeader}>
           <Text style={r.cardTitle}>{p.phase_name}</Text>
-          <Text style={r.small}>{p.planned_time ? fmtTime(p.planned_time) : ""}</Text>
+          <Text style={r.small}>
+            {p.planned_date ? fmtDate(p.planned_date) + " " : ""}{p.planned_time ? fmtTime(p.planned_time) : ""}
+          </Text>
         </View>
-        {route && (
+        {isDrive && route && (
           <View style={r.row}>
             <Text style={r.label}>Route</Text>
             <Text style={r.value}>{route}</Text>
           </View>
         )}
-        {(alloc || driverDisplay) && (
+        {isDrive && (alloc || driverDisplay) && (
           <View style={r.row}>
             <Text style={r.label}>Vehicle</Text>
             <Text style={r.value}>
@@ -122,7 +151,41 @@ export default function FestivalSetupExport() {
             </Text>
           </View>
         )}
+        {showPower && powerRows.length > 0 && (
+          <View style={{ marginTop: 4 }}>
+            <Text style={[r.small, { fontWeight: 700, marginBottom: 2 }]}>⚡ Electricity</Text>
+            {powerRows.map((pw: any) => {
+              const bits = [
+                pw.total_kw_estimate ? `${pw.total_kw_estimate} kW` : null,
+                pw.connections_16a_240v ? `16A/240V ×${pw.connections_16a_240v}` : null,
+                pw.connections_16a_400v ? `16A/400V ×${pw.connections_16a_400v}` : null,
+                pw.connections_32a ? `32A ×${pw.connections_32a}` : null,
+                pw.connections_63a ? `63A ×${pw.connections_63a}` : null,
+                pw.connections_125a ? `125A ×${pw.connections_125a}` : null,
+                pw.tableau_required ? `Tableau ×${pw.tableau_count || 1}` : null,
+              ].filter(Boolean).join(" · ");
+              return (
+                <Text key={pw.festival_contract_id} style={r.small}>
+                  • {String(pw.concept_name).toUpperCase()}: {bits || "—"} ({pw.status})
+                </Text>
+              );
+            })}
+          </View>
+        )}
         {p.notes && <Text style={[r.small, { marginTop: 4 }]}>{p.notes}</Text>}
+        {myAtts.length > 0 && (
+          <View style={{ marginTop: 6 }}>
+            <Text style={[r.small, { fontWeight: 700, marginBottom: 2 }]}>Plan files</Text>
+            {myAtts.map((a) => (
+              <View key={a.id} style={{ marginBottom: 6 }} wrap={false}>
+                <Text style={r.small}>📎 {a.file_name}</Text>
+                {a.isImage && a.signedUrl ? (
+                  <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 360, objectFit: "contain", marginTop: 2 }} />
+                ) : null}
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     );
   };
