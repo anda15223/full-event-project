@@ -68,6 +68,7 @@ type SetupPhase = {
   concept: Concept | null;
   transport_allocation_id: string | null;
   planned_time: string | null;
+  planned_date: string | null;
   from_location: string | null;
   to_location: string | null;
   driver_name: string | null;
@@ -561,7 +562,7 @@ export default function FestivalSetup() {
                     </div>
 
                     {/* Row 3: vehicle + driver name + time */}
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <Field label="Car">
                         <Select
                           value={p.transport_allocation_id ?? "__none__"}
@@ -584,6 +585,14 @@ export default function FestivalSetup() {
                           defaultValue={p.driver_name ?? ""}
                           placeholder="Type driver name…"
                           onBlur={(e) => { const v = e.target.value.trim() || null; if (v !== p.driver_name) updatePhase.mutate({ id: p.id, patch: { driver_name: v } }); }}
+                        />
+                      </Field>
+                      <Field label="Planned date">
+                        <Input
+                          type="date"
+                          className="h-9 text-xs"
+                          defaultValue={p.planned_date ?? ""}
+                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.planned_date) updatePhase.mutate({ id: p.id, patch: { planned_date: v } }); }}
                         />
                       </Field>
                       <Field label="Planned time">
