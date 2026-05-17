@@ -198,12 +198,49 @@ export default function FestivalStaff() {
   const unassignedCount = allRows.filter((s) => !s.concept_id && s.role !== "management").length;
 
   const [filter, setFilter] = useState<"all" | "unconfirmed" | "unassigned">("all");
-  const rows =
-    filter === "unconfirmed"
-      ? allRows.filter((s) => !s.confirmed)
-      : filter === "unassigned"
-      ? allRows.filter((s) => !s.concept_id && s.role !== "management")
-      : allRows;
+  const [cityFilter, setCityFilter] = useState<string>("__all__");
+  const [accomFilter, setAccomFilter] = useState<"any" | "yes" | "no">("any");
+
+  const cityOptions = Array.from(
+    new Set(allRows.map((s) => (s.home_location ?? "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const rows = allRows
+    .filter((s) =>
+      filter === "unconfirmed"
+        ? !s.confirmed
+        : filter === "unassigned"
+        ? !s.concept_id && s.role !== "management"
+        : true
+    )
+    .filter((s) => (cityFilter === "__all__" ? true : (s.home_location ?? "") === cityFilter))
+    .filter((s) =>
+      accomFilter === "any"
+        ? true
+        : accomFilter === "yes"
+        ? !!s.needs_accommodation
+        : !s.needs_accommodation
+    );
+
+  // Empty-slot calculation across concept plans
+  const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
+  concepts.forEach((c) => {
+    const plan = CONCEPT_STATION_PLAN.find((p) => p.match(c.name.toLowerCase()));
+    if (!plan) return;
+    const conceptPeople = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
+    plan.slots.forEach((slot) => {
+      const filled = conceptPeople.filter((p) => p.station === slot.station).length;
+      const missing = slot.count - Math.min(filled, slot.count);
+      if (missing > 0) {
+        emptySlots.push({
+          conceptName: c.name,
+          stationLabel: STATION_LABEL[slot.station] ?? slot.station,
+          missing,
+        });
+      }
+    });
+  });
+  const totalEmpty = emptySlots.reduce((a, s) => a + s.missing, 0);
 
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
