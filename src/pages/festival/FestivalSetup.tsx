@@ -552,6 +552,9 @@ export default function FestivalSetup() {
           phases.map((p, idx) => {
             const alloc = p.transport_allocation_id ? allocLookup.get(p.transport_allocation_id) : null;
             const driverMissing = !!alloc && !alloc.driver_staff_id;
+            const isDrive = isDrivePhase(p.phase_name);
+            const showPower = p.phase_name === "Setup at festival";
+            const phaseAttachments = attachmentsByPhase.get(p.id) ?? [];
             return (
               <div key={p.id} className="rounded-2xl border bg-card p-4 space-y-3">
                 <div className="flex items-start gap-2">
