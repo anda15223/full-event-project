@@ -244,6 +244,21 @@ export default function FestivalTransport() {
     return map;
   }, [legs, assignments]);
 
+  // Staff assigned to ANY return_home leg, regardless of date. Used on return legs
+  // so nobody is "left at the hotel" — once they have a return ride, they appear
+  // as taken in every other return leg dropdown.
+  const returnHomeAssignedIds = useMemo(() => {
+    const legById = new Map(legs.map((l) => [l.id, l]));
+    const set = new Set<string>();
+    assignments.forEach((a) => {
+      if (!a.staff_id) return;
+      const l = legById.get(a.leg_id);
+      if (!l || l.leg_phase !== "return_home") return;
+      set.add(a.staff_id);
+    });
+    return set;
+  }, [legs, assignments]);
+
   // Scroll to focused leg
   useEffect(() => {
     if (!focusLegId || legs.length === 0) return;
@@ -392,6 +407,7 @@ export default function FestivalTransport() {
             focusLegId={focusLegId}
             conflictByLeg={conflictByLeg}
             assignedIdsByDate={assignedIdsByDate}
+            returnHomeAssignedIds={returnHomeAssignedIds}
           />
         ))}
         {vehicles.length === 0 && festival && (
@@ -438,12 +454,13 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 // ============================================================
 function VehicleBlock({
-  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIdsByDate,
+  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIdsByDate, returnHomeAssignedIds,
 }: {
   vehicle: Vehicle; legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; slug: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
   assignedIdsByDate: Map<string, Set<string>>;
+  returnHomeAssignedIds: Set<string>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [addLegOpen, setAddLegOpen] = useState(false);
@@ -500,6 +517,7 @@ function VehicleBlock({
         focusLegId={focusLegId}
         conflictByLeg={conflictByLeg}
         assignedIdsByDate={assignedIdsByDate}
+        returnHomeAssignedIds={returnHomeAssignedIds}
       />
 
       <div className="p-3 border-t print:hidden">
@@ -539,12 +557,13 @@ function StatusPill({ status }: { status: string }) {
 
 // ============================================================
 function LegsTable({
-  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIdsByDate,
+  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIdsByDate, returnHomeAssignedIds,
 }: {
   legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
   assignedIdsByDate: Map<string, Set<string>>;
+  returnHomeAssignedIds: Set<string>;
 }) {
   if (legs.length === 0) {
     return <div className="p-4 text-sm text-muted-foreground italic">No legs scheduled.</div>;
@@ -577,7 +596,14 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
-              assignedIds={assignedIdsByDate.get(leg.leg_date) ?? new Set()}
+              assignedIds={
+                leg.leg_phase === "return_home"
+                  ? new Set<string>([
+                      ...(assignedIdsByDate.get(leg.leg_date) ?? new Set<string>()),
+                      ...returnHomeAssignedIds,
+                    ])
+                  : (assignedIdsByDate.get(leg.leg_date) ?? new Set<string>())
+              }
             />
           ))}
         </tbody>
