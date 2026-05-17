@@ -390,7 +390,7 @@ export default function FestivalSetup() {
   const [uploadConcept, setUploadConcept] = useState<Concept>("all");
   const [uploading, setUploading] = useState(false);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (file: File, phaseId: string | null = null) => {
     if (!run) return;
     setUploading(true);
     try {
@@ -400,7 +400,8 @@ export default function FestivalSetup() {
       if (upErr) throw upErr;
       const { error: insErr } = await sb.from("setup_attachments").insert({
         setup_run_id: run.id,
-        concept: uploadConcept,
+        setup_phase_id: phaseId,
+        concept: phaseId ? null : uploadConcept,
         file_path: path,
         file_name: file.name,
         mime_type: file.type,
