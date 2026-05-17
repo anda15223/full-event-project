@@ -230,7 +230,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
