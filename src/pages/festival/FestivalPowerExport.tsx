@@ -225,16 +225,50 @@ function PowerDoc({
                 <Text style={styles.row}>{N(`Total Amp: ${p.total_amp_estimate}`)}</Text>
               )}
 
-              <Text style={[styles.row, { marginTop: 6, fontWeight: 700 }]}>
-                {N(`Equipment (${poweredEq.length} powered items)`)}
+              <Text style={[styles.row, { marginTop: 8, fontWeight: 700 }]}>
+                {N(`Powered equipment (${poweredEq.length})`)}
               </Text>
-              {poweredEq.length === 0
-                ? <Text style={styles.row}>—</Text>
-                : poweredEq.map((e) => (
-                    <Text key={e.id} style={styles.row}>
-                      {N(`• ${e.equipment_name} × ${e.quantity ?? 1} — ${(Number(e.power_kw ?? 0)).toFixed(2)} kW`)}
+              {poweredEq.length === 0 ? (
+                <Text style={styles.row}>—</Text>
+              ) : (
+                <View style={styles.tableWrap}>
+                  <View style={styles.tHead}>
+                    <Text style={styles.colName}>Equipment</Text>
+                    <Text style={styles.colQty}>Qty</Text>
+                    <Text style={styles.colKw}>kW each</Text>
+                    <Text style={styles.colTot}>Total kW</Text>
+                  </View>
+                  {poweredEq.map((e, idx) => {
+                    const qty = Number(e.quantity ?? 1);
+                    const kwEach = Number(e.power_kw ?? 0);
+                    const total = qty * kwEach;
+                    const isLast = idx === poweredEq.length - 1;
+                    return (
+                      <View
+                        key={e.id}
+                        style={[
+                          styles.tRow,
+                          idx % 2 === 1 ? styles.tRowAlt : {},
+                          isLast ? styles.tRowLast : {},
+                        ]}
+                      >
+                        <Text style={styles.colName}>{N(e.equipment_name)}</Text>
+                        <Text style={styles.colQty}>{qty}</Text>
+                        <Text style={styles.colKw}>{kwEach.toFixed(2)}</Text>
+                        <Text style={styles.colTot}>{total.toFixed(2)}</Text>
+                      </View>
+                    );
+                  })}
+                  <View style={styles.tFoot}>
+                    <Text style={styles.colName}>Total</Text>
+                    <Text style={styles.colQty}>
+                      {poweredEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
                     </Text>
-                  ))}
+                    <Text style={styles.colKw}></Text>
+                    <Text style={styles.colTot}>{demandKw.toFixed(2)}</Text>
+                  </View>
+                </View>
+              )}
 
               {canSeeFinance ? (
                 <Text style={[styles.row, { marginTop: 6 }]}>
