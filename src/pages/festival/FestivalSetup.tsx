@@ -217,7 +217,37 @@ export default function FestivalSetup() {
       return (data ?? []) as Attachment[];
     },
   });
-  const attachments = attQ.data ?? [];
+  const allAttachments = attQ.data ?? [];
+  const attachments = allAttachments.filter((a) => !a.setup_phase_id);
+  const attachmentsByPhase = useMemo(() => {
+    const m = new Map<string, Attachment[]>();
+    allAttachments.forEach((a) => {
+      if (!a.setup_phase_id) return;
+      const arr = m.get(a.setup_phase_id) ?? [];
+      arr.push(a); m.set(a.setup_phase_id, arr);
+    });
+    return m;
+  }, [allAttachments]);
+
+  /* ---------- Electricity (Power) summary for this festival ---------- */
+  const powerQ = useQuery({
+    queryKey: ["setup-power-summary", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data: contracts, error: cErr } = await sb.from("festival_contracts")
+        .select("id, concept_name, is_active").eq("festival_id", festivalId).eq("is_active", true);
+      if (cErr) throw cErr;
+      const ids = (contracts ?? []).map((c: any) => c.id);
+      if (!ids.length) return [] as any[];
+      const { data: power, error: pErr } = await sb.from("festival_power")
+        .select("festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, tableau_required, tableau_count, status, power_drawing_file_path, notes")
+        .in("festival_contract_id", ids);
+      if (pErr) throw pErr;
+      const byContract = new Map((contracts ?? []).map((c: any) => [c.id, c.concept_name]));
+      return (power ?? []).map((p: any) => ({ ...p, concept_name: byContract.get(p.festival_contract_id) ?? "—" }));
+    },
+  });
+  const powerRows = powerQ.data ?? [];
 
   /* ---------- Staff (driver picker) ---------- */
   const staffQ = useQuery({
