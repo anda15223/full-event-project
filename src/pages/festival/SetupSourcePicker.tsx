@@ -81,7 +81,7 @@ export default function SetupSourcePicker({
     },
   });
 
-  /* Concepts (active contracts) */
+  /* Concepts (active contracts) + façade + power joined */
   const conceptsQ = useQuery({
     enabled: open && !!festivalId,
     queryKey: ["picker-concepts", festivalId],
@@ -98,6 +98,44 @@ export default function SetupSourcePicker({
       return (contracts ?? []).map((c: any) => ({
         ...c,
         concept_name: c.concept_id ? nameMap.get(c.concept_id) ?? "Concept" : (c.concept_alias ?? "Concept"),
+      }));
+    },
+  });
+
+  /* Façade — one per active concept */
+  const facadeQ = useQuery({
+    enabled: open && !!festivalId && !!conceptsQ.data,
+    queryKey: ["picker-facade", festivalId, (conceptsQ.data ?? []).map((c: any) => c.id).join(",")],
+    queryFn: async () => {
+      const contractIds = (conceptsQ.data ?? []).map((c: any) => c.id);
+      if (!contractIds.length) return [];
+      const { data } = await sb.from("festival_facade")
+        .select("id, festival_contract_id, design_status, material_type, material_supplier, dimensions_text, dimensions_w_cm, dimensions_h_cm, panel_count, print_deadline")
+        .in("festival_contract_id", contractIds);
+      const byContract = new Map<string, string>();
+      (conceptsQ.data ?? []).forEach((c: any) => byContract.set(c.id, c.concept_name));
+      return (data ?? []).map((f: any) => ({
+        ...f,
+        concept_name: byContract.get(f.festival_contract_id) ?? "Concept",
+      }));
+    },
+  });
+
+  /* Power — one per active concept */
+  const powerQ = useQuery({
+    enabled: open && !!festivalId && !!conceptsQ.data,
+    queryKey: ["picker-power", festivalId, (conceptsQ.data ?? []).map((c: any) => c.id).join(",")],
+    queryFn: async () => {
+      const contractIds = (conceptsQ.data ?? []).map((c: any) => c.id);
+      if (!contractIds.length) return [];
+      const { data } = await sb.from("festival_power")
+        .select("id, festival_contract_id, status, total_kw_estimate, total_amp_estimate, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, tableau_required, tableau_count, tent_location, power_drawing_file_path, submission_deadline")
+        .in("festival_contract_id", contractIds);
+      const byContract = new Map<string, string>();
+      (conceptsQ.data ?? []).forEach((c: any) => byContract.set(c.id, c.concept_name));
+      return (data ?? []).map((p: any) => ({
+        ...p,
+        concept_name: byContract.get(p.festival_contract_id) ?? "Concept",
       }));
     },
   });
