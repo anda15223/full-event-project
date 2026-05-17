@@ -76,6 +76,33 @@ const styles = StyleSheet.create({
   pill: { borderWidth: 0.5, borderColor: "#666", padding: "1pt 4pt", fontSize: 8, borderRadius: 2 },
   row: { fontSize: 9, marginBottom: 2 },
   notes: { marginTop: 6, fontSize: 9, color: "#333" },
+  // Equipment table
+  tableWrap: { marginTop: 6, borderWidth: 0.5, borderColor: "#888", borderRadius: 2 },
+  tHead: {
+    flexDirection: "row", backgroundColor: "#eee",
+    borderBottomWidth: 0.5, borderBottomColor: "#888",
+    paddingVertical: 3, paddingHorizontal: 4,
+    fontSize: 8, fontWeight: 700, color: "#222",
+  },
+  tRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.25, borderBottomColor: "#ccc",
+    paddingVertical: 2.5, paddingHorizontal: 4,
+    fontSize: 9,
+  },
+  tRowAlt: { backgroundColor: "#fafafa" },
+  tRowLast: { borderBottomWidth: 0 },
+  tFoot: {
+    flexDirection: "row",
+    borderTopWidth: 0.5, borderTopColor: "#888",
+    backgroundColor: "#f3f3f3",
+    paddingVertical: 3, paddingHorizontal: 4,
+    fontSize: 9, fontWeight: 700,
+  },
+  colName: { flex: 1, paddingRight: 4 },
+  colQty:  { width: 32, textAlign: "right", paddingRight: 4 },
+  colKw:   { width: 56, textAlign: "right", paddingRight: 4 },
+  colTot:  { width: 64, textAlign: "right" },
   sumBox: { marginTop: 16, padding: 8, borderWidth: 1, borderColor: "#333", backgroundColor: "#f3f3f3" },
   sumTitle: { fontSize: 11, fontWeight: 700, marginBottom: 4 },
   footer: {
