@@ -58,6 +58,8 @@ type SetupPhase = {
   concept: Concept | null;
   transport_allocation_id: string | null;
   planned_time: string | null;
+  from_location: string | null;
+  to_location: string | null;
   notes: string | null;
 };
 
@@ -445,43 +447,79 @@ export default function FestivalSetup() {
                       <ArrowDown className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-2">
-                    <Input
-                      className="sm:col-span-5 h-9 text-sm font-medium"
-                      defaultValue={p.phase_name}
-                      onBlur={(e) => { if (e.target.value !== p.phase_name) updatePhase.mutate({ id: p.id, patch: { phase_name: e.target.value } }); }}
-                      placeholder="Phase name"
-                    />
-                    <Select
-                      value={p.concept ?? ""}
-                      onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { concept: v as Concept } })}
-                    >
-                      <SelectTrigger className="sm:col-span-3 h-9 text-xs"><SelectValue placeholder="Concept" /></SelectTrigger>
-                      <SelectContent>
-                        {CONCEPTS.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="time"
-                      className="sm:col-span-2 h-9 text-xs"
-                      value={p.planned_time ?? ""}
-                      onChange={(e) => updatePhase.mutate({ id: p.id, patch: { planned_time: e.target.value || null } })}
-                    />
-                    <Select
-                      value={p.transport_allocation_id ?? "__none__"}
-                      onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
-                    >
-                      <SelectTrigger className="sm:col-span-2 h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— No vehicle —</SelectItem>
-                        {allocations.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>
-                            {a.vehicle_name}{a.driver_name ? ` · ${a.driver_name}` : " · (no driver)"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  <div className="flex-1 space-y-2">
+                    {/* Row 1: phase name + concept + delete */}
+                    <div className="grid grid-cols-12 gap-2">
+                      <Input
+                        className="col-span-8 h-9 text-sm font-medium"
+                        defaultValue={p.phase_name}
+                        onBlur={(e) => { if (e.target.value !== p.phase_name) updatePhase.mutate({ id: p.id, patch: { phase_name: e.target.value } }); }}
+                        placeholder="Phase name"
+                      />
+                      <Select
+                        value={p.concept ?? ""}
+                        onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { concept: v as Concept } })}
+                      >
+                        <SelectTrigger className="col-span-4 h-9 text-xs"><SelectValue placeholder="Concept" /></SelectTrigger>
+                        <SelectContent>
+                          {CONCEPTS.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Row 2: leaving point → destination point */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Field label="Leaving from">
+                        <Input
+                          className="h-9 text-xs"
+                          defaultValue={p.from_location ?? ""}
+                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.from_location) updatePhase.mutate({ id: p.id, patch: { from_location: v } }); }}
+                          placeholder="e.g. Søborg HQ"
+                        />
+                      </Field>
+                      <Field label="Destination">
+                        <Input
+                          className="h-9 text-xs"
+                          defaultValue={p.to_location ?? ""}
+                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.to_location) updatePhase.mutate({ id: p.id, patch: { to_location: v } }); }}
+                          placeholder="e.g. Jelling site – Fish stand"
+                        />
+                      </Field>
+                    </div>
+
+                    {/* Row 3: vehicle/driver + time */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <Field label="Car · Driver">
+                        <Select
+                          value={p.transport_allocation_id ?? "__none__"}
+                          onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { transport_allocation_id: v === "__none__" ? null : v } })}
+                        >
+                          <SelectTrigger className="sm:col-span-2 h-9 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— No vehicle —</SelectItem>
+                            {allocations.map((a) => (
+                              <SelectItem key={a.id} value={a.id}>
+                                {a.vehicle_name}{a.driver_name ? ` · ${a.driver_name}` : " · (no driver)"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="Planned time">
+                        <Select
+                          value={p.planned_time ? p.planned_time.slice(0, 5) : undefined}
+                          onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { planned_time: v || null } })}
+                        >
+                          <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Pick time" /></SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    </div>
                   </div>
+
                   <button onClick={() => { if (confirm("Delete this phase?")) deletePhase.mutate(p.id); }}
                     className="p-1 text-muted-foreground hover:text-destructive">
                     <Trash2 className="h-4 w-4" />

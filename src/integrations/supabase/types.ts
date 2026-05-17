@@ -6627,36 +6627,42 @@ export type Database = {
         Row: {
           concept: string | null
           created_at: string
+          from_location: string | null
           id: string
           notes: string | null
           phase_name: string
           planned_time: string | null
           setup_run_id: string
           sort_order: number
+          to_location: string | null
           transport_allocation_id: string | null
           updated_at: string
         }
         Insert: {
           concept?: string | null
           created_at?: string
+          from_location?: string | null
           id?: string
           notes?: string | null
           phase_name: string
           planned_time?: string | null
           setup_run_id: string
           sort_order?: number
+          to_location?: string | null
           transport_allocation_id?: string | null
           updated_at?: string
         }
         Update: {
           concept?: string | null
           created_at?: string
+          from_location?: string | null
           id?: string
           notes?: string | null
           phase_name?: string
           planned_time?: string | null
           setup_run_id?: string
           sort_order?: number
+          to_location?: string | null
           transport_allocation_id?: string | null
           updated_at?: string
         }
