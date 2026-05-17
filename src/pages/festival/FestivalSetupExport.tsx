@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { PDFViewer, Text, View } from "@react-pdf/renderer";
+import { PDFViewer, Text, View, Image } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ReportTemplate, reportStyles as r, fmtFilename } from "@/components/pdf/ReportTemplate";
-import { inferPhaseType, PHASE_TYPE_LABEL } from "@/lib/setupStatus";
 
 const sb = supabase as any;
+const BUCKET = "festival-setup-docs";
 
-const fmtDate = (iso?: string | null) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";
-const fmtTime = (iso?: string | null) => iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "";
+const CONCEPT_ORDER = ["fish", "gyros", "creperie", "chicks"] as const;
+
+const fmtTime = (t?: string | null) => (t ? t.slice(0, 5) : "");
+const fmtDate = (d?: string | null) =>
+  d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+type AttRender = { id: string; file_name: string; concept: string | null; signedUrl: string | null; isImage: boolean };
 
 export default function FestivalSetupExport() {
   const { slug = "" } = useParams();
@@ -19,91 +24,166 @@ export default function FestivalSetupExport() {
   useEffect(() => {
     (async () => {
       const { data: f } = await supabase.from("festivals")
-        .select("id, name, slug, start_date, end_date, setup_date, breakdown_date").eq("slug", slug).maybeSingle();
+        .select("id, name, slug, start_date, end_date")
+        .eq("slug", slug).maybeSingle();
       if (!f) return setData({ festival: null });
 
-      const { data: phases } = await sb.from("festival_setup")
-        .select("*").eq("festival_id", f.id).order("scheduled_start", { ascending: true, nullsFirst: false });
+      const { data: run } = await sb.from("setup_runs")
+        .select("*").eq("festival_id", f.id).maybeSingle();
+      if (!run) return setData({ festival: f, run: null });
 
-      setData({ festival: f, phases: phases ?? [] });
+      const { data: phases } = await sb.from("setup_phases")
+        .select("*").eq("setup_run_id", run.id).order("sort_order");
+
+      const { data: vehicles } = await sb.from("festival_staff_vehicles")
+        .select("id, vehicle_name, driver_staff_id").eq("festival_id", f.id);
+      const driverIds = (vehicles ?? []).map((v: any) => v.driver_staff_id).filter(Boolean);
+      const { data: staff } = driverIds.length
+        ? await sb.from("festival_staff").select("id, name").in("id", driverIds)
+        : { data: [] };
+      const staffMap = new Map<string, string>();
+      (staff ?? []).forEach((s: any) => staffMap.set(s.id, s.name ?? "Unnamed"));
+      const allocMap = new Map<string, { vehicle_name: string; driver_name: string | null }>();
+      (vehicles ?? []).forEach((v: any) => allocMap.set(v.id, {
+        vehicle_name: v.vehicle_name,
+        driver_name: v.driver_staff_id ? (staffMap.get(v.driver_staff_id) ?? null) : null,
+      }));
+
+      const { data: atts } = await sb.from("setup_attachments")
+        .select("*").eq("setup_run_id", run.id).order("created_at");
+      const attRender: AttRender[] = await Promise.all((atts ?? []).map(async (a: any) => {
+        const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(a.file_path, 1800);
+        const isImage = (a.mime_type ?? "").startsWith("image/")
+          || /\.(png|jpe?g|webp)$/i.test(a.file_name);
+        return { id: a.id, file_name: a.file_name, concept: a.concept, signedUrl: signed?.signedUrl ?? null, isImage };
+      }));
+
+      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender });
     })();
   }, [slug]);
 
   if (!data) return <div className="p-12 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF…</div>;
   if (!data.festival) return <div className="p-12">Festival not found.</div>;
+  if (!data.run) return <div className="p-12">No setup run for this festival yet.</div>;
 
   const f = data.festival;
-  const phases = data.phases as any[];
-  const done = phases.filter((p) => p.status === "done").length;
-  const planned = phases.length - done;
+  const run = data.run;
+  const phases: any[] = data.phases;
+  const attachments: AttRender[] = data.attachments;
+  const allocMap: Map<string, { vehicle_name: string; driver_name: string | null }> = data.allocMap;
 
-  const summary = (
+  const header = (
     <View>
-      <Text style={[r.body, { fontWeight: 700, marginBottom: 4 }]}>Setup summary</Text>
+      <Text style={[r.body, { fontWeight: 700, marginBottom: 4 }]}>Setup run</Text>
       <Text style={r.small}>
-        {phases.length} phases · {done} done · {planned} planned
-        {f.setup_date ? ` · setup ${fmtDate(f.setup_date)}` : ""}
-        {f.breakdown_date ? ` · breakdown ${fmtDate(f.breakdown_date)}` : ""}
+        Date: {fmtDate(run.setup_date)} · Søborg meet: {fmtTime(run.soborg_meet_time) || "—"} · Arrival Jelling: {fmtTime(run.arrival_time) || "—"}
       </Text>
+      <Text style={r.small}>Destination: {run.destination_address ?? "—"}</Text>
     </View>
   );
+
+  const phasesByConcept = (c: string) => phases.filter((p) => p.concept === c);
+  const allTagged = attachments.filter((a) => a.concept === "all");
+  const attByConcept = (c: string) => attachments.filter((a) => a.concept === c);
+
+  const renderPhase = (p: any) => {
+    const alloc = p.transport_allocation_id ? allocMap.get(p.transport_allocation_id) : null;
+    return (
+      <View key={p.id} style={r.card} wrap={false}>
+        <View style={r.cardHeader}>
+          <Text style={r.cardTitle}>{p.phase_name}</Text>
+          <Text style={r.small}>{p.planned_time ? fmtTime(p.planned_time) : ""}</Text>
+        </View>
+        {alloc && (
+          <View style={r.row}>
+            <Text style={r.label}>Vehicle</Text>
+            <Text style={r.value}>
+              {alloc.vehicle_name} · Driver: {alloc.driver_name ?? "🔴 UNALLOCATED"}
+            </Text>
+          </View>
+        )}
+        {p.notes && <Text style={[r.small, { marginTop: 4 }]}>{p.notes}</Text>}
+      </View>
+    );
+  };
+
+  const renderAttachment = (a: AttRender) => (
+    <View key={a.id} style={r.card} wrap={false}>
+      <Text style={[r.small, { fontWeight: 700, marginBottom: 4 }]}>
+        Layout plan: {a.file_name} ({a.concept ?? "—"})
+      </Text>
+      {a.isImage && a.signedUrl ? (
+        <Image src={a.signedUrl} style={{ width: "100%", maxHeight: 400, objectFit: "contain" }} />
+      ) : (
+        <Text style={r.small}>{a.signedUrl ?? "(no preview)"}</Text>
+      )}
+    </View>
+  );
+
+  // Allocation summary
+  const usedAllocIds = Array.from(new Set(phases.map((p) => p.transport_allocation_id).filter(Boolean))) as string[];
 
   const doc = (
     <ReportTemplate
       festivalName={f.name}
       festivalDates={formatDateRange(f.start_date, f.end_date)}
       reportTitle="Setup"
-      reportSubtitle="Chronological setup-through-teardown phases with crew, vehicles, and tasks"
+      reportSubtitle="Søborg → Jelling sequence with vehicle allocations and layout plans"
       accentColor="emerald"
-      summary={summary}
+      summary={header}
     >
-      {phases.length === 0 && <Text style={r.small}>No phases recorded.</Text>}
-      {phases.map((p: any) => {
-        const ptype = inferPhaseType(p.work_type, p.title);
-        const ptLabel = PHASE_TYPE_LABEL[ptype];
-        const tasks: any[] = Array.isArray(p.tasks) ? p.tasks : [];
-        const crew: string[] = Array.isArray(p.crew_names) ? p.crew_names : [];
-        const vehicles: string[] = Array.isArray(p.vehicle_labels) ? p.vehicle_labels : [];
+      {/* Site overview (all-tagged) */}
+      {allTagged.length > 0 && (
+        <View>
+          <Text style={r.h2}>Site overview</Text>
+          {allTagged.map(renderAttachment)}
+        </View>
+      )}
+
+      {/* Concept-grouped phases + layout */}
+      {CONCEPT_ORDER.map((c) => {
+        const ps = phasesByConcept(c);
+        const atts = attByConcept(c);
+        if (ps.length === 0 && atts.length === 0) return null;
         return (
-          <View key={p.id} style={r.card} wrap={false}>
-            <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>[ {ptLabel.toUpperCase()} ]  {p.title}</Text>
-              <Text style={r.small}>{p.status ?? "planned"}</Text>
-            </View>
-            <Text style={r.small}>
-              {p.scheduled_start ? `${fmtDate(p.scheduled_start)} ${fmtTime(p.scheduled_start)}` : "Unscheduled"}
-              {p.location ? ` · ${p.location}` : ""}
-            </Text>
-            {crew.length > 0 && (
-              <View style={r.row}>
-                <Text style={r.label}>Crew</Text>
-                <Text style={r.value}>{crew.join(", ")}</Text>
-              </View>
-            )}
-            {vehicles.length > 0 && (
-              <View style={r.row}>
-                <Text style={r.label}>Vehicles</Text>
-                <Text style={r.value}>{vehicles.join(", ")}</Text>
-              </View>
-            )}
-            {tasks.length > 0 && (
-              <View style={{ marginTop: 4 }}>
-                <Text style={r.h3}>Tasks</Text>
-                {tasks.map((t: any, i: number) => (
-                  <Text key={i} style={r.bullet}>{t.done ? "✓" : "◯"} {t.text ?? t.title ?? String(t)}</Text>
-                ))}
-              </View>
-            )}
-            {p.notes && <Text style={[r.small, { marginTop: 4 }]}>{p.notes}</Text>}
+          <View key={c}>
+            <Text style={[r.h2, { textTransform: "capitalize" }]}>{c}</Text>
+            {ps.map(renderPhase)}
+            {atts.map(renderAttachment)}
           </View>
         );
       })}
+
+      {/* Unconcept'd / null phases */}
+      {phases.filter((p) => !p.concept).length > 0 && (
+        <View>
+          <Text style={r.h2}>Other phases</Text>
+          {phases.filter((p) => !p.concept).map(renderPhase)}
+        </View>
+      )}
+
+      {/* Allocation summary */}
+      <View>
+        <Text style={r.h2}>Allocation summary</Text>
+        {usedAllocIds.length === 0 ? (
+          <Text style={r.small}>No vehicles allocated.</Text>
+        ) : (
+          usedAllocIds.map((id) => {
+            const a = allocMap.get(id);
+            if (!a) return null;
+            const missing = !a.driver_name;
+            return (
+              <Text key={id} style={[r.small, missing && { color: "#b91c1c", fontWeight: 700 }]}>
+                • {a.vehicle_name} — {a.driver_name ?? "UNALLOCATED"}
+              </Text>
+            );
+          })
+        )}
+      </View>
     </ReportTemplate>
   );
 
-  return (
-    <PDFViewer style={{ width: "100vw", height: "100vh", border: "none" }}>{doc}</PDFViewer>
-  );
+  return <PDFViewer style={{ width: "100vw", height: "100vh", border: "none" }}>{doc}</PDFViewer>;
 }
 
 export const setupExportFilename = (slug: string) => fmtFilename(slug, "setup");
