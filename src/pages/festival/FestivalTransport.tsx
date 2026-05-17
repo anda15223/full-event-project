@@ -801,7 +801,13 @@ function DriverCell({
             variant="outline"
             size="sm"
             className="text-xs border-orange-500/40 text-orange-700 dark:text-orange-300"
-            onClick={() => upsertDriver.mutate(null)}
+            onClick={async () => {
+              const { error } = await supabase
+                .from("transport_leg_assignments")
+                .insert({ leg_id: leg.id, role: "driver", staff_id: null });
+              if (error) { toast.error(error.message); return; }
+              qc.invalidateQueries({ queryKey: ["transport-assignments-all"] });
+            }}
           >
             <Plus className="h-3 w-3" /> Add driver
           </Button>
