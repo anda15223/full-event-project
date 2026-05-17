@@ -11,11 +11,19 @@ const BUCKET = "festival-setup-docs";
 
 const CONCEPT_ORDER = ["fish", "gyros", "creperie", "chicks"] as const;
 
+const DRIVE_PRESETS = new Set<string>(["Drive to festival", "Driving home"]);
+const SEQUENCE_PRESETS = new Set<string>([
+  "Drive to festival", "Setup at festival", "Arriving cooling", "Arriving goods",
+  "Place goods in freezers", "Wrap up", "Driving home",
+]);
+const isDrivePhase = (name: string | null) =>
+  !name || DRIVE_PRESETS.has(name) || !SEQUENCE_PRESETS.has(name);
+
 const fmtTime = (t?: string | null) => (t ? t.slice(0, 5) : "");
 const fmtDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-type AttRender = { id: string; file_name: string; concept: string | null; signedUrl: string | null; isImage: boolean };
+type AttRender = { id: string; file_name: string; concept: string | null; setup_phase_id: string | null; signedUrl: string | null; isImage: boolean };
 
 export default function FestivalSetupExport() {
   const { slug = "" } = useParams();
