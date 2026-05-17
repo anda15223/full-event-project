@@ -35,6 +35,9 @@ export default function FestivalSetupExport() {
       const { data: phases } = await sb.from("setup_phases")
         .select("*").eq("setup_run_id", run.id).order("sort_order");
 
+      // Build allocation lookup from BOTH staff vehicles and the Transport card
+      const allocMap = new Map<string, { vehicle_name: string; driver_name: string | null }>();
+
       const { data: vehicles } = await sb.from("festival_staff_vehicles")
         .select("id, vehicle_name, driver_staff_id").eq("festival_id", f.id);
       const driverIds = (vehicles ?? []).map((v: any) => v.driver_staff_id).filter(Boolean);
@@ -43,11 +46,20 @@ export default function FestivalSetupExport() {
         : { data: [] };
       const staffMap = new Map<string, string>();
       (staff ?? []).forEach((s: any) => staffMap.set(s.id, s.name ?? "Unnamed"));
-      const allocMap = new Map<string, { vehicle_name: string; driver_name: string | null }>();
       (vehicles ?? []).forEach((v: any) => allocMap.set(v.id, {
         vehicle_name: v.vehicle_name,
         driver_name: v.driver_staff_id ? (staffMap.get(v.driver_staff_id) ?? null) : null,
       }));
+
+      const { data: transport } = await sb.from("festival_transport")
+        .select("id, vehicle_type, license_plate, notes").eq("festival_id", f.id);
+      (transport ?? []).forEach((t: any) => {
+        const driverMatch = (t.notes ?? "").match(/Driver[^:]*:\s*([^.\n\[]+)/i);
+        allocMap.set(t.id, {
+          vehicle_name: `${t.vehicle_type ?? "Vehicle"}${t.license_plate ? ` · ${t.license_plate}` : ""}`,
+          driver_name: driverMatch ? driverMatch[1].trim() : null,
+        });
+      });
 
       const { data: atts } = await sb.from("setup_attachments")
         .select("*").eq("setup_run_id", run.id).order("created_at");
