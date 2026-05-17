@@ -10,7 +10,11 @@ import {
   Upload, FileText, Download, Image as ImageIcon, X, Loader2,
 } from "lucide-react";
 import { computeFacadeStatus, FACADE_STATUS_PILL } from "@/lib/facadeStatus";
+import { FACADE_STATUSES, FACADE_STATUS_META } from "@/lib/facade";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 export interface FacadeRow {
   id: string;
