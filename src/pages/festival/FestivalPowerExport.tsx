@@ -263,6 +263,7 @@ export default function FestivalPowerExport() {
   const [festival, setFestival] = useState<Festival | null>(null);
   const [rows, setRows] = useState<PowerRow[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -284,10 +285,16 @@ export default function FestivalPowerExport() {
         ? await supabase.from("festival_power").select("*").in("festival_contract_id", cs.map((c) => c.id))
         : { data: [] as any[] };
 
+      const powerRows = (pRes.data ?? []) as PowerRow[];
+      const eqRes = powerRows.length > 0
+        ? await supabase.from("festival_power_equipment").select("*").in("festival_power_id", powerRows.map((p) => p.id))
+        : { data: [] as any[] };
+
       if (!alive) return;
       setFestival(f.data as Festival);
       setContracts(cs);
-      setRows((pRes.data ?? []) as PowerRow[]);
+      setRows(powerRows);
+      setEquipment((eqRes.data ?? []) as EquipmentRow[]);
       setLoading(false);
     })();
     return () => { alive = false; };
@@ -324,11 +331,19 @@ export default function FestivalPowerExport() {
     return (ca?.concept?.display_order ?? 999) - (cb?.concept?.display_order ?? 999);
   });
 
+  const equipmentByPower = new Map<string, EquipmentRow[]>();
+  equipment.forEach((e) => {
+    const arr = equipmentByPower.get(e.festival_power_id) ?? [];
+    arr.push(e);
+    equipmentByPower.set(e.festival_power_id, arr);
+  });
+
   const doc = (
     <PowerDoc
       festival={festival}
       rows={sortedRows}
       contractsById={contractsById}
+      equipmentByPower={equipmentByPower}
       filterLabel={filterLabel}
       canSeeFinance={canSeeFinance}
     />
