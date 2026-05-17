@@ -217,11 +217,13 @@ export default function FestivalStaff() {
 function StaffRow({
   staff,
   index,
+  concepts,
   onPatch,
   onDelete,
 }: {
   staff: Staff;
   index: number;
+  concepts: Concept[];
   onPatch: (patch: Partial<Staff>) => void;
   onDelete: () => void;
 }) {
@@ -252,6 +254,28 @@ function StaffRow({
           }}
           placeholder="e.g. Copenhaga"
           className="h-8"
+        />
+      </TableCell>
+      <TableCell>
+        <Select
+          value={staff.concept_id ?? "__none__"}
+          onValueChange={(v) => onPatch({ concept_id: v === "__none__" ? null : v })}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
+            {concepts.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="text-center">
+        <Checkbox
+          checked={!!staff.needs_accommodation}
+          onCheckedChange={(c) => onPatch({ needs_accommodation: !!c })}
         />
       </TableCell>
       <TableCell>
