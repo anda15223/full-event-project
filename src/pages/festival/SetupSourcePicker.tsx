@@ -122,7 +122,6 @@ export default function SetupSourcePicker({
         phase_name: `Drive ${v.vehicle_name}`,
         from_location: leaving,
         to_location: dest,
-        planned_time: v.departure_time ? String(v.departure_time).slice(0, 5) : undefined,
         notes: appendNote(`Vehicle: ${label}`),
       },
       { source_table: "festival_staff_vehicles", source_id: v.id, label: v.vehicle_name, detail: v.driver_name ?? "no driver" },
