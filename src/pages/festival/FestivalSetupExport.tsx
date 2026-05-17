@@ -27,22 +27,24 @@ type AttRender = { id: string; file_name: string; concept: string | null; setup_
 
 async function renderPdfToImages(url: string): Promise<string[]> {
   try {
-    const pdfjs: any = await import("pdfjs-dist/build/pdf");
+    const pdfjs: any = await import("pdfjs-dist");
     const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.js?url")).default;
     pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
-    const loadingTask = pdfjs.getDocument({ url, disableRange: true, disableStream: true });
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`fetch ${resp.status}`);
+    const buf = await resp.arrayBuffer();
+    const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buf) });
     const pdf = await loadingTask.promise;
     const out: string[] = [];
-    const maxPages = pdf.numPages;
-    for (let i = 1; i <= maxPages; i++) {
+    for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2 });
+      const viewport = page.getViewport({ scale: 1.5 });
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       const ctx = canvas.getContext("2d")!;
       await page.render({ canvasContext: ctx, viewport }).promise;
-      out.push(canvas.toDataURL("image/jpeg", 0.85));
+      out.push(canvas.toDataURL("image/jpeg", 0.8));
     }
     return out;
   } catch (e) {
