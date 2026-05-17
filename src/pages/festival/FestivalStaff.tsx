@@ -37,6 +37,7 @@ type Staff = {
   works_sunday: boolean | null;
   staff_source: string;
   role: string;
+  station: string | null;
   notes: string | null;
 };
 
@@ -48,6 +49,18 @@ const SOURCE_OPTIONS = [
   { value: "fidibus", label: "Fidibus" },
   { value: "unknown", label: "Unknown" },
 ];
+
+const STATION_OPTIONS = [
+  { value: "cash_register", label: "Cash register" },
+  { value: "assembly", label: "Assembly" },
+  { value: "fryer", label: "Fryer" },
+  { value: "oven", label: "Oven" },
+  { value: "pita_wrapper", label: "Pita wrapper" },
+  { value: "burger", label: "Burger" },
+];
+const STATION_LABEL: Record<string, string> = Object.fromEntries(
+  STATION_OPTIONS.map((s) => [s.value, s.label])
+);
 
 export default function FestivalStaff() {
   const { slug = "" } = useParams();
@@ -190,6 +203,7 @@ export default function FestivalStaff() {
               <TableHead className="min-w-[180px]">Name</TableHead>
               <TableHead className="min-w-[140px]">Location</TableHead>
               <TableHead className="min-w-[140px]">Concept</TableHead>
+              <TableHead className="min-w-[140px]">Station</TableHead>
               <TableHead className="text-center">Accom.</TableHead>
               <TableHead className="min-w-[120px]">Source</TableHead>
               <TableHead className="text-center">Thu</TableHead>
@@ -216,7 +230,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
@@ -260,6 +274,52 @@ export default function FestivalStaff() {
                       <span className="text-xs text-muted-foreground">{p.home_location ?? ""}</span>
                     </li>
                   ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[
+            ...STATION_OPTIONS.map((s) => ({
+              id: s.value,
+              name: s.label,
+              people: allRows.filter((p) => p.station === s.value),
+            })),
+            { id: "__none__", name: "No station", people: allRows.filter((p) => !p.station) },
+          ].map((group) => (
+            <div key={group.id} className="rounded-lg border bg-card p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-sm">{group.name}</h3>
+                <span className="text-xs text-muted-foreground">{group.people.length}</span>
+              </div>
+              {group.people.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No one assigned</p>
+              ) : (
+                <ul className="space-y-1">
+                  {group.people.map((p) => {
+                    const conceptName =
+                      p.role === "management"
+                        ? "Management"
+                        : concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
+                    return (
+                      <li key={p.id} className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={`inline-block h-2 w-2 rounded-full ${
+                              p.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                            }`}
+                          />
+                          <span>{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                        </span>
+                        <span className="text-xs text-muted-foreground">{conceptName}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -356,6 +416,22 @@ function StaffRow({
             <SelectItem value="__mgmt__">Management</SelectItem>
             {concepts.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        <Select
+          value={staff.station ?? "__none__"}
+          onValueChange={(v) => onPatch({ station: v === "__none__" ? null : v })}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— None —</SelectItem>
+            {STATION_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
