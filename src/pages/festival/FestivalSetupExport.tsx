@@ -101,7 +101,12 @@ export default function FestivalSetupExport() {
         const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(a.file_path, 1800);
         const isImage = (a.mime_type ?? "").startsWith("image/")
           || /\.(png|jpe?g|webp)$/i.test(a.file_name);
-        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage, ai_summary: a.ai_summary ?? null, extracted_text: a.extracted_text ?? null };
+        const isPdf = (a.mime_type ?? "").includes("pdf") || /\.pdf$/i.test(a.file_name);
+        let pageImages: string[] = [];
+        if (isPdf && signed?.signedUrl) {
+          pageImages = await renderPdfToImages(signed.signedUrl);
+        }
+        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage, isPdf, pageImages, ai_summary: a.ai_summary ?? null, extracted_text: a.extracted_text ?? null };
       }));
 
       // Power summary for setup phases
