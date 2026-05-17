@@ -56,12 +56,51 @@ const STATION_OPTIONS = [
   { value: "fryer", label: "Fryer" },
   { value: "oven", label: "Oven" },
   { value: "pita_wrapper", label: "Pita wrapper" },
+  { value: "pita_griddle", label: "Pita griddle" },
   { value: "burger", label: "Burger" },
+  { value: "burger_bun_grill", label: "Burger bun grill" },
   { value: "crepes", label: "Crepes" },
 ];
 const STATION_LABEL: Record<string, string> = Object.fromEntries(
   STATION_OPTIONS.map((s) => [s.value, s.label])
 );
+
+// Required station slots per concept (matched by lowercased concept name substring)
+const CONCEPT_STATION_PLAN: { match: (name: string) => boolean; slots: { station: string; count: number }[] }[] = [
+  {
+    match: (n) => n.includes("gyros"),
+    slots: [
+      { station: "cash_register", count: 2 },
+      { station: "pita_wrapper", count: 2 },
+      { station: "assembly", count: 3 },
+      { station: "oven", count: 1 },
+      { station: "pita_griddle", count: 1 },
+    ],
+  },
+  {
+    match: (n) => n.includes("fish"),
+    slots: [
+      { station: "cash_register", count: 2 },
+      { station: "assembly", count: 1 },
+      { station: "fryer", count: 1 },
+    ],
+  },
+  {
+    match: (n) => n.includes("chick") || n.includes("buns"),
+    slots: [
+      { station: "cash_register", count: 2 },
+      { station: "fryer", count: 2 },
+      { station: "assembly", count: 2 },
+      { station: "burger", count: 3 },
+      { station: "burger_bun_grill", count: 1 },
+    ],
+  },
+  {
+    match: (n) => n.includes("crepe"),
+    slots: [{ station: "crepes", count: 4 }],
+  },
+];
+
 
 export default function FestivalStaff() {
   const { slug = "" } = useParams();
