@@ -440,14 +440,20 @@ export default function FestivalTransportExport() {
     );
   }
 
-  const fileName = `${data.festival.slug}-transport-plan.pdf`;
+  const festival = festivalQ.data;
+  const vehicles = vehiclesQ.data ?? [];
+  const legs = legsQ.data ?? [];
+  const assignments = assignmentsQ.data ?? [];
+  const staff = staffQ.data ?? [];
+
+  const fileName = `${festival.slug}-transport-plan.pdf`;
   const doc = (
     <TransportPdf
-      festival={data.festival}
-      vehicles={data.vehicles}
-      legs={data.legs}
-      assignments={data.assignments}
-      staff={data.staff}
+      festival={festival}
+      vehicles={vehicles}
+      legs={legs}
+      assignments={assignments}
+      staff={staff}
     />
   );
 
@@ -458,16 +464,21 @@ export default function FestivalTransportExport() {
           ← Back to transport
         </Link>
         <div className="text-sm font-medium truncate">
-          {data.festival.name} — Transport Plan ({data.vehicles.length} vehicles · {data.legs.length} legs)
+          {festival.name} — Transport Plan ({vehicles.length} vehicles · {legs.length} legs)
         </div>
-        <PDFDownloadLink document={doc} fileName={fileName}>
-          {({ loading }) => (
-            <Button size="sm" disabled={loading}>
-              <Download className="h-4 w-4" />
-              {loading ? "Preparing…" : "Download PDF"}
-            </Button>
-          )}
-        </PDFDownloadLink>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={refetchAll}>
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </Button>
+          <PDFDownloadLink document={doc} fileName={fileName}>
+            {({ loading }) => (
+              <Button size="sm" disabled={loading}>
+                <Download className="h-4 w-4" />
+                {loading ? "Preparing…" : "Download PDF"}
+              </Button>
+            )}
+          </PDFDownloadLink>
+        </div>
       </div>
       <div className="flex-1 bg-muted">
         <PDFViewer width="100%" height="100%" showToolbar style={{ border: 0 }}>
