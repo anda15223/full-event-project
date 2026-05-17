@@ -66,11 +66,21 @@ export interface AccommodationRoomRow {
   position: number;
 }
 
+export interface StaffPickOption {
+  id: string;
+  name: string;
+  home_location: string | null;
+  confirmed: boolean | null;
+}
+
 interface Props {
   festivalId: string;
   festivalSlug: string;
   booking: AccommodationRow;
   rooms: AccommodationRoomRow[];
+  staffList?: StaffPickOption[];
+  /** lowercased assignee name -> "Booking · Room X · Bed Y" */
+  assignmentMap?: Map<string, string>;
 }
 
 const PAYMENT_OPTIONS = [
