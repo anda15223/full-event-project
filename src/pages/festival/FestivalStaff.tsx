@@ -258,14 +258,19 @@ function StaffRow({
       </TableCell>
       <TableCell>
         <Select
-          value={staff.concept_id ?? "__none__"}
-          onValueChange={(v) => onPatch({ concept_id: v === "__none__" ? null : v })}
+          value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
+          onValueChange={(v) => {
+            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null });
+            else if (v === "__none__") onPatch({ role: "crew", concept_id: null });
+            else onPatch({ role: "crew", concept_id: v });
+          }}
         >
           <SelectTrigger className="h-8">
             <SelectValue placeholder="—" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">— None —</SelectItem>
+            <SelectItem value="__mgmt__">Management</SelectItem>
             {concepts.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
