@@ -58,6 +58,7 @@ import FestivalEquipment from "./pages/festival/FestivalEquipment";
 import FestivalPrices from "./pages/festival/FestivalPrices";
 import FestivalSoborgLoadingExport from "./pages/festival/FestivalSoborgLoadingExport";
 import FestivalSetup from "./pages/festival/FestivalSetup";
+import FestivalStaff from "./pages/festival/FestivalStaff";
 import FestivalEquipmentExport from "./pages/festival/FestivalEquipmentExport";
 import FestivalPricesExport from "./pages/festival/FestivalPricesExport";
 import FestivalSetupExport from "./pages/festival/FestivalSetupExport";
