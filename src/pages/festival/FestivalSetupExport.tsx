@@ -232,7 +232,7 @@ export default function FestivalSetupExport() {
                   <Image key={i} src={src} style={{ width: "100%", maxHeight: 500, objectFit: "contain", marginTop: 4 }} />
                 ))}
                 {a.ai_summary && (
-                  <Text style={[r.small, { marginTop: 3, fontStyle: "italic", color: "#444" }]}>
+                  <Text style={[r.small, { marginTop: 3, color: "#444" }]}> 
                     AI summary: {a.ai_summary}
                   </Text>
                 )}
@@ -261,7 +261,7 @@ export default function FestivalSetupExport() {
         <Image key={i} src={src} style={{ width: "100%", maxHeight: 520, objectFit: "contain", marginTop: 4 }} />
       ))}
       {a.ai_summary && (
-        <Text style={[r.small, { marginTop: 4, fontStyle: "italic", color: "#444" }]}>
+        <Text style={[r.small, { marginTop: 4, color: "#444" }]}> 
           AI summary: {a.ai_summary}
         </Text>
       )}
