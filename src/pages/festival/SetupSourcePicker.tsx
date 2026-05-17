@@ -107,15 +107,18 @@ export default function SetupSourcePicker({
     [currentNotes, extra].filter(Boolean).join("\n");
 
   const pickTransport = (v: any) => {
-    const label = `${v.vehicle_name}${v.driver_name ? ` · ${v.driver_name}` : " · (no driver)"}`;
+    const label = `${v.vehicle_type ?? "Vehicle"}${v.license_plate ? ` (${v.license_plate})` : ""}`;
+    const driverMatch = (v.notes ?? "").match(/Driver[^:]*:\s*([^.\n\[]+)/i);
+    const driver = driverMatch ? driverMatch[1].trim() : null;
     onApply(
       {
-        phase_name: `Drive ${v.vehicle_name}`,
-        from_location: leaving,
+        phase_name: `Drive ${v.vehicle_type ?? "vehicle"}`,
+        from_location: v.pickup_location || leaving,
         to_location: dest,
-        notes: appendNote(`Vehicle: ${label}`),
+        planned_time: v.pickup_time ? v.pickup_time.slice(0, 5) : null,
+        notes: appendNote(`Vehicle: ${label}${driver ? ` · driver ${driver}` : ""}${v.vehicle_purpose ? ` — ${v.vehicle_purpose}` : ""}`),
       },
-      { source_table: "festival_staff_vehicles", source_id: v.id, label: v.vehicle_name, detail: v.driver_name ?? "no driver" },
+      { source_table: "festival_transport", source_id: v.id, label, detail: driver ?? v.rental_supplier ?? "" },
     );
     close();
   };
