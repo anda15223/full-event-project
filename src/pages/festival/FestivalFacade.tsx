@@ -3,7 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   FacadeConceptCard, type FacadeRow, type FacadePhotoRow,
 } from "@/components/festival/cards/FacadeConceptCard";
