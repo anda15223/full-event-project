@@ -755,11 +755,12 @@ function DriverCell({
 
 // ============================================================
 function PassengersCell({
-  leg, passengers, assignments, staff, staffById, cap, assignedCount, overCapacity, expanded, setExpanded, conflictStaffIds,
+  leg, passengers, assignments, staff, staffById, cap, assignedCount, overCapacity, expanded, setExpanded, conflictStaffIds, assignedIds,
 }: {
   leg: Leg; passengers: Assignment[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; cap: number; assignedCount: number; overCapacity: boolean;
   expanded: boolean; setExpanded: (b: boolean) => void; conflictStaffIds: Set<string>;
+  assignedIds: Set<string>;
 }) {
   const qc = useQueryClient();
   const usedStaffIds = new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!));
