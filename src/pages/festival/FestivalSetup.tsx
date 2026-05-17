@@ -19,8 +19,18 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft, Calendar, CalendarIcon, Upload, Loader2, FileText, Plus, Trash2,
-  ArrowUp, ArrowDown, AlertCircle,
+  ArrowUp, ArrowDown, AlertCircle, Link2, X,
 } from "lucide-react";
+import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
+
+type PhaseSource = {
+  id: string;
+  setup_phase_id: string;
+  source_table: string;
+  source_id: string;
+  label: string | null;
+  detail: string | null;
+};
 
 const TIME_OPTIONS: string[] = (() => {
   const out: string[] = [];
