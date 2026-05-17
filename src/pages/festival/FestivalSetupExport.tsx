@@ -160,39 +160,25 @@ export default function FestivalSetupExport() {
         </View>
       )}
 
-      {/* Concept-grouped phases + layout */}
+      {/* Full setup sequence — every phase in order */}
+      {phases.length > 0 && (
+        <View>
+          <Text style={r.h2}>Setup sequence</Text>
+          {phases.map(renderPhase)}
+        </View>
+      )}
+
+      {/* Concept-grouped layout attachments only */}
       {CONCEPT_ORDER.map((c) => {
-        const ps = phasesByConcept(c);
         const atts = attByConcept(c);
-        if (ps.length === 0 && atts.length === 0) return null;
+        if (atts.length === 0) return null;
         return (
           <View key={c}>
-            <Text style={[r.h2, { textTransform: "capitalize" }]}>{c}</Text>
-            {ps.map(renderPhase)}
+            <Text style={[r.h2, { textTransform: "capitalize" }]}>{c} — layout</Text>
             {atts.map(renderAttachment)}
           </View>
         );
       })}
-
-      {/* Unconcept'd / null phases — show as main sequence if no concept-tagged phases exist */}
-      {phases.filter((p) => !p.concept).length > 0 && (
-        <View>
-          <Text style={r.h2}>
-            {phases.every((p) => !p.concept) ? "Setup sequence" : "Other phases"}
-          </Text>
-          {phases.filter((p) => !p.concept).map(renderPhase)}
-        </View>
-      )}
-
-      {/* Allocation summary — built from phase.driver_name when no vehicle picked */}
-      {phases.filter((p) => p.driver_name && !p.transport_allocation_id).length > 0 && (
-        <View>
-          <Text style={r.h2}>Driver notes</Text>
-          {phases.filter((p) => p.driver_name && !p.transport_allocation_id).map((p) => (
-            <Text key={p.id} style={r.small}>• {p.phase_name}: {p.driver_name}</Text>
-          ))}
-        </View>
-      )}
 
       {/* Allocation summary */}
       <View>
