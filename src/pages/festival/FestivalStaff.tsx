@@ -138,9 +138,18 @@ export default function FestivalStaff() {
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
 
-  const rows = staffQ.data ?? [];
-  const confirmedCount = rows.filter((s) => s.confirmed).length;
-  const unconfirmedCount = rows.length - confirmedCount;
+  const allRows = staffQ.data ?? [];
+  const confirmedCount = allRows.filter((s) => s.confirmed).length;
+  const unconfirmedCount = allRows.length - confirmedCount;
+  const unassignedCount = allRows.filter((s) => !s.concept_id && s.role !== "management").length;
+
+  const [filter, setFilter] = useState<"all" | "unconfirmed" | "unassigned">("all");
+  const rows =
+    filter === "unconfirmed"
+      ? allRows.filter((s) => !s.confirmed)
+      : filter === "unassigned"
+      ? allRows.filter((s) => !s.concept_id && s.role !== "management")
+      : allRows;
 
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
@@ -158,10 +167,19 @@ export default function FestivalStaff() {
         </Button>
       </div>
 
-      <div className="flex gap-3 text-sm text-muted-foreground">
-        <span>Total: <strong className="text-foreground">{rows.length}</strong></span>
-        <span className="text-emerald-600">✓ Confirmed: <strong>{confirmedCount}</strong></span>
-        <span className="text-amber-600">? Unconfirmed: <strong>{unconfirmedCount}</strong></span>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+          All <span className="opacity-60">({allRows.length})</span>
+        </FilterChip>
+        <FilterChip active={filter === "unconfirmed"} onClick={() => setFilter("unconfirmed")}>
+          Unconfirmed <span className="opacity-60">({unconfirmedCount})</span>
+        </FilterChip>
+        <FilterChip active={filter === "unassigned"} onClick={() => setFilter("unassigned")}>
+          Not assigned <span className="opacity-60">({unassignedCount})</span>
+        </FilterChip>
+        <span className="ml-auto text-muted-foreground">
+          ✓ {confirmedCount} confirmed
+        </span>
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
@@ -211,6 +229,29 @@ export default function FestivalStaff() {
         This list is shared across Transport, Setup and other festival sections.
       </p>
     </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1 rounded-full border text-xs transition ${
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-background hover:bg-muted border-border text-foreground"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
