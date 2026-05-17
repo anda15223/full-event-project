@@ -37,6 +37,7 @@ type Staff = {
   works_sunday: boolean | null;
   staff_source: string;
   role: string;
+  station: string | null;
   notes: string | null;
 };
 
@@ -48,6 +49,18 @@ const SOURCE_OPTIONS = [
   { value: "fidibus", label: "Fidibus" },
   { value: "unknown", label: "Unknown" },
 ];
+
+const STATION_OPTIONS = [
+  { value: "cash_register", label: "Cash register" },
+  { value: "assembly", label: "Assembly" },
+  { value: "fryer", label: "Fryer" },
+  { value: "oven", label: "Oven" },
+  { value: "pita_wrapper", label: "Pita wrapper" },
+  { value: "burger", label: "Burger" },
+];
+const STATION_LABEL: Record<string, string> = Object.fromEntries(
+  STATION_OPTIONS.map((s) => [s.value, s.label])
+);
 
 export default function FestivalStaff() {
   const { slug = "" } = useParams();
