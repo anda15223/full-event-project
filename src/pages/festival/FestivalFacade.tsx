@@ -116,14 +116,24 @@ export default function FestivalFacade() {
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
         </Link>
-        <div className="flex items-center gap-3 mt-2">
-          <ImageIcon className="h-7 w-7 text-rose-600" />
-          <h1 className="text-3xl font-bold tracking-tight">Facade</h1>
+        <div className="flex items-start justify-between gap-3 mt-2">
+          <div>
+            <div className="flex items-center gap-3">
+              <ImageIcon className="h-7 w-7 text-rose-600" />
+              <h1 className="text-3xl font-bold tracking-tight">Facade</h1>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+              Per-concept facade sets, AI-parsed from uploads. Sets are reusable season inventory —
+              they travel with the concept across festivals.
+            </p>
+          </div>
+          <Button asChild variant="default" size="sm" className="shrink-0">
+            <a href={`/festivals/${slug}/facade/export`} target="_blank" rel="noopener noreferrer">
+              <Download className="h-4 w-4 mr-1.5" />
+              Export full report
+            </a>
+          </Button>
         </div>
-        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Per-concept facade sets, AI-parsed from uploads. Sets are reusable season inventory —
-          they travel with the concept across festivals.
-        </p>
       </div>
 
       {/* Summary pills */}
