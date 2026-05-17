@@ -562,7 +562,7 @@ export default function FestivalSetup() {
                     </div>
 
                     {/* Row 3: vehicle + driver name + time */}
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
                       <Field label="Car">
                         <Select
                           value={p.transport_allocation_id ?? "__none__"}
