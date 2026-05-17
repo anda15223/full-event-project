@@ -1347,10 +1347,43 @@ function LegEditDrawer({
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       qc.invalidateQueries({ queryKey: ["transport-legs-all"] });
       toast.success(leg ? "Leg updated" : "Leg created");
       onOpenChange(false);
+
+      // Warn if any required staff is still missing a return ride
+      if (form.leg_phase === "return_home") {
+        try {
+          const { data: tRow } = await supabase
+            .from("festival_transport").select("festival_id").eq("id", transportId).maybeSingle();
+          const fid = tRow?.festival_id;
+          if (!fid) return;
+          const [{ data: allStaff }, { data: allVehicles }] = await Promise.all([
+            supabase.from("festival_staff")
+              .select("id,name,requires_transport").eq("festival_id", fid).eq("requires_transport", true),
+            supabase.from("festival_transport").select("id").eq("festival_id", fid),
+          ]);
+          const vids = (allVehicles ?? []).map((v: any) => v.id);
+          if (vids.length === 0) return;
+          const { data: returnLegs } = await supabase
+            .from("transport_legs").select("id").in("transport_id", vids).eq("leg_phase", "return_home");
+          const lids = (returnLegs ?? []).map((l: any) => l.id);
+          const { data: returnAssigns } = lids.length
+            ? await supabase.from("transport_leg_assignments")
+                .select("staff_id").in("leg_id", lids).not("staff_id", "is", null)
+            : { data: [] as any[] };
+          const covered = new Set((returnAssigns ?? []).map((a: any) => a.staff_id));
+          const missing = (allStaff ?? []).filter((s: any) => !covered.has(s.id));
+          if (missing.length > 0) {
+            const names = missing.map((s: any) => s.name ?? "?").join(", ");
+            toast.warning(`${missing.length} staff still without a return ride`, {
+              description: names,
+              duration: 10000,
+            });
+          }
+        } catch { /* non-blocking */ }
+      }
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
