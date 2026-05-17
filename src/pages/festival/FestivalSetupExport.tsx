@@ -174,11 +174,23 @@ export default function FestivalSetupExport() {
         );
       })}
 
-      {/* Unconcept'd / null phases */}
+      {/* Unconcept'd / null phases — show as main sequence if no concept-tagged phases exist */}
       {phases.filter((p) => !p.concept).length > 0 && (
         <View>
-          <Text style={r.h2}>Other phases</Text>
+          <Text style={r.h2}>
+            {phases.every((p) => !p.concept) ? "Setup sequence" : "Other phases"}
+          </Text>
           {phases.filter((p) => !p.concept).map(renderPhase)}
+        </View>
+      )}
+
+      {/* Allocation summary — built from phase.driver_name when no vehicle picked */}
+      {phases.filter((p) => p.driver_name && !p.transport_allocation_id).length > 0 && (
+        <View>
+          <Text style={r.h2}>Driver notes</Text>
+          {phases.filter((p) => p.driver_name && !p.transport_allocation_id).map((p) => (
+            <Text key={p.id} style={r.small}>• {p.phase_name}: {p.driver_name}</Text>
+          ))}
         </View>
       )}
 
