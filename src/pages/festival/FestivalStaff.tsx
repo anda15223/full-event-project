@@ -35,11 +35,22 @@ type Staff = {
   works_friday: boolean | null;
   works_saturday: boolean | null;
   works_sunday: boolean | null;
+  accom_thursday: boolean | null;
+  accom_friday: boolean | null;
+  accom_saturday: boolean | null;
+  accom_sunday: boolean | null;
   staff_source: string;
   role: string;
   station: string | null;
   notes: string | null;
 };
+
+const ACCOM_DAYS = [
+  { key: "accom_thursday", label: "Thu" },
+  { key: "accom_friday", label: "Fri" },
+  { key: "accom_saturday", label: "Sat" },
+  { key: "accom_sunday", label: "Sun" },
+] as const;
 
 type Concept = { id: string; name: string };
 
