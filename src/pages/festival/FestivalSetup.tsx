@@ -56,6 +56,9 @@ const SEQUENCE_PRESETS = [
   "Driving home",
 ] as const;
 
+const DRIVE_PRESETS = new Set<string>(["Drive to festival", "Driving home"]);
+const isDrivePhase = (name: string | null) => !name || DRIVE_PRESETS.has(name) || !SEQUENCE_PRESETS.includes(name as any);
+
 type Festival = {
   id: string; slug: string; name: string;
   address?: string | null; city?: string | null;
