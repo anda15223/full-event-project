@@ -522,11 +522,21 @@ export default function FestivalSetup() {
                   </div>
 
                   <div className="flex-1 space-y-2">
-                    {/* Row 1: phase name + concept + delete */}
+                    {/* Row 1: sequence type + phase name + concept */}
                     <div className="grid grid-cols-12 gap-2">
+                      <Select
+                        value={SEQUENCE_PRESETS.includes(p.phase_name as any) ? p.phase_name : ""}
+                        onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { phase_name: v } })}
+                      >
+                        <SelectTrigger className="col-span-4 h-9 text-xs"><SelectValue placeholder="Sequence type…" /></SelectTrigger>
+                        <SelectContent>
+                          {SEQUENCE_PRESETS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                       <Input
-                        className="col-span-8 h-9 text-sm font-medium"
+                        className="col-span-5 h-9 text-sm font-medium"
                         defaultValue={p.phase_name}
+                        key={p.phase_name}
                         onBlur={(e) => { if (e.target.value !== p.phase_name) updatePhase.mutate({ id: p.id, patch: { phase_name: e.target.value } }); }}
                         placeholder="Phase name"
                       />
@@ -534,7 +544,7 @@ export default function FestivalSetup() {
                         value={p.concept ?? ""}
                         onValueChange={(v) => updatePhase.mutate({ id: p.id, patch: { concept: v as Concept } })}
                       >
-                        <SelectTrigger className="col-span-4 h-9 text-xs"><SelectValue placeholder="Concept" /></SelectTrigger>
+                        <SelectTrigger className="col-span-3 h-9 text-xs"><SelectValue placeholder="Concept" /></SelectTrigger>
                         <SelectContent>
                           {CONCEPTS.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
                         </SelectContent>
