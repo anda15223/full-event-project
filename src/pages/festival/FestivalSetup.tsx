@@ -70,6 +70,7 @@ type SetupPhase = {
   planned_time: string | null;
   from_location: string | null;
   to_location: string | null;
+  driver_name: string | null;
   notes: string | null;
 };
 
