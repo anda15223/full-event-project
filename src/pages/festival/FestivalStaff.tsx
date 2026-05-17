@@ -203,6 +203,7 @@ export default function FestivalStaff() {
               <TableHead className="min-w-[180px]">Name</TableHead>
               <TableHead className="min-w-[140px]">Location</TableHead>
               <TableHead className="min-w-[140px]">Concept</TableHead>
+              <TableHead className="min-w-[140px]">Station</TableHead>
               <TableHead className="text-center">Accom.</TableHead>
               <TableHead className="min-w-[120px]">Source</TableHead>
               <TableHead className="text-center">Thu</TableHead>
