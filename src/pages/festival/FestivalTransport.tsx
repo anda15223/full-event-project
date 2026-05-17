@@ -82,6 +82,50 @@ function fmtDateLong(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
+// Bucket staff by home city (Aarhus / Copenhagen / Other)
+function cityBucket(loc: string | null | undefined): "aarhus" | "copenhagen" | "other" {
+  const s = (loc ?? "").toLowerCase();
+  if (s.includes("aarhus") || s.includes("århus")) return "aarhus";
+  if (s.includes("copenhagen") || s.includes("københavn") || s.includes("kobenhavn") || s.includes("kbh")) return "copenhagen";
+  return "other";
+}
+
+function StaffOptions({
+  staff, assignedIds, currentId,
+}: { staff: Staff[]; assignedIds: Set<string>; currentId?: string | null }) {
+  const groups: { key: string; label: string; items: Staff[] }[] = [
+    { key: "aarhus", label: "Aarhus", items: [] },
+    { key: "copenhagen", label: "Copenhagen", items: [] },
+    { key: "other", label: "Other", items: [] },
+  ];
+  staff.forEach((s) => {
+    const b = cityBucket(s.home_location);
+    groups.find((g) => g.key === b)!.items.push(s);
+  });
+  return (
+    <>
+      {groups.filter((g) => g.items.length > 0).map((g) => (
+        <SelectGroup key={g.key}>
+          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">{g.label}</SelectLabel>
+          {g.items.map((s) => {
+            const taken = assignedIds.has(s.id) && s.id !== currentId;
+            return (
+              <SelectItem
+                key={s.id}
+                value={s.id}
+                className={cn(taken && "text-destructive line-through opacity-70")}
+              >
+                {s.name ?? "(unnamed)"} · {s.role}
+                {taken && " · assigned"}
+              </SelectItem>
+            );
+          })}
+        </SelectGroup>
+      ))}
+    </>
+  );
+}
+
 // ============================================================
 export default function FestivalTransport() {
   const { slug = "" } = useParams();
