@@ -57,6 +57,7 @@ const STATION_OPTIONS = [
   { value: "oven", label: "Oven" },
   { value: "pita_wrapper", label: "Pita wrapper" },
   { value: "burger", label: "Burger" },
+  { value: "crepes", label: "Crepes" },
 ];
 const STATION_LABEL: Record<string, string> = Object.fromEntries(
   STATION_OPTIONS.map((s) => [s.value, s.label])
