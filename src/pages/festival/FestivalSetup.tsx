@@ -588,6 +588,25 @@ export default function FestivalSetup() {
                         </Select>
                       </Field>
                     </div>
+
+                    {/* Row 4: attached sources */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      {(sourcesByPhase.get(p.id) ?? []).map((s) => (
+                        <span key={s.id}
+                          className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border bg-muted/40">
+                          <span className="font-medium">{s.label}</span>
+                          {s.detail ? <span className="text-muted-foreground">· {s.detail}</span> : null}
+                          <button onClick={() => removeSource.mutate(s.id)}
+                            className="ml-0.5 text-muted-foreground hover:text-destructive">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                      <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
+                        onClick={() => setPickerPhaseId(p.id)}>
+                        <Link2 className="h-3 w-3 mr-1" /> Attach source
+                      </Button>
+                    </div>
                   </div>
 
                   <button onClick={() => { if (confirm("Delete this phase?")) deletePhase.mutate(p.id); }}
