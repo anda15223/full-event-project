@@ -303,8 +303,9 @@ function BedPicker({
 }
 
 export function AccommodationBookingCard({
-  festivalId, festivalSlug, booking, rooms,
+  festivalId, festivalSlug, booking, rooms, staffList = [], assignmentMap,
 }: Props) {
+  const effectiveAssignmentMap = assignmentMap ?? new Map<string, string>();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [notesDraft, setNotesDraft] = useState(booking.notes ?? "");
