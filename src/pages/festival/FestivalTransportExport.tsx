@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, RefreshCw } from "lucide-react";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
 import { PDF_COLORS, pdfStatusColor } from "@/lib/pdfTokens";
