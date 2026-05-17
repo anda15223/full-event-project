@@ -35,6 +35,9 @@ export default function FestivalSetupExport() {
       const { data: phases } = await sb.from("setup_phases")
         .select("*").eq("setup_run_id", run.id).order("sort_order");
 
+      // Build allocation lookup from BOTH staff vehicles and the Transport card
+      const allocMap = new Map<string, { vehicle_name: string; driver_name: string | null }>();
+
       const { data: vehicles } = await sb.from("festival_staff_vehicles")
         .select("id, vehicle_name, driver_staff_id").eq("festival_id", f.id);
       const driverIds = (vehicles ?? []).map((v: any) => v.driver_staff_id).filter(Boolean);
@@ -43,11 +46,20 @@ export default function FestivalSetupExport() {
         : { data: [] };
       const staffMap = new Map<string, string>();
       (staff ?? []).forEach((s: any) => staffMap.set(s.id, s.name ?? "Unnamed"));
-      const allocMap = new Map<string, { vehicle_name: string; driver_name: string | null }>();
       (vehicles ?? []).forEach((v: any) => allocMap.set(v.id, {
         vehicle_name: v.vehicle_name,
         driver_name: v.driver_staff_id ? (staffMap.get(v.driver_staff_id) ?? null) : null,
       }));
+
+      const { data: transport } = await sb.from("festival_transport")
+        .select("id, vehicle_type, license_plate, notes").eq("festival_id", f.id);
+      (transport ?? []).forEach((t: any) => {
+        const driverMatch = (t.notes ?? "").match(/Driver[^:]*:\s*([^.\n\[]+)/i);
+        allocMap.set(t.id, {
+          vehicle_name: `${t.vehicle_type ?? "Vehicle"}${t.license_plate ? ` · ${t.license_plate}` : ""}`,
+          driver_name: driverMatch ? driverMatch[1].trim() : null,
+        });
+      });
 
       const { data: atts } = await sb.from("setup_attachments")
         .select("*").eq("setup_run_id", run.id).order("created_at");
@@ -88,17 +100,25 @@ export default function FestivalSetupExport() {
 
   const renderPhase = (p: any) => {
     const alloc = p.transport_allocation_id ? allocMap.get(p.transport_allocation_id) : null;
+    const driverDisplay = p.driver_name || alloc?.driver_name || null;
+    const route = [p.from_location, p.to_location].filter(Boolean).join(" → ");
     return (
       <View key={p.id} style={r.card} wrap={false}>
         <View style={r.cardHeader}>
           <Text style={r.cardTitle}>{p.phase_name}</Text>
           <Text style={r.small}>{p.planned_time ? fmtTime(p.planned_time) : ""}</Text>
         </View>
-        {alloc && (
+        {route && (
+          <View style={r.row}>
+            <Text style={r.label}>Route</Text>
+            <Text style={r.value}>{route}</Text>
+          </View>
+        )}
+        {(alloc || driverDisplay) && (
           <View style={r.row}>
             <Text style={r.label}>Vehicle</Text>
             <Text style={r.value}>
-              {alloc.vehicle_name} · Driver: {alloc.driver_name ?? "🔴 UNALLOCATED"}
+              {alloc?.vehicle_name ?? "—"} · Driver: {driverDisplay ?? "🔴 UNALLOCATED"}
             </Text>
           </View>
         )}
@@ -154,11 +174,23 @@ export default function FestivalSetupExport() {
         );
       })}
 
-      {/* Unconcept'd / null phases */}
+      {/* Unconcept'd / null phases — show as main sequence if no concept-tagged phases exist */}
       {phases.filter((p) => !p.concept).length > 0 && (
         <View>
-          <Text style={r.h2}>Other phases</Text>
+          <Text style={r.h2}>
+            {phases.every((p) => !p.concept) ? "Setup sequence" : "Other phases"}
+          </Text>
           {phases.filter((p) => !p.concept).map(renderPhase)}
+        </View>
+      )}
+
+      {/* Allocation summary — built from phase.driver_name when no vehicle picked */}
+      {phases.filter((p) => p.driver_name && !p.transport_allocation_id).length > 0 && (
+        <View>
+          <Text style={r.h2}>Driver notes</Text>
+          {phases.filter((p) => p.driver_name && !p.transport_allocation_id).map((p) => (
+            <Text key={p.id} style={r.small}>• {p.phase_name}: {p.driver_name}</Text>
+          ))}
         </View>
       )}
 
