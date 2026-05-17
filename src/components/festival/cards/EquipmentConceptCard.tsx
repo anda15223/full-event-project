@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ExternalLink, Plus, Trash2, Zap, Truck, MapPin } from "lucide-react";
+import { ExternalLink, Plus, Trash2, Zap, Truck, MapPin, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   ALL_CATEGORIES, CATEGORY_META, EquipCategory, EquipmentRow,
@@ -69,9 +69,19 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
               </Link>
             </div>
           </div>
-          <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_PILL[status.status]}`}>
-            {status.status === "green" ? "✅" : status.status === "amber" ? "⚠️" : "—"} {status.label}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={`/festivals/${props.festivalSlug}/equipment/export?concept=${conceptSlug}`}
+              target="_blank" rel="noopener noreferrer"
+              title={`Export full ${conceptName} equipment card`}
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
+            >
+              <FileDown className="h-3 w-3" /> Export
+            </a>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_PILL[status.status]}`}>
+              {status.status === "green" ? "✅" : status.status === "amber" ? "⚠️" : "—"} {status.label}
+            </span>
+          </div>
         </div>
 
         {/* Pack into vehicle */}
