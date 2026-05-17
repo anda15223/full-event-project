@@ -588,12 +588,32 @@ export default function FestivalSetup() {
                         />
                       </Field>
                       <Field label="Planned date">
-                        <Input
-                          type="date"
-                          className="h-9 text-xs"
-                          defaultValue={p.planned_date ?? ""}
-                          onBlur={(e) => { const v = e.target.value || null; if (v !== p.planned_date) updatePhase.mutate({ id: p.id, patch: { planned_date: v } }); }}
-                        />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "h-9 text-xs justify-start font-normal",
+                                !p.planned_date && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-1.5 h-3.5 w-3.5 opacity-60" />
+                              {p.planned_date ? format(parseISO(p.planned_date), "MMM d, yyyy") : "Pick date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarPicker
+                              mode="single"
+                              selected={p.planned_date ? parseISO(p.planned_date) : undefined}
+                              onSelect={(d) => {
+                                const v = d ? format(d, "yyyy-MM-dd") : null;
+                                if (v !== p.planned_date) updatePhase.mutate({ id: p.id, patch: { planned_date: v } });
+                              }}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </Field>
                       <Field label="Planned time">
                         <Select
