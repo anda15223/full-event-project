@@ -350,7 +350,7 @@ export default function FestivalSetup() {
       </div>
 
       {/* Block 1 — Run header */}
-      <div className="rounded-2xl border bg-card p-6 grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
+      <div className="rounded-2xl border bg-card p-6 grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
         <Field label="Setup date">
           {(() => {
             const dateStr = (run?.setup_date ?? "").slice(0, 10);
