@@ -703,11 +703,35 @@ function StaffRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell className="text-center">
-        <Checkbox
-          checked={!!staff.needs_accommodation}
-          onCheckedChange={(c) => onPatch({ needs_accommodation: !!c })}
-        />
+      <TableCell>
+        <div className="flex items-center justify-center gap-1.5">
+          {ACCOM_DAYS.map((d) => {
+            const checked = !!staff[d.key];
+            return (
+              <button
+                key={d.key}
+                type="button"
+                onClick={() => {
+                  const next = { [d.key]: !checked } as Partial<Staff>;
+                  // keep summary boolean in sync
+                  const anyOther = ACCOM_DAYS.some(
+                    (x) => x.key !== d.key && !!staff[x.key]
+                  );
+                  next.needs_accommodation = !checked || anyOther;
+                  onPatch(next);
+                }}
+                className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
+                  checked
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                }`}
+                title={`Needs accommodation on ${d.label}`}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
       </TableCell>
       <TableCell>
         <Select
