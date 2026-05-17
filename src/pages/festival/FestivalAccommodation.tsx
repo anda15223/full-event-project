@@ -98,6 +98,31 @@ export default function FestivalAccommodation() {
     return map;
   }, [pageQ.data]);
 
+  // Build a name -> "Room X · Bed Y" map across ALL bookings
+  const bookingLabelById = useMemo(() => {
+    const m = new Map<string, string>();
+    (pageQ.data?.bookings ?? []).forEach((b, i) => {
+      m.set(b.id, b.provider_name?.trim() || `Booking ${i + 1}`);
+    });
+    return m;
+  }, [pageQ.data]);
+
+  const assignmentMap = useMemo(() => {
+    const m = new Map<string, string>(); // lowercased name -> location label
+    (pageQ.data?.rooms ?? []).forEach((r) => {
+      const c = r.bed_count ?? 0;
+      for (let i = 1; i <= 4; i++) {
+        if (i > c) break;
+        const key = `bed_${i}_assignee` as keyof AccommodationRoomRow;
+        const v = (r[key] as string | null)?.trim();
+        if (!v) continue;
+        const where = `${bookingLabelById.get(r.accommodation_id) ?? ""} · ${r.room_label} · Bed ${i}`;
+        m.set(v.toLowerCase(), where);
+      }
+    });
+    return m;
+  }, [pageQ.data, bookingLabelById]);
+
   const summary = useMemo(() => {
     const bookings = pageQ.data?.bookings ?? [];
     const rooms = pageQ.data?.rooms ?? [];
