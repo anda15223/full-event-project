@@ -22,7 +22,7 @@ export default function FestivalSetupExport() {
         .select("id, name, slug, start_date, end_date, setup_date, breakdown_date").eq("slug", slug).maybeSingle();
       if (!f) return setData({ festival: null });
 
-      const { data: phases } = await sb.from("festival_setup_phases")
+      const { data: phases } = await sb.from("festival_setup")
         .select("*").eq("festival_id", f.id).order("scheduled_start", { ascending: true, nullsFirst: false });
 
       setData({ festival: f, phases: phases ?? [] });
