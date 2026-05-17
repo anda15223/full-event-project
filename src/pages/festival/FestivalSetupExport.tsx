@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { PDFViewer, Text, View, Image } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
+import { Buffer } from "buffer";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ReportTemplate, reportStyles as r, fmtFilename } from "@/components/pdf/ReportTemplate";
+
+(globalThis as any).Buffer ||= Buffer;
 
 const sb = supabase as any;
 const BUCKET = "festival-setup-docs";
@@ -38,14 +41,26 @@ async function renderPdfToImages(url: string): Promise<string[]> {
     const out: string[] = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.5 });
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scale = Math.min(1.35, 1800 / baseViewport.width, 2200 / baseViewport.height);
+      const viewport = page.getViewport({ scale });
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
       const ctx = canvas.getContext("2d")!;
       await page.render({ canvasContext: ctx, viewport }).promise;
-      out.push(canvas.toDataURL("image/jpeg", 0.8));
+      const dataUrl = await new Promise<string>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (!blob) return resolve(canvas.toDataURL("image/jpeg", 0.72));
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(String(reader.result));
+          reader.readAsDataURL(blob);
+        }, "image/jpeg", 0.72);
+      });
+      out.push(dataUrl);
+      page.cleanup?.();
     }
+    await loadingTask.destroy?.();
     return out;
   } catch (e) {
     console.error("PDF render failed", e);
@@ -99,7 +114,8 @@ export default function FestivalSetupExport() {
 
       const { data: atts } = await sb.from("setup_attachments")
         .select("*").eq("setup_run_id", run.id).order("created_at");
-      const attRender: AttRender[] = await Promise.all((atts ?? []).map(async (a: any) => {
+      const attRender: AttRender[] = [];
+      for (const a of atts ?? []) {
         const { data: signed } = await supabase.storage.from(BUCKET).createSignedUrl(a.file_path, 1800);
         const isImage = (a.mime_type ?? "").startsWith("image/")
           || /\.(png|jpe?g|webp)$/i.test(a.file_name);
@@ -108,19 +124,19 @@ export default function FestivalSetupExport() {
         if (isPdf && signed?.signedUrl) {
           pageImages = await renderPdfToImages(signed.signedUrl);
         }
-        return { id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage, isPdf, pageImages, ai_summary: a.ai_summary ?? null, extracted_text: a.extracted_text ?? null };
-      }));
+        attRender.push({ id: a.id, file_name: a.file_name, concept: a.concept, setup_phase_id: a.setup_phase_id ?? null, signedUrl: signed?.signedUrl ?? null, isImage, isPdf, pageImages, ai_summary: a.ai_summary ?? null, extracted_text: a.extracted_text ?? null });
+      }
 
       // Power summary for setup phases
       const { data: contracts } = await sb.from("festival_contracts")
-        .select("id, concept_name, is_active").eq("festival_id", f.id).eq("is_active", true);
+        .select("id, concept_alias, is_active, concept:concepts!concept_id(name)").eq("festival_id", f.id).eq("is_active", true);
       const cIds = (contracts ?? []).map((c: any) => c.id);
       let powerRows: any[] = [];
       if (cIds.length) {
         const { data: pw } = await sb.from("festival_power")
           .select("festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, tableau_required, tableau_count, status")
           .in("festival_contract_id", cIds);
-        const byId = new Map((contracts ?? []).map((c: any) => [c.id, c.concept_name]));
+        const byId = new Map((contracts ?? []).map((c: any) => [c.id, c.concept_alias || c.concept?.name]));
         powerRows = (pw ?? []).map((p: any) => ({ ...p, concept_name: byId.get(p.festival_contract_id) ?? "—" }));
       }
 
@@ -219,7 +235,7 @@ export default function FestivalSetupExport() {
                   <Image key={i} src={src} style={{ width: "100%", maxHeight: 500, objectFit: "contain", marginTop: 4 }} />
                 ))}
                 {a.ai_summary && (
-                  <Text style={[r.small, { marginTop: 3, fontStyle: "italic", color: "#444" }]}>
+                  <Text style={[r.small, { marginTop: 3, color: "#444" }]}> 
                     AI summary: {a.ai_summary}
                   </Text>
                 )}
@@ -248,7 +264,7 @@ export default function FestivalSetupExport() {
         <Image key={i} src={src} style={{ width: "100%", maxHeight: 520, objectFit: "contain", marginTop: 4 }} />
       ))}
       {a.ai_summary && (
-        <Text style={[r.small, { marginTop: 4, fontStyle: "italic", color: "#444" }]}>
+        <Text style={[r.small, { marginTop: 4, color: "#444" }]}> 
           AI summary: {a.ai_summary}
         </Text>
       )}
