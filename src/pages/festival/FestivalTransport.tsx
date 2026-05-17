@@ -737,11 +737,7 @@ function DriverCell({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {staff.map((s) => (
-              <SelectItem key={s.id} value={s.id} className={cn(conflictStaffIds.has(s.id) && "text-destructive")}>
-                {s.name ?? "(unnamed)"} · {s.role}
-              </SelectItem>
-            ))}
+            <StaffOptions staff={staff} assignedIds={assignedIds} currentId={driver.staff_id} />
           </SelectContent>
         </Select>
       </div>
