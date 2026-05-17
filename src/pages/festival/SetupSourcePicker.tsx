@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Truck, Snowflake, Package, Store } from "lucide-react";
+import { Truck, Snowflake, Package, Store, Image as ImageIcon, Zap } from "lucide-react";
 
 const sb = supabase as any;
 
