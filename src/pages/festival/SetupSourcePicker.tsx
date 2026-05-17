@@ -195,7 +195,6 @@ export default function SetupSourcePicker({
                     <div className="font-medium">{v.vehicle_name}</div>
                     <div className="text-xs text-muted-foreground">
                       {v.driver_name ?? <span className="text-rose-600">no driver</span>}
-                      {v.departure_time ? ` · departs ${String(v.departure_time).slice(0,5)}` : ""}
                     </div>
                   </div>
                 </button>
