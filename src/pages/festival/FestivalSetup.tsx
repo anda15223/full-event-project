@@ -342,7 +342,7 @@ export default function FestivalSetup() {
         <Field label="Setup date">
           <Input
             type="date"
-            value={run?.setup_date ?? ""}
+            value={(run?.setup_date ?? "").slice(0, 10)}
             onChange={(e) => updateRun.mutate({ setup_date: e.target.value || null })}
             className="h-9 text-xs"
           />
@@ -350,7 +350,7 @@ export default function FestivalSetup() {
         <Field label="Søborg meet time">
           <Input
             type="time"
-            value={run?.soborg_meet_time ?? ""}
+            value={(run?.soborg_meet_time ?? "").slice(0, 5)}
             onChange={(e) => updateRun.mutate({ soborg_meet_time: e.target.value || null })}
             className="h-9 text-xs"
           />
@@ -358,7 +358,7 @@ export default function FestivalSetup() {
         <Field label="Arrival at Jelling">
           <Input
             type="time"
-            value={run?.arrival_time ?? ""}
+            value={(run?.arrival_time ?? "").slice(0, 5)}
             onChange={(e) => updateRun.mutate({ arrival_time: e.target.value || null })}
             className="h-9 text-xs"
           />
