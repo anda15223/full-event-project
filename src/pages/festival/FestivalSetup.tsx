@@ -720,6 +720,20 @@ export default function FestivalSetup() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Source picker */}
+      <SetupSourcePicker
+        open={!!pickerPhaseId}
+        onOpenChange={(o) => { if (!o) setPickerPhaseId(null); }}
+        festivalId={festivalId}
+        soborgDefault="Søborg HQ"
+        destinationDefault={run?.destination_address ?? ""}
+        currentNotes={pickerPhaseId ? (phases.find((p) => p.id === pickerPhaseId)?.notes ?? null) : null}
+        onApply={(patch, snap) => {
+          if (!pickerPhaseId) return;
+          applySource.mutate({ phaseId: pickerPhaseId, patch, snap });
+        }}
+      />
     </div>
   );
 }
