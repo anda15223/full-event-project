@@ -184,12 +184,12 @@ export default function SetupSourcePicker({
               (transportQ.data ?? []).length === 0 ? <Empty msg="No vehicles in Transport card." /> :
               (transportQ.data ?? []).map((v: any) => (
                 <button key={v.id} onClick={() => pickTransport(v)}
-                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{v.vehicle_name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {v.driver_name ?? <span className="text-rose-600">no driver</span>}
-                    </div>
+                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 text-sm">
+                  <div className="font-medium">{v.vehicle_type ?? "Vehicle"}{v.license_plate ? ` · ${v.license_plate}` : ""}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {v.vehicle_purpose ?? v.rental_supplier ?? "—"}
+                    {v.pickup_date ? ` · ${v.pickup_date}` : ""}
+                    {v.pickup_time ? ` ${String(v.pickup_time).slice(0,5)}` : ""}
                   </div>
                 </button>
               ))}
