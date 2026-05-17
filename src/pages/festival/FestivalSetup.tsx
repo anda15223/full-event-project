@@ -352,28 +352,59 @@ export default function FestivalSetup() {
       {/* Block 1 — Run header */}
       <div className="rounded-2xl border bg-card p-6 grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
         <Field label="Setup date">
-          <Input
-            type="date"
-            value={(run?.setup_date ?? "").slice(0, 10)}
-            onChange={(e) => updateRun.mutate({ setup_date: e.target.value || null })}
-            className="h-9 text-xs"
-          />
+          {(() => {
+            const dateStr = (run?.setup_date ?? "").slice(0, 10);
+            const dateVal = dateStr ? parseISO(dateStr) : undefined;
+            return (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 w-full justify-start text-left text-xs font-normal",
+                      !dateVal && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                    {dateVal ? format(dateVal, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker
+                    mode="single"
+                    selected={dateVal}
+                    onSelect={(d) =>
+                      updateRun.mutate({ setup_date: d ? format(d, "yyyy-MM-dd") : null })
+                    }
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            );
+          })()}
         </Field>
         <Field label="Søborg meet time">
-          <Input
-            type="time"
-            value={(run?.soborg_meet_time ?? "").slice(0, 5)}
-            onChange={(e) => updateRun.mutate({ soborg_meet_time: e.target.value || null })}
-            className="h-9 text-xs"
-          />
+          <Select
+            value={(run?.soborg_meet_time ?? "").slice(0, 5) || undefined}
+            onValueChange={(v) => updateRun.mutate({ soborg_meet_time: v || null })}
+          >
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Pick time" /></SelectTrigger>
+            <SelectContent className="max-h-64">
+              {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Arrival at Jelling">
-          <Input
-            type="time"
-            value={(run?.arrival_time ?? "").slice(0, 5)}
-            onChange={(e) => updateRun.mutate({ arrival_time: e.target.value || null })}
-            className="h-9 text-xs"
-          />
+          <Select
+            value={(run?.arrival_time ?? "").slice(0, 5) || undefined}
+            onValueChange={(v) => updateRun.mutate({ arrival_time: v || null })}
+          >
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Pick time" /></SelectTrigger>
+            <SelectContent className="max-h-64">
+              {TIME_OPTIONS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </Field>
         <Field label="Destination address">
           <Input
