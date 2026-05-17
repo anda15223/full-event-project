@@ -198,12 +198,49 @@ export default function FestivalStaff() {
   const unassignedCount = allRows.filter((s) => !s.concept_id && s.role !== "management").length;
 
   const [filter, setFilter] = useState<"all" | "unconfirmed" | "unassigned">("all");
-  const rows =
-    filter === "unconfirmed"
-      ? allRows.filter((s) => !s.confirmed)
-      : filter === "unassigned"
-      ? allRows.filter((s) => !s.concept_id && s.role !== "management")
-      : allRows;
+  const [cityFilter, setCityFilter] = useState<string>("__all__");
+  const [accomFilter, setAccomFilter] = useState<"any" | "yes" | "no">("any");
+
+  const cityOptions = Array.from(
+    new Set(allRows.map((s) => (s.home_location ?? "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const rows = allRows
+    .filter((s) =>
+      filter === "unconfirmed"
+        ? !s.confirmed
+        : filter === "unassigned"
+        ? !s.concept_id && s.role !== "management"
+        : true
+    )
+    .filter((s) => (cityFilter === "__all__" ? true : (s.home_location ?? "") === cityFilter))
+    .filter((s) =>
+      accomFilter === "any"
+        ? true
+        : accomFilter === "yes"
+        ? !!s.needs_accommodation
+        : !s.needs_accommodation
+    );
+
+  // Empty-slot calculation across concept plans
+  const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
+  concepts.forEach((c) => {
+    const plan = CONCEPT_STATION_PLAN.find((p) => p.match(c.name.toLowerCase()));
+    if (!plan) return;
+    const conceptPeople = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
+    plan.slots.forEach((slot) => {
+      const filled = conceptPeople.filter((p) => p.station === slot.station).length;
+      const missing = slot.count - Math.min(filled, slot.count);
+      if (missing > 0) {
+        emptySlots.push({
+          conceptName: c.name,
+          stationLabel: STATION_LABEL[slot.station] ?? slot.station,
+          missing,
+        });
+      }
+    });
+  });
+  const totalEmpty = emptySlots.reduce((a, s) => a + s.missing, 0);
 
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
@@ -231,10 +268,56 @@ export default function FestivalStaff() {
         <FilterChip active={filter === "unassigned"} onClick={() => setFilter("unassigned")}>
           Not assigned <span className="opacity-60">({unassignedCount})</span>
         </FilterChip>
+
+        <div className="h-5 w-px bg-border mx-1" />
+
+        <Select value={cityFilter} onValueChange={setCityFilter}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="All cities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All cities</SelectItem>
+            {cityOptions.map((c) => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <FilterChip active={accomFilter === "any"} onClick={() => setAccomFilter("any")}>
+          Any accom.
+        </FilterChip>
+        <FilterChip active={accomFilter === "yes"} onClick={() => setAccomFilter("yes")}>
+          Needs accom.
+        </FilterChip>
+        <FilterChip active={accomFilter === "no"} onClick={() => setAccomFilter("no")}>
+          No accom.
+        </FilterChip>
+
         <span className="ml-auto text-muted-foreground">
           ✓ {confirmedCount} confirmed
         </span>
       </div>
+
+      {totalEmpty > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/50 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-amber-900">
+              Empty slots · {totalEmpty}
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {emptySlots.map((e, i) => (
+              <span
+                key={i}
+                className="text-xs px-2 py-1 rounded bg-white border border-amber-200"
+              >
+                <strong>{e.conceptName}</strong> · {e.stationLabel} ×{e.missing}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
