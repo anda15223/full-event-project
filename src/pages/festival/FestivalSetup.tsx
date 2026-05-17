@@ -98,6 +98,7 @@ type Allocation = {
 type Attachment = {
   id: string;
   setup_run_id: string;
+  setup_phase_id: string | null;
   concept: Concept | null;
   file_path: string;
   file_name: string;
