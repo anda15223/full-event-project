@@ -600,11 +600,13 @@ export function AccommodationBookingCard({
                   {Array.from({ length: room.bed_count }).map((_, i) => {
                     const key = (`bed_${i + 1}_assignee`) as keyof AccommodationRoomRow;
                     return (
-                      <BedInput
+                      <BedPicker
                         key={i}
                         label={`Bed ${i + 1}`}
                         value={(room[key] as string | null) ?? null}
                         onSave={(v) => updateRoom.mutate({ id: room.id, patch: { [key]: v } as any })}
+                        staffList={staffList}
+                        assignmentMap={effectiveAssignmentMap}
                       />
                     );
                   })}
