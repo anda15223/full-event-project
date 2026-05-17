@@ -815,11 +815,12 @@ function DriverCell({
       <>
         <div className="hidden print:block text-xs">DRIVER: __________________</div>
         <div className="print:hidden">
-          <Select onValueChange={(v) => upsertDriver.mutate(v)}>
+          <Select onValueChange={handleSelect}>
             <SelectTrigger className="h-8 text-xs border-destructive/50 bg-destructive/5 text-destructive">
               <SelectValue placeholder="🚨 TBD — Assign driver" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__none__" className="text-muted-foreground italic">— None —</SelectItem>
               <StaffOptions staff={staff} assignedIds={assignedIds} />
             </SelectContent>
           </Select>
