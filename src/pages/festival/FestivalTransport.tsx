@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  SelectGroup, SelectLabel,
 } from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -79,6 +80,50 @@ function fmtDate(d: string) {
 }
 function fmtDateLong(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+}
+
+// Bucket staff by home city (Aarhus / Copenhagen / Other)
+function cityBucket(loc: string | null | undefined): "aarhus" | "copenhagen" | "other" {
+  const s = (loc ?? "").toLowerCase();
+  if (s.includes("aarhus") || s.includes("århus")) return "aarhus";
+  if (s.includes("copenhagen") || s.includes("københavn") || s.includes("kobenhavn") || s.includes("kbh")) return "copenhagen";
+  return "other";
+}
+
+function StaffOptions({
+  staff, assignedIds, currentId,
+}: { staff: Staff[]; assignedIds: Set<string>; currentId?: string | null }) {
+  const groups: { key: string; label: string; items: Staff[] }[] = [
+    { key: "aarhus", label: "Aarhus", items: [] },
+    { key: "copenhagen", label: "Copenhagen", items: [] },
+    { key: "other", label: "Other", items: [] },
+  ];
+  staff.forEach((s) => {
+    const b = cityBucket(s.home_location);
+    groups.find((g) => g.key === b)!.items.push(s);
+  });
+  return (
+    <>
+      {groups.filter((g) => g.items.length > 0).map((g) => (
+        <SelectGroup key={g.key}>
+          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">{g.label}</SelectLabel>
+          {g.items.map((s) => {
+            const taken = assignedIds.has(s.id) && s.id !== currentId;
+            return (
+              <SelectItem
+                key={s.id}
+                value={s.id}
+                className={cn(taken && "text-destructive line-through opacity-70")}
+              >
+                {s.name ?? "(unnamed)"} · {s.role}
+                {taken && " · assigned"}
+              </SelectItem>
+            );
+          })}
+        </SelectGroup>
+      ))}
+    </>
+  );
 }
 
 // ============================================================
@@ -183,6 +228,12 @@ export default function FestivalTransport() {
     });
     return result;
   }, [legs, assignments]);
+
+  // Global set of staff currently assigned to ANY leg (any role).
+  const globalAssignedIds = useMemo(
+    () => new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!)),
+    [assignments],
+  );
 
   // Scroll to focused leg
   useEffect(() => {
@@ -331,6 +382,7 @@ export default function FestivalTransport() {
             slug={slug}
             focusLegId={focusLegId}
             conflictByLeg={conflictByLeg}
+            assignedIds={globalAssignedIds}
           />
         ))}
         {vehicles.length === 0 && festival && (
@@ -377,11 +429,12 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 // ============================================================
 function VehicleBlock({
-  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg,
+  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIds,
 }: {
   vehicle: Vehicle; legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; slug: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
+  assignedIds: Set<string>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [addLegOpen, setAddLegOpen] = useState(false);
@@ -437,6 +490,7 @@ function VehicleBlock({
         festivalId={festivalId}
         focusLegId={focusLegId}
         conflictByLeg={conflictByLeg}
+        assignedIds={assignedIds}
       />
 
       <div className="p-3 border-t print:hidden">
@@ -476,11 +530,12 @@ function StatusPill({ status }: { status: string }) {
 
 // ============================================================
 function LegsTable({
-  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg,
+  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIds,
 }: {
   legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
+  assignedIds: Set<string>;
 }) {
   if (legs.length === 0) {
     return <div className="p-4 text-sm text-muted-foreground italic">No legs scheduled.</div>;
@@ -511,6 +566,7 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
+              assignedIds={assignedIds}
             />
           ))}
         </tbody>
@@ -520,11 +576,12 @@ function LegsTable({
 }
 
 function LegRow({
-  leg, assignments, staff, staffById, festivalId, highlighted, conflictStaffIds,
+  leg, assignments, staff, staffById, festivalId, highlighted, conflictStaffIds, assignedIds,
 }: {
   leg: Leg; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; highlighted: boolean;
   conflictStaffIds: Set<string>;
+  assignedIds: Set<string>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -560,7 +617,7 @@ function LegRow({
           {leg.destination && <div className="text-muted-foreground">→ {leg.destination}</div>}
         </td>
         <td className="p-3">
-          <DriverCell leg={leg} driver={driver} staff={staff} staffById={staffById} festivalId={festivalId} conflictStaffIds={conflictStaffIds} />
+          <DriverCell leg={leg} driver={driver} staff={staff} staffById={staffById} festivalId={festivalId} conflictStaffIds={conflictStaffIds} assignedIds={assignedIds} />
         </td>
         <td className="p-3">
           <PassengersCell
@@ -575,6 +632,7 @@ function LegRow({
             expanded={expanded}
             setExpanded={setExpanded}
             conflictStaffIds={conflictStaffIds}
+            assignedIds={assignedIds}
           />
         </td>
         <td className="p-3 print:hidden">
@@ -605,8 +663,8 @@ function LegRow({
 
 // ============================================================
 function DriverCell({
-  leg, driver, staff, staffById, festivalId, conflictStaffIds,
-}: { leg: Leg; driver: Assignment | undefined; staff: Staff[]; staffById: Record<string, Staff>; festivalId: string; conflictStaffIds: Set<string> }) {
+  leg, driver, staff, staffById, festivalId, conflictStaffIds, assignedIds,
+}: { leg: Leg; driver: Assignment | undefined; staff: Staff[]; staffById: Record<string, Staff>; festivalId: string; conflictStaffIds: Set<string>; assignedIds: Set<string> }) {
   const qc = useQueryClient();
 
   const upsertDriver = useMutation({
@@ -662,11 +720,7 @@ function DriverCell({
               <SelectValue placeholder="🚨 TBD — Assign driver" />
             </SelectTrigger>
             <SelectContent>
-              {staff.map((s) => (
-                <SelectItem key={s.id} value={s.id} className={cn(conflictStaffIds.has(s.id) && "text-destructive")}>
-                  {s.name ?? "(unnamed)"} · {s.role}
-                </SelectItem>
-              ))}
+              <StaffOptions staff={staff} assignedIds={assignedIds} />
             </SelectContent>
           </Select>
         </div>
@@ -683,11 +737,7 @@ function DriverCell({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {staff.map((s) => (
-              <SelectItem key={s.id} value={s.id} className={cn(conflictStaffIds.has(s.id) && "text-destructive")}>
-                {s.name ?? "(unnamed)"} · {s.role}
-              </SelectItem>
-            ))}
+            <StaffOptions staff={staff} assignedIds={assignedIds} currentId={driver.staff_id} />
           </SelectContent>
         </Select>
       </div>
@@ -697,11 +747,12 @@ function DriverCell({
 
 // ============================================================
 function PassengersCell({
-  leg, passengers, assignments, staff, staffById, cap, assignedCount, overCapacity, expanded, setExpanded, conflictStaffIds,
+  leg, passengers, assignments, staff, staffById, cap, assignedCount, overCapacity, expanded, setExpanded, conflictStaffIds, assignedIds,
 }: {
   leg: Leg; passengers: Assignment[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; cap: number; assignedCount: number; overCapacity: boolean;
   expanded: boolean; setExpanded: (b: boolean) => void; conflictStaffIds: Set<string>;
+  assignedIds: Set<string>;
 }) {
   const qc = useQueryClient();
   const usedStaffIds = new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!));
@@ -771,11 +822,7 @@ function PassengersCell({
             </SelectTrigger>
             <SelectContent>
               {available.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">No staff available</div>}
-              {available.map((s) => (
-                <SelectItem key={s.id} value={s.id} className={cn(conflictStaffIds.has(s.id) && "text-destructive")}>
-                  {s.name ?? "(unnamed)"} · {s.role}
-                </SelectItem>
-              ))}
+              <StaffOptions staff={available} assignedIds={assignedIds} />
             </SelectContent>
           </Select>
         </div>
