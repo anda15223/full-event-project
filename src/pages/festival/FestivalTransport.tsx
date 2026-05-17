@@ -229,11 +229,20 @@ export default function FestivalTransport() {
     return result;
   }, [legs, assignments]);
 
-  // Global set of staff currently assigned to ANY leg (any role).
-  const globalAssignedIds = useMemo(
-    () => new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!)),
-    [assignments],
-  );
+  // Per-date set of staff currently assigned (any role) to ANY leg on that date.
+  // A driver assigned on the 21st is still "available" on the 18th.
+  const assignedIdsByDate = useMemo(() => {
+    const legById = new Map(legs.map((l) => [l.id, l]));
+    const map = new Map<string, Set<string>>();
+    assignments.forEach((a) => {
+      if (!a.staff_id) return;
+      const l = legById.get(a.leg_id);
+      if (!l) return;
+      if (!map.has(l.leg_date)) map.set(l.leg_date, new Set());
+      map.get(l.leg_date)!.add(a.staff_id);
+    });
+    return map;
+  }, [legs, assignments]);
 
   // Scroll to focused leg
   useEffect(() => {
@@ -382,7 +391,7 @@ export default function FestivalTransport() {
             slug={slug}
             focusLegId={focusLegId}
             conflictByLeg={conflictByLeg}
-            assignedIds={globalAssignedIds}
+            assignedIdsByDate={assignedIdsByDate}
           />
         ))}
         {vehicles.length === 0 && festival && (
@@ -429,12 +438,12 @@ function Stat({ label, value }: { label: string; value: number }) {
 
 // ============================================================
 function VehicleBlock({
-  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIds,
+  vehicle, legs, assignments, staff, staffById, festivalId, slug, focusLegId, conflictByLeg, assignedIdsByDate,
 }: {
   vehicle: Vehicle; legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; slug: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
-  assignedIds: Set<string>;
+  assignedIdsByDate: Map<string, Set<string>>;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [addLegOpen, setAddLegOpen] = useState(false);
@@ -490,7 +499,7 @@ function VehicleBlock({
         festivalId={festivalId}
         focusLegId={focusLegId}
         conflictByLeg={conflictByLeg}
-        assignedIds={assignedIds}
+        assignedIdsByDate={assignedIdsByDate}
       />
 
       <div className="p-3 border-t print:hidden">
@@ -530,12 +539,12 @@ function StatusPill({ status }: { status: string }) {
 
 // ============================================================
 function LegsTable({
-  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIds,
+  legs, assignments, staff, staffById, festivalId, focusLegId, conflictByLeg, assignedIdsByDate,
 }: {
   legs: Leg[]; assignments: Assignment[]; staff: Staff[];
   staffById: Record<string, Staff>; festivalId: string; focusLegId: string | null;
   conflictByLeg: Map<string, Set<string>>;
-  assignedIds: Set<string>;
+  assignedIdsByDate: Map<string, Set<string>>;
 }) {
   if (legs.length === 0) {
     return <div className="p-4 text-sm text-muted-foreground italic">No legs scheduled.</div>;
@@ -566,7 +575,7 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
-              assignedIds={assignedIds}
+              assignedIds={assignedIdsByDate.get(leg.leg_date) ?? new Set()}
             />
           ))}
         </tbody>
