@@ -295,7 +295,7 @@ export default function FestivalStaffExport() {
           .order("name", { ascending: true }),
         supabase
           .from("festival_contracts")
-          .select("id, concept_name")
+          .select("concept_id, concepts:concept_id(id, name)")
           .eq("festival_id", (f as any).id)
           .eq("is_active", true),
         supabase
