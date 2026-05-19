@@ -8,7 +8,7 @@ import { getSystemPrompt } from "./prompts.ts";
 
 const ALLOWED_TYPES = new Set([
   "contract", "electricity", "cooling", "facade",
-  "prices", "accommodation", "setup", "generic",
+  "prices", "accommodation", "setup", "staff_roster", "generic",
 ]);
 
 const MODEL = "claude-sonnet-4-20250514";
