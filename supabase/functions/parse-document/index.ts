@@ -97,7 +97,8 @@ async function callClaude(
   apiKey: string,
   systemPrompt: string,
   userContent: unknown[],
-): Promise<{ text: string; usage: { input_tokens: number; output_tokens: number } }> {
+  maxTokens = 4000,
+): Promise<{ text: string; usage: { input_tokens: number; output_tokens: number }; stopReason: string }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -108,7 +109,7 @@ async function callClaude(
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
       temperature: 0,
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
@@ -123,7 +124,7 @@ async function callClaude(
     .filter((c: { type: string }) => c.type === "text")
     .map((c: { text: string }) => c.text)
     .join("\n");
-  return { text, usage: json.usage ?? { input_tokens: 0, output_tokens: 0 } };
+  return { text, usage: json.usage ?? { input_tokens: 0, output_tokens: 0 }, stopReason: json.stop_reason ?? "" };
 }
 
 function tryParseJson(s: string): unknown | null {
