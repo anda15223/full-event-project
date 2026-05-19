@@ -138,6 +138,7 @@ const App = () => (
             <Route path="/festivals/:slug/setup/export" element={<Protected><FestivalSetupExport /></Protected>} />
             <Route path="/festivals/:slug/staff" element={<Protected><FestivalStaff /></Protected>} />
             <Route path="/festivals/:slug/staff/export" element={<Protected><FestivalStaffExport /></Protected>} />
+            <Route path="/festivals/:slug/staff-v2" element={<Protected><FestivalStaffV2 /></Protected>} />
             <Route path="/festivals/:slug/info/export" element={<Protected><FestivalInfoExport /></Protected>} />
             <Route path="/staff" element={<Protected><StaffDirectory /></Protected>} />
             <Route path="*" element={<NotFound />} />
