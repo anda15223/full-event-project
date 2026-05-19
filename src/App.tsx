@@ -64,6 +64,7 @@ import FestivalEquipmentExport from "./pages/festival/FestivalEquipmentExport";
 import FestivalPricesExport from "./pages/festival/FestivalPricesExport";
 import FestivalSetupExport from "./pages/festival/FestivalSetupExport";
 import FestivalInfoExport from "./pages/festival/FestivalInfoExport";
+import StaffDirectory from "./pages/StaffDirectory";
 
 const queryClient = new QueryClient();
 
@@ -137,6 +138,7 @@ const App = () => (
             <Route path="/festivals/:slug/staff" element={<Protected><FestivalStaff /></Protected>} />
             <Route path="/festivals/:slug/staff/export" element={<Protected><FestivalStaffExport /></Protected>} />
             <Route path="/festivals/:slug/info/export" element={<Protected><FestivalInfoExport /></Protected>} />
+            <Route path="/staff" element={<Protected><StaffDirectory /></Protected>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
