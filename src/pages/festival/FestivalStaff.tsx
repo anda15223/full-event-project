@@ -556,6 +556,13 @@ export default function FestivalStaff() {
         />
       )}
 
+      {festivalId && (
+        <ShiftScheduleCard
+          festivalId={festivalId}
+          concepts={concepts.filter((c) => /fish|gyros/i.test(c.name))}
+        />
+      )}
+
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1166,6 +1173,175 @@ function ShiftGroupsEditor({
                     ))}
                   </ul>
                 )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============ Shift schedule card (Thu–Sun grid per person) ============
+
+const SCHEDULE_DAYS = [
+  { date: "2026-05-21", label: "Thu 21" },
+  { date: "2026-05-22", label: "Fri 22" },
+  { date: "2026-05-23", label: "Sat 23" },
+  { date: "2026-05-24", label: "Sun 24" },
+] as const;
+
+function fmt(t: string | null | undefined) {
+  if (!t) return "—";
+  return t.slice(0, 5);
+}
+
+function hoursBetween(start: string, end: string, crosses: boolean) {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let mins = eh * 60 + em - (sh * 60 + sm);
+  if (mins <= 0 || crosses) mins += 24 * 60;
+  return Math.round((mins / 60) * 10) / 10;
+}
+
+function ShiftScheduleCard({
+  festivalId,
+  concepts,
+}: {
+  festivalId: string;
+  concepts: Concept[];
+}) {
+  const conceptIds = concepts.map((c) => c.id);
+  const dates = SCHEDULE_DAYS.map((d) => d.date);
+
+  const shiftsQ = useQuery({
+    queryKey: ["shift-schedule", festivalId, conceptIds.join(",")],
+    enabled: conceptIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_shifts")
+        .select("id, concept_id, shift_date, start_time, end_time, crosses_midnight, notes")
+        .eq("festival_id", festivalId)
+        .in("concept_id", conceptIds)
+        .in("shift_date", dates)
+        .not("notes", "is", null);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  if (concepts.length === 0) return null;
+
+  const rows = shiftsQ.data ?? [];
+
+  return (
+    <div className="rounded-xl border-2 border-primary/30 bg-card p-4 md:p-5 space-y-5 print:border-0 print:p-0">
+      <div className="flex items-center justify-between gap-2 print:hidden">
+        <div>
+          <h2 className="font-heading text-xl font-semibold">Shift schedule · Thu–Sun</h2>
+          <p className="text-xs text-muted-foreground">
+            Per-person hours for Fish & Chips and Gyros. Sunday closes 24:00.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => window.print()}>
+          Print / PDF
+        </Button>
+      </div>
+
+      <div className="space-y-6">
+        {concepts.map((c) => {
+          const conceptRows = rows.filter(
+            (r) => r.concept_id === c.id && (r.notes ?? "").trim()
+          );
+          const byName = new Map<string, any[]>();
+          conceptRows.forEach((r) => {
+            const n = (r.notes ?? "").trim();
+            if (!byName.has(n)) byName.set(n, []);
+            byName.get(n)!.push(r);
+          });
+
+          const names = Array.from(byName.keys()).sort((a, b) => {
+            // late closers (Thu end 02:00) first, then early
+            const aLate = (byName.get(a)!.find((r) => r.shift_date === "2026-05-21")?.end_time ?? "").startsWith("02");
+            const bLate = (byName.get(b)!.find((r) => r.shift_date === "2026-05-21")?.end_time ?? "").startsWith("02");
+            if (aLate !== bLate) return aLate ? -1 : 1;
+            return a.localeCompare(b);
+          });
+
+          let conceptTotal = 0;
+
+          return (
+            <div key={c.id} className="space-y-2">
+              <h3 className="font-heading text-base font-semibold">{c.name}</h3>
+              <div className="overflow-x-auto rounded-lg border bg-background">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-medium">Name</th>
+                      {SCHEDULE_DAYS.map((d) => (
+                        <th key={d.date} className="text-center px-2 py-2 font-medium">
+                          {d.label}
+                        </th>
+                      ))}
+                      <th className="text-center px-3 py-2 font-medium tabular-nums">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {names.map((name) => {
+                      const personRows = byName.get(name)!;
+                      let personTotal = 0;
+                      return (
+                        <tr key={name} className="border-t">
+                          <td className="px-3 py-2 font-medium whitespace-nowrap">{name}</td>
+                          {SCHEDULE_DAYS.map((d) => {
+                            const r = personRows.find((x) => x.shift_date === d.date);
+                            if (!r) {
+                              return (
+                                <td key={d.date} className="text-center px-2 py-2 text-muted-foreground">
+                                  —
+                                </td>
+                              );
+                            }
+                            const h = hoursBetween(r.start_time, r.end_time, !!r.crosses_midnight);
+                            personTotal += h;
+                            const isLate = (r.end_time ?? "").startsWith("02");
+                            return (
+                              <td key={d.date} className="text-center px-2 py-2 tabular-nums">
+                                <div className={isLate ? "text-foreground font-medium" : "text-foreground"}>
+                                  {fmt(r.start_time)}–{fmt(r.end_time)}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">{h}h</div>
+                              </td>
+                            );
+                          })}
+                          <td className="text-center px-3 py-2 tabular-nums font-semibold">
+                            {(conceptTotal += personTotal, personTotal)}h
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {names.length === 0 && (
+                      <tr>
+                        <td colSpan={SCHEDULE_DAYS.length + 2} className="text-center text-muted-foreground py-6 text-xs">
+                          No shifts yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {names.length > 0 && (
+                    <tfoot className="bg-muted/30">
+                      <tr className="border-t">
+                        <td className="px-3 py-2 font-semibold text-xs uppercase tracking-wide">
+                          {c.name} total
+                        </td>
+                        <td colSpan={SCHEDULE_DAYS.length} />
+                        <td className="text-center px-3 py-2 tabular-nums font-bold">
+                          {Math.round(conceptTotal * 10) / 10}h
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
               </div>
             </div>
           );
