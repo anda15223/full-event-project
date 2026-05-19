@@ -107,10 +107,10 @@ export default function FestivalStaffV2() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff_assignment")
-        .select("id, staff_id, primary_concept_id")
+        .select("id, staff_id, primary_concept_id, station_id")
         .eq("festival_id", fest!.id);
       if (error) throw error;
-      return (data ?? []) as { id: string; staff_id: string; primary_concept_id: string | null }[];
+      return (data ?? []) as { id: string; staff_id: string; primary_concept_id: string | null; station_id: string | null }[];
     },
   });
 
@@ -184,6 +184,7 @@ export default function FestivalStaffV2() {
           full_name: s.full_name,
           display_name: s.display_name,
           primaryConceptId: a.primary_concept_id,
+          assignedStationId: a.station_id ?? null,
         } as GridStaff;
       })
       .filter((x): x is GridStaff => !!x);

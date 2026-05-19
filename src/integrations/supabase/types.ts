@@ -5204,6 +5204,7 @@ export type Database = {
           primary_concept_id: string | null
           source_override: string | null
           staff_id: string
+          station_id: string | null
           updated_at: string
           works_fri: boolean | null
           works_sat: boolean | null
@@ -5224,6 +5225,7 @@ export type Database = {
           primary_concept_id?: string | null
           source_override?: string | null
           staff_id: string
+          station_id?: string | null
           updated_at?: string
           works_fri?: boolean | null
           works_sat?: boolean | null
@@ -5244,6 +5246,7 @@ export type Database = {
           primary_concept_id?: string | null
           source_override?: string | null
           staff_id?: string
+          station_id?: string | null
           updated_at?: string
           works_fri?: boolean | null
           works_sat?: boolean | null
@@ -5326,6 +5329,13 @@ export type Database = {
             columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_staff_assignment_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "station"
             referencedColumns: ["id"]
           },
         ]
