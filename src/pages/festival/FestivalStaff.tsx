@@ -547,6 +547,14 @@ export default function FestivalStaff() {
         })()}
       </div>
 
+      {festivalId && (
+        <ShiftGroupsEditor
+          festivalId={festivalId}
+          concepts={concepts.filter((c) =>
+            /fish|gyros/i.test(c.name)
+          )}
+        />
+      )}
 
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
@@ -989,5 +997,180 @@ function SlotPicker({
         })}
       </SelectContent>
     </Select>
+  );
+}
+
+// ============ Shift groups editor (Fish & Gyros) ============
+
+type ShiftRow = {
+  id: string;
+  concept_id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  notes: string | null;
+};
+
+const WORK_DAYS = ["2026-05-21", "2026-05-22", "2026-05-23"]; // Thu, Fri, Sat
+const LATE_END = "02:00:00";
+const EARLY_END = "23:00:00";
+
+function ShiftGroupsEditor({
+  festivalId,
+  concepts,
+}: {
+  festivalId: string;
+  concepts: Concept[];
+}) {
+  const qc = useQueryClient();
+  const conceptIds = concepts.map((c) => c.id);
+
+  const shiftsQ = useQuery({
+    queryKey: ["shift-groups", festivalId, conceptIds.join(",")],
+    enabled: conceptIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_shifts")
+        .select("id, concept_id, shift_date, start_time, end_time, notes")
+        .eq("festival_id", festivalId)
+        .in("concept_id", conceptIds)
+        .in("shift_date", WORK_DAYS)
+        .not("notes", "is", null);
+      if (error) throw error;
+      return (data ?? []) as ShiftRow[];
+    },
+  });
+
+  const swap = useMutation({
+    mutationFn: async ({
+      conceptId,
+      name,
+      target,
+    }: {
+      conceptId: string;
+      name: string;
+      target: "late" | "early";
+    }) => {
+      const rows = (shiftsQ.data ?? []).filter(
+        (r) => r.concept_id === conceptId && (r.notes ?? "").trim() === name
+      );
+      for (const r of rows) {
+        const isThu = r.shift_date === "2026-05-21";
+        const newStart = target === "late" ? "11:00:00" : isThu ? "11:00:00" : "10:00:00";
+        const newEnd = target === "late" ? LATE_END : EARLY_END;
+        const { error } = await supabase
+          .from("festival_shifts")
+          .update({
+            start_time: newStart,
+            end_time: newEnd,
+            crosses_midnight: target === "late",
+          })
+          .eq("id", r.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shift-groups", festivalId] });
+      toast.success("Shift updated");
+    },
+    onError: (e: any) => toast.error(e.message ?? "Swap failed"),
+  });
+
+  if (concepts.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-4">
+      <div>
+        <h2 className="font-heading text-lg font-semibold">Shift groups · Thu–Sat</h2>
+        <p className="text-xs text-muted-foreground">
+          Swap people between late closers (until 02:00) and early out (until 23:00). Sunday is unchanged.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {concepts.map((c) => {
+          const rows = (shiftsQ.data ?? []).filter((r) => r.concept_id === c.id);
+          const byName = new Map<string, ShiftRow[]>();
+          rows.forEach((r) => {
+            const n = (r.notes ?? "").trim();
+            if (!n) return;
+            if (!byName.has(n)) byName.set(n, []);
+            byName.get(n)!.push(r);
+          });
+
+          const late: string[] = [];
+          const early: string[] = [];
+          Array.from(byName.entries()).forEach(([name, rs]) => {
+            const thu = rs.find((r) => r.shift_date === "2026-05-21") ?? rs[0];
+            if ((thu?.end_time ?? "").startsWith("02")) late.push(name);
+            else if ((thu?.end_time ?? "").startsWith("23")) early.push(name);
+          });
+          late.sort();
+          early.sort();
+
+          return (
+            <div key={c.id} className="rounded-lg border bg-background p-3 space-y-3">
+              <h3 className="font-semibold text-sm border-b pb-1">{c.name}</h3>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80 mb-1.5">
+                  Late closers · until 02:00 ({late.length})
+                </div>
+                {late.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">—</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {late.map((n) => (
+                      <li key={n} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{n}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-[10px]"
+                          disabled={swap.isPending}
+                          onClick={() =>
+                            swap.mutate({ conceptId: c.id, name: n, target: "early" })
+                          }
+                        >
+                          → Early
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80 mb-1.5">
+                  Early out · until 23:00 ({early.length})
+                </div>
+                {early.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">—</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {early.map((n) => (
+                      <li key={n} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{n}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-[10px]"
+                          disabled={swap.isPending}
+                          onClick={() =>
+                            swap.mutate({ conceptId: c.id, name: n, target: "late" })
+                          }
+                        >
+                          → Late
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
