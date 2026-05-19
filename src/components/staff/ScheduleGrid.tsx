@@ -76,52 +76,129 @@ export default function ScheduleGrid(props: Props) {
 
   const groups = useMemo<Group[]>(() => {
     if (viewMode === "position") {
-      // For each concept: rows are its festival_position entries, plus a "No position" row for orphan shifts.
+      // For each concept: a position header sub-row, then one row per assigned
+      // person at that station (so people show up even with zero shifts),
+      // then empty-slot placeholders if assigned < slots_needed.
       const out: Group[] = [];
       for (const c of orderedConcepts) {
         const conceptPositions = positions.filter((p) => p.concept_id === c.id);
+        const conceptStaff = staff.filter((s) => s.primaryConceptId === c.id);
         const knownStationIds = new Set(conceptPositions.map((p) => p.station_id));
-        const rows: Row[] = conceptPositions.map((p) => {
+        const rows: Row[] = [];
+
+        for (const p of conceptPositions) {
           const stn = stationById.get(p.station_id);
-          return {
-            key: `pos:${p.id}`,
+          const peopleHere = conceptStaff
+            .filter((s) => s.assignedStationId === p.station_id)
+            .sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+          // Station header row
+          rows.push({
+            key: `pos:${p.id}:hdr`,
             leftLabel: stn?.label ?? "?",
-            leftSub: `slots ${p.slots_needed ?? 0}`,
+            leftSub: `${peopleHere.length}/${p.slots_needed ?? peopleHere.length} assigned`,
             conceptId: c.id,
             ctxStationId: p.station_id,
-            matches: (s) => s.conceptId === c.id && s.stationId === p.station_id,
-          };
-        });
-        // No position row: shifts for this concept where stationId is null OR not in knownStationIds
-        const hasOrphans = shifts.some(
-          (s) => s.conceptId === c.id && (!s.stationId || !knownStationIds.has(s.stationId)),
-        );
-        if (hasOrphans || rows.length === 0) {
+            matches: () => false, // header row, no shifts shown here
+          });
+
+          // One row per assigned person at this station
+          for (const person of peopleHere) {
+            rows.push({
+              key: `pos:${p.id}:p:${person.id}`,
+              leftLabel: `· ${person.display_name || person.full_name}`,
+              leftSub: undefined,
+              conceptId: c.id,
+              ctxStationId: p.station_id,
+              ctxStaffId: person.id,
+              matches: (s) => s.staffId === person.id && s.stationId === p.station_id,
+            });
+          }
+
+          // Empty slot placeholders
+          const slotsNeeded = p.slots_needed ?? peopleHere.length;
+          const empties = Math.max(0, slotsNeeded - peopleHere.length);
+          for (let i = 0; i < empties; i++) {
+            rows.push({
+              key: `pos:${p.id}:empty:${i}`,
+              leftLabel: "— Empty slot —",
+              leftSub: undefined,
+              conceptId: c.id,
+              ctxStationId: p.station_id,
+              matches: () => false,
+            });
+          }
+        }
+
+        // People assigned to this concept with NO station (or unknown station)
+        const stationlessPeople = conceptStaff
+          .filter((s) => !s.assignedStationId || !knownStationIds.has(s.assignedStationId))
+          .sort((a, b) => a.full_name.localeCompare(b.full_name));
+        if (stationlessPeople.length > 0) {
           rows.push({
-            key: `pos:${c.id}:none`,
-            leftLabel: "No position",
+            key: `pos:${c.id}:nostation:hdr`,
+            leftLabel: "No station",
+            leftSub: `${stationlessPeople.length} unassigned`,
+            conceptId: c.id,
+            ctxStationId: null,
+            matches: () => false,
+          });
+          for (const person of stationlessPeople) {
+            rows.push({
+              key: `pos:${c.id}:nostation:${person.id}`,
+              leftLabel: `· ${person.display_name || person.full_name}`,
+              conceptId: c.id,
+              ctxStationId: null,
+              ctxStaffId: person.id,
+              matches: (s) => s.staffId === person.id,
+            });
+          }
+        }
+
+        // Orphan shifts row (shifts pointing at stations we don't have a position for)
+        const hasOrphans = shifts.some(
+          (s) => s.conceptId === c.id && s.stationId && !knownStationIds.has(s.stationId),
+        );
+        if (hasOrphans) {
+          rows.push({
+            key: `pos:${c.id}:orphans`,
+            leftLabel: "Other shifts",
             leftSub: "shifts without a planned position",
             conceptId: c.id,
             ctxStationId: null,
             matches: (s) => s.conceptId === c.id && (!s.stationId || !knownStationIds.has(s.stationId)),
           });
         }
+
+        if (rows.length === 0) continue;
         out.push({ conceptId: c.id, conceptName: c.name, conceptSlug: c.slug, rows });
       }
-      // Catch-all for null-concept assignments (Management / Not assigned)
-      const orphanGroup: Row[] = [];
-      const hasNullConcept = staff.some((s) => !s.primaryConceptId) ||
-        shifts.some((s) => !s.conceptId);
-      if (hasNullConcept) {
-        orphanGroup.push({
-          key: "null-concept:none",
-          leftLabel: "Unassigned / Management",
-          leftSub: "no concept",
+
+      // Catch-all for null-concept assignments (Management)
+      const noConceptStaff = staff
+        .filter((s) => !s.primaryConceptId)
+        .sort((a, b) => a.full_name.localeCompare(b.full_name));
+      const hasNullShifts = shifts.some((s) => !s.conceptId);
+      if (noConceptStaff.length > 0 || hasNullShifts) {
+        const rows: Row[] = noConceptStaff.map((person) => ({
+          key: `null:p:${person.id}`,
+          leftLabel: `· ${person.display_name || person.full_name}`,
           conceptId: null,
           ctxStationId: null,
-          matches: (s) => !s.conceptId,
-        });
-        out.push({ conceptId: null, conceptName: "Unassigned / Management", conceptSlug: "_", rows: orphanGroup });
+          ctxStaffId: person.id,
+          matches: (s) => s.staffId === person.id,
+        }));
+        if (hasNullShifts) {
+          rows.push({
+            key: "null:orphan",
+            leftLabel: "Other shifts",
+            leftSub: "no concept",
+            conceptId: null,
+            ctxStationId: null,
+            matches: (s) => !s.conceptId,
+          });
+        }
+        out.push({ conceptId: null, conceptName: "Unassigned / Management", conceptSlug: "_", rows });
       }
       return out;
     }
