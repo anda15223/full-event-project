@@ -114,6 +114,15 @@ export default function FestivalStaffV2() {
       if (!res.ok || !res.parsed) throw new Error(res.message || res.error || "Parse failed");
 
       const roster = res.parsed;
+      const totalShifts = roster.people.reduce((n, p) => n + (p.shifts?.length ?? 0), 0);
+      const zeroShiftWorkers = roster.people.filter(
+        (p) => (p.works?.thu || p.works?.fri || p.works?.sat || p.works?.sun) && (p.shifts?.length ?? 0) === 0,
+      );
+      console.log("[staff-v2] parsed", {
+        people: roster.people.length,
+        totalShiftObjects: totalShifts,
+        workersWithZeroShifts: zeroShiftWorkers.map((p) => p.full_name),
+      });
       setParsed(roster);
 
       // Build plan
