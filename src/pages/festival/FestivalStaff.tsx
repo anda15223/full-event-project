@@ -556,6 +556,13 @@ export default function FestivalStaff() {
         />
       )}
 
+      {festivalId && (
+        <ShiftScheduleCard
+          festivalId={festivalId}
+          concepts={concepts.filter((c) => /fish|gyros/i.test(c.name))}
+        />
+      )}
+
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
