@@ -11,6 +11,7 @@ export interface GridStaff {
   full_name: string;
   display_name: string | null;
   primaryConceptId: string | null;
+  assignedStationId?: string | null;
 }
 export interface GridShift {
   id: string;
