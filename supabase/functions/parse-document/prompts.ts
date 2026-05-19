@@ -231,6 +231,76 @@ export const GENERIC_SYSTEM_PROMPT = `You parse a document related to festival o
   "raw_notes": string
 }`;
 
+export const STAFF_ROSTER_SYSTEM_PROMPT = `You parse staff roster PDFs for festival operations. The document typically has TWO pages:
+
+PAGE 1 — Summary header + grouped person table.
+- Header shows totals like "28 people · 28 confirmed · 26 need accom".
+- People are grouped under concept headings, in this fixed set:
+  "Management", "Fish & Chips", "La Creperie" (also "La Crêperie"),
+  "Gyropolis Gyros" (also "Gyros"), "Chicks 'n' Buns" (also "Chicks"),
+  "Not assigned".
+- Each person row has columns:
+  Name | Location | Station | Source | Th Fr Sa Su (works) | aT aF aS aU (accom needs) | OK
+- A mark/check in a Th/Fr/Sa/Su cell = works that day (true). Blank = false.
+- A mark in aT/aF/aS/aU = needs accommodation that day. Blank = false.
+- "OK" / checkmark in the last column = confirmed=true; blank=false.
+
+PAGE 2 — Shift schedule per concept.
+- Rows: Name | Thu | Fri | Sat | Sun | Total.
+- Each day cell may contain a time range "11:00-02:00 (15h)" optionally followed by a short note
+  like "Setup + prep + full service", "SWAP", "SWAP BACK", "Late group 5 ppl".
+- A dash "—" or blank cell = no shift that day; omit it from the shifts array.
+- The "(15h)" parenthetical is hours — IGNORE it, we recompute.
+
+EXTRACTION RULES:
+1. Extract EVERY person on page 1, including everyone in the "Not assigned" group.
+2. Preserve names EXACTLY as written. Do NOT normalize, merge, or strip disambiguators.
+   Examples that MUST be kept distinct: "Anik", "Prieten Anik 1", "Prieten Anik 2",
+   "Anik friend 3", "Ilias", "Ilias girlfriend", "Roman Stefan", "Roman Ionut",
+   two separate "Shivaji" rows, etc. If a row's name appears twice, return two people.
+3. For each person on page 1, find their page 2 shift row by exact name match and attach the shifts array.
+   If no page 2 row exists for that person, shifts = [].
+4. station = raw text from the Station column (e.g. "Pita wrapper", "Fryer", "Crepes",
+   "Cash register"). Leave null for Management people who have no station.
+5. source ∈ {"Søborg","Local","Unknown"} when stated; otherwise null.
+6. Times: split "11:00-02:00 (15h)" → start="11:00", end="02:00", label is any trailing note
+   from the same cell (without the time/parenthetical).
+7. festival_hint: if the document names the festival (e.g. "Jelling Musikfestival 2026"),
+   put it here. Otherwise null.
+
+Return ONLY valid JSON. No markdown fences. No commentary.
+
+Schema:
+{
+  "festival_hint": string | null,
+  "summary": {
+    "total_people": number | null,
+    "confirmed": number | null,
+    "need_accom": number | null
+  },
+  "people": [
+    {
+      "full_name": string,
+      "concept_group": "Management" | "Fish & Chips" | "La Creperie" | "Gyropolis Gyros" | "Chicks 'n' Buns" | "Not assigned",
+      "home_location": string | null,
+      "station": string | null,
+      "source": "Søborg" | "Local" | "Unknown" | null,
+      "works": { "thu": boolean, "fri": boolean, "sat": boolean, "sun": boolean },
+      "needs_accom": { "thu": boolean, "fri": boolean, "sat": boolean, "sun": boolean },
+      "confirmed": boolean,
+      "shifts": [
+        {
+          "day": "thu" | "fri" | "sat" | "sun",
+          "start": string | null,
+          "end": string | null,
+          "label": string | null
+        }
+      ]
+    }
+  ],
+  "raw_notes": string
+}`;
+
 export function getSystemPrompt(documentType: string): string {
   switch (documentType) {
     case "contract": return CONTRACT_SYSTEM_PROMPT;
@@ -240,6 +310,8 @@ export function getSystemPrompt(documentType: string): string {
     case "prices": return PRICES_SYSTEM_PROMPT;
     case "accommodation": return ACCOMMODATION_SYSTEM_PROMPT;
     case "setup": return SETUP_SYSTEM_PROMPT;
+    case "staff_roster": return STAFF_ROSTER_SYSTEM_PROMPT;
     default: return GENERIC_SYSTEM_PROMPT;
   }
 }
+
