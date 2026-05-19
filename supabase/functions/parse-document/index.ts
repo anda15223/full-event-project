@@ -97,7 +97,8 @@ async function callClaude(
   apiKey: string,
   systemPrompt: string,
   userContent: unknown[],
-): Promise<{ text: string; usage: { input_tokens: number; output_tokens: number } }> {
+  maxTokens = 4000,
+): Promise<{ text: string; usage: { input_tokens: number; output_tokens: number }; stopReason: string }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -108,7 +109,7 @@ async function callClaude(
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
       temperature: 0,
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
@@ -123,18 +124,59 @@ async function callClaude(
     .filter((c: { type: string }) => c.type === "text")
     .map((c: { text: string }) => c.text)
     .join("\n");
-  return { text, usage: json.usage ?? { input_tokens: 0, output_tokens: 0 } };
+  return { text, usage: json.usage ?? { input_tokens: 0, output_tokens: 0 }, stopReason: json.stop_reason ?? "" };
 }
 
 function tryParseJson(s: string): unknown | null {
-  let t = s.trim();
+  let t = (s ?? "").trim();
   if (t.startsWith("```")) {
     t = t.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
   }
-  const first = t.indexOf("{");
-  const last = t.lastIndexOf("}");
-  if (first !== -1 && last !== -1 && last > first) t = t.slice(first, last + 1);
-  try { return JSON.parse(t); } catch { return null; }
+  // Find outermost JSON (object or array)
+  const objStart = t.indexOf("{");
+  const arrStart = t.indexOf("[");
+  let start = -1;
+  let isArr = false;
+  if (objStart === -1 && arrStart === -1) return null;
+  if (arrStart !== -1 && (objStart === -1 || arrStart < objStart)) { start = arrStart; isArr = true; }
+  else { start = objStart; }
+  const end = isArr ? t.lastIndexOf("]") : t.lastIndexOf("}");
+  if (end > start) t = t.slice(start, end + 1);
+  else t = t.slice(start);
+  try { return JSON.parse(t); } catch { /* fall through */ }
+  // Attempt to repair truncated JSON by closing brackets
+  const repaired = repairTruncatedJson(t);
+  if (repaired) {
+    try { return JSON.parse(repaired); } catch { /* ignore */ }
+  }
+  return null;
+}
+
+function repairTruncatedJson(s: string): string | null {
+  let t = s.replace(/,\s*$/, "");
+  const stack: string[] = [];
+  let inStr = false;
+  let esc = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (c === "\\") { esc = true; continue; }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{" || c === "[") stack.push(c);
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  if (inStr) t += '"';
+  // Trim trailing partial token after last complete value
+  t = t.replace(/,\s*("[^"]*"\s*:\s*)?$/, "");
+  while (stack.length) {
+    const open = stack.pop();
+    t += open === "{" ? "}" : "]";
+  }
+  return t;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -284,15 +326,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // First Claude call
-    let { text: claudeText, usage } = await callClaude(apiKey, systemPrompt, userContent);
+    // First Claude call — bigger budget for staff_roster (large tabular extraction)
+    const maxTokens = documentType === "staff_roster" ? 16000 : 4000;
+    let { text: claudeText, usage, stopReason } = await callClaude(apiKey, systemPrompt, userContent, maxTokens);
     let parsed = tryParseJson(claudeText);
 
     // Retry once with stricter nudge
     if (!parsed) {
-      const nudge = systemPrompt + "\n\nIMPORTANT: Return ONLY valid JSON, no markdown fences, no prose.";
-      const retry = await callClaude(apiKey, nudge, userContent);
+      const nudge = systemPrompt + "\n\nIMPORTANT: Return ONLY valid JSON, no markdown fences, no prose. Keep the response compact and complete — do not truncate.";
+      const retry = await callClaude(apiKey, nudge, userContent, maxTokens);
       claudeText = retry.text;
+      stopReason = retry.stopReason;
       usage = {
         input_tokens: usage.input_tokens + retry.usage.input_tokens,
         output_tokens: usage.output_tokens + retry.usage.output_tokens,
@@ -303,8 +347,12 @@ Deno.serve(async (req) => {
     if (!parsed) {
       return jsonResponse({
         ok: false, error: "JSON_PARSE_FAILED",
-        message: "Claude did not return valid JSON after retry.",
-        rawTextExcerpt: rawTextExcerpt ?? claudeText.slice(0, 500),
+        message: stopReason === "max_tokens"
+          ? "Claude response was truncated (hit max_tokens). Try a smaller document or increase max_tokens."
+          : "Claude did not return valid JSON after retry.",
+        stopReason,
+        claudeOutputExcerpt: (claudeText ?? "").slice(0, 800),
+        rawTextExcerpt: rawTextExcerpt ?? "",
       }, 502);
     }
 
