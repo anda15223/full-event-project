@@ -547,6 +547,14 @@ export default function FestivalStaff() {
         })()}
       </div>
 
+      {festivalId && (
+        <ShiftGroupsEditor
+          festivalId={festivalId}
+          concepts={concepts.filter((c) =>
+            /fish|gyros/i.test(c.name)
+          )}
+        />
+      )}
 
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
