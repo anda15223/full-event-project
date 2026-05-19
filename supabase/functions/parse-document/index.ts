@@ -128,14 +128,55 @@ async function callClaude(
 }
 
 function tryParseJson(s: string): unknown | null {
-  let t = s.trim();
+  let t = (s ?? "").trim();
   if (t.startsWith("```")) {
     t = t.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
   }
-  const first = t.indexOf("{");
-  const last = t.lastIndexOf("}");
-  if (first !== -1 && last !== -1 && last > first) t = t.slice(first, last + 1);
-  try { return JSON.parse(t); } catch { return null; }
+  // Find outermost JSON (object or array)
+  const objStart = t.indexOf("{");
+  const arrStart = t.indexOf("[");
+  let start = -1;
+  let isArr = false;
+  if (objStart === -1 && arrStart === -1) return null;
+  if (arrStart !== -1 && (objStart === -1 || arrStart < objStart)) { start = arrStart; isArr = true; }
+  else { start = objStart; }
+  const end = isArr ? t.lastIndexOf("]") : t.lastIndexOf("}");
+  if (end > start) t = t.slice(start, end + 1);
+  else t = t.slice(start);
+  try { return JSON.parse(t); } catch { /* fall through */ }
+  // Attempt to repair truncated JSON by closing brackets
+  const repaired = repairTruncatedJson(t);
+  if (repaired) {
+    try { return JSON.parse(repaired); } catch { /* ignore */ }
+  }
+  return null;
+}
+
+function repairTruncatedJson(s: string): string | null {
+  let t = s.replace(/,\s*$/, "");
+  const stack: string[] = [];
+  let inStr = false;
+  let esc = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (c === "\\") { esc = true; continue; }
+      if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{" || c === "[") stack.push(c);
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  if (inStr) t += '"';
+  // Trim trailing partial token after last complete value
+  t = t.replace(/,\s*("[^"]*"\s*:\s*)?$/, "");
+  while (stack.length) {
+    const open = stack.pop();
+    t += open === "{" ? "}" : "]";
+  }
+  return t;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
