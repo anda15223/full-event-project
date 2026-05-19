@@ -417,18 +417,25 @@ export default function FestivalStaffV2() {
         </section>
       )}
 
-      <Dialog open={showModal} onOpenChange={setShowModal}>
+      <Dialog open={showModal} onOpenChange={(open) => { if (!importing) setShowModal(open); }}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {parsed?.people.length ?? 0} people parsed from roster
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              Review before import — nothing has been saved yet
             </DialogTitle>
             {parsed && (
               <p className="text-sm text-muted-foreground">
-                {parsed.summary?.confirmed ?? 0} confirmed · {parsed.summary?.need_accom ?? 0} need accom
+                {parsed.people.length} people parsed · {parsed.summary?.confirmed ?? 0} confirmed · {parsed.summary?.need_accom ?? 0} need accom.
+                Click <strong>Confirm import</strong> below to write, or <strong>Cancel</strong> to discard.
               </p>
             )}
           </DialogHeader>
+
+          <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 text-xs px-3 py-2">
+            This is a preview. No staff, assignments or shifts have been written to the database yet.
+            Review the three sections below, resolve any ambiguous names, then confirm.
+          </div>
 
           <div className="space-y-5">
             {/* Reuse */}
