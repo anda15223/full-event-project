@@ -184,6 +184,7 @@ export default function FestivalStaffV2() {
           full_name: s.full_name,
           display_name: s.display_name,
           primaryConceptId: a.primary_concept_id,
+          assignedStationId: a.station_id ?? null,
         } as GridStaff;
       })
       .filter((x): x is GridStaff => !!x);
