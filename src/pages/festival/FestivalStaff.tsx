@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Check, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, X, FileDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,9 +267,16 @@ export default function FestivalStaff() {
           </Button>
           <h1 className="font-heading text-2xl font-semibold">Staff</h1>
         </div>
-        <Button size="sm" onClick={() => addStaff.mutate()} disabled={!festivalId}>
-          <Plus className="h-4 w-4 mr-1" /> Add person
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" asChild>
+            <Link to={`/festivals/${slug}/staff/export`}>
+              <FileDown className="h-4 w-4 mr-1" /> Export
+            </Link>
+          </Button>
+          <Button size="sm" onClick={() => addStaff.mutate()} disabled={!festivalId}>
+            <Plus className="h-4 w-4 mr-1" /> Add person
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
