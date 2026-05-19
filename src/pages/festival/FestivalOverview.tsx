@@ -909,7 +909,7 @@ export default function FestivalOverview() {
             );
             tiles.push(
               <FestivalTile key="staff-v2" href={`/festivals/${slug}/staff-v2`}
-                icon={UserCog} iconAccent="sky" title="Staff (new)"
+                icon={UserCog} iconAccent="blue" title="Staff (new)"
                 primaryStat="Roster import"
                 secondaryStat="New system — parallel" status="gray" />
             );
