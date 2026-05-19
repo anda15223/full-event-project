@@ -258,13 +258,31 @@ EXTRACTION RULES:
    Examples that MUST be kept distinct: "Anik", "Prieten Anik 1", "Prieten Anik 2",
    "Anik friend 3", "Ilias", "Ilias girlfriend", "Roman Stefan", "Roman Ionut",
    two separate "Shivaji" rows, etc. If a row's name appears twice, return two people.
-3. For each person on page 1, find their page 2 shift row by exact name match and attach the shifts array.
-   If no page 2 row exists for that person, shifts = [].
+3. For each person on page 1, find their page 2 shift row and attach a SHIFT for EVERY
+   day-cell that contains a time. CRITICAL RULES for matching and shift extraction:
+   a. Match by name with flexibility: page 2 may abbreviate or vary slightly
+      (e.g. page 1 "Mihaela Popescu" ↔ page 2 "Mihaela"; "Roman Ionut" ↔ "Ionut").
+      Match within the SAME concept group. If exactly one page-2 row in the person's
+      concept is a reasonable match (case-insensitive substring of first name, or
+      first-name match), USE IT.
+   b. Walk EACH of the four day-columns (Thu/Fri/Sat/Sun) independently. Every cell
+      with a time range = one shift object. A person working 4 days = 4 shift objects.
+      Do NOT stop after the first day; do NOT collapse identical days into one.
+      Do NOT skip a day just because its time matches the prior day.
+   c. A dash "—", "-", "OFF", or blank cell = no shift that day (skip).
+   d. Unnamed continuation rows on page 2 ("Late group 5 ppl", "SWAP", "SWAP BACK")
+      are ANNOTATIONS on the immediately preceding named person's row — do NOT
+      treat them as new people; merge their time into the preceding person's shifts
+      if they contain times, otherwise attach as a label.
+   e. Sanity check: if page 1 says a person works Thu+Fri+Sat+Sun and you returned
+      an empty shifts array for them, look again — you almost certainly missed
+      their page-2 row.
 4. station = raw text from the Station column (e.g. "Pita wrapper", "Fryer", "Crepes",
    "Cash register"). Leave null for Management people who have no station.
 5. source ∈ {"Søborg","Local","Unknown"} when stated; otherwise null.
 6. Times: split "11:00-02:00 (15h)" → start="11:00", end="02:00", label is any trailing note
-   from the same cell (without the time/parenthetical).
+   from the same cell (without the time/parenthetical). The "(15h)" hours value MUST be
+   ignored — we recompute.
 7. festival_hint: if the document names the festival (e.g. "Jelling Musikfestival 2026"),
    put it here. Otherwise null.
 
