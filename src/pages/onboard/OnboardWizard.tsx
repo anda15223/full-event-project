@@ -166,7 +166,7 @@ export default function OnboardWizard() {
     setSaving(true);
     const { error } = await supabase
       .from("fep_employee_profile")
-      .update(patch)
+      .update(patch as any)
       .eq("magic_token", token);
     setSaving(false);
     if (error) { toast.error(error.message || "Save failed"); return false; }
