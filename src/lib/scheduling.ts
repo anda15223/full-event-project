@@ -69,3 +69,29 @@ export function formatTimeHHMM(t: string | null | undefined): string {
   // expects HH:MM:SS or HH:MM
   return t.slice(0, 5);
 }
+
+export function timeToMinutes(t: string | null | undefined): number {
+  if (!t) return 0;
+  const [h, m] = t.split(":");
+  return (parseInt(h, 10) || 0) * 60 + (parseInt(m, 10) || 0);
+}
+
+// Returns [startMin, endMin] with endMin > startMin (adds 24h if crosses midnight)
+export function shiftIntervalMin(start: string, end: string): [number, number] {
+  const s = timeToMinutes(start);
+  let e = timeToMinutes(end);
+  if (e <= s) e += 24 * 60;
+  return [s, e];
+}
+
+export function intervalsOverlap(
+  a: [number, number],
+  b: [number, number],
+): boolean {
+  return a[0] < b[1] && b[0] < a[1];
+}
+
+export function computeShiftHours(start: string, end: string): number {
+  const [s, e] = shiftIntervalMin(start, end);
+  return Math.round(((e - s) / 60) * 100) / 100;
+}
