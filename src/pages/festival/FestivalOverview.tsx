@@ -908,12 +908,6 @@ export default function FestivalOverview() {
                 secondaryStat="Names, days, locations" status="gray" />
             );
             tiles.push(
-              <FestivalTile key="staff-v2" href={`/festivals/${slug}/staff-v2`}
-                icon={UserCog} iconAccent="blue" title="Staff (new)"
-                primaryStat="Roster import"
-                secondaryStat="New system — parallel" status="gray" />
-            );
-            tiles.push(
               <FestivalTile key="groceries" href="#"
                 icon={ShoppingCart} iconAccent="slate" title="Groceries"
                 primaryStat="Coming soon" disabled />
