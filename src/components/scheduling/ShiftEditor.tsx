@@ -455,6 +455,49 @@ export default function ShiftEditor(props: Props) {
                 rows={2}
               />
             </div>
+
+            {mode === "edit" && existingShift && otherDays.length > 0 && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <div className="text-sm font-medium">Duplicate this shift to other days</div>
+                <div className="space-y-1.5">
+                  {otherDays.map((d) => {
+                    const exists = hasExistingOnDay(d.date);
+                    const checked = duplicateDays.has(d.date);
+                    return (
+                      <label
+                        key={d.date}
+                        className="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleDay(d.date)}
+                        />
+                        <span>{d.label}</span>
+                        {exists && (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-700">
+                            <AlertTriangle className="h-3 w-3" />
+                            {existingShift.staff_name ?? "Staff"} already has a shift here
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={duplicateDays.size === 0 || duplicating}
+                  onClick={handleDuplicate}
+                >
+                  {duplicating
+                    ? "Duplicating…"
+                    : `Duplicate to ${duplicateDays.size || 0} day${
+                        duplicateDays.size === 1 ? "" : "s"
+                      }`}
+                </Button>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="flex sm:justify-between gap-2 pt-2">
