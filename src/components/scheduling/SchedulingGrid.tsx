@@ -368,6 +368,109 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     });
   }
 
+
+  // ============ Drag and drop ============
+  const qc = useQueryClient();
+  const shiftsKey = ["sched-grid-shifts", festivalId];
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+  const [activeDrag, setActiveDrag] = useState<{ shift: ShiftRow; slug: string | null } | null>(null);
+
+  const slugByPositionId = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const p of positionsQ.data ?? []) {
+      const c = conceptById.get(p.concept_id);
+      m.set(p.id, c?.slug ?? null);
+    }
+    return m;
+  }, [positionsQ.data, conceptById]);
+
+  const collisionDetection: CollisionDetection = (args) => {
+    const hits = pointerWithin(args);
+    const chipHit = hits.find((h) => String(h.id).startsWith("chip:"));
+    if (chipHit) return [chipHit];
+    const cellHit = hits.find((h) => String(h.id).startsWith("cell:"));
+    return cellHit ? [cellHit] : [];
+  };
+
+  function onDragStart(e: DragStartEvent) {
+    const data = e.active.data.current as { shiftId: string } | undefined;
+    if (!data) return;
+    const shift = (shiftsQ.data ?? []).find((s) => s.id === data.shiftId);
+    if (!shift) return;
+    setActiveDrag({ shift, slug: slugByPositionId.get(shift.schedule_position_id) ?? null });
+  }
+
+  async function onDragEnd(e: DragEndEvent) {
+    setActiveDrag(null);
+    const over = e.over;
+    const active = e.active;
+    if (!over) return;
+    const a = active.data.current as
+      | { shiftId: string; positionId: string; date: string }
+      | undefined;
+    const o = over.data.current as
+      | { kind: "cell" | "chip"; positionId: string; date: string; shiftId?: string }
+      | undefined;
+    if (!a || !o) return;
+    if (o.positionId === a.positionId && o.date === a.date) return;
+
+    const prev = qc.getQueryData<ShiftRow[]>(shiftsKey) ?? [];
+    let next: ShiftRow[];
+    let action: "move" | "swap";
+    let swapPartnerId: string | undefined;
+
+    if (o.kind === "chip" && o.shiftId && o.shiftId !== a.shiftId) {
+      action = "swap";
+      swapPartnerId = o.shiftId;
+      next = prev.map((s) => {
+        if (s.id === a.shiftId) return { ...s, schedule_position_id: o.positionId, shift_date: o.date };
+        if (s.id === o.shiftId) return { ...s, schedule_position_id: a.positionId, shift_date: a.date };
+        return s;
+      });
+    } else {
+      action = "move";
+      next = prev.map((s) =>
+        s.id === a.shiftId
+          ? { ...s, schedule_position_id: o.positionId, shift_date: o.date }
+          : s,
+      );
+    }
+
+    qc.setQueryData(shiftsKey, next);
+
+    try {
+      if (action === "swap" && swapPartnerId) {
+        const r1 = await supabase
+          .from("festival_schedule_shift")
+          .update({ schedule_position_id: o.positionId, shift_date: o.date })
+          .eq("id", a.shiftId);
+        if (r1.error) throw r1.error;
+        const r2 = await supabase
+          .from("festival_schedule_shift")
+          .update({ schedule_position_id: a.positionId, shift_date: a.date })
+          .eq("id", swapPartnerId);
+        if (r2.error) throw r2.error;
+        toast.success("Shifts swapped");
+      } else {
+        const r = await supabase
+          .from("festival_schedule_shift")
+          .update({ schedule_position_id: o.positionId, shift_date: o.date })
+          .eq("id", a.shiftId);
+        if (r.error) throw r.error;
+        toast.success("Shift moved");
+      }
+      shiftsQ.refetch();
+    } catch (err) {
+      console.error("Drag-and-drop save failed", err);
+      qc.setQueryData(shiftsKey, prev);
+      toast.error("Couldn't move shift — try again");
+    }
+  }
+
+
+
   function openEdit(positionId: string, date: string, shiftId: string) {
     const info = positionInfo.get(positionId);
     if (!info) return;
