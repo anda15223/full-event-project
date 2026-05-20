@@ -484,6 +484,361 @@ export type Database = {
           },
         ]
       }
+      fep_company_settings: {
+        Row: {
+          address: string
+          company_name: string
+          contract_cc_email: string | null
+          created_at: string
+          cvr: string
+          default_hourly_rate: number
+          email: string
+          id: string
+          insurance_company: string | null
+          phone: string | null
+          sick_contact_name: string | null
+          sick_contact_phone: string | null
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          company_name: string
+          contract_cc_email?: string | null
+          created_at?: string
+          cvr: string
+          default_hourly_rate?: number
+          email: string
+          id?: string
+          insurance_company?: string | null
+          phone?: string | null
+          sick_contact_name?: string | null
+          sick_contact_phone?: string | null
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          company_name?: string
+          contract_cc_email?: string | null
+          created_at?: string
+          cvr?: string
+          default_hourly_rate?: number
+          email?: string
+          id?: string
+          insurance_company?: string | null
+          phone?: string | null
+          sick_contact_name?: string | null
+          sick_contact_phone?: string | null
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fep_contract: {
+        Row: {
+          company_snapshot: Json | null
+          created_at: string
+          emailed_to_admin_at: string | null
+          emailed_to_hire_at: string | null
+          employee_profile_id: string | null
+          employee_snapshot: Json | null
+          end_date: string
+          festival_id: string
+          festival_staff_id: string
+          hourly_rate: number
+          id: string
+          job_title: string | null
+          signed_at: string | null
+          signed_ip: string | null
+          signed_name: string | null
+          signed_pdf_path: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["fep_contract_status"]
+          template_id: string | null
+          updated_at: string
+          work_hours_description: string | null
+          work_location: string | null
+        }
+        Insert: {
+          company_snapshot?: Json | null
+          created_at?: string
+          emailed_to_admin_at?: string | null
+          emailed_to_hire_at?: string | null
+          employee_profile_id?: string | null
+          employee_snapshot?: Json | null
+          end_date: string
+          festival_id: string
+          festival_staff_id: string
+          hourly_rate: number
+          id?: string
+          job_title?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_name?: string | null
+          signed_pdf_path?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["fep_contract_status"]
+          template_id?: string | null
+          updated_at?: string
+          work_hours_description?: string | null
+          work_location?: string | null
+        }
+        Update: {
+          company_snapshot?: Json | null
+          created_at?: string
+          emailed_to_admin_at?: string | null
+          emailed_to_hire_at?: string | null
+          employee_profile_id?: string | null
+          employee_snapshot?: Json | null
+          end_date?: string
+          festival_id?: string
+          festival_staff_id?: string
+          hourly_rate?: number
+          id?: string
+          job_title?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          signed_name?: string | null
+          signed_pdf_path?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["fep_contract_status"]
+          template_id?: string | null
+          updated_at?: string
+          work_hours_description?: string | null
+          work_location?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fep_contract_employee_profile_id_fkey"
+            columns: ["employee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "fep_employee_profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_contract_festival_staff_id_fkey"
+            columns: ["festival_staff_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fep_contract_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "fep_contract_template"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fep_contract_template: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          is_active: boolean
+          language: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          is_active?: boolean
+          language?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          is_active?: boolean
+          language?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fep_employee_profile: {
+        Row: {
+          account_nr: string | null
+          address_line1: string | null
+          address_line2: string | null
+          auth_user_id: string | null
+          bank_type: Database["public"]["Enums"]["fep_bank_type"] | null
+          city: string | null
+          country: string | null
+          cpr: string | null
+          created_at: string
+          date_of_birth: string | null
+          email: string | null
+          eu_status: Database["public"]["Enums"]["fep_eu_status"] | null
+          festival_staff_id: string
+          full_legal_name: string | null
+          iban: string | null
+          id: string
+          magic_token: string | null
+          magic_token_expires_at: string | null
+          nationality: string | null
+          onboarding_status: Database["public"]["Enums"]["fep_onboarding_status"]
+          phone: string | null
+          postal_code: string | null
+          privacy_accepted_at: string | null
+          profile_completed_at: string | null
+          reg_nr: string | null
+          swift: string | null
+          terms_accepted_at: string | null
+          updated_at: string
+          work_permit_file_path: string | null
+        }
+        Insert: {
+          account_nr?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          auth_user_id?: string | null
+          bank_type?: Database["public"]["Enums"]["fep_bank_type"] | null
+          city?: string | null
+          country?: string | null
+          cpr?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          eu_status?: Database["public"]["Enums"]["fep_eu_status"] | null
+          festival_staff_id: string
+          full_legal_name?: string | null
+          iban?: string | null
+          id?: string
+          magic_token?: string | null
+          magic_token_expires_at?: string | null
+          nationality?: string | null
+          onboarding_status?: Database["public"]["Enums"]["fep_onboarding_status"]
+          phone?: string | null
+          postal_code?: string | null
+          privacy_accepted_at?: string | null
+          profile_completed_at?: string | null
+          reg_nr?: string | null
+          swift?: string | null
+          terms_accepted_at?: string | null
+          updated_at?: string
+          work_permit_file_path?: string | null
+        }
+        Update: {
+          account_nr?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          auth_user_id?: string | null
+          bank_type?: Database["public"]["Enums"]["fep_bank_type"] | null
+          city?: string | null
+          country?: string | null
+          cpr?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          email?: string | null
+          eu_status?: Database["public"]["Enums"]["fep_eu_status"] | null
+          festival_staff_id?: string
+          full_legal_name?: string | null
+          iban?: string | null
+          id?: string
+          magic_token?: string | null
+          magic_token_expires_at?: string | null
+          nationality?: string | null
+          onboarding_status?: Database["public"]["Enums"]["fep_onboarding_status"]
+          phone?: string | null
+          postal_code?: string | null
+          privacy_accepted_at?: string | null
+          profile_completed_at?: string | null
+          reg_nr?: string | null
+          swift?: string | null
+          terms_accepted_at?: string | null
+          updated_at?: string
+          work_permit_file_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fep_employee_profile_festival_staff_id_fkey"
+            columns: ["festival_staff_id"]
+            isOneToOne: true
+            referencedRelation: "festival_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fep_user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["fep_app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["fep_app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["fep_app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       festival_accommodation: {
         Row: {
           accommodation_type: Database["public"]["Enums"]["accommodation_type"]
@@ -7837,6 +8192,14 @@ export type Database = {
       }
     }
     Functions: {
+      fep_has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["fep_app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      fep_is_admin: { Args: never; Returns: boolean }
       get_active_rules_for_festival: {
         Args: { festival_slug: string }
         Returns: Json
@@ -7882,6 +8245,15 @@ export type Database = {
         | "other"
       equipment_source: "by_us" | "by_festival"
       equipment_status: "pending" | "confirmed" | "delivered" | "returned"
+      fep_app_role: "admin" | "staff"
+      fep_bank_type: "dk" | "iban" | "nemkonto"
+      fep_contract_status: "draft" | "sent" | "signed" | "declined" | "expired"
+      fep_eu_status: "eu_eea" | "non_eu"
+      fep_onboarding_status:
+        | "incomplete"
+        | "completed"
+        | "contract_sent"
+        | "contract_signed"
       safety_electrical_status:
         | "not_required"
         | "pending"
@@ -8057,6 +8429,16 @@ export const Constants = {
       ],
       equipment_source: ["by_us", "by_festival"],
       equipment_status: ["pending", "confirmed", "delivered", "returned"],
+      fep_app_role: ["admin", "staff"],
+      fep_bank_type: ["dk", "iban", "nemkonto"],
+      fep_contract_status: ["draft", "sent", "signed", "declined", "expired"],
+      fep_eu_status: ["eu_eea", "non_eu"],
+      fep_onboarding_status: [
+        "incomplete",
+        "completed",
+        "contract_sent",
+        "contract_signed",
+      ],
       safety_electrical_status: [
         "not_required",
         "pending",
