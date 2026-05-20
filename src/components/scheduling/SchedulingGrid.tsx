@@ -944,7 +944,7 @@ function ConceptBlock(props: {
 
       {positions.map((p) => {
         const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
-        const label = positionLabel(p.station_label, p.position_number, sib);
+        const label = positionLabel(p.station_label, p.position_number, sib, p.display_name);
         return (
           <tr key={p.id} className="border-b last:border-b-0">
             <td
