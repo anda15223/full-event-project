@@ -1232,6 +1232,7 @@ export type Database = {
           id: string
           notes: string | null
           open_time: string
+          operating_date: string
           updated_at: string
         }
         Insert: {
@@ -1244,6 +1245,7 @@ export type Database = {
           id?: string
           notes?: string | null
           open_time: string
+          operating_date: string
           updated_at?: string
         }
         Update: {
@@ -1256,6 +1258,7 @@ export type Database = {
           id?: string
           notes?: string | null
           open_time?: string
+          operating_date?: string
           updated_at?: string
         }
         Relationships: [

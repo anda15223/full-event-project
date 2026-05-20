@@ -18,12 +18,14 @@ interface HoursRow {
   id: string;
   festival_id: string;
   concept_id: string;
+  operating_date: string;
   open_time: string;
   close_time: string;
   crosses_midnight: boolean;
   computed_hours: number | null;
   notes: string | null;
 }
+
 
 interface Props {
   festivalId: string;
@@ -129,12 +131,15 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     queryFn: async (): Promise<HoursRow[]> => {
       const { data, error } = await supabase
         .from("festival_concept_hours")
-        .select("id, festival_id, concept_id, open_time, close_time, crosses_midnight, computed_hours, notes")
-        .eq("festival_id", festivalId);
+        .select("id, festival_id, concept_id, operating_date, open_time, close_time, crosses_midnight, computed_hours, notes")
+        .eq("festival_id", festivalId)
+        .order("concept_id")
+        .order("operating_date");
       if (error) throw error;
       return (data ?? []) as HoursRow[];
     },
   });
+
 
   const shiftsQ = useQuery({
     queryKey: ["sched-grid-shifts", festivalId],
@@ -164,17 +169,24 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     },
   });
 
-  const hoursByConceptId = useMemo(() => {
-    const m = new Map<string, HoursRow>();
-    for (const h of hoursQ.data ?? []) m.set(h.concept_id, h);
+  const hoursByConceptByDate = useMemo(() => {
+    const m = new Map<string, Map<string, HoursRow>>();
+    for (const h of hoursQ.data ?? []) {
+      let inner = m.get(h.concept_id);
+      if (!inner) {
+        inner = new Map();
+        m.set(h.concept_id, inner);
+      }
+      inner.set(h.operating_date, h);
+    }
     return m;
   }, [hoursQ.data]);
 
   const [hoursDialog, setHoursDialog] = useState<{
     conceptId: string;
     conceptName: string;
-    existing: HoursRow | null;
   } | null>(null);
+
 
   const days = useMemo(() => {
     if (!festivalQ.data) return [];
@@ -303,7 +315,9 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
               const slug = concept?.slug ?? null;
               const accent = conceptAccentClass(slug);
               const sibKeyCounts = grouped.sibCount;
-              const hours = concept ? hoursByConceptId.get(concept.id) ?? null : null;
+              const hoursByDate = concept
+                ? hoursByConceptByDate.get(concept.id) ?? new Map<string, HoursRow>()
+                : new Map<string, HoursRow>();
               return (
                 <ConceptBlock
                   key={concept?.id ?? "orphan"}
@@ -320,19 +334,19 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
                   onCellClick={onCellClick}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
-                  hours={hours}
+                  hoursByDate={hoursByDate}
                   onEditHours={() => {
                     if (!concept) return;
                     setHoursDialog({
                       conceptId: concept.id,
                       conceptName: concept.short_name ?? concept.name,
-                      existing: hours,
                     });
                   }}
                 />
               );
             })}
           </tbody>
+
 
           <tfoot className="sticky bottom-0 z-20 bg-card">
             <tr className="border-t">
@@ -354,12 +368,16 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
         </table>
       </div>
 
-      {hoursDialog && (
+      {hoursDialog && festivalQ.data && (
         <ConceptHoursDialog
           festivalId={festivalId}
+          festivalStartDate={festivalQ.data.start_date}
+          festivalEndDate={festivalQ.data.end_date}
           conceptId={hoursDialog.conceptId}
           conceptName={hoursDialog.conceptName}
-          existingHours={hoursDialog.existing}
+          existingHoursByDate={
+            hoursByConceptByDate.get(hoursDialog.conceptId) ?? new Map()
+          }
           open={!!hoursDialog}
           onOpenChange={(o) => {
             if (!o) setHoursDialog(null);
@@ -369,6 +387,7 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
           }}
         />
       )}
+
     </TooltipProvider>
   );
 }
@@ -387,14 +406,18 @@ function ConceptBlock(props: {
   onCellClick: Props["onCellClick"];
   posColClass: string;
   dayColClass: string;
-  hours: HoursRow | null;
+  hoursByDate: Map<string, HoursRow>;
   onEditHours: () => void;
 }) {
   const {
     conceptId, conceptName, conceptActive, accentClass, slug, totalCols, days,
     positions, sibCount, shiftsByCell, onCellClick, posColClass, dayColClass,
-    hours, onEditHours,
+    hoursByDate, onEditHours,
   } = props;
+
+  const setDays = days.filter((d) => hoursByDate.has(d.date));
+  const unsetCount = days.length - setDays.length;
+  const hasAny = setDays.length > 0;
 
   return (
     <>
@@ -405,23 +428,7 @@ function ConceptBlock(props: {
         >
           <div className="flex items-center gap-2 flex-wrap">
             <span>{conceptName}</span>
-            {conceptId && hours && (
-              <>
-                <span className="opacity-50">·</span>
-                <span className="font-normal text-xs opacity-80">
-                  {formatTimeHHMM(hours.open_time)}–{formatTimeHHMM(hours.close_time)}
-                </span>
-                <button
-                  type="button"
-                  onClick={onEditHours}
-                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
-                  aria-label="Edit opening hours"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              </>
-            )}
-            {conceptId && !hours && (
+            {conceptId && !hasAny && (
               <>
                 <span className="opacity-50">·</span>
                 <button
@@ -433,9 +440,43 @@ function ConceptBlock(props: {
                 </button>
               </>
             )}
+            {conceptId && hasAny && (
+              <>
+                {setDays.map((d) => {
+                  const h = hoursByDate.get(d.date)!;
+                  const dayShort = d.label.split(" ")[0];
+                  return (
+                    <span key={d.date} className="flex items-center gap-2">
+                      <span className="opacity-50">·</span>
+                      <span className="font-normal text-xs opacity-80">
+                        {dayShort} {formatTimeHHMM(h.open_time).replace(":00", "")}
+                        –{formatTimeHHMM(h.close_time).replace(":00", "")}
+                      </span>
+                    </span>
+                  );
+                })}
+                {unsetCount > 0 && (
+                  <>
+                    <span className="opacity-50">·</span>
+                    <span className="font-normal text-xs opacity-70">
+                      {unsetCount} day{unsetCount === 1 ? "" : "s"} unset
+                    </span>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={onEditHours}
+                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
+                  aria-label="Edit opening hours"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
           </div>
         </td>
       </tr>
+
       {positions.map((p) => {
         const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
         const label = positionLabel(p.station_label, p.position_number, sib);
