@@ -524,7 +524,16 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
 
   return (
     <TooltipProvider delayDuration={200}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setActiveDrag(null)}
+        autoScroll
+      >
       <div className="rounded-lg border bg-card overflow-auto max-h-[calc(100vh-260px)] md:max-h-[calc(100vh-240px)]">
+
         <table className="w-full border-collapse text-sm">
           {/* Header */}
           <thead>
