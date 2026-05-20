@@ -4633,6 +4633,7 @@ export type Database = {
         Row: {
           concept_id: string
           created_at: string
+          display_name: string | null
           display_order: number
           festival_id: string
           id: string
@@ -4644,6 +4645,7 @@ export type Database = {
         Insert: {
           concept_id: string
           created_at?: string
+          display_name?: string | null
           display_order?: number
           festival_id: string
           id?: string
@@ -4655,6 +4657,7 @@ export type Database = {
         Update: {
           concept_id?: string
           created_at?: string
+          display_name?: string | null
           display_order?: number
           festival_id?: string
           id?: string

@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,7 @@ interface PositionRow {
   position_number: number;
   display_order: number;
   notes: string | null;
+  display_name: string | null;
   station: { label: string } | null;
 }
 
@@ -55,6 +57,12 @@ export default function PositionManager({ festivalId }: Props) {
   const [pendingStationId, setPendingStationId] = useState<string>("");
   const [pendingNotes, setPendingNotes] = useState("");
   const [removeTarget, setRemoveTarget] = useState<{ id: string; label: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; currentLabel: string; displayName: string | null } | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  useEffect(() => {
+    setEditValue(editTarget?.displayName ?? "");
+  }, [editTarget]);
 
   // a) Active concepts for this festival
   const conceptsQ = useQuery({
@@ -86,7 +94,7 @@ export default function PositionManager({ festivalId }: Props) {
     queryFn: async (): Promise<PositionRow[]> => {
       const { data, error } = await supabase
         .from("festival_schedule_position")
-        .select("id, festival_id, concept_id, station_id, position_number, display_order, notes, station:station_id(label)")
+        .select("id, festival_id, concept_id, station_id, position_number, display_order, notes, display_name, station:station_id(label)")
         .eq("festival_id", festivalId)
         .order("concept_id")
         .order("display_order")
@@ -212,6 +220,24 @@ export default function PositionManager({ festivalId }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Failed to remove position"),
   });
 
+  const renameMutation = useMutation({
+    mutationFn: async (args: { id: string; displayName: string | null }) => {
+      const { error } = await supabase
+        .from("festival_schedule_position")
+        .update({ display_name: args.displayName, updated_at: new Date().toISOString() })
+        .eq("id", args.id);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+      qc.invalidateQueries({ queryKey: ["sched-grid-positions", festivalId] });
+      toast.success(args.displayName ? "Position renamed" : "Name reset");
+      setEditTarget(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to rename position"),
+  });
+
   if (conceptsQ.isLoading || positionsQ.isLoading || stationsQ.isLoading) {
     return <Skeleton className="h-48 w-full" />;
   }
@@ -232,6 +258,7 @@ export default function PositionManager({ festivalId }: Props) {
         const positions = positionsByConcept.get(concept.id) ?? [];
         const stationCounts = new Map<string, number>();
         for (const p of positions) {
+          if (p.display_name && p.display_name.trim().length > 0) continue;
           stationCounts.set(p.station_id, (stationCounts.get(p.station_id) ?? 0) + 1);
         }
         return (
@@ -257,6 +284,7 @@ export default function PositionManager({ festivalId }: Props) {
                       p.station?.label ?? "Unknown station",
                       p.position_number,
                       sibCount,
+                      p.display_name,
                     );
                     return (
                       <li key={p.id} className="flex items-center justify-between px-4 py-2">
@@ -267,15 +295,30 @@ export default function PositionManager({ festivalId }: Props) {
                             <span className="ml-2 text-xs text-muted-foreground">— {p.notes}</span>
                           )}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setRemoveTarget({ id: p.id, label })}
-                          aria-label={`Remove ${label}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setEditTarget({
+                              id: p.id,
+                              currentLabel: label,
+                              displayName: p.display_name,
+                            })}
+                            aria-label={`Rename ${label}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setRemoveTarget({ id: p.id, label })}
+                            aria-label={`Remove ${label}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </li>
                     );
                   })}
@@ -385,6 +428,68 @@ export default function PositionManager({ festivalId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit display_name */}
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit position name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              Current: <span className="font-medium text-foreground">{editTarget?.currentLabel}</span>
+            </div>
+            <div>
+              <Label htmlFor="position-display-name">New name</Label>
+              <Input
+                id="position-display-name"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                placeholder="e.g. Burger prep"
+                maxLength={80}
+                autoFocus
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Leave blank to use the auto-numbered station label
+                (e.g. "Assembly" or "Assembly 1").
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
+            {editTarget?.displayName && (
+              <Button
+                variant="ghost"
+                disabled={renameMutation.isPending}
+                onClick={() => editTarget && renameMutation.mutate({
+                  id: editTarget.id,
+                  displayName: null,
+                })}
+              >
+                Reset
+              </Button>
+            )}
+            <Button
+              disabled={renameMutation.isPending}
+              onClick={() => {
+                if (!editTarget) return;
+                const trimmed = editValue.trim();
+                renameMutation.mutate({
+                  id: editTarget.id,
+                  displayName: trimmed.length > 0 ? trimmed : null,
+                });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

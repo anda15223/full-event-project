@@ -80,6 +80,7 @@ interface PositionRow {
   display_order: number;
   notes: string | null;
   station_label: string;
+  display_name: string | null;
 }
 interface ShiftRow {
   id: string;
@@ -146,7 +147,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     queryFn: async (): Promise<PositionRow[]> => {
       const { data, error } = await supabase
         .from("festival_schedule_position")
-        .select("id, concept_id, station_id, position_number, display_order, notes, station:station_id(label)")
+        .select("id, concept_id, station_id, position_number, display_order, notes, display_name, station:station_id(label)")
         .eq("festival_id", festivalId)
         .order("concept_id")
         .order("display_order")
@@ -160,6 +161,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
         display_order: r.display_order,
         notes: r.notes,
         station_label: r.station?.label ?? "Unknown station",
+        display_name: r.display_name ?? null,
       }));
     },
   });
@@ -291,6 +293,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     // station sibling counts per concept+station
     const sibCount = new Map<string, number>();
     for (const p of positions) {
+      if (p.display_name && p.display_name.trim().length > 0) continue;
       const k = `${p.concept_id}:${p.station_id}`;
       sibCount.set(k, (sibCount.get(k) ?? 0) + 1);
     }
@@ -335,6 +338,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     const m = new Map<string, { label: string; conceptId: string; conceptName: string }>();
     const sibCount = new Map<string, number>();
     for (const p of positionsQ.data ?? []) {
+      if (p.display_name && p.display_name.trim().length > 0) continue;
       const k = `${p.concept_id}:${p.station_id}`;
       sibCount.set(k, (sibCount.get(k) ?? 0) + 1);
     }
@@ -342,7 +346,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
       const c = conceptById.get(p.concept_id);
       const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
       m.set(p.id, {
-        label: positionLabel(p.station_label, p.position_number, sib),
+        label: positionLabel(p.station_label, p.position_number, sib, p.display_name),
         conceptId: p.concept_id,
         conceptName: c?.short_name ?? c?.name ?? "?",
       });
@@ -940,7 +944,7 @@ function ConceptBlock(props: {
 
       {positions.map((p) => {
         const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
-        const label = positionLabel(p.station_label, p.position_number, sib);
+        const label = positionLabel(p.station_label, p.position_number, sib, p.display_name);
         return (
           <tr key={p.id} className="border-b last:border-b-0">
             <td
