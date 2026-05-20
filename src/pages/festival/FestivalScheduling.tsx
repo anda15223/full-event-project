@@ -2,11 +2,13 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateRange } from "@/lib/dateFormat";
 import PositionManager from "@/components/scheduling/PositionManager";
+import SchedulingGrid from "@/components/scheduling/SchedulingGrid";
 
 export default function FestivalScheduling() {
   const { slug = "" } = useParams();
