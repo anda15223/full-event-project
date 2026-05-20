@@ -289,20 +289,20 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="rounded-lg border bg-card overflow-x-auto">
+      <div className="rounded-lg border bg-card overflow-auto max-h-[calc(100vh-260px)] md:max-h-[calc(100vh-240px)]">
         <table className="w-full border-collapse text-sm">
           {/* Header */}
-          <thead className="sticky top-0 z-20 bg-card">
-            <tr className="border-b">
+          <thead>
+            <tr>
               <th
-                className={`${POS_COL} sticky left-0 z-30 bg-card text-left px-3 py-2 font-medium text-muted-foreground border-r`}
+                className={`${POS_COL} sticky top-0 left-0 z-30 bg-card text-left px-3 py-2 font-medium text-muted-foreground border-r border-b shadow-[0_1px_0_0_hsl(var(--border))]`}
               >
                 Position
               </th>
               {days.map((d) => (
                 <th
                   key={d.date}
-                  className={`${DAY_COL} text-left px-3 py-2 font-medium text-muted-foreground border-r last:border-r-0`}
+                  className={`${DAY_COL} sticky top-0 z-20 bg-card text-left px-3 py-2 font-medium text-muted-foreground border-r border-b last:border-r-0 shadow-[0_1px_0_0_hsl(var(--border))]`}
                 >
                   {d.label}
                 </th>
@@ -348,17 +348,17 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
           </tbody>
 
 
-          <tfoot className="sticky bottom-0 z-20 bg-card">
-            <tr className="border-t">
+          <tfoot>
+            <tr>
               <td
-                className={`${POS_COL} sticky left-0 z-30 bg-card px-3 py-2 font-medium border-r`}
+                className={`${POS_COL} sticky bottom-0 left-0 z-30 bg-card px-3 py-2 font-medium border-r border-t`}
               >
                 Hours
               </td>
               {days.map((d) => (
                 <td
                   key={d.date}
-                  className={`${DAY_COL} px-3 py-2 font-medium border-r last:border-r-0`}
+                  className={`${DAY_COL} sticky bottom-0 z-20 bg-card px-3 py-2 font-medium border-r border-t last:border-r-0`}
                 >
                   {formatHoursMinutes(totalsByDay.get(d.date) ?? 0)}
                 </td>
