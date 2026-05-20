@@ -57,6 +57,12 @@ export default function PositionManager({ festivalId }: Props) {
   const [pendingStationId, setPendingStationId] = useState<string>("");
   const [pendingNotes, setPendingNotes] = useState("");
   const [removeTarget, setRemoveTarget] = useState<{ id: string; label: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<{ id: string; currentLabel: string; displayName: string | null } | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  useEffect(() => {
+    setEditValue(editTarget?.displayName ?? "");
+  }, [editTarget]);
 
   // a) Active concepts for this festival
   const conceptsQ = useQuery({
