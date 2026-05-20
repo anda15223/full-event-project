@@ -169,17 +169,24 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     },
   });
 
-  const hoursByConceptId = useMemo(() => {
-    const m = new Map<string, HoursRow>();
-    for (const h of hoursQ.data ?? []) m.set(h.concept_id, h);
+  const hoursByConceptByDate = useMemo(() => {
+    const m = new Map<string, Map<string, HoursRow>>();
+    for (const h of hoursQ.data ?? []) {
+      let inner = m.get(h.concept_id);
+      if (!inner) {
+        inner = new Map();
+        m.set(h.concept_id, inner);
+      }
+      inner.set(h.operating_date, h);
+    }
     return m;
   }, [hoursQ.data]);
 
   const [hoursDialog, setHoursDialog] = useState<{
     conceptId: string;
     conceptName: string;
-    existing: HoursRow | null;
   } | null>(null);
+
 
   const days = useMemo(() => {
     if (!festivalQ.data) return [];
