@@ -69,6 +69,7 @@ import FestivalInfoExport from "./pages/festival/FestivalInfoExport";
 import StaffDirectory from "./pages/StaffDirectory";
 import CompanySettings from "./pages/crew/CompanySettings";
 import FestivalCrewHire from "./pages/crew/FestivalCrewHire";
+import OnboardWizard from "./pages/onboard/OnboardWizard";
 import AdminRoute from "./components/crew/AdminRoute";
 
 const queryClient = new QueryClient();
