@@ -428,6 +428,68 @@ export default function PositionManager({ festivalId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit display_name */}
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit position name</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              Current: <span className="font-medium text-foreground">{editTarget?.currentLabel}</span>
+            </div>
+            <div>
+              <Label htmlFor="position-display-name">New name</Label>
+              <Input
+                id="position-display-name"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                placeholder="e.g. Burger prep"
+                maxLength={80}
+                autoFocus
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Leave blank to use the auto-numbered station label
+                (e.g. "Assembly" or "Assembly 1").
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
+            {editTarget?.displayName && (
+              <Button
+                variant="ghost"
+                disabled={renameMutation.isPending}
+                onClick={() => editTarget && renameMutation.mutate({
+                  id: editTarget.id,
+                  displayName: null,
+                })}
+              >
+                Reset
+              </Button>
+            )}
+            <Button
+              disabled={renameMutation.isPending}
+              onClick={() => {
+                if (!editTarget) return;
+                const trimmed = editValue.trim();
+                renameMutation.mutate({
+                  id: editTarget.id,
+                  displayName: trimmed.length > 0 ? trimmed : null,
+                });
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
