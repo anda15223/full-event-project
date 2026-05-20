@@ -22,12 +22,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   computeShiftHours,
   formatHoursMinutes,
   formatTimeHHMM,
   intervalsOverlap,
   shiftIntervalMin,
+  type FestivalDay,
 } from "@/lib/scheduling";
 
 export interface ShiftEditorShift {
