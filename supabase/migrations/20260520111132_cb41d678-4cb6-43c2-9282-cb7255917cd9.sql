@@ -1,0 +1,1 @@
+ALTER TABLE public.festival_schedule_position ADD COLUMN display_name text;
