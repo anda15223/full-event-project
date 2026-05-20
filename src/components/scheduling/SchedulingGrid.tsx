@@ -11,8 +11,11 @@ import {
   festivalDays,
   formatHoursMinutes,
   formatTimeHHMM,
+  intervalsOverlap,
+  shiftIntervalMin,
 } from "@/lib/scheduling";
 import ConceptHoursDialog from "./ConceptHoursDialog";
+import ShiftEditor, { ShiftEditorShift, FestivalStaffLite } from "./ShiftEditor";
 
 interface HoursRow {
   id: string;
@@ -29,9 +32,10 @@ interface HoursRow {
 
 interface Props {
   festivalId: string;
-  onCellClick: (args: { positionId: string; date: string; shiftId?: string }) => void;
   onGoToPositions?: () => void;
 }
+
+
 
 interface FestivalRow {
   id: string;
