@@ -131,12 +131,15 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     queryFn: async (): Promise<HoursRow[]> => {
       const { data, error } = await supabase
         .from("festival_concept_hours")
-        .select("id, festival_id, concept_id, open_time, close_time, crosses_midnight, computed_hours, notes")
-        .eq("festival_id", festivalId);
+        .select("id, festival_id, concept_id, operating_date, open_time, close_time, crosses_midnight, computed_hours, notes")
+        .eq("festival_id", festivalId)
+        .order("concept_id")
+        .order("operating_date");
       if (error) throw error;
       return (data ?? []) as HoursRow[];
     },
   });
+
 
   const shiftsQ = useQuery({
     queryKey: ["sched-grid-shifts", festivalId],
