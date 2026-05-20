@@ -18,12 +18,14 @@ interface HoursRow {
   id: string;
   festival_id: string;
   concept_id: string;
+  operating_date: string;
   open_time: string;
   close_time: string;
   crosses_midnight: boolean;
   computed_hours: number | null;
   notes: string | null;
 }
+
 
 interface Props {
   festivalId: string;
