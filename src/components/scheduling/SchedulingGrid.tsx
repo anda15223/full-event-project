@@ -571,6 +571,158 @@ function ConceptBlock(props: {
   positions: PositionRow[];
   sibCount: Map<string, number>;
   shiftsByCell: Map<string, ShiftRow[]>;
+  shiftsByStaffByDate: Map<string, Map<string, ShiftEditorShift[]>>;
+  onOpenCreate: (positionId: string, date: string) => void;
+  onOpenEdit: (positionId: string, date: string, shiftId: string) => void;
+  posColClass: string;
+  dayColClass: string;
+  hoursByDate: Map<string, HoursRow>;
+  onEditHours: () => void;
+}) {
+  const {
+    conceptId, conceptName, conceptActive, accentClass, slug, days,
+    positions, sibCount, shiftsByCell, shiftsByStaffByDate,
+    onOpenCreate, onOpenEdit, posColClass, dayColClass,
+    hoursByDate, onEditHours,
+  } = props;
+
+  const clickable = !!conceptId;
+  const handleOpen = () => {
+    if (clickable) onEditHours();
+  };
+
+  return (
+    <>
+      <tr className={accentClass}>
+        <td
+          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-2 font-heading font-semibold border-t border-r`}
+        >
+          <button
+            type="button"
+            onClick={handleOpen}
+            disabled={!clickable}
+            className="flex w-full items-center justify-between gap-2 text-left disabled:cursor-default"
+          >
+            <span className="truncate">{conceptName}</span>
+            {clickable && (
+              <Pencil className="h-3.5 w-3.5 shrink-0 opacity-70" aria-label="Edit opening hours" />
+            )}
+          </button>
+        </td>
+        {days.map((d) => {
+          const h = hoursByDate.get(d.date);
+          return (
+            <td
+              key={d.date}
+              className={`${dayColClass} px-3 py-2 border-t border-r last:border-r-0 align-middle`}
+            >
+              {clickable ? (
+                <button
+                  type="button"
+                  onClick={handleOpen}
+                  className="w-full text-left text-xs font-normal hover:underline underline-offset-2"
+                >
+                  {h ? (
+                    <span className="opacity-90">
+                      {formatTimeHHMM(h.open_time)}–{formatTimeHHMM(h.close_time)}
+                    </span>
+                  ) : (
+                    <span className="opacity-50">— Set hours</span>
+                  )}
+                </button>
+              ) : (
+                <span className="opacity-50 text-xs">—</span>
+              )}
+            </td>
+          );
+        })}
+      </tr>
+
+      {positions.map((p) => {
+        const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
+        const label = positionLabel(p.station_label, p.position_number, sib);
+        return (
+          <tr key={p.id} className="border-b last:border-b-0">
+            <td
+              className={`${posColClass} sticky left-0 z-10 bg-card px-3 py-2 border-r align-top`}
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium">{label}</span>
+                {p.notes && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      {p.notes}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {!conceptActive && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      Concept not active for this festival.
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            </td>
+            {days.map((d) => {
+              const cellShifts = shiftsByCell.get(`${p.id}|${d.date}`) ?? [];
+              return (
+                <td
+                  key={d.date}
+                  className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
+                >
+                  {cellShifts.length === 0 ? (
+                    <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {cellShifts.map((s) => {
+                        const sibs =
+                          shiftsByStaffByDate.get(s.festival_staff_id)?.get(s.shift_date) ?? [];
+                        return (
+                          <ShiftChip
+                            key={s.id}
+                            shift={s}
+                            slug={slug}
+                            siblings={sibs}
+                            onClick={() => onOpenEdit(p.id, d.date, s.id)}
+                          />
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => onOpenCreate(p.id, d.date)}
+                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
+                      >
+                        <Plus className="h-3 w-3" /> Add another
+                      </button>
+                    </div>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        );
+      })}
+    </>
+  );
+}
+
+  conceptId: string | null;
+  conceptName: string;
+  conceptActive: boolean;
+  accentClass: string;
+  slug: string | null;
+  totalCols: number;
+  days: { date: string; label: string }[];
+  positions: PositionRow[];
+  sibCount: Map<string, number>;
+  shiftsByCell: Map<string, ShiftRow[]>;
   onCellClick: Props["onCellClick"];
   posColClass: string;
   dayColClass: string;
