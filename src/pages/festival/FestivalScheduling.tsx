@@ -2,11 +2,13 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateRange } from "@/lib/dateFormat";
 import PositionManager from "@/components/scheduling/PositionManager";
+import SchedulingGrid from "@/components/scheduling/SchedulingGrid";
 
 export default function FestivalScheduling() {
   const { slug = "" } = useParams();
@@ -73,7 +75,13 @@ export default function FestivalScheduling() {
           <PositionManager festivalId={festival.id} />
         </TabsContent>
         <TabsContent value="grid" className="mt-6">
-          <div className="p-8 text-muted-foreground">Grid coming in next step</div>
+          <SchedulingGrid
+            festivalId={festival.id}
+            onGoToPositions={() => setTab("positions")}
+            onCellClick={() => {
+              toast.info("Shift editor coming in next step");
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>
