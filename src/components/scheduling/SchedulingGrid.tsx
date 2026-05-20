@@ -374,6 +374,7 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
 }
 
 function ConceptBlock(props: {
+  conceptId: string | null;
   conceptName: string;
   conceptActive: boolean;
   accentClass: string;
@@ -386,10 +387,13 @@ function ConceptBlock(props: {
   onCellClick: Props["onCellClick"];
   posColClass: string;
   dayColClass: string;
+  hours: HoursRow | null;
+  onEditHours: () => void;
 }) {
   const {
-    conceptName, conceptActive, accentClass, slug, totalCols, days,
+    conceptId, conceptName, conceptActive, accentClass, slug, totalCols, days,
     positions, sibCount, shiftsByCell, onCellClick, posColClass, dayColClass,
+    hours, onEditHours,
   } = props;
 
   return (
@@ -399,7 +403,37 @@ function ConceptBlock(props: {
           colSpan={totalCols}
           className={`${accentClass} px-3 py-2 font-heading font-semibold border-t`}
         >
-          {conceptName}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>{conceptName}</span>
+            {conceptId && hours && (
+              <>
+                <span className="opacity-50">·</span>
+                <span className="font-normal text-xs opacity-80">
+                  {formatTimeHHMM(hours.open_time)}–{formatTimeHHMM(hours.close_time)}
+                </span>
+                <button
+                  type="button"
+                  onClick={onEditHours}
+                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
+                  aria-label="Edit opening hours"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
+            {conceptId && !hours && (
+              <>
+                <span className="opacity-50">·</span>
+                <button
+                  type="button"
+                  onClick={onEditHours}
+                  className="inline-flex items-center gap-1 text-xs font-normal opacity-80 hover:opacity-100 underline-offset-2 hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Set opening hours
+                </button>
+              </>
+            )}
+          </div>
         </td>
       </tr>
       {positions.map((p) => {
