@@ -75,7 +75,12 @@ export default function FestivalScheduling() {
           <PositionManager festivalId={festival.id} />
         </TabsContent>
         <TabsContent value="grid" className="mt-6">
-          <div className="p-8 text-muted-foreground">Grid coming in next step</div>
+          <SchedulingGrid
+            festivalId={festival.id}
+            onCellClick={() => {
+              toast.info("Shift editor coming in next step");
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>
