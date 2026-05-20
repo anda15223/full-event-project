@@ -1040,7 +1040,7 @@ function EmptyCell({ onClick, copyMode }: { onClick: () => void; copyMode: boole
       <button
         type="button"
         onClick={onClick}
-        className="group w-full min-h-[56px] rounded-md border border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-xs text-primary"
+        className="group w-full min-h-[40px] rounded-md border border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-xs text-primary"
       >
         <span className="inline-flex items-center gap-1 opacity-60 group-hover:opacity-100">
           <Clipboard className="h-3 w-3" /> Paste here
