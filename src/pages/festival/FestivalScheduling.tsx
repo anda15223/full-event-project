@@ -77,6 +77,7 @@ export default function FestivalScheduling() {
         <TabsContent value="grid" className="mt-6">
           <SchedulingGrid
             festivalId={festival.id}
+            onGoToPositions={() => setTab("positions")}
             onCellClick={() => {
               toast.info("Shift editor coming in next step");
             }}
