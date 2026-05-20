@@ -110,7 +110,6 @@ export default function FestivalScheduling() {
                 }
                 const staffIds = Array.from(firstByStaff.keys());
                 if (staffIds.length === 0) {
-                  await navigator.clipboard.writeText("");
                   toast("No staff with shifts to export yet");
                   return;
                 }
