@@ -899,7 +899,7 @@ function ConceptBlock(props: {
     <>
       <tr className={accentClass}>
         <td
-          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-2 font-heading font-semibold border-t border-r`}
+          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-1 font-heading font-semibold border-t border-r`}
         >
           <button
             type="button"
