@@ -315,7 +315,9 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
               const slug = concept?.slug ?? null;
               const accent = conceptAccentClass(slug);
               const sibKeyCounts = grouped.sibCount;
-              const hours = concept ? hoursByConceptId.get(concept.id) ?? null : null;
+              const hoursByDate = concept
+                ? hoursByConceptByDate.get(concept.id) ?? new Map<string, HoursRow>()
+                : new Map<string, HoursRow>();
               return (
                 <ConceptBlock
                   key={concept?.id ?? "orphan"}
@@ -332,19 +334,19 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
                   onCellClick={onCellClick}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
-                  hours={hours}
+                  hoursByDate={hoursByDate}
                   onEditHours={() => {
                     if (!concept) return;
                     setHoursDialog({
                       conceptId: concept.id,
                       conceptName: concept.short_name ?? concept.name,
-                      existing: hours,
                     });
                   }}
                 />
               );
             })}
           </tbody>
+
 
           <tfoot className="sticky bottom-0 z-20 bg-card">
             <tr className="border-t">
