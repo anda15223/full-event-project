@@ -508,9 +508,57 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
         />
       )}
 
+      {editor && festivalQ.data && (() => {
+        const existing =
+          editor.mode === "edit" && editor.existingShiftId
+            ? augmentedShifts.find((s) => s.id === editor.existingShiftId)
+            : null;
+        const hours = hoursByConceptByDate
+          .get(editor.conceptId)
+          ?.get(editor.shiftDate);
+        return (
+          <ShiftEditor
+            open={!!editor}
+            onOpenChange={(o) => {
+              if (!o) setEditor(null);
+            }}
+            mode={editor.mode}
+            festivalId={festivalId}
+            schedulePositionId={editor.schedulePositionId}
+            shiftDate={editor.shiftDate}
+            conceptId={editor.conceptId}
+            positionLabel={editor.positionLabel}
+            conceptName={editor.conceptName}
+            shiftDateLabel={editor.shiftDateLabel}
+            conceptHoursForDay={
+              hours
+                ? { open_time: hours.open_time, close_time: hours.close_time }
+                : null
+            }
+            existingShift={
+              existing
+                ? {
+                    id: existing.id,
+                    festival_staff_id: existing.festival_staff_id,
+                    staff_name: existing.staff_name,
+                    start_time: existing.start_time,
+                    end_time: existing.end_time,
+                    notes: existing.notes,
+                  }
+                : null
+            }
+            allShiftsForFestival={augmentedShifts}
+            festivalStaffList={staffQ.data ?? []}
+            onSaved={() => {
+              shiftsQ.refetch();
+            }}
+          />
+        );
+      })()}
     </TooltipProvider>
   );
 }
+
 
 function ConceptBlock(props: {
   conceptId: string | null;
