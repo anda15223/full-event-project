@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { formatDateRange } from "@/lib/dateFormat";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import PositionManager from "@/components/scheduling/PositionManager";
 import SchedulingGrid from "@/components/scheduling/SchedulingGrid";
 
@@ -86,7 +87,6 @@ export default function FestivalScheduling() {
                 if (pErr) throw pErr;
                 const posIds = (positions ?? []).map((p) => p.id);
                 if (posIds.length === 0) {
-                  await navigator.clipboard.writeText("");
                   toast("No staff with shifts to export yet");
                   return;
                 }
@@ -110,7 +110,6 @@ export default function FestivalScheduling() {
                 }
                 const staffIds = Array.from(firstByStaff.keys());
                 if (staffIds.length === 0) {
-                  await navigator.clipboard.writeText("");
                   toast("No staff with shifts to export yet");
                   return;
                 }
@@ -141,8 +140,12 @@ export default function FestivalScheduling() {
                   })
                   .sort((a, b) => a.name.localeCompare(b.name));
                 const text = rows.map((r) => `${r.name}, ${r.concept}`).join("\n");
-                await navigator.clipboard.writeText(text);
-                toast(`Copied ${rows.length} ${rows.length === 1 ? "person" : "people"} to clipboard`);
+                const ok = await copyTextToClipboard(text);
+                if (!ok) {
+                  toast.error("Couldn't copy to clipboard — try selecting the text manually");
+                  return;
+                }
+                toast.success(`Copied ${rows.length} ${rows.length === 1 ? "person" : "people"} to clipboard`);
               } catch (e) {
                 console.error(e);
                 toast.error("Couldn't copy to clipboard");
