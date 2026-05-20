@@ -90,6 +90,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/onboard/:token" element={<OnboardWizard />} />
             <Route path="/" element={<Protected><DashboardHome /></Protected>} />
             <Route path="/home" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
