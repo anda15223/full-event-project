@@ -222,18 +222,15 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
         <p className="text-muted-foreground">
           No positions defined yet. Go to the Positions tab to add stations for this festival.
         </p>
-        <button
-          type="button"
-          onClick={() => {
-            const trigger = document.querySelector<HTMLButtonElement>(
-              '[role="tab"][value="positions"]',
-            );
-            trigger?.click();
-          }}
-          className="inline-flex items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
-        >
-          Go to Positions
-        </button>
+        {onGoToPositions && (
+          <button
+            type="button"
+            onClick={onGoToPositions}
+            className="inline-flex items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Go to Positions
+          </button>
+        )}
       </div>
     );
   }
