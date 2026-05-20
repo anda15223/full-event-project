@@ -258,6 +258,7 @@ export default function PositionManager({ festivalId }: Props) {
         const positions = positionsByConcept.get(concept.id) ?? [];
         const stationCounts = new Map<string, number>();
         for (const p of positions) {
+          if (p.display_name && p.display_name.trim().length > 0) continue;
           stationCounts.set(p.station_id, (stationCounts.get(p.station_id) ?? 0) + 1);
         }
         return (
@@ -283,6 +284,7 @@ export default function PositionManager({ festivalId }: Props) {
                       p.station?.label ?? "Unknown station",
                       p.position_number,
                       sibCount,
+                      p.display_name,
                     );
                     return (
                       <li key={p.id} className="flex items-center justify-between px-4 py-2">
@@ -293,15 +295,30 @@ export default function PositionManager({ festivalId }: Props) {
                             <span className="ml-2 text-xs text-muted-foreground">— {p.notes}</span>
                           )}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setRemoveTarget({ id: p.id, label })}
-                          aria-label={`Remove ${label}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setEditTarget({
+                              id: p.id,
+                              currentLabel: label,
+                              displayName: p.display_name,
+                            })}
+                            aria-label={`Rename ${label}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setRemoveTarget({ id: p.id, label })}
+                            aria-label={`Remove ${label}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </li>
                     );
                   })}
