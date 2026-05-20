@@ -681,6 +681,21 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
           />
         );
       })()}
+      <DragOverlay dropAnimation={null}>
+        {activeDrag ? (
+          <div className="rotate-3 shadow-xl opacity-95 w-[160px]">
+            <ShiftChipVisual
+              staffName={activeDrag.shift.staff_name}
+              startTime={activeDrag.shift.start_time}
+              endTime={activeDrag.shift.end_time}
+              computedHours={activeDrag.shift.computed_hours}
+              notes={activeDrag.shift.notes}
+              slug={activeDrag.slug}
+            />
+          </div>
+        ) : null}
+      </DragOverlay>
+      </DndContext>
     </TooltipProvider>
   );
 }
