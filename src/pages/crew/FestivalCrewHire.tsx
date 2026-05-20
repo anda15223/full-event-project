@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { ArrowLeft, Copy } from "lucide-react";
+import { isValidEmail } from "@/lib/validation";
 
 type Hire = {
   staff_id: string;
@@ -134,8 +135,8 @@ export default function FestivalCrewHire() {
   const addHire = async () => {
     if (!festival) return;
     if (!name.trim()) { toast.error("Name is required"); return; }
-    const emailOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim());
-    if (!emailOk) { toast.error("Valid email is required"); return; }
+    const trimmedEmail = email.trim();
+    if (!isValidEmail(trimmedEmail)) { toast.error("Valid email is required"); return; }
 
     setSubmitting(true);
     try {
@@ -156,7 +157,7 @@ export default function FestivalCrewHire() {
         .from("fep_employee_profile")
         .insert({
           festival_staff_id: staffRow.id,
-          email: email.trim(),
+          email: trimmedEmail,
           phone: phone.trim() || null,
         })
         .select("id")
@@ -196,9 +197,11 @@ export default function FestivalCrewHire() {
     if (!h.email) {
       const emailInput = prompt(`Enter email for ${h.name}:`);
       if (!emailInput) return;
+      const trimmed = emailInput.trim();
+      if (!isValidEmail(trimmed)) { toast.error("Valid email is required"); return; }
       const { data: profileRow, error } = await supabase
         .from("fep_employee_profile")
-        .insert({ festival_staff_id: h.staff_id, email: emailInput.trim() })
+        .insert({ festival_staff_id: h.staff_id, email: trimmed })
         .select("id")
         .single();
       if (error || !profileRow) { toast.error(error?.message || "Failed"); return; }
