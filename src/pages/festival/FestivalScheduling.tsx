@@ -87,7 +87,6 @@ export default function FestivalScheduling() {
                 if (pErr) throw pErr;
                 const posIds = (positions ?? []).map((p) => p.id);
                 if (posIds.length === 0) {
-                  await navigator.clipboard.writeText("");
                   toast("No staff with shifts to export yet");
                   return;
                 }
