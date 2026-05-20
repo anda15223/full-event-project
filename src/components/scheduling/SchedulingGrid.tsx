@@ -282,6 +282,94 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     return m;
   }, [shiftsQ.data]);
 
+  const positionInfo = useMemo(() => {
+    const m = new Map<string, { label: string; conceptId: string; conceptName: string }>();
+    const sibCount = new Map<string, number>();
+    for (const p of positionsQ.data ?? []) {
+      const k = `${p.concept_id}:${p.station_id}`;
+      sibCount.set(k, (sibCount.get(k) ?? 0) + 1);
+    }
+    for (const p of positionsQ.data ?? []) {
+      const c = conceptById.get(p.concept_id);
+      const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
+      m.set(p.id, {
+        label: positionLabel(p.station_label, p.position_number, sib),
+        conceptId: p.concept_id,
+        conceptName: c?.short_name ?? c?.name ?? "?",
+      });
+    }
+    return m;
+  }, [positionsQ.data, conceptById]);
+
+  const augmentedShifts = useMemo<ShiftEditorShift[]>(() => {
+    return (shiftsQ.data ?? []).map((s) => {
+      const info = positionInfo.get(s.schedule_position_id);
+      return {
+        id: s.id,
+        schedule_position_id: s.schedule_position_id,
+        shift_date: s.shift_date,
+        festival_staff_id: s.festival_staff_id,
+        staff_name: s.staff_name,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        notes: s.notes,
+        position_label: info?.label,
+        concept_name: info?.conceptName,
+      };
+    });
+  }, [shiftsQ.data, positionInfo]);
+
+  const shiftsByStaffByDate = useMemo(() => {
+    const m = new Map<string, Map<string, ShiftEditorShift[]>>();
+    for (const s of augmentedShifts) {
+      let inner = m.get(s.festival_staff_id);
+      if (!inner) {
+        inner = new Map();
+        m.set(s.festival_staff_id, inner);
+      }
+      const list = inner.get(s.shift_date) ?? [];
+      list.push(s);
+      inner.set(s.shift_date, list);
+    }
+    return m;
+  }, [augmentedShifts]);
+
+  const dayLabelByDate = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of days) m.set(d.date, d.label);
+    return m;
+  }, [days]);
+
+  function openCreate(positionId: string, date: string) {
+    const info = positionInfo.get(positionId);
+    if (!info) return;
+    setEditor({
+      mode: "create",
+      schedulePositionId: positionId,
+      shiftDate: date,
+      conceptId: info.conceptId,
+      positionLabel: info.label,
+      conceptName: info.conceptName,
+      shiftDateLabel: dayLabelByDate.get(date) ?? date,
+    });
+  }
+
+  function openEdit(positionId: string, date: string, shiftId: string) {
+    const info = positionInfo.get(positionId);
+    if (!info) return;
+    setEditor({
+      mode: "edit",
+      schedulePositionId: positionId,
+      shiftDate: date,
+      conceptId: info.conceptId,
+      positionLabel: info.label,
+      conceptName: info.conceptName,
+      shiftDateLabel: dayLabelByDate.get(date) ?? date,
+      existingShiftId: shiftId,
+    });
+  }
+
+
   if (festivalQ.isLoading || conceptsQ.isLoading || positionsQ.isLoading) {
     return <Skeleton className="h-72 w-full" />;
   }
