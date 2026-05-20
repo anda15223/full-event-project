@@ -1052,7 +1052,7 @@ function EmptyCell({ onClick, copyMode }: { onClick: () => void; copyMode: boole
     <button
       type="button"
       onClick={onClick}
-      className="group w-full min-h-[56px] rounded-md border border-dashed border-transparent text-xs text-muted-foreground/0 hover:border-border hover:bg-muted/50 hover:text-muted-foreground transition-colors flex items-center justify-center"
+      className="group w-full min-h-[40px] rounded-md border border-dashed border-transparent text-xs text-muted-foreground/0 hover:border-border hover:bg-muted/50 hover:text-muted-foreground transition-colors flex items-center justify-center"
     >
       <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
         <Plus className="h-3 w-3" /> Add shift
