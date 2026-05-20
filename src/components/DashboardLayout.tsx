@@ -6,10 +6,11 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard, Tent,
-  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature, Home,
+  Settings, PanelLeft, Zap, LogOut, AlertTriangle, Target, Contact, HelpCircle, ScrollText, Calendar, FileSignature, Home, Building2,
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useFepAdmin } from "@/hooks/useFepAdmin";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -224,6 +225,7 @@ function SidebarNav() {
         <div className="mt-auto pt-4 border-t border-border/40">
           {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.14em] mb-2 px-3">System</p>}
           <SidebarMenu>
+            <AdminCompanySettingsLink collapsed={collapsed} pathname={pathname} />
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith("/settings")} tooltip="Settings">
                 <NavLink to="/settings" className="h-9 rounded-xl text-[13px] font-normal transition-all" activeClassName="bg-primary/8 text-primary font-medium">
@@ -236,6 +238,22 @@ function SidebarNav() {
         </div>
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+function AdminCompanySettingsLink({ collapsed, pathname }: { collapsed: boolean; pathname: string }) {
+  const { isAdmin } = useFepAdmin();
+  if (!isAdmin) return null;
+  const active = pathname.startsWith("/admin/company-settings");
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active} tooltip="Company settings">
+        <NavLink to="/admin/company-settings" className="h-9 rounded-xl text-[13px] font-normal transition-all" activeClassName="bg-primary/8 text-primary font-medium">
+          <Building2 className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
+          {!collapsed && <span>Company settings</span>}
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }
 
