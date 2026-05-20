@@ -140,8 +140,12 @@ export default function FestivalScheduling() {
                   })
                   .sort((a, b) => a.name.localeCompare(b.name));
                 const text = rows.map((r) => `${r.name}, ${r.concept}`).join("\n");
-                await navigator.clipboard.writeText(text);
-                toast(`Copied ${rows.length} ${rows.length === 1 ? "person" : "people"} to clipboard`);
+                const ok = await copyTextToClipboard(text);
+                if (!ok) {
+                  toast.error("Couldn't copy to clipboard — try selecting the text manually");
+                  return;
+                }
+                toast.success(`Copied ${rows.length} ${rows.length === 1 ? "person" : "people"} to clipboard`);
               } catch (e) {
                 console.error(e);
                 toast.error("Couldn't copy to clipboard");
