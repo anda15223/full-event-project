@@ -22,12 +22,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   computeShiftHours,
   formatHoursMinutes,
   formatTimeHHMM,
   intervalsOverlap,
   shiftIntervalMin,
+  type FestivalDay,
 } from "@/lib/scheduling";
 
 export interface ShiftEditorShift {
@@ -70,6 +72,7 @@ interface Props {
   } | null;
   allShiftsForFestival: ShiftEditorShift[];
   festivalStaffList: FestivalStaffLite[];
+  festivalDays: FestivalDay[];
   onSaved: () => void;
 }
 
@@ -79,7 +82,7 @@ export default function ShiftEditor(props: Props) {
   const {
     open, onOpenChange, mode, schedulePositionId, shiftDate,
     positionLabel, conceptName, shiftDateLabel, conceptHoursForDay,
-    existingShift, allShiftsForFestival, festivalStaffList, onSaved,
+    existingShift, allShiftsForFestival, festivalStaffList, festivalDays, onSaved,
   } = props;
 
   const [staffId, setStaffId] = useState<string>("");
@@ -91,6 +94,8 @@ export default function ShiftEditor(props: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [duplicateDays, setDuplicateDays] = useState<Set<string>>(new Set());
+  const [duplicating, setDuplicating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -109,6 +114,7 @@ export default function ShiftEditor(props: Props) {
     setPickerOpen(false);
     setSearch("");
     setConfirmDelete(false);
+    setDuplicateDays(new Set());
   }, [open, mode, existingShift, conceptHoursForDay]);
 
   const sortedStaff = useMemo(() => {
@@ -218,6 +224,73 @@ export default function ShiftEditor(props: Props) {
       setConfirmDelete(false);
     }
   }
+
+  // Other festival days (excluding the current shift's day) for the bulk-duplicate section.
+  const otherDays = useMemo(
+    () => festivalDays.filter((d) => d.date !== shiftDate),
+    [festivalDays, shiftDate],
+  );
+
+  // For each other day, does the same staff already have a shift on the same position?
+  function hasExistingOnDay(day: string): boolean {
+    if (!existingShift) return false;
+    return allShiftsForFestival.some(
+      (s) =>
+        s.id !== existingShift.id &&
+        s.schedule_position_id === schedulePositionId &&
+        s.festival_staff_id === existingShift.festival_staff_id &&
+        s.shift_date === day,
+    );
+  }
+
+  function toggleDay(day: string) {
+    setDuplicateDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+  }
+
+  async function handleDuplicate() {
+    if (!existingShift || duplicateDays.size === 0) return;
+    setDuplicating(true);
+    const targetDays = Array.from(duplicateDays);
+    const failures: string[] = [];
+    for (const day of targetDays) {
+      try {
+        const { error } = await supabase
+          .from("festival_schedule_shift")
+          .insert({
+            schedule_position_id: schedulePositionId,
+            shift_date: day,
+            festival_staff_id: existingShift.festival_staff_id,
+            start_time: existingShift.start_time,
+            end_time: existingShift.end_time,
+            notes: existingShift.notes,
+          });
+        if (error) throw error;
+      } catch (err: any) {
+        const lbl = festivalDays.find((d) => d.date === day)?.label ?? day;
+        failures.push(lbl);
+      }
+    }
+    setDuplicating(false);
+    if (failures.length === targetDays.length) {
+      toast.error(`Couldn't duplicate to ${failures.join(", ")}`);
+      return;
+    }
+    if (failures.length > 0) {
+      toast.error(`Couldn't duplicate to ${failures.join(", ")}`);
+    } else {
+      toast.success(
+        `Duplicated to ${targetDays.length} day${targetDays.length === 1 ? "" : "s"}`,
+      );
+    }
+    onSaved();
+    onOpenChange(false);
+  }
+
 
   return (
     <>
@@ -382,6 +455,49 @@ export default function ShiftEditor(props: Props) {
                 rows={2}
               />
             </div>
+
+            {mode === "edit" && existingShift && otherDays.length > 0 && (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <div className="text-sm font-medium">Duplicate this shift to other days</div>
+                <div className="space-y-1.5">
+                  {otherDays.map((d) => {
+                    const exists = hasExistingOnDay(d.date);
+                    const checked = duplicateDays.has(d.date);
+                    return (
+                      <label
+                        key={d.date}
+                        className="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleDay(d.date)}
+                        />
+                        <span>{d.label}</span>
+                        {exists && (
+                          <span className="inline-flex items-center gap-1 text-xs text-amber-700">
+                            <AlertTriangle className="h-3 w-3" />
+                            {existingShift.staff_name ?? "Staff"} already has a shift here
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={duplicateDays.size === 0 || duplicating}
+                  onClick={handleDuplicate}
+                >
+                  {duplicating
+                    ? "Duplicating…"
+                    : `Duplicate to ${duplicateDays.size || 0} day${
+                        duplicateDays.size === 1 ? "" : "s"
+                      }`}
+                </Button>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="flex sm:justify-between gap-2 pt-2">

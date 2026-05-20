@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Info, AlertTriangle, Plus, Pencil } from "lucide-react";
+import { Info, AlertTriangle, Plus, Pencil, Copy, Trash2, X, Clipboard } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -18,6 +18,16 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   positionLabel,
   conceptAccentClass,
@@ -82,6 +92,15 @@ interface ShiftRow {
   computed_hours: number;
   notes: string | null;
   staff_name: string | null;
+}
+
+interface CopiedShift {
+  sourceShiftId: string;
+  staffId: string;
+  staffName: string | null;
+  startTime: string;
+  endTime: string;
+  notes: string | null;
 }
 
 export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
@@ -229,8 +248,24 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     existingShiftId?: string;
   } | null>(null);
 
+  // Copy mode + delete-confirm state
+  const [copied, setCopied] = useState<CopiedShift | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    shiftId: string;
+    name: string;
+    timeLabel: string;
+    contextLabel: string;
+  } | null>(null);
 
-
+  // Escape cancels copy mode
+  useEffect(() => {
+    if (!copied) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCopied(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [copied]);
 
   const days = useMemo(() => {
     if (!festivalQ.data) return [];
@@ -486,6 +521,71 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     });
   }
 
+  function handleCopyChip(shift: ShiftRow) {
+    if (copied?.sourceShiftId === shift.id) {
+      // Toggle off
+      setCopied(null);
+      return;
+    }
+    setCopied({
+      sourceShiftId: shift.id,
+      staffId: shift.festival_staff_id,
+      staffName: shift.staff_name,
+      startTime: shift.start_time,
+      endTime: shift.end_time,
+      notes: shift.notes,
+    });
+  }
+
+  function requestDelete(shift: ShiftRow, info: { conceptName: string; positionLabel: string; dayLabel: string }) {
+    setConfirmDelete({
+      shiftId: shift.id,
+      name: shift.staff_name?.trim() || "(no name)",
+      timeLabel: `${formatTimeHHMM(shift.start_time)}–${formatTimeHHMM(shift.end_time)}`,
+      contextLabel: `${info.conceptName} / ${info.positionLabel} / ${info.dayLabel}`,
+    });
+  }
+
+  async function performDelete() {
+    if (!confirmDelete) return;
+    const id = confirmDelete.shiftId;
+    try {
+      const { error } = await supabase
+        .from("festival_schedule_shift")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Shift deleted");
+      if (copied?.sourceShiftId === id) setCopied(null);
+      shiftsQ.refetch();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't delete shift");
+    } finally {
+      setConfirmDelete(null);
+    }
+  }
+
+  async function pasteToCell(positionId: string, date: string) {
+    if (!copied) return;
+    try {
+      const { error } = await supabase
+        .from("festival_schedule_shift")
+        .insert({
+          schedule_position_id: positionId,
+          shift_date: date,
+          festival_staff_id: copied.staffId,
+          start_time: copied.startTime,
+          end_time: copied.endTime,
+          notes: copied.notes,
+        });
+      if (error) throw error;
+      toast.success("Shift pasted");
+      shiftsQ.refetch();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't paste shift");
+    }
+  }
+
 
   if (festivalQ.isLoading || conceptsQ.isLoading || positionsQ.isLoading) {
     return <Skeleton className="h-72 w-full" />;
@@ -521,9 +621,29 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
   const POS_COL = "w-[140px] md:w-[180px] min-w-[140px] md:min-w-[180px]";
   const DAY_COL = "min-w-[160px]";
   const totalCols = days.length + 1;
+  const copyMode = !!copied;
 
   return (
     <TooltipProvider delayDuration={200}>
+      {copied && (
+        <div className="sticky top-2 z-40 mx-auto mb-2 flex max-w-md items-center justify-between gap-3 rounded-full border bg-background/95 px-4 py-2 shadow-md backdrop-blur">
+          <div className="flex items-center gap-2 text-sm">
+            <Copy className="h-4 w-4 text-primary" />
+            <span>
+              Copying{" "}
+              <span className="font-semibold">{copied.staffName ?? "(no name)"}</span>
+              ’s {formatTimeHHMM(copied.startTime)}–{formatTimeHHMM(copied.endTime)} shift · click an empty cell to paste
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCopied(null)}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-3 w-3" /> Cancel
+          </button>
+        </div>
+      )}
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
@@ -578,6 +698,18 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
                   shiftsByStaffByDate={shiftsByStaffByDate}
                   onOpenCreate={openCreate}
                   onOpenEdit={openEdit}
+                  onCopyShift={handleCopyChip}
+                  onRequestDelete={(s, posId, date) => {
+                    const info = positionInfo.get(posId);
+                    requestDelete(s, {
+                      conceptName: info?.conceptName ?? "?",
+                      positionLabel: info?.label ?? "?",
+                      dayLabel: dayLabelByDate.get(date) ?? date,
+                    });
+                  }}
+                  copyMode={copyMode}
+                  copiedSourceId={copied?.sourceShiftId ?? null}
+                  onPaste={pasteToCell}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
                   hoursByDate={hoursByDate}
@@ -675,6 +807,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
             }
             allShiftsForFestival={augmentedShifts}
             festivalStaffList={staffQ.data ?? []}
+            festivalDays={days}
             onSaved={() => {
               shiftsQ.refetch();
             }}
@@ -696,6 +829,25 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
         ) : null}
       </DragOverlay>
       </DndContext>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this shift?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmDelete && (
+                <>
+                  {confirmDelete.name} · {confirmDelete.timeLabel} · {confirmDelete.contextLabel}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={performDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }
@@ -715,6 +867,11 @@ function ConceptBlock(props: {
   shiftsByStaffByDate: Map<string, Map<string, ShiftEditorShift[]>>;
   onOpenCreate: (positionId: string, date: string) => void;
   onOpenEdit: (positionId: string, date: string, shiftId: string) => void;
+  onCopyShift: (s: ShiftRow) => void;
+  onRequestDelete: (s: ShiftRow, posId: string, date: string) => void;
+  copyMode: boolean;
+  copiedSourceId: string | null;
+  onPaste: (positionId: string, date: string) => void;
   posColClass: string;
   dayColClass: string;
   hoursByDate: Map<string, HoursRow>;
@@ -723,7 +880,9 @@ function ConceptBlock(props: {
   const {
     conceptId, conceptName, conceptActive, accentClass, slug, days,
     positions, sibCount, shiftsByCell, shiftsByStaffByDate,
-    onOpenCreate, onOpenEdit, posColClass, dayColClass,
+    onOpenCreate, onOpenEdit, onCopyShift, onRequestDelete,
+    copyMode, copiedSourceId, onPaste,
+    posColClass, dayColClass,
     hoursByDate, onEditHours,
   } = props;
 
@@ -813,14 +972,21 @@ function ConceptBlock(props: {
             </td>
             {days.map((d) => {
               const cellShifts = shiftsByCell.get(`${p.id}|${d.date}`) ?? [];
+              const isEmpty = cellShifts.length === 0;
               return (
                 <td
                   key={d.date}
                   className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
                 >
                   <CellDrop positionId={p.id} date={d.date}>
-                    {cellShifts.length === 0 ? (
-                      <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
+                    {isEmpty ? (
+                      <EmptyCell
+                        copyMode={copyMode}
+                        onClick={() => {
+                          if (copyMode) onPaste(p.id, d.date);
+                          else onOpenCreate(p.id, d.date);
+                        }}
+                      />
                     ) : (
                       <div className="flex flex-col gap-1">
                         {cellShifts.map((s) => {
@@ -835,16 +1001,22 @@ function ConceptBlock(props: {
                               positionId={p.id}
                               date={d.date}
                               onClick={() => onOpenEdit(p.id, d.date, s.id)}
+                              onCopy={() => onCopyShift(s)}
+                              onDelete={() => onRequestDelete(s, p.id, d.date)}
+                              copyMode={copyMode}
+                              isCopiedSource={copiedSourceId === s.id}
                             />
                           );
                         })}
-                        <button
-                          type="button"
-                          onClick={() => onOpenCreate(p.id, d.date)}
-                          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
-                        >
-                          <Plus className="h-3 w-3" /> Add another
-                        </button>
+                        {!copyMode && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenCreate(p.id, d.date)}
+                            className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
+                          >
+                            <Plus className="h-3 w-3" /> Add another
+                          </button>
+                        )}
                       </div>
                     )}
                   </CellDrop>
@@ -858,7 +1030,20 @@ function ConceptBlock(props: {
   );
 }
 
-function EmptyCell({ onClick }: { onClick: () => void }) {
+function EmptyCell({ onClick, copyMode }: { onClick: () => void; copyMode: boolean }) {
+  if (copyMode) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="group w-full min-h-[56px] rounded-md border border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-xs text-primary"
+      >
+        <span className="inline-flex items-center gap-1 opacity-60 group-hover:opacity-100">
+          <Clipboard className="h-3 w-3" /> Paste here
+        </span>
+      </button>
+    );
+  }
   return (
     <button
       type="button"
@@ -968,6 +1153,10 @@ function ShiftChip({
   positionId,
   date,
   onClick,
+  onCopy,
+  onDelete,
+  copyMode,
+  isCopiedSource,
 }: {
   shift: ShiftRow;
   slug: string | null;
@@ -975,6 +1164,10 @@ function ShiftChip({
   positionId: string;
   date: string;
   onClick: () => void;
+  onCopy: () => void;
+  onDelete: () => void;
+  copyMode: boolean;
+  isCopiedSource: boolean;
 }) {
   const name = shift.staff_name?.trim() || "(no name)";
   const multi = siblings.length >= 2;
@@ -986,16 +1179,19 @@ function ShiftChip({
       (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
     );
 
+  // Disable drag while in copy mode
   const draggable = useDraggable({
     id: `drag:${shift.id}`,
     data: { shiftId: shift.id, positionId, date },
+    disabled: copyMode,
   });
   const droppable = useDroppable({
     id: `chip:${shift.id}`,
     data: { kind: "chip", shiftId: shift.id, positionId, date },
+    disabled: copyMode,
   });
 
-  const setRefs = (el: HTMLButtonElement | null) => {
+  const setRefs = (el: HTMLDivElement | null) => {
     draggable.setNodeRef(el);
     droppable.setNodeRef(el);
   };
@@ -1014,27 +1210,86 @@ function ShiftChip({
 
   const isDragging = draggable.isDragging;
 
+  // In copy mode: clicking the chip body does NOTHING (no edit)
+  const handleBodyClick = () => {
+    if (copyMode) return;
+    onClick();
+  };
+
+  const stop = (e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+  };
+
+  const sourceOutline = isCopiedSource ? "outline outline-2 outline-dashed outline-primary outline-offset-1" : "";
+
   const chip = (
-    <button
+    <div
       ref={setRefs}
-      type="button"
-      onClick={onClick}
-      {...draggable.attributes}
-      {...draggable.listeners}
-      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 hover:shadow-md transition cursor-grab active:cursor-grabbing ${conceptChipClass(slug)} ${extraBorder} ${
+      role="button"
+      tabIndex={0}
+      onClick={handleBodyClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleBodyClick();
+        }
+      }}
+      {...(copyMode ? {} : draggable.attributes)}
+      {...(copyMode ? {} : draggable.listeners)}
+      className={`group relative w-full text-left rounded-md p-2 hover:brightness-95 hover:shadow-md transition ${
+        copyMode ? "cursor-default" : "cursor-grab active:cursor-grabbing"
+      } ${conceptChipClass(slug)} ${extraBorder} ${
         isDragging ? "opacity-50" : ""
-      } ${swapHighlight ? "ring-2 ring-primary ring-offset-1" : ""}`}
+      } ${swapHighlight ? "ring-2 ring-primary ring-offset-1" : ""} ${sourceOutline}`}
     >
+      {/* Hover action icons */}
+      <div
+        className="absolute top-1 right-1 z-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+        onPointerDown={stop}
+        onMouseDown={stop}
+      >
+        <button
+          type="button"
+          aria-label="Copy shift"
+          onClick={(e) => { stop(e); onCopy(); }}
+          onPointerDown={stop}
+          onMouseDown={stop}
+          className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-background/70 text-foreground/70 hover:text-foreground"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Edit shift"
+          onClick={(e) => { stop(e); onClick(); }}
+          onPointerDown={stop}
+          onMouseDown={stop}
+          className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-background/70 text-foreground/70 hover:text-foreground"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          aria-label="Delete shift"
+          onClick={(e) => { stop(e); onDelete(); }}
+          onPointerDown={stop}
+          onMouseDown={stop}
+          className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-destructive/15 text-foreground/70 hover:text-destructive"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
       {multi && (
         <span
-          className={`absolute -top-1.5 -right-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 py-0.5 text-white shadow ${
+          className={`absolute -top-1.5 -left-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 py-0.5 text-white shadow ${
             hasOverlap ? "bg-destructive" : "bg-amber-500"
           }`}
         >
           {siblings.length}×
         </span>
       )}
-      <div className={`text-xs font-semibold truncate ${shift.staff_name ? "" : "text-muted-foreground italic"}`}>
+      <div className={`text-xs font-semibold truncate pr-16 ${shift.staff_name ? "" : "text-muted-foreground italic"}`}>
         {name}
       </div>
       <div className="flex items-center justify-between text-xs mt-0.5">
@@ -1048,7 +1303,7 @@ function ShiftChip({
           {shift.notes}
         </div>
       )}
-    </button>
+    </div>
   );
 
   if (!multi) return chip;
@@ -1071,5 +1326,3 @@ function ShiftChip({
     </Tooltip>
   );
 }
-
-
