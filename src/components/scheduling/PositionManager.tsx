@@ -47,6 +47,7 @@ interface PositionRow {
   position_number: number;
   display_order: number;
   notes: string | null;
+  display_name: string | null;
   station: { label: string } | null;
 }
 
