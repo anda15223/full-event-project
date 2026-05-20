@@ -11,8 +11,11 @@ import {
   festivalDays,
   formatHoursMinutes,
   formatTimeHHMM,
+  intervalsOverlap,
+  shiftIntervalMin,
 } from "@/lib/scheduling";
 import ConceptHoursDialog from "./ConceptHoursDialog";
+import ShiftEditor, { ShiftEditorShift, FestivalStaffLite } from "./ShiftEditor";
 
 interface HoursRow {
   id: string;
@@ -29,9 +32,10 @@ interface HoursRow {
 
 interface Props {
   festivalId: string;
-  onCellClick: (args: { positionId: string; date: string; shiftId?: string }) => void;
   onGoToPositions?: () => void;
 }
+
+
 
 interface FestivalRow {
   id: string;
@@ -66,10 +70,11 @@ interface ShiftRow {
   staff_name: string | null;
 }
 
-export default function SchedulingGrid({ festivalId, onCellClick, onGoToPositions }: Props) {
+export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
   const festivalQ = useQuery({
     queryKey: ["sched-grid-festival", festivalId],
     queryFn: async (): Promise<FestivalRow> => {
+
       const { data, error } = await supabase
         .from("festivals")
         .select("id, start_date, end_date")
@@ -169,6 +174,18 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     },
   });
 
+  const staffQ = useQuery({
+    queryKey: ["sched-grid-staff", festivalId],
+    queryFn: async (): Promise<FestivalStaffLite[]> => {
+      const { data, error } = await supabase
+        .from("festival_staff")
+        .select("id, name")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return (data ?? []) as FestivalStaffLite[];
+    },
+  });
+
   const hoursByConceptByDate = useMemo(() => {
     const m = new Map<string, Map<string, HoursRow>>();
     for (const h of hoursQ.data ?? []) {
@@ -186,6 +203,19 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     conceptId: string;
     conceptName: string;
   } | null>(null);
+
+  const [editor, setEditor] = useState<{
+    mode: "create" | "edit";
+    schedulePositionId: string;
+    shiftDate: string;
+    conceptId: string;
+    positionLabel: string;
+    conceptName: string;
+    shiftDateLabel: string;
+    existingShiftId?: string;
+  } | null>(null);
+
+
 
 
   const days = useMemo(() => {
@@ -251,6 +281,94 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     }
     return m;
   }, [shiftsQ.data]);
+
+  const positionInfo = useMemo(() => {
+    const m = new Map<string, { label: string; conceptId: string; conceptName: string }>();
+    const sibCount = new Map<string, number>();
+    for (const p of positionsQ.data ?? []) {
+      const k = `${p.concept_id}:${p.station_id}`;
+      sibCount.set(k, (sibCount.get(k) ?? 0) + 1);
+    }
+    for (const p of positionsQ.data ?? []) {
+      const c = conceptById.get(p.concept_id);
+      const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
+      m.set(p.id, {
+        label: positionLabel(p.station_label, p.position_number, sib),
+        conceptId: p.concept_id,
+        conceptName: c?.short_name ?? c?.name ?? "?",
+      });
+    }
+    return m;
+  }, [positionsQ.data, conceptById]);
+
+  const augmentedShifts = useMemo<ShiftEditorShift[]>(() => {
+    return (shiftsQ.data ?? []).map((s) => {
+      const info = positionInfo.get(s.schedule_position_id);
+      return {
+        id: s.id,
+        schedule_position_id: s.schedule_position_id,
+        shift_date: s.shift_date,
+        festival_staff_id: s.festival_staff_id,
+        staff_name: s.staff_name,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        notes: s.notes,
+        position_label: info?.label,
+        concept_name: info?.conceptName,
+      };
+    });
+  }, [shiftsQ.data, positionInfo]);
+
+  const shiftsByStaffByDate = useMemo(() => {
+    const m = new Map<string, Map<string, ShiftEditorShift[]>>();
+    for (const s of augmentedShifts) {
+      let inner = m.get(s.festival_staff_id);
+      if (!inner) {
+        inner = new Map();
+        m.set(s.festival_staff_id, inner);
+      }
+      const list = inner.get(s.shift_date) ?? [];
+      list.push(s);
+      inner.set(s.shift_date, list);
+    }
+    return m;
+  }, [augmentedShifts]);
+
+  const dayLabelByDate = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const d of days) m.set(d.date, d.label);
+    return m;
+  }, [days]);
+
+  function openCreate(positionId: string, date: string) {
+    const info = positionInfo.get(positionId);
+    if (!info) return;
+    setEditor({
+      mode: "create",
+      schedulePositionId: positionId,
+      shiftDate: date,
+      conceptId: info.conceptId,
+      positionLabel: info.label,
+      conceptName: info.conceptName,
+      shiftDateLabel: dayLabelByDate.get(date) ?? date,
+    });
+  }
+
+  function openEdit(positionId: string, date: string, shiftId: string) {
+    const info = positionInfo.get(positionId);
+    if (!info) return;
+    setEditor({
+      mode: "edit",
+      schedulePositionId: positionId,
+      shiftDate: date,
+      conceptId: info.conceptId,
+      positionLabel: info.label,
+      conceptName: info.conceptName,
+      shiftDateLabel: dayLabelByDate.get(date) ?? date,
+      existingShiftId: shiftId,
+    });
+  }
+
 
   if (festivalQ.isLoading || conceptsQ.isLoading || positionsQ.isLoading) {
     return <Skeleton className="h-72 w-full" />;
@@ -331,7 +449,9 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
                   positions={rows}
                   sibCount={sibKeyCounts}
                   shiftsByCell={shiftsByCell}
-                  onCellClick={onCellClick}
+                  shiftsByStaffByDate={shiftsByStaffByDate}
+                  onOpenCreate={openCreate}
+                  onOpenEdit={openEdit}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
                   hoursByDate={hoursByDate}
@@ -388,9 +508,57 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
         />
       )}
 
+      {editor && festivalQ.data && (() => {
+        const existing =
+          editor.mode === "edit" && editor.existingShiftId
+            ? augmentedShifts.find((s) => s.id === editor.existingShiftId)
+            : null;
+        const hours = hoursByConceptByDate
+          .get(editor.conceptId)
+          ?.get(editor.shiftDate);
+        return (
+          <ShiftEditor
+            open={!!editor}
+            onOpenChange={(o) => {
+              if (!o) setEditor(null);
+            }}
+            mode={editor.mode}
+            festivalId={festivalId}
+            schedulePositionId={editor.schedulePositionId}
+            shiftDate={editor.shiftDate}
+            conceptId={editor.conceptId}
+            positionLabel={editor.positionLabel}
+            conceptName={editor.conceptName}
+            shiftDateLabel={editor.shiftDateLabel}
+            conceptHoursForDay={
+              hours
+                ? { open_time: hours.open_time, close_time: hours.close_time }
+                : null
+            }
+            existingShift={
+              existing
+                ? {
+                    id: existing.id,
+                    festival_staff_id: existing.festival_staff_id,
+                    staff_name: existing.staff_name,
+                    start_time: existing.start_time,
+                    end_time: existing.end_time,
+                    notes: existing.notes,
+                  }
+                : null
+            }
+            allShiftsForFestival={augmentedShifts}
+            festivalStaffList={staffQ.data ?? []}
+            onSaved={() => {
+              shiftsQ.refetch();
+            }}
+          />
+        );
+      })()}
     </TooltipProvider>
   );
 }
+
 
 function ConceptBlock(props: {
   conceptId: string | null;
@@ -403,15 +571,18 @@ function ConceptBlock(props: {
   positions: PositionRow[];
   sibCount: Map<string, number>;
   shiftsByCell: Map<string, ShiftRow[]>;
-  onCellClick: Props["onCellClick"];
+  shiftsByStaffByDate: Map<string, Map<string, ShiftEditorShift[]>>;
+  onOpenCreate: (positionId: string, date: string) => void;
+  onOpenEdit: (positionId: string, date: string, shiftId: string) => void;
   posColClass: string;
   dayColClass: string;
   hoursByDate: Map<string, HoursRow>;
   onEditHours: () => void;
 }) {
   const {
-    conceptId, conceptName, conceptActive, accentClass, slug, totalCols, days,
-    positions, sibCount, shiftsByCell, onCellClick, posColClass, dayColClass,
+    conceptId, conceptName, conceptActive, accentClass, slug, days,
+    positions, sibCount, shiftsByCell, shiftsByStaffByDate,
+    onOpenCreate, onOpenEdit, posColClass, dayColClass,
     hoursByDate, onEditHours,
   } = props;
 
@@ -507,25 +678,29 @@ function ConceptBlock(props: {
                   className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
                 >
                   {cellShifts.length === 0 ? (
-                    <EmptyCell
-                      onClick={() => onCellClick({ positionId: p.id, date: d.date })}
-                    />
+                    <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
                   ) : (
                     <div className="flex flex-col gap-1">
-                      {cellShifts.map((s) => (
-                        <ShiftChip
-                          key={s.id}
-                          shift={s}
-                          slug={slug}
-                          onClick={() =>
-                            onCellClick({
-                              positionId: p.id,
-                              date: d.date,
-                              shiftId: s.id,
-                            })
-                          }
-                        />
-                      ))}
+                      {cellShifts.map((s) => {
+                        const sibs =
+                          shiftsByStaffByDate.get(s.festival_staff_id)?.get(s.shift_date) ?? [];
+                        return (
+                          <ShiftChip
+                            key={s.id}
+                            shift={s}
+                            slug={slug}
+                            siblings={sibs}
+                            onClick={() => onOpenEdit(p.id, d.date, s.id)}
+                          />
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => onOpenCreate(p.id, d.date)}
+                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
+                      >
+                        <Plus className="h-3 w-3" /> Add another
+                      </button>
                     </div>
                   )}
                 </td>
@@ -555,19 +730,43 @@ function EmptyCell({ onClick }: { onClick: () => void }) {
 function ShiftChip({
   shift,
   slug,
+  siblings,
   onClick,
 }: {
   shift: ShiftRow;
   slug: string | null;
+  siblings: ShiftEditorShift[];
   onClick: () => void;
 }) {
   const name = shift.staff_name?.trim() || "(no name)";
-  return (
+  const multi = siblings.length >= 2;
+
+  const cur = shiftIntervalMin(shift.start_time, shift.end_time);
+  const hasOverlap = multi && siblings.some(
+    (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
+  );
+
+  const extraBorder = multi
+    ? hasOverlap
+      ? "border-2 border-destructive"
+      : "border-2 border-amber-500"
+    : "border";
+
+  const chip = (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-md border p-2 hover:brightness-95 transition ${conceptChipClass(slug)}`}
+      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 transition ${conceptChipClass(slug)} ${extraBorder}`}
     >
+      {multi && (
+        <span
+          className={`absolute -top-1.5 -right-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 py-0.5 text-white shadow ${
+            hasOverlap ? "bg-destructive" : "bg-amber-500"
+          }`}
+        >
+          {siblings.length}×
+        </span>
+      )}
       <div className={`text-xs font-semibold truncate ${shift.staff_name ? "" : "text-muted-foreground italic"}`}>
         {name}
       </div>
@@ -584,4 +783,25 @@ function ShiftChip({
       )}
     </button>
   );
+
+  if (!multi) return chip;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+      <TooltipContent side="right" className="max-w-xs">
+        <div className="text-xs space-y-0.5">
+          <div className="font-semibold">{name} also works today:</div>
+          {siblings.map((o) => (
+            <div key={o.id} className={o.id === shift.id ? "font-medium" : ""}>
+              • {o.concept_name ?? "?"} / {o.position_label ?? "?"} /{" "}
+              {formatTimeHHMM(o.start_time)}–{formatTimeHHMM(o.end_time)}
+              {o.id === shift.id ? " (this shift)" : ""}
+            </div>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
+
