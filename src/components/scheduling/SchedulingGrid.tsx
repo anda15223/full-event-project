@@ -818,32 +818,36 @@ function ConceptBlock(props: {
                   key={d.date}
                   className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
                 >
-                  {cellShifts.length === 0 ? (
-                    <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {cellShifts.map((s) => {
-                        const sibs =
-                          shiftsByStaffByDate.get(s.festival_staff_id)?.get(s.shift_date) ?? [];
-                        return (
-                          <ShiftChip
-                            key={s.id}
-                            shift={s}
-                            slug={slug}
-                            siblings={sibs}
-                            onClick={() => onOpenEdit(p.id, d.date, s.id)}
-                          />
-                        );
-                      })}
-                      <button
-                        type="button"
-                        onClick={() => onOpenCreate(p.id, d.date)}
-                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
-                      >
-                        <Plus className="h-3 w-3" /> Add another
-                      </button>
-                    </div>
-                  )}
+                  <CellDrop positionId={p.id} date={d.date}>
+                    {cellShifts.length === 0 ? (
+                      <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {cellShifts.map((s) => {
+                          const sibs =
+                            shiftsByStaffByDate.get(s.festival_staff_id)?.get(s.shift_date) ?? [];
+                          return (
+                            <ShiftChip
+                              key={s.id}
+                              shift={s}
+                              slug={slug}
+                              siblings={sibs}
+                              positionId={p.id}
+                              date={d.date}
+                              onClick={() => onOpenEdit(p.id, d.date, s.id)}
+                            />
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => onOpenCreate(p.id, d.date)}
+                          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
+                        >
+                          <Plus className="h-3 w-3" /> Add another
+                        </button>
+                      </div>
+                    )}
+                  </CellDrop>
                 </td>
               );
             })}
