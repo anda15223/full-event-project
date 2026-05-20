@@ -94,6 +94,8 @@ export default function ShiftEditor(props: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [duplicateDays, setDuplicateDays] = useState<Set<string>>(new Set());
+  const [duplicating, setDuplicating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
