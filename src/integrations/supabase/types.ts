@@ -4523,6 +4523,170 @@ export type Database = {
           },
         ]
       }
+      festival_schedule_position: {
+        Row: {
+          concept_id: string
+          created_at: string
+          display_order: number
+          festival_id: string
+          id: string
+          notes: string | null
+          position_number: number
+          station_id: string
+          updated_at: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          display_order?: number
+          festival_id: string
+          id?: string
+          notes?: string | null
+          position_number?: number
+          station_id: string
+          updated_at?: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          display_order?: number
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          position_number?: number
+          station_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_schedule_position_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_position_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "station"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_schedule_shift: {
+        Row: {
+          computed_hours: number | null
+          created_at: string
+          crosses_midnight: boolean
+          end_time: string
+          festival_staff_id: string
+          id: string
+          notes: string | null
+          schedule_position_id: string
+          shift_date: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          computed_hours?: number | null
+          created_at?: string
+          crosses_midnight?: boolean
+          end_time: string
+          festival_staff_id: string
+          id?: string
+          notes?: string | null
+          schedule_position_id: string
+          shift_date: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          computed_hours?: number | null
+          created_at?: string
+          crosses_midnight?: boolean
+          end_time?: string
+          festival_staff_id?: string
+          id?: string
+          notes?: string | null
+          schedule_position_id?: string
+          shift_date?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_schedule_shift_festival_staff_id_fkey"
+            columns: ["festival_staff_id"]
+            isOneToOne: false
+            referencedRelation: "festival_staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_schedule_shift_schedule_position_id_fkey"
+            columns: ["schedule_position_id"]
+            isOneToOne: false
+            referencedRelation: "festival_schedule_position"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_service_hours: {
         Row: {
           close_time: string | null
