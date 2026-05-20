@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { formatDateRange } from "@/lib/dateFormat";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import PositionManager from "@/components/scheduling/PositionManager";
 import SchedulingGrid from "@/components/scheduling/SchedulingGrid";
 
