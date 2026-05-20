@@ -70,10 +70,11 @@ interface ShiftRow {
   staff_name: string | null;
 }
 
-export default function SchedulingGrid({ festivalId, onCellClick, onGoToPositions }: Props) {
+export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
   const festivalQ = useQuery({
     queryKey: ["sched-grid-festival", festivalId],
     queryFn: async (): Promise<FestivalRow> => {
+
       const { data, error } = await supabase
         .from("festivals")
         .select("id, start_date, end_date")
