@@ -713,151 +713,6 @@ function ConceptBlock(props: {
   );
 }
 
-  conceptId: string | null;
-  conceptName: string;
-  conceptActive: boolean;
-  accentClass: string;
-  slug: string | null;
-  totalCols: number;
-  days: { date: string; label: string }[];
-  positions: PositionRow[];
-  sibCount: Map<string, number>;
-  shiftsByCell: Map<string, ShiftRow[]>;
-  onCellClick: Props["onCellClick"];
-  posColClass: string;
-  dayColClass: string;
-  hoursByDate: Map<string, HoursRow>;
-  onEditHours: () => void;
-}) {
-  const {
-    conceptId, conceptName, conceptActive, accentClass, slug, totalCols, days,
-    positions, sibCount, shiftsByCell, onCellClick, posColClass, dayColClass,
-    hoursByDate, onEditHours,
-  } = props;
-
-  const clickable = !!conceptId;
-  const handleOpen = () => {
-    if (clickable) onEditHours();
-  };
-
-  return (
-    <>
-      <tr className={accentClass}>
-        <td
-          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-2 font-heading font-semibold border-t border-r`}
-        >
-          <button
-            type="button"
-            onClick={handleOpen}
-            disabled={!clickable}
-            className="flex w-full items-center justify-between gap-2 text-left disabled:cursor-default"
-          >
-            <span className="truncate">{conceptName}</span>
-            {clickable && (
-              <Pencil className="h-3.5 w-3.5 shrink-0 opacity-70" aria-label="Edit opening hours" />
-            )}
-          </button>
-        </td>
-        {days.map((d) => {
-          const h = hoursByDate.get(d.date);
-          return (
-            <td
-              key={d.date}
-              className={`${dayColClass} px-3 py-2 border-t border-r last:border-r-0 align-middle`}
-            >
-              {clickable ? (
-                <button
-                  type="button"
-                  onClick={handleOpen}
-                  className="w-full text-left text-xs font-normal hover:underline underline-offset-2"
-                >
-                  {h ? (
-                    <span className="opacity-90">
-                      {formatTimeHHMM(h.open_time)}–{formatTimeHHMM(h.close_time)}
-                    </span>
-                  ) : (
-                    <span className="opacity-50">— Set hours</span>
-                  )}
-                </button>
-              ) : (
-                <span className="opacity-50 text-xs">—</span>
-              )}
-            </td>
-          );
-        })}
-      </tr>
-
-      {positions.map((p) => {
-        const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
-        const label = positionLabel(p.station_label, p.position_number, sib);
-        return (
-          <tr key={p.id} className="border-b last:border-b-0">
-            <td
-              className={`${posColClass} sticky left-0 z-10 bg-card px-3 py-2 border-r align-top`}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="font-medium">{label}</span>
-                {p.notes && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      {p.notes}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                {!conceptActive && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      Concept not active for this festival.
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            </td>
-            {days.map((d) => {
-              const cellShifts = shiftsByCell.get(`${p.id}|${d.date}`) ?? [];
-              return (
-                <td
-                  key={d.date}
-                  className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
-                >
-                  {cellShifts.length === 0 ? (
-                    <EmptyCell
-                      onClick={() => onCellClick({ positionId: p.id, date: d.date })}
-                    />
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {cellShifts.map((s) => (
-                        <ShiftChip
-                          key={s.id}
-                          shift={s}
-                          slug={slug}
-                          onClick={() =>
-                            onCellClick({
-                              positionId: p.id,
-                              date: d.date,
-                              shiftId: s.id,
-                            })
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-                </td>
-              );
-            })}
-          </tr>
-        );
-      })}
-    </>
-  );
-}
-
 function EmptyCell({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -875,19 +730,43 @@ function EmptyCell({ onClick }: { onClick: () => void }) {
 function ShiftChip({
   shift,
   slug,
+  siblings,
   onClick,
 }: {
   shift: ShiftRow;
   slug: string | null;
+  siblings: ShiftEditorShift[];
   onClick: () => void;
 }) {
   const name = shift.staff_name?.trim() || "(no name)";
-  return (
+  const multi = siblings.length >= 2;
+
+  const cur = shiftIntervalMin(shift.start_time, shift.end_time);
+  const hasOverlap = multi && siblings.some(
+    (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
+  );
+
+  const extraBorder = multi
+    ? hasOverlap
+      ? "border-2 border-destructive"
+      : "border-2 border-amber-500"
+    : "border";
+
+  const chip = (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left rounded-md border p-2 hover:brightness-95 transition ${conceptChipClass(slug)}`}
+      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 transition ${conceptChipClass(slug)} ${extraBorder}`}
     >
+      {multi && (
+        <span
+          className={`absolute -top-1.5 -right-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 py-0.5 text-white shadow ${
+            hasOverlap ? "bg-destructive" : "bg-amber-500"
+          }`}
+        >
+          {siblings.length}×
+        </span>
+      )}
       <div className={`text-xs font-semibold truncate ${shift.staff_name ? "" : "text-muted-foreground italic"}`}>
         {name}
       </div>
@@ -904,4 +783,25 @@ function ShiftChip({
       )}
     </button>
   );
+
+  if (!multi) return chip;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+      <TooltipContent side="right" className="max-w-xs">
+        <div className="text-xs space-y-0.5">
+          <div className="font-semibold">{name} also works today:</div>
+          {siblings.map((o) => (
+            <div key={o.id} className={o.id === shift.id ? "font-medium" : ""}>
+              • {o.concept_name ?? "?"} / {o.position_label ?? "?"} /{" "}
+              {formatTimeHHMM(o.start_time)}–{formatTimeHHMM(o.end_time)}
+              {o.id === shift.id ? " (this shift)" : ""}
+            </div>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
+
