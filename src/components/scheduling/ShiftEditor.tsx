@@ -72,6 +72,7 @@ interface Props {
   } | null;
   allShiftsForFestival: ShiftEditorShift[];
   festivalStaffList: FestivalStaffLite[];
+  festivalDays: FestivalDay[];
   onSaved: () => void;
 }
 
