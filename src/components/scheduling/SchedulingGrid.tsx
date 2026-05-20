@@ -147,7 +147,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     queryFn: async (): Promise<PositionRow[]> => {
       const { data, error } = await supabase
         .from("festival_schedule_position")
-        .select("id, concept_id, station_id, position_number, display_order, notes, station:station_id(label)")
+        .select("id, concept_id, station_id, position_number, display_order, notes, display_name, station:station_id(label)")
         .eq("festival_id", festivalId)
         .order("concept_id")
         .order("display_order")
@@ -161,6 +161,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
         display_order: r.display_order,
         notes: r.notes,
         station_label: r.station?.label ?? "Unknown station",
+        display_name: r.display_name ?? null,
       }));
     },
   });
