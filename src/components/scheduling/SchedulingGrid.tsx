@@ -16,6 +16,7 @@ import {
 interface Props {
   festivalId: string;
   onCellClick: (args: { positionId: string; date: string; shiftId?: string }) => void;
+  onGoToPositions?: () => void;
 }
 
 interface FestivalRow {
