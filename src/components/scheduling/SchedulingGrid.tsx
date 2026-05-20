@@ -449,7 +449,9 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
                   positions={rows}
                   sibCount={sibKeyCounts}
                   shiftsByCell={shiftsByCell}
-                  onCellClick={onCellClick}
+                  shiftsByStaffByDate={shiftsByStaffByDate}
+                  onOpenCreate={openCreate}
+                  onOpenEdit={openEdit}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
                   hoursByDate={hoursByDate}
