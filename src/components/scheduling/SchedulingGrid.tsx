@@ -1,6 +1,20 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, AlertTriangle, Plus, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -354,6 +368,109 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     });
   }
 
+
+  // ============ Drag and drop ============
+  const qc = useQueryClient();
+  const shiftsKey = ["sched-grid-shifts", festivalId];
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+  const [activeDrag, setActiveDrag] = useState<{ shift: ShiftRow; slug: string | null } | null>(null);
+
+  const slugByPositionId = useMemo(() => {
+    const m = new Map<string, string | null>();
+    for (const p of positionsQ.data ?? []) {
+      const c = conceptById.get(p.concept_id);
+      m.set(p.id, c?.slug ?? null);
+    }
+    return m;
+  }, [positionsQ.data, conceptById]);
+
+  const collisionDetection: CollisionDetection = (args) => {
+    const hits = pointerWithin(args);
+    const chipHit = hits.find((h) => String(h.id).startsWith("chip:"));
+    if (chipHit) return [chipHit];
+    const cellHit = hits.find((h) => String(h.id).startsWith("cell:"));
+    return cellHit ? [cellHit] : [];
+  };
+
+  function onDragStart(e: DragStartEvent) {
+    const data = e.active.data.current as { shiftId: string } | undefined;
+    if (!data) return;
+    const shift = (shiftsQ.data ?? []).find((s) => s.id === data.shiftId);
+    if (!shift) return;
+    setActiveDrag({ shift, slug: slugByPositionId.get(shift.schedule_position_id) ?? null });
+  }
+
+  async function onDragEnd(e: DragEndEvent) {
+    setActiveDrag(null);
+    const over = e.over;
+    const active = e.active;
+    if (!over) return;
+    const a = active.data.current as
+      | { shiftId: string; positionId: string; date: string }
+      | undefined;
+    const o = over.data.current as
+      | { kind: "cell" | "chip"; positionId: string; date: string; shiftId?: string }
+      | undefined;
+    if (!a || !o) return;
+    if (o.positionId === a.positionId && o.date === a.date) return;
+
+    const prev = qc.getQueryData<ShiftRow[]>(shiftsKey) ?? [];
+    let next: ShiftRow[];
+    let action: "move" | "swap";
+    let swapPartnerId: string | undefined;
+
+    if (o.kind === "chip" && o.shiftId && o.shiftId !== a.shiftId) {
+      action = "swap";
+      swapPartnerId = o.shiftId;
+      next = prev.map((s) => {
+        if (s.id === a.shiftId) return { ...s, schedule_position_id: o.positionId, shift_date: o.date };
+        if (s.id === o.shiftId) return { ...s, schedule_position_id: a.positionId, shift_date: a.date };
+        return s;
+      });
+    } else {
+      action = "move";
+      next = prev.map((s) =>
+        s.id === a.shiftId
+          ? { ...s, schedule_position_id: o.positionId, shift_date: o.date }
+          : s,
+      );
+    }
+
+    qc.setQueryData(shiftsKey, next);
+
+    try {
+      if (action === "swap" && swapPartnerId) {
+        const r1 = await supabase
+          .from("festival_schedule_shift")
+          .update({ schedule_position_id: o.positionId, shift_date: o.date })
+          .eq("id", a.shiftId);
+        if (r1.error) throw r1.error;
+        const r2 = await supabase
+          .from("festival_schedule_shift")
+          .update({ schedule_position_id: a.positionId, shift_date: a.date })
+          .eq("id", swapPartnerId);
+        if (r2.error) throw r2.error;
+        toast.success("Shifts swapped");
+      } else {
+        const r = await supabase
+          .from("festival_schedule_shift")
+          .update({ schedule_position_id: o.positionId, shift_date: o.date })
+          .eq("id", a.shiftId);
+        if (r.error) throw r.error;
+        toast.success("Shift moved");
+      }
+      shiftsQ.refetch();
+    } catch (err) {
+      console.error("Drag-and-drop save failed", err);
+      qc.setQueryData(shiftsKey, prev);
+      toast.error("Couldn't move shift — try again");
+    }
+  }
+
+
+
   function openEdit(positionId: string, date: string, shiftId: string) {
     const info = positionInfo.get(positionId);
     if (!info) return;
@@ -407,7 +524,16 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
 
   return (
     <TooltipProvider delayDuration={200}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setActiveDrag(null)}
+        autoScroll
+      >
       <div className="rounded-lg border bg-card overflow-auto max-h-[calc(100vh-260px)] md:max-h-[calc(100vh-240px)]">
+
         <table className="w-full border-collapse text-sm">
           {/* Header */}
           <thead>
@@ -555,6 +681,21 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
           />
         );
       })()}
+      <DragOverlay dropAnimation={null}>
+        {activeDrag ? (
+          <div className="rotate-3 shadow-xl opacity-95 w-[160px]">
+            <ShiftChipVisual
+              staffName={activeDrag.shift.staff_name}
+              startTime={activeDrag.shift.start_time}
+              endTime={activeDrag.shift.end_time}
+              computedHours={activeDrag.shift.computed_hours}
+              notes={activeDrag.shift.notes}
+              slug={activeDrag.slug}
+            />
+          </div>
+        ) : null}
+      </DragOverlay>
+      </DndContext>
     </TooltipProvider>
   );
 }
@@ -677,32 +818,36 @@ function ConceptBlock(props: {
                   key={d.date}
                   className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
                 >
-                  {cellShifts.length === 0 ? (
-                    <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {cellShifts.map((s) => {
-                        const sibs =
-                          shiftsByStaffByDate.get(s.festival_staff_id)?.get(s.shift_date) ?? [];
-                        return (
-                          <ShiftChip
-                            key={s.id}
-                            shift={s}
-                            slug={slug}
-                            siblings={sibs}
-                            onClick={() => onOpenEdit(p.id, d.date, s.id)}
-                          />
-                        );
-                      })}
-                      <button
-                        type="button"
-                        onClick={() => onOpenCreate(p.id, d.date)}
-                        className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
-                      >
-                        <Plus className="h-3 w-3" /> Add another
-                      </button>
-                    </div>
-                  )}
+                  <CellDrop positionId={p.id} date={d.date}>
+                    {cellShifts.length === 0 ? (
+                      <EmptyCell onClick={() => onOpenCreate(p.id, d.date)} />
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {cellShifts.map((s) => {
+                          const sibs =
+                            shiftsByStaffByDate.get(s.festival_staff_id)?.get(s.shift_date) ?? [];
+                          return (
+                            <ShiftChip
+                              key={s.id}
+                              shift={s}
+                              slug={slug}
+                              siblings={sibs}
+                              positionId={p.id}
+                              date={d.date}
+                              onClick={() => onOpenEdit(p.id, d.date, s.id)}
+                            />
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => onOpenCreate(p.id, d.date)}
+                          className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 pl-1"
+                        >
+                          <Plus className="h-3 w-3" /> Add another
+                        </button>
+                      </div>
+                    )}
+                  </CellDrop>
                 </td>
               );
             })}
@@ -727,24 +872,139 @@ function EmptyCell({ onClick }: { onClick: () => void }) {
   );
 }
 
+function CellDrop({
+  positionId,
+  date,
+  children,
+}: {
+  positionId: string;
+  date: string;
+  children: React.ReactNode;
+}) {
+  const { isOver, setNodeRef, active } = useDroppable({
+    id: `cell:${positionId}:${date}`,
+    data: { kind: "cell", positionId, date },
+  });
+  const activeData = active?.data?.current as
+    | { positionId: string; date: string }
+    | undefined;
+  const isSameCell =
+    activeData && activeData.positionId === positionId && activeData.date === date;
+  const highlight = isOver && !isSameCell;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-md transition-colors ${
+        highlight ? "outline outline-2 outline-dashed outline-primary/60 bg-primary/5" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ShiftChipVisual({
+  staffName,
+  startTime,
+  endTime,
+  computedHours,
+  notes,
+  slug,
+  multi,
+  hasOverlap,
+  siblingsCount,
+}: {
+  staffName: string | null;
+  startTime: string;
+  endTime: string;
+  computedHours: number;
+  notes: string | null;
+  slug: string | null;
+  multi?: boolean;
+  hasOverlap?: boolean;
+  siblingsCount?: number;
+}) {
+  const name = staffName?.trim() || "(no name)";
+  const extraBorder = multi
+    ? hasOverlap
+      ? "border-2 border-destructive"
+      : "border-2 border-amber-500"
+    : "border";
+  return (
+    <div
+      className={`relative w-full text-left rounded-md p-2 ${conceptChipClass(slug)} ${extraBorder}`}
+    >
+      {multi && siblingsCount ? (
+        <span
+          className={`absolute -top-1.5 -right-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 py-0.5 text-white shadow ${
+            hasOverlap ? "bg-destructive" : "bg-amber-500"
+          }`}
+        >
+          {siblingsCount}×
+        </span>
+      ) : null}
+      <div className={`text-xs font-semibold truncate ${staffName ? "" : "text-muted-foreground italic"}`}>
+        {name}
+      </div>
+      <div className="flex items-center justify-between text-xs mt-0.5">
+        <span>
+          {formatTimeHHMM(startTime)} – {formatTimeHHMM(endTime)}
+        </span>
+        <span className="font-medium">{formatHoursMinutes(computedHours)}</span>
+      </div>
+      {notes && (
+        <div className="text-[11px] italic text-muted-foreground truncate mt-0.5">
+          {notes}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ShiftChip({
   shift,
   slug,
   siblings,
+  positionId,
+  date,
   onClick,
 }: {
   shift: ShiftRow;
   slug: string | null;
   siblings: ShiftEditorShift[];
+  positionId: string;
+  date: string;
   onClick: () => void;
 }) {
   const name = shift.staff_name?.trim() || "(no name)";
   const multi = siblings.length >= 2;
 
   const cur = shiftIntervalMin(shift.start_time, shift.end_time);
-  const hasOverlap = multi && siblings.some(
-    (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
-  );
+  const hasOverlap =
+    multi &&
+    siblings.some(
+      (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
+    );
+
+  const draggable = useDraggable({
+    id: `drag:${shift.id}`,
+    data: { shiftId: shift.id, positionId, date },
+  });
+  const droppable = useDroppable({
+    id: `chip:${shift.id}`,
+    data: { kind: "chip", shiftId: shift.id, positionId, date },
+  });
+
+  const setRefs = (el: HTMLButtonElement | null) => {
+    draggable.setNodeRef(el);
+    droppable.setNodeRef(el);
+  };
+
+  const activeData = droppable.active?.data?.current as
+    | { positionId: string; date: string; shiftId: string }
+    | undefined;
+  const isSelf = activeData?.shiftId === shift.id;
+  const swapHighlight = droppable.isOver && !isSelf;
 
   const extraBorder = multi
     ? hasOverlap
@@ -752,11 +1012,18 @@ function ShiftChip({
       : "border-2 border-amber-500"
     : "border";
 
+  const isDragging = draggable.isDragging;
+
   const chip = (
     <button
+      ref={setRefs}
       type="button"
       onClick={onClick}
-      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 transition ${conceptChipClass(slug)} ${extraBorder}`}
+      {...draggable.attributes}
+      {...draggable.listeners}
+      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 hover:shadow-md transition cursor-grab active:cursor-grabbing ${conceptChipClass(slug)} ${extraBorder} ${
+        isDragging ? "opacity-50" : ""
+      } ${swapHighlight ? "ring-2 ring-primary ring-offset-1" : ""}`}
     >
       {multi && (
         <span
@@ -804,4 +1071,5 @@ function ShiftChip({
     </Tooltip>
   );
 }
+
 
