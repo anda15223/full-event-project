@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Info, AlertTriangle, Plus } from "lucide-react";
+import { Info, AlertTriangle, Plus, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,6 +12,18 @@ import {
   formatHoursMinutes,
   formatTimeHHMM,
 } from "@/lib/scheduling";
+import ConceptHoursDialog from "./ConceptHoursDialog";
+
+interface HoursRow {
+  id: string;
+  festival_id: string;
+  concept_id: string;
+  open_time: string;
+  close_time: string;
+  crosses_midnight: boolean;
+  computed_hours: number | null;
+  notes: string | null;
+}
 
 interface Props {
   festivalId: string;
