@@ -908,6 +908,12 @@ export default function FestivalOverview() {
                 secondaryStat="Names, days, locations" status="gray" />
             );
             tiles.push(
+              <FestivalTile key="scheduling" href={`/festivals/${slug}/scheduling`}
+                icon={Calendar} iconAccent="blue" title="Scheduling"
+                primaryStat="Positions + grid"
+                secondaryStat="Manual shift planner" status="gray" />
+            );
+            tiles.push(
               <FestivalTile key="groceries" href="#"
                 icon={ShoppingCart} iconAccent="slate" title="Groceries"
                 primaryStat="Coming soon" disabled />
