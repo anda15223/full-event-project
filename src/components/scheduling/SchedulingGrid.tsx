@@ -406,14 +406,18 @@ function ConceptBlock(props: {
   onCellClick: Props["onCellClick"];
   posColClass: string;
   dayColClass: string;
-  hours: HoursRow | null;
+  hoursByDate: Map<string, HoursRow>;
   onEditHours: () => void;
 }) {
   const {
     conceptId, conceptName, conceptActive, accentClass, slug, totalCols, days,
     positions, sibCount, shiftsByCell, onCellClick, posColClass, dayColClass,
-    hours, onEditHours,
+    hoursByDate, onEditHours,
   } = props;
+
+  const setDays = days.filter((d) => hoursByDate.has(d.date));
+  const unsetCount = days.length - setDays.length;
+  const hasAny = setDays.length > 0;
 
   return (
     <>
@@ -424,23 +428,7 @@ function ConceptBlock(props: {
         >
           <div className="flex items-center gap-2 flex-wrap">
             <span>{conceptName}</span>
-            {conceptId && hours && (
-              <>
-                <span className="opacity-50">·</span>
-                <span className="font-normal text-xs opacity-80">
-                  {formatTimeHHMM(hours.open_time)}–{formatTimeHHMM(hours.close_time)}
-                </span>
-                <button
-                  type="button"
-                  onClick={onEditHours}
-                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
-                  aria-label="Edit opening hours"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              </>
-            )}
-            {conceptId && !hours && (
+            {conceptId && !hasAny && (
               <>
                 <span className="opacity-50">·</span>
                 <button
@@ -452,9 +440,43 @@ function ConceptBlock(props: {
                 </button>
               </>
             )}
+            {conceptId && hasAny && (
+              <>
+                {setDays.map((d) => {
+                  const h = hoursByDate.get(d.date)!;
+                  const dayShort = d.label.split(" ")[0];
+                  return (
+                    <span key={d.date} className="flex items-center gap-2">
+                      <span className="opacity-50">·</span>
+                      <span className="font-normal text-xs opacity-80">
+                        {dayShort} {formatTimeHHMM(h.open_time).replace(":00", "")}
+                        –{formatTimeHHMM(h.close_time).replace(":00", "")}
+                      </span>
+                    </span>
+                  );
+                })}
+                {unsetCount > 0 && (
+                  <>
+                    <span className="opacity-50">·</span>
+                    <span className="font-normal text-xs opacity-70">
+                      {unsetCount} day{unsetCount === 1 ? "" : "s"} unset
+                    </span>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={onEditHours}
+                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
+                  aria-label="Edit opening hours"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
           </div>
         </td>
       </tr>
+
       {positions.map((p) => {
         const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
         const label = positionLabel(p.station_label, p.position_number, sib);
