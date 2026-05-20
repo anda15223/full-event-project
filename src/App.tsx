@@ -60,6 +60,7 @@ import FestivalSoborgLoadingExport from "./pages/festival/FestivalSoborgLoadingE
 import FestivalSetup from "./pages/festival/FestivalSetup";
 import FestivalStaff from "./pages/festival/FestivalStaff";
 import FestivalStaffExport from "./pages/festival/FestivalStaffExport";
+import FestivalScheduling from "./pages/festival/FestivalScheduling";
 
 import FestivalEquipmentExport from "./pages/festival/FestivalEquipmentExport";
 import FestivalPricesExport from "./pages/festival/FestivalPricesExport";
@@ -138,6 +139,7 @@ const App = () => (
             <Route path="/festivals/:slug/setup/export" element={<Protected><FestivalSetupExport /></Protected>} />
             <Route path="/festivals/:slug/staff" element={<Protected><FestivalStaff /></Protected>} />
             <Route path="/festivals/:slug/staff/export" element={<Protected><FestivalStaffExport /></Protected>} />
+            <Route path="/festivals/:slug/scheduling" element={<Protected><FestivalScheduling /></Protected>} />
             
             <Route path="/festivals/:slug/info/export" element={<Protected><FestivalInfoExport /></Protected>} />
             <Route path="/staff" element={<Protected><StaffDirectory /></Protected>} />
