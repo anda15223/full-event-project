@@ -82,7 +82,7 @@ export default function ShiftEditor(props: Props) {
   const {
     open, onOpenChange, mode, schedulePositionId, shiftDate,
     positionLabel, conceptName, shiftDateLabel, conceptHoursForDay,
-    existingShift, allShiftsForFestival, festivalStaffList, onSaved,
+    existingShift, allShiftsForFestival, festivalStaffList, festivalDays, onSaved,
   } = props;
 
   const [staffId, setStaffId] = useState<string>("");
