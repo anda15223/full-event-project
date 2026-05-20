@@ -415,66 +415,56 @@ function ConceptBlock(props: {
     hoursByDate, onEditHours,
   } = props;
 
-  const setDays = days.filter((d) => hoursByDate.has(d.date));
-  const unsetCount = days.length - setDays.length;
-  const hasAny = setDays.length > 0;
+  const clickable = !!conceptId;
+  const handleOpen = () => {
+    if (clickable) onEditHours();
+  };
 
   return (
     <>
-      <tr>
+      <tr className={accentClass}>
         <td
-          colSpan={totalCols}
-          className={`${accentClass} px-3 py-2 font-heading font-semibold border-t`}
+          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-2 font-heading font-semibold border-t border-r`}
         >
-          <div className="flex items-center gap-2 flex-wrap">
-            <span>{conceptName}</span>
-            {conceptId && !hasAny && (
-              <>
-                <span className="opacity-50">·</span>
-                <button
-                  type="button"
-                  onClick={onEditHours}
-                  className="inline-flex items-center gap-1 text-xs font-normal opacity-80 hover:opacity-100 underline-offset-2 hover:underline"
-                >
-                  <Plus className="h-3 w-3" /> Set opening hours
-                </button>
-              </>
+          <button
+            type="button"
+            onClick={handleOpen}
+            disabled={!clickable}
+            className="flex w-full items-center justify-between gap-2 text-left disabled:cursor-default"
+          >
+            <span className="truncate">{conceptName}</span>
+            {clickable && (
+              <Pencil className="h-3.5 w-3.5 shrink-0 opacity-70" aria-label="Edit opening hours" />
             )}
-            {conceptId && hasAny && (
-              <>
-                {setDays.map((d) => {
-                  const h = hoursByDate.get(d.date)!;
-                  const dayShort = d.label.split(" ")[0];
-                  return (
-                    <span key={d.date} className="flex items-center gap-2">
-                      <span className="opacity-50">·</span>
-                      <span className="font-normal text-xs opacity-80">
-                        {dayShort} {formatTimeHHMM(h.open_time).replace(":00", "")}
-                        –{formatTimeHHMM(h.close_time).replace(":00", "")}
-                      </span>
-                    </span>
-                  );
-                })}
-                {unsetCount > 0 && (
-                  <>
-                    <span className="opacity-50">·</span>
-                    <span className="font-normal text-xs opacity-70">
-                      {unsetCount} day{unsetCount === 1 ? "" : "s"} unset
-                    </span>
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={onEditHours}
-                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
-                  aria-label="Edit opening hours"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              </>
-            )}
-          </div>
+          </button>
         </td>
+        {days.map((d) => {
+          const h = hoursByDate.get(d.date);
+          return (
+            <td
+              key={d.date}
+              className={`${dayColClass} px-3 py-2 border-t border-r last:border-r-0 align-middle`}
+            >
+              {clickable ? (
+                <button
+                  type="button"
+                  onClick={handleOpen}
+                  className="w-full text-left text-xs font-normal hover:underline underline-offset-2"
+                >
+                  {h ? (
+                    <span className="opacity-90">
+                      {formatTimeHHMM(h.open_time)}–{formatTimeHHMM(h.close_time)}
+                    </span>
+                  ) : (
+                    <span className="opacity-50">— Set hours</span>
+                  )}
+                </button>
+              ) : (
+                <span className="opacity-50 text-xs">—</span>
+              )}
+            </td>
+          );
+        })}
       </tr>
 
       {positions.map((p) => {
