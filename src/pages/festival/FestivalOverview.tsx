@@ -914,6 +914,12 @@ export default function FestivalOverview() {
                 secondaryStat="Manual shift planner" status="gray" />
             );
             tiles.push(
+              <FestivalTile key="crew-contracts" href={`/festivals/${slug}/crew`}
+                icon={FileSignature} iconAccent="violet" title="Crew & Contracts"
+                primaryStat="Onboarding"
+                secondaryStat="Hires, links, contracts" status="gray" />
+            );
+            tiles.push(
               <FestivalTile key="groceries" href="#"
                 icon={ShoppingCart} iconAccent="slate" title="Groceries"
                 primaryStat="Coming soon" disabled />
