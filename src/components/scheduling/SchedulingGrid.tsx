@@ -895,7 +895,7 @@ function CellDrop({
     <div
       ref={setNodeRef}
       className={`rounded-md transition-colors ${
-        highlight ? "ring-2 ring-dashed ring-primary/60 bg-primary/5" : ""
+        highlight ? "outline outline-2 outline-dashed outline-primary/60 bg-primary/5" : ""
       }`}
     >
       {children}
