@@ -57,7 +57,7 @@ export default function FestivalCrewHire() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [source, setSource] = useState("Local");
+  const [source, setSource] = useState("local");
   const [submitting, setSubmitting] = useState(false);
 
   const [linkModal, setLinkModal] = useState<{ name: string; link: string } | null>(null);
@@ -336,9 +336,10 @@ export default function FestivalCrewHire() {
             <Select value={source} onValueChange={setSource}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="Local">Local hire</SelectItem>
-                <SelectItem value="Soborg">Søborg crew</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="local">Local hire</SelectItem>
+                <SelectItem value="soborg">Søborg crew</SelectItem>
+                <SelectItem value="fidibus">Fidibus</SelectItem>
+                <SelectItem value="unknown">Other / unknown</SelectItem>
               </SelectContent>
             </Select>
           </div>
