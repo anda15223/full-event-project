@@ -124,6 +124,18 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     },
   });
 
+  const hoursQ = useQuery({
+    queryKey: ["sched-grid-hours", festivalId],
+    queryFn: async (): Promise<HoursRow[]> => {
+      const { data, error } = await supabase
+        .from("festival_concept_hours")
+        .select("id, festival_id, concept_id, open_time, close_time, crosses_midnight, computed_hours, notes")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return (data ?? []) as HoursRow[];
+    },
+  });
+
   const shiftsQ = useQuery({
     queryKey: ["sched-grid-shifts", festivalId],
     enabled: !!positionsQ.data,
@@ -151,6 +163,18 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
       }));
     },
   });
+
+  const hoursByConceptId = useMemo(() => {
+    const m = new Map<string, HoursRow>();
+    for (const h of hoursQ.data ?? []) m.set(h.concept_id, h);
+    return m;
+  }, [hoursQ.data]);
+
+  const [hoursDialog, setHoursDialog] = useState<{
+    conceptId: string;
+    conceptName: string;
+    existing: HoursRow | null;
+  } | null>(null);
 
   const days = useMemo(() => {
     if (!festivalQ.data) return [];
