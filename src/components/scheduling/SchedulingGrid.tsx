@@ -368,12 +368,16 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
         </table>
       </div>
 
-      {hoursDialog && (
+      {hoursDialog && festivalQ.data && (
         <ConceptHoursDialog
           festivalId={festivalId}
+          festivalStartDate={festivalQ.data.start_date}
+          festivalEndDate={festivalQ.data.end_date}
           conceptId={hoursDialog.conceptId}
           conceptName={hoursDialog.conceptName}
-          existingHours={hoursDialog.existing}
+          existingHoursByDate={
+            hoursByConceptByDate.get(hoursDialog.conceptId) ?? new Map()
+          }
           open={!!hoursDialog}
           onOpenChange={(o) => {
             if (!o) setHoursDialog(null);
@@ -383,6 +387,7 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
           }}
         />
       )}
+
     </TooltipProvider>
   );
 }
