@@ -174,6 +174,18 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     },
   });
 
+  const staffQ = useQuery({
+    queryKey: ["sched-grid-staff", festivalId],
+    queryFn: async (): Promise<FestivalStaffLite[]> => {
+      const { data, error } = await supabase
+        .from("festival_staff")
+        .select("id, name")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return (data ?? []) as FestivalStaffLite[];
+    },
+  });
+
   const hoursByConceptByDate = useMemo(() => {
     const m = new Map<string, Map<string, HoursRow>>();
     for (const h of hoursQ.data ?? []) {
@@ -191,6 +203,19 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     conceptId: string;
     conceptName: string;
   } | null>(null);
+
+  const [editor, setEditor] = useState<{
+    mode: "create" | "edit";
+    schedulePositionId: string;
+    shiftDate: string;
+    conceptId: string;
+    positionLabel: string;
+    conceptName: string;
+    shiftDateLabel: string;
+    existingShiftId?: string;
+  } | null>(null);
+
+
 
 
   const days = useMemo(() => {
