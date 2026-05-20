@@ -293,6 +293,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     // station sibling counts per concept+station
     const sibCount = new Map<string, number>();
     for (const p of positions) {
+      if (p.display_name && p.display_name.trim().length > 0) continue;
       const k = `${p.concept_id}:${p.station_id}`;
       sibCount.set(k, (sibCount.get(k) ?? 0) + 1);
     }
