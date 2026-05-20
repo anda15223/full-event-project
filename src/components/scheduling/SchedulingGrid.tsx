@@ -899,7 +899,7 @@ function ConceptBlock(props: {
     <>
       <tr className={accentClass}>
         <td
-          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-2 font-heading font-semibold border-t border-r`}
+          className={`${posColClass} sticky left-0 z-10 ${accentClass} px-3 py-1 font-heading font-semibold border-t border-r`}
         >
           <button
             type="button"
@@ -918,7 +918,7 @@ function ConceptBlock(props: {
           return (
             <td
               key={d.date}
-              className={`${dayColClass} px-3 py-2 border-t border-r last:border-r-0 align-middle`}
+              className={`${dayColClass} px-3 py-1 border-t border-r last:border-r-0 align-middle`}
             >
               {clickable ? (
                 <button
@@ -948,7 +948,7 @@ function ConceptBlock(props: {
         return (
           <tr key={p.id} className="border-b last:border-b-0">
             <td
-              className={`${posColClass} sticky left-0 z-10 bg-card px-3 py-2 border-r align-top`}
+              className={`${posColClass} sticky left-0 z-10 bg-card px-3 py-1 border-r align-top`}
             >
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">{label}</span>
@@ -980,7 +980,7 @@ function ConceptBlock(props: {
               return (
                 <td
                   key={d.date}
-                  className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
+                  className={`${dayColClass} p-1 border-r last:border-r-0 align-top`}
                 >
                   <CellDrop positionId={p.id} date={d.date}>
                     {isEmpty ? (
@@ -1040,7 +1040,7 @@ function EmptyCell({ onClick, copyMode }: { onClick: () => void; copyMode: boole
       <button
         type="button"
         onClick={onClick}
-        className="group w-full min-h-[56px] rounded-md border border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-xs text-primary"
+        className="group w-full min-h-[40px] rounded-md border border-dashed border-primary/40 bg-primary/5 hover:border-primary hover:bg-primary/10 transition-colors flex items-center justify-center text-xs text-primary"
       >
         <span className="inline-flex items-center gap-1 opacity-60 group-hover:opacity-100">
           <Clipboard className="h-3 w-3" /> Paste here
@@ -1052,7 +1052,7 @@ function EmptyCell({ onClick, copyMode }: { onClick: () => void; copyMode: boole
     <button
       type="button"
       onClick={onClick}
-      className="group w-full min-h-[56px] rounded-md border border-dashed border-transparent text-xs text-muted-foreground/0 hover:border-border hover:bg-muted/50 hover:text-muted-foreground transition-colors flex items-center justify-center"
+      className="group w-full min-h-[40px] rounded-md border border-dashed border-transparent text-xs text-muted-foreground/0 hover:border-border hover:bg-muted/50 hover:text-muted-foreground transition-colors flex items-center justify-center"
     >
       <span className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100">
         <Plus className="h-3 w-3" /> Add shift
