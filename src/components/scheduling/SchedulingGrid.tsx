@@ -948,7 +948,7 @@ function ConceptBlock(props: {
         return (
           <tr key={p.id} className="border-b last:border-b-0">
             <td
-              className={`${posColClass} sticky left-0 z-10 bg-card px-3 py-2 border-r align-top`}
+              className={`${posColClass} sticky left-0 z-10 bg-card px-3 py-1 border-r align-top`}
             >
               <div className="flex items-center gap-1.5">
                 <span className="font-medium">{label}</span>
