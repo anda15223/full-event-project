@@ -1221,6 +1221,109 @@ export type Database = {
           },
         ]
       }
+      festival_concept_hours: {
+        Row: {
+          close_time: string
+          computed_hours: number | null
+          concept_id: string
+          created_at: string
+          crosses_midnight: boolean
+          festival_id: string
+          id: string
+          notes: string | null
+          open_time: string
+          updated_at: string
+        }
+        Insert: {
+          close_time: string
+          computed_hours?: number | null
+          concept_id: string
+          created_at?: string
+          crosses_midnight?: boolean
+          festival_id: string
+          id?: string
+          notes?: string | null
+          open_time: string
+          updated_at?: string
+        }
+        Update: {
+          close_time?: string
+          computed_hours?: number | null
+          concept_id?: string
+          created_at?: string
+          crosses_midnight?: boolean
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          open_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_concept_hours_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_hours_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
       festival_concept_price_item: {
         Row: {
           category: string | null

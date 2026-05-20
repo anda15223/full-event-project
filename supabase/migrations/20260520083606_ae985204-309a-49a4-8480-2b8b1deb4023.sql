@@ -1,0 +1,1 @@
+DELETE FROM public.festival_concept_hours WHERE festival_id='bc3f8a61-c60e-420e-84f8-4f5b901f2718' AND concept_id='07416be9-f4a3-437d-a4fd-3a68d4917a34';

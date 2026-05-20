@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Info, AlertTriangle, Plus } from "lucide-react";
+import { Info, AlertTriangle, Plus, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,6 +12,18 @@ import {
   formatHoursMinutes,
   formatTimeHHMM,
 } from "@/lib/scheduling";
+import ConceptHoursDialog from "./ConceptHoursDialog";
+
+interface HoursRow {
+  id: string;
+  festival_id: string;
+  concept_id: string;
+  open_time: string;
+  close_time: string;
+  crosses_midnight: boolean;
+  computed_hours: number | null;
+  notes: string | null;
+}
 
 interface Props {
   festivalId: string;
@@ -112,6 +124,18 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
     },
   });
 
+  const hoursQ = useQuery({
+    queryKey: ["sched-grid-hours", festivalId],
+    queryFn: async (): Promise<HoursRow[]> => {
+      const { data, error } = await supabase
+        .from("festival_concept_hours")
+        .select("id, festival_id, concept_id, open_time, close_time, crosses_midnight, computed_hours, notes")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return (data ?? []) as HoursRow[];
+    },
+  });
+
   const shiftsQ = useQuery({
     queryKey: ["sched-grid-shifts", festivalId],
     enabled: !!positionsQ.data,
@@ -139,6 +163,18 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
       }));
     },
   });
+
+  const hoursByConceptId = useMemo(() => {
+    const m = new Map<string, HoursRow>();
+    for (const h of hoursQ.data ?? []) m.set(h.concept_id, h);
+    return m;
+  }, [hoursQ.data]);
+
+  const [hoursDialog, setHoursDialog] = useState<{
+    conceptId: string;
+    conceptName: string;
+    existing: HoursRow | null;
+  } | null>(null);
 
   const days = useMemo(() => {
     if (!festivalQ.data) return [];
@@ -267,9 +303,11 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
               const slug = concept?.slug ?? null;
               const accent = conceptAccentClass(slug);
               const sibKeyCounts = grouped.sibCount;
+              const hours = concept ? hoursByConceptId.get(concept.id) ?? null : null;
               return (
                 <ConceptBlock
                   key={concept?.id ?? "orphan"}
+                  conceptId={concept?.id ?? null}
                   conceptName={concept?.short_name ?? concept?.name ?? "Unassigned concept"}
                   conceptActive={!!concept}
                   accentClass={accent}
@@ -282,6 +320,15 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
                   onCellClick={onCellClick}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
+                  hours={hours}
+                  onEditHours={() => {
+                    if (!concept) return;
+                    setHoursDialog({
+                      conceptId: concept.id,
+                      conceptName: concept.short_name ?? concept.name,
+                      existing: hours,
+                    });
+                  }}
                 />
               );
             })}
@@ -306,11 +353,28 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
           </tfoot>
         </table>
       </div>
+
+      {hoursDialog && (
+        <ConceptHoursDialog
+          festivalId={festivalId}
+          conceptId={hoursDialog.conceptId}
+          conceptName={hoursDialog.conceptName}
+          existingHours={hoursDialog.existing}
+          open={!!hoursDialog}
+          onOpenChange={(o) => {
+            if (!o) setHoursDialog(null);
+          }}
+          onSaved={() => {
+            hoursQ.refetch();
+          }}
+        />
+      )}
     </TooltipProvider>
   );
 }
 
 function ConceptBlock(props: {
+  conceptId: string | null;
   conceptName: string;
   conceptActive: boolean;
   accentClass: string;
@@ -323,10 +387,13 @@ function ConceptBlock(props: {
   onCellClick: Props["onCellClick"];
   posColClass: string;
   dayColClass: string;
+  hours: HoursRow | null;
+  onEditHours: () => void;
 }) {
   const {
-    conceptName, conceptActive, accentClass, slug, totalCols, days,
+    conceptId, conceptName, conceptActive, accentClass, slug, totalCols, days,
     positions, sibCount, shiftsByCell, onCellClick, posColClass, dayColClass,
+    hours, onEditHours,
   } = props;
 
   return (
@@ -336,7 +403,37 @@ function ConceptBlock(props: {
           colSpan={totalCols}
           className={`${accentClass} px-3 py-2 font-heading font-semibold border-t`}
         >
-          {conceptName}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>{conceptName}</span>
+            {conceptId && hours && (
+              <>
+                <span className="opacity-50">·</span>
+                <span className="font-normal text-xs opacity-80">
+                  {formatTimeHHMM(hours.open_time)}–{formatTimeHHMM(hours.close_time)}
+                </span>
+                <button
+                  type="button"
+                  onClick={onEditHours}
+                  className="inline-flex items-center justify-center rounded-md p-1 hover:bg-black/5 transition"
+                  aria-label="Edit opening hours"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </>
+            )}
+            {conceptId && !hours && (
+              <>
+                <span className="opacity-50">·</span>
+                <button
+                  type="button"
+                  onClick={onEditHours}
+                  className="inline-flex items-center gap-1 text-xs font-normal opacity-80 hover:opacity-100 underline-offset-2 hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Set opening hours
+                </button>
+              </>
+            )}
+          </div>
         </td>
       </tr>
       {positions.map((p) => {
