@@ -872,24 +872,139 @@ function EmptyCell({ onClick }: { onClick: () => void }) {
   );
 }
 
+function CellDrop({
+  positionId,
+  date,
+  children,
+}: {
+  positionId: string;
+  date: string;
+  children: React.ReactNode;
+}) {
+  const { isOver, setNodeRef, active } = useDroppable({
+    id: `cell:${positionId}:${date}`,
+    data: { kind: "cell", positionId, date },
+  });
+  const activeData = active?.data?.current as
+    | { positionId: string; date: string }
+    | undefined;
+  const isSameCell =
+    activeData && activeData.positionId === positionId && activeData.date === date;
+  const highlight = isOver && !isSameCell;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-md transition-colors ${
+        highlight ? "ring-2 ring-dashed ring-primary/60 bg-primary/5" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ShiftChipVisual({
+  staffName,
+  startTime,
+  endTime,
+  computedHours,
+  notes,
+  slug,
+  multi,
+  hasOverlap,
+  siblingsCount,
+}: {
+  staffName: string | null;
+  startTime: string;
+  endTime: string;
+  computedHours: number;
+  notes: string | null;
+  slug: string | null;
+  multi?: boolean;
+  hasOverlap?: boolean;
+  siblingsCount?: number;
+}) {
+  const name = staffName?.trim() || "(no name)";
+  const extraBorder = multi
+    ? hasOverlap
+      ? "border-2 border-destructive"
+      : "border-2 border-amber-500"
+    : "border";
+  return (
+    <div
+      className={`relative w-full text-left rounded-md p-2 ${conceptChipClass(slug)} ${extraBorder}`}
+    >
+      {multi && siblingsCount ? (
+        <span
+          className={`absolute -top-1.5 -right-1.5 inline-flex items-center justify-center rounded-full text-[10px] font-bold px-1.5 py-0.5 text-white shadow ${
+            hasOverlap ? "bg-destructive" : "bg-amber-500"
+          }`}
+        >
+          {siblingsCount}×
+        </span>
+      ) : null}
+      <div className={`text-xs font-semibold truncate ${staffName ? "" : "text-muted-foreground italic"}`}>
+        {name}
+      </div>
+      <div className="flex items-center justify-between text-xs mt-0.5">
+        <span>
+          {formatTimeHHMM(startTime)} – {formatTimeHHMM(endTime)}
+        </span>
+        <span className="font-medium">{formatHoursMinutes(computedHours)}</span>
+      </div>
+      {notes && (
+        <div className="text-[11px] italic text-muted-foreground truncate mt-0.5">
+          {notes}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ShiftChip({
   shift,
   slug,
   siblings,
+  positionId,
+  date,
   onClick,
 }: {
   shift: ShiftRow;
   slug: string | null;
   siblings: ShiftEditorShift[];
+  positionId: string;
+  date: string;
   onClick: () => void;
 }) {
   const name = shift.staff_name?.trim() || "(no name)";
   const multi = siblings.length >= 2;
 
   const cur = shiftIntervalMin(shift.start_time, shift.end_time);
-  const hasOverlap = multi && siblings.some(
-    (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
-  );
+  const hasOverlap =
+    multi &&
+    siblings.some(
+      (o) => o.id !== shift.id && intervalsOverlap(cur, shiftIntervalMin(o.start_time, o.end_time)),
+    );
+
+  const draggable = useDraggable({
+    id: `drag:${shift.id}`,
+    data: { shiftId: shift.id, positionId, date },
+  });
+  const droppable = useDroppable({
+    id: `chip:${shift.id}`,
+    data: { kind: "chip", shiftId: shift.id, positionId, date },
+  });
+
+  const setRefs = (el: HTMLButtonElement | null) => {
+    draggable.setNodeRef(el);
+    droppable.setNodeRef(el);
+  };
+
+  const activeData = droppable.active?.data?.current as
+    | { positionId: string; date: string; shiftId: string }
+    | undefined;
+  const isSelf = activeData?.shiftId === shift.id;
+  const swapHighlight = droppable.isOver && !isSelf;
 
   const extraBorder = multi
     ? hasOverlap
@@ -897,11 +1012,18 @@ function ShiftChip({
       : "border-2 border-amber-500"
     : "border";
 
+  const isDragging = draggable.isDragging;
+
   const chip = (
     <button
+      ref={setRefs}
       type="button"
       onClick={onClick}
-      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 transition ${conceptChipClass(slug)} ${extraBorder}`}
+      {...draggable.attributes}
+      {...draggable.listeners}
+      className={`relative w-full text-left rounded-md p-2 hover:brightness-95 hover:shadow-md transition cursor-grab active:cursor-grabbing ${conceptChipClass(slug)} ${extraBorder} ${
+        isDragging ? "opacity-50" : ""
+      } ${swapHighlight ? "ring-2 ring-primary ring-offset-1" : ""}`}
     >
       {multi && (
         <span
@@ -949,4 +1071,5 @@ function ShiftChip({
     </Tooltip>
   );
 }
+
 
