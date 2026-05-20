@@ -225,6 +225,73 @@ export default function ShiftEditor(props: Props) {
     }
   }
 
+  // Other festival days (excluding the current shift's day) for the bulk-duplicate section.
+  const otherDays = useMemo(
+    () => festivalDays.filter((d) => d.date !== shiftDate),
+    [festivalDays, shiftDate],
+  );
+
+  // For each other day, does the same staff already have a shift on the same position?
+  function hasExistingOnDay(day: string): boolean {
+    if (!existingShift) return false;
+    return allShiftsForFestival.some(
+      (s) =>
+        s.id !== existingShift.id &&
+        s.schedule_position_id === schedulePositionId &&
+        s.festival_staff_id === existingShift.festival_staff_id &&
+        s.shift_date === day,
+    );
+  }
+
+  function toggleDay(day: string) {
+    setDuplicateDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
+  }
+
+  async function handleDuplicate() {
+    if (!existingShift || duplicateDays.size === 0) return;
+    setDuplicating(true);
+    const targetDays = Array.from(duplicateDays);
+    const failures: string[] = [];
+    for (const day of targetDays) {
+      try {
+        const { error } = await supabase
+          .from("festival_schedule_shift")
+          .insert({
+            schedule_position_id: schedulePositionId,
+            shift_date: day,
+            festival_staff_id: existingShift.festival_staff_id,
+            start_time: existingShift.start_time,
+            end_time: existingShift.end_time,
+            notes: existingShift.notes,
+          });
+        if (error) throw error;
+      } catch (err: any) {
+        const lbl = festivalDays.find((d) => d.date === day)?.label ?? day;
+        failures.push(lbl);
+      }
+    }
+    setDuplicating(false);
+    if (failures.length === targetDays.length) {
+      toast.error(`Couldn't duplicate to ${failures.join(", ")}`);
+      return;
+    }
+    if (failures.length > 0) {
+      toast.error(`Couldn't duplicate to ${failures.join(", ")}`);
+    } else {
+      toast.success(
+        `Duplicated to ${targetDays.length} day${targetDays.length === 1 ? "" : "s"}`,
+      );
+    }
+    onSaved();
+    onOpenChange(false);
+  }
+
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
