@@ -52,7 +52,7 @@ interface ShiftRow {
   staff_name: string | null;
 }
 
-export default function SchedulingGrid({ festivalId, onCellClick }: Props) {
+export default function SchedulingGrid({ festivalId, onCellClick, onGoToPositions }: Props) {
   const festivalQ = useQuery({
     queryKey: ["sched-grid-festival", festivalId],
     queryFn: async (): Promise<FestivalRow> => {
