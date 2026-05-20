@@ -338,6 +338,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
     const m = new Map<string, { label: string; conceptId: string; conceptName: string }>();
     const sibCount = new Map<string, number>();
     for (const p of positionsQ.data ?? []) {
+      if (p.display_name && p.display_name.trim().length > 0) continue;
       const k = `${p.concept_id}:${p.station_id}`;
       sibCount.set(k, (sibCount.get(k) ?? 0) + 1);
     }
@@ -345,7 +346,7 @@ export default function SchedulingGrid({ festivalId, onGoToPositions }: Props) {
       const c = conceptById.get(p.concept_id);
       const sib = sibCount.get(`${p.concept_id}:${p.station_id}`) ?? 1;
       m.set(p.id, {
-        label: positionLabel(p.station_label, p.position_number, sib),
+        label: positionLabel(p.station_label, p.position_number, sib, p.display_name),
         conceptId: p.concept_id,
         conceptName: c?.short_name ?? c?.name ?? "?",
       });
