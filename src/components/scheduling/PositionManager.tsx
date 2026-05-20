@@ -220,6 +220,24 @@ export default function PositionManager({ festivalId }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Failed to remove position"),
   });
 
+  const renameMutation = useMutation({
+    mutationFn: async (args: { id: string; displayName: string | null }) => {
+      const { error } = await supabase
+        .from("festival_schedule_position")
+        .update({ display_name: args.displayName, updated_at: new Date().toISOString() })
+        .eq("id", args.id);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (args) => {
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+      qc.invalidateQueries({ queryKey: ["sched-grid-positions", festivalId] });
+      toast.success(args.displayName ? "Position renamed" : "Name reset");
+      setEditTarget(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to rename position"),
+  });
+
   if (conceptsQ.isLoading || positionsQ.isLoading || stationsQ.isLoading) {
     return <Skeleton className="h-48 w-full" />;
   }
