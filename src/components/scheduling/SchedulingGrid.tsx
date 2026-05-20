@@ -980,7 +980,7 @@ function ConceptBlock(props: {
               return (
                 <td
                   key={d.date}
-                  className={`${dayColClass} p-1.5 border-r last:border-r-0 align-top`}
+                  className={`${dayColClass} p-1 border-r last:border-r-0 align-top`}
                 >
                   <CellDrop positionId={p.id} date={d.date}>
                     {isEmpty ? (
