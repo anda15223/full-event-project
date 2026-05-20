@@ -4,7 +4,11 @@ export function positionLabel(
   stationLabel: string,
   positionNumber: number,
   siblingCount: number,
+  displayName?: string | null,
 ): string {
+  if (displayName && displayName.trim().length > 0) {
+    return displayName.trim();
+  }
   if (siblingCount <= 1) return stationLabel;
   return `${stationLabel} ${positionNumber}`;
 }
