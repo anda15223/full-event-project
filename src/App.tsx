@@ -67,8 +67,15 @@ import FestivalPricesExport from "./pages/festival/FestivalPricesExport";
 import FestivalSetupExport from "./pages/festival/FestivalSetupExport";
 import FestivalInfoExport from "./pages/festival/FestivalInfoExport";
 import StaffDirectory from "./pages/StaffDirectory";
+import CompanySettings from "./pages/crew/CompanySettings";
+import FestivalCrewHire from "./pages/crew/FestivalCrewHire";
+import AdminRoute from "./components/crew/AdminRoute";
 
 const queryClient = new QueryClient();
+
+const AdminProtected = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute><AdminRoute><DashboardLayout>{children}</DashboardLayout></AdminRoute></ProtectedRoute>
+);
 
 const Protected = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute><DashboardLayout>{children}</DashboardLayout></ProtectedRoute>
@@ -140,6 +147,8 @@ const App = () => (
             <Route path="/festivals/:slug/staff" element={<Protected><FestivalStaff /></Protected>} />
             <Route path="/festivals/:slug/staff/export" element={<Protected><FestivalStaffExport /></Protected>} />
             <Route path="/festivals/:slug/scheduling" element={<Protected><FestivalScheduling /></Protected>} />
+            <Route path="/festivals/:slug/crew" element={<AdminProtected><FestivalCrewHire /></AdminProtected>} />
+            <Route path="/admin/company-settings" element={<AdminProtected><CompanySettings /></AdminProtected>} />
             
             <Route path="/festivals/:slug/info/export" element={<Protected><FestivalInfoExport /></Protected>} />
             <Route path="/staff" element={<Protected><StaffDirectory /></Protected>} />
