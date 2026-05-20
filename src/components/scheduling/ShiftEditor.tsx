@@ -114,6 +114,7 @@ export default function ShiftEditor(props: Props) {
     setPickerOpen(false);
     setSearch("");
     setConfirmDelete(false);
+    setDuplicateDays(new Set());
   }, [open, mode, existingShift, conceptHoursForDay]);
 
   const sortedStaff = useMemo(() => {
