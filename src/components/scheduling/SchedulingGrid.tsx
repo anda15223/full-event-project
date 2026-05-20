@@ -918,7 +918,7 @@ function ConceptBlock(props: {
           return (
             <td
               key={d.date}
-              className={`${dayColClass} px-3 py-2 border-t border-r last:border-r-0 align-middle`}
+              className={`${dayColClass} px-3 py-1 border-t border-r last:border-r-0 align-middle`}
             >
               {clickable ? (
                 <button
