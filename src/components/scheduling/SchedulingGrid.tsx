@@ -303,9 +303,11 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
               const slug = concept?.slug ?? null;
               const accent = conceptAccentClass(slug);
               const sibKeyCounts = grouped.sibCount;
+              const hours = concept ? hoursByConceptId.get(concept.id) ?? null : null;
               return (
                 <ConceptBlock
                   key={concept?.id ?? "orphan"}
+                  conceptId={concept?.id ?? null}
                   conceptName={concept?.short_name ?? concept?.name ?? "Unassigned concept"}
                   conceptActive={!!concept}
                   accentClass={accent}
@@ -318,6 +320,15 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
                   onCellClick={onCellClick}
                   posColClass={POS_COL}
                   dayColClass={DAY_COL}
+                  hours={hours}
+                  onEditHours={() => {
+                    if (!concept) return;
+                    setHoursDialog({
+                      conceptId: concept.id,
+                      conceptName: concept.short_name ?? concept.name,
+                      existing: hours,
+                    });
+                  }}
                 />
               );
             })}
@@ -342,6 +353,22 @@ export default function SchedulingGrid({ festivalId, onCellClick, onGoToPosition
           </tfoot>
         </table>
       </div>
+
+      {hoursDialog && (
+        <ConceptHoursDialog
+          festivalId={festivalId}
+          conceptId={hoursDialog.conceptId}
+          conceptName={hoursDialog.conceptName}
+          existingHours={hoursDialog.existing}
+          open={!!hoursDialog}
+          onOpenChange={(o) => {
+            if (!o) setHoursDialog(null);
+          }}
+          onSaved={() => {
+            hoursQ.refetch();
+          }}
+        />
+      )}
     </TooltipProvider>
   );
 }
