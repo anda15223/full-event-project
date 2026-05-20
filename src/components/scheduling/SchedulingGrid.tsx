@@ -80,6 +80,7 @@ interface PositionRow {
   display_order: number;
   notes: string | null;
   station_label: string;
+  display_name: string | null;
 }
 interface ShiftRow {
   id: string;
