@@ -94,7 +94,7 @@ export default function PositionManager({ festivalId }: Props) {
     queryFn: async (): Promise<PositionRow[]> => {
       const { data, error } = await supabase
         .from("festival_schedule_position")
-        .select("id, festival_id, concept_id, station_id, position_number, display_order, notes, station:station_id(label)")
+        .select("id, festival_id, concept_id, station_id, position_number, display_order, notes, display_name, station:station_id(label)")
         .eq("festival_id", festivalId)
         .order("concept_id")
         .order("display_order")
