@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { isValidEmail } from "@/lib/validation";
 
 type Settings = {
   id: string;
@@ -55,6 +56,14 @@ export default function CompanySettings() {
     }
     if (!(settings.default_hourly_rate > 0)) {
       toast.error("Default hourly rate must be > 0");
+      return;
+    }
+    if (!isValidEmail(settings.email)) {
+      toast.error("Valid email is required");
+      return;
+    }
+    if (settings.contract_cc_email && settings.contract_cc_email.trim() && !isValidEmail(settings.contract_cc_email)) {
+      toast.error("Contract CC email is invalid");
       return;
     }
     setSaving(true);
