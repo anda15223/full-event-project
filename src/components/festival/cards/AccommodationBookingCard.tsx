@@ -15,12 +15,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   BedDouble, Upload, FileText, Download, Loader2, Trash2, Plus, Pencil, Sparkles,
-  Eye, EyeOff, ChevronDown, ChevronUp, Printer,
+  Eye, EyeOff, ChevronDown, ChevronUp,
 } from "lucide-react";
 import {
   computeBookingStatus, ACC_STATUS_PILL,
 } from "@/lib/accommodationStatus";
 import { toIsoDate } from "@/lib/parseDate";
+import { jsPDF } from "jspdf";
 
 const sb = supabase as any;
 
@@ -495,11 +496,13 @@ export function AccommodationBookingCard({
   const nights = nightsBetween(booking.check_in_date, booking.check_out_date);
   const currency = booking.currency || "DKK";
 
-  const printAllocation = () => {
-    const esc = (s: string) =>
-      s.replace(/[&<>"']/g, (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!),
-      );
+  const exportAllocation = () => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentW = pageW - margin * 2;
+    let y = margin;
+
     const title = booking.provider_name?.trim() || "Accommodation booking";
     const subtitle = [
       booking.address,
@@ -508,52 +511,85 @@ export function AccommodationBookingCard({
       booking.confirmation_number ? `Ref ${booking.confirmation_number}` : "",
     ].filter(Boolean).join(" · ");
 
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${title} — Room allocation`, margin, y);
+    y += 7;
+
+    // Subtitle
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(subtitle, margin, y);
+    y += 10;
+
+    // Header row
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(60, 60, 60);
+    doc.text("Room", margin, y);
+    doc.text("Bed assignments", margin + 50, y);
+    doc.setDrawColor(40, 40, 40);
+    doc.line(margin, y + 2, pageW - margin, y + 2);
+    y += 8;
+
+    // Rows
     const sorted = [...rooms].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    const rowsHtml = sorted.map((r) => {
+    for (const r of sorted) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(20, 20, 20);
+      doc.text(r.room_label || "Room", margin, y);
+
       const beds = Array.from({ length: r.bed_count }).map((_, i) => {
         const key = (`bed_${i + 1}_assignee`) as keyof AccommodationRoomRow;
-        const v = (r[key] as string | null)?.trim() || "—";
-        return `<div class="bed"><span class="bedlbl">Bed ${i + 1}</span><span class="bedval">${esc(v)}</span></div>`;
-      }).join("");
-      return `
-        <tr>
-          <td class="rmlbl">${esc(r.room_label || "Room")}</td>
-          <td class="beds">${beds}</td>
-        </tr>`;
-    }).join("");
+        return ((r[key] as string | null)?.trim()) || "—";
+      });
 
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)} — Room allocation</title>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111; margin: 32px; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .sub { color: #555; font-size: 12px; margin-bottom: 20px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
-  th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; border-bottom: 2px solid #333; }
-  .rmlbl { font-weight: 600; width: 120px; }
-  .beds { display: flex; flex-wrap: wrap; gap: 8px 24px; }
-  .bed { display: flex; flex-direction: column; min-width: 140px; }
-  .bedlbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; }
-  .bedval { font-size: 14px; }
-  .summary { margin-top: 20px; font-size: 11px; color: #555; }
-  @media print { body { margin: 16mm; } button { display: none; } }
-</style></head><body>
-  <h1>${esc(title)} — Room allocation</h1>
-  <div class="sub">${esc(subtitle)}</div>
-  <table>
-    <thead><tr><th>Room</th><th>Bed assignments</th></tr></thead>
-    <tbody>${rowsHtml || `<tr><td colspan="2" style="color:#888;padding:20px;text-align:center">No rooms yet</td></tr>`}</tbody>
-  </table>
-  <div class="summary">${beds_assigned} of ${beds_total} beds assigned · ${sorted.length} room${sorted.length === 1 ? "" : "s"}</div>
-  <script>window.onload=()=>{window.print();}</script>
-</body></html>`;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      let bedX = margin + 50;
+      for (let i = 0; i < beds.length; i++) {
+        const label = `Bed ${i + 1}:`;
+        const value = beds[i];
+        doc.setTextColor(120, 120, 120);
+        doc.text(label, bedX, y);
+        const labelW = doc.getTextWidth(label);
+        doc.setTextColor(20, 20, 20);
+        doc.text(` ${value}`, bedX + labelW, y);
+        bedX += labelW + doc.getTextWidth(` ${value}`) + 8;
+        if (bedX > pageW - margin - 20) {
+          bedX = margin + 50;
+          y += 5;
+        }
+      }
 
-    const w = window.open("", "_blank");
-    if (!w) { toast.error("Pop-up blocked — allow pop-ups to print"); return; }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+      y += 6;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, y - 1, pageW - margin, y - 1);
+
+      if (y > 270) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+
+    if (sorted.length === 0) {
+      doc.setFontSize(10);
+      doc.setTextColor(140, 140, 140);
+      doc.text("No rooms yet", margin, y);
+      y += 8;
+    }
+
+    // Summary
+    y += 6;
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${beds_assigned} of ${beds_total} beds assigned · ${sorted.length} room${sorted.length === 1 ? "" : "s"}`, margin, y);
+
+    const safeName = title.replace(/[^a-zA-Z0-9\-_.\s]/g, "").replace(/\s+/g, "_").slice(0, 40);
+    doc.save(`${safeName}_rooms.pdf`);
   };
 
 
@@ -628,8 +664,8 @@ export function AccommodationBookingCard({
           </h4>
           <div className="flex gap-1">
             {rooms.length > 0 && (
-              <Button size="sm" variant="outline" className="h-7" onClick={printAllocation}>
-                <Printer className="h-3 w-3" /> Print
+              <Button size="sm" variant="outline" className="h-7" onClick={exportAllocation}>
+                <Download className="h-3 w-3" /> Export
               </Button>
             )}
             {partialGeneration && (
