@@ -22,6 +22,7 @@ import {
 } from "@/lib/accommodationStatus";
 import { toIsoDate } from "@/lib/parseDate";
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 const sb = supabase as any;
 
@@ -496,13 +497,7 @@ export function AccommodationBookingCard({
   const nights = nightsBetween(booking.check_in_date, booking.check_out_date);
   const currency = booking.currency || "DKK";
 
-  const exportAllocation = () => {
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    const contentW = pageW - margin * 2;
-    let y = margin;
-
+  const exportAllocation = async () => {
     const title = booking.provider_name?.trim() || "Accommodation booking";
     const subtitle = [
       booking.address,
@@ -511,86 +506,85 @@ export function AccommodationBookingCard({
       booking.confirmation_number ? `Ref ${booking.confirmation_number}` : "",
     ].filter(Boolean).join(" · ");
 
-    // Title
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${title} — Room allocation`, margin, y);
-    y += 7;
-
-    // Subtitle
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text(subtitle, margin, y);
-    y += 10;
-
-    // Header row
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(60, 60, 60);
-    doc.text("Room", margin, y);
-    doc.text("Bed assignments", margin + 50, y);
-    doc.setDrawColor(40, 40, 40);
-    doc.line(margin, y + 2, pageW - margin, y + 2);
-    y += 8;
-
-    // Rows
     const sorted = [...rooms].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-    for (const r of sorted) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(20, 20, 20);
-      doc.text(r.room_label || "Room", margin, y);
 
+    const esc = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    const rowsHtml = sorted.map((r) => {
       const beds = Array.from({ length: r.bed_count }).map((_, i) => {
         const key = (`bed_${i + 1}_assignee`) as keyof AccommodationRoomRow;
-        return ((r[key] as string | null)?.trim()) || "—";
+        const value = ((r[key] as string | null)?.trim()) || "—";
+        return `<span style="margin-right:24px;white-space:nowrap;"><span style="color:#9ca3af;">Bed ${i + 1}:</span> <span style="color:#111827;">${esc(value)}</span></span>`;
+      }).join("");
+      return `
+        <tr style="border-bottom:1px solid #e5e7eb;">
+          <td style="padding:10px 12px 10px 0;font-weight:600;color:#111827;vertical-align:top;width:120px;">${esc(r.room_label || "Room")}</td>
+          <td style="padding:10px 0;color:#111827;">${beds}</td>
+        </tr>`;
+    }).join("");
+
+    const emptyHtml = sorted.length === 0
+      ? `<tr><td colspan="2" style="padding:16px 0;color:#9ca3af;">No rooms yet</td></tr>`
+      : "";
+
+    const container = document.createElement("div");
+    container.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;background:#ffffff;padding:40px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#111827;";
+    container.innerHTML = `
+      <div style="font-size:22px;font-weight:700;margin-bottom:6px;">${esc(title)} — Room allocation</div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:24px;">${esc(subtitle)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:2px solid #111827;">
+            <th style="text-align:left;padding:8px 12px 8px 0;font-weight:600;color:#374151;">Room</th>
+            <th style="text-align:left;padding:8px 0;font-weight:600;color:#374151;">Bed assignments</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+          ${emptyHtml}
+        </tbody>
+      </table>
+      <div style="margin-top:16px;font-size:11px;color:#6b7280;">
+        ${beds_assigned} of ${beds_total} beds assigned · ${sorted.length} room${sorted.length === 1 ? "" : "s"}
+      </div>
+    `;
+    document.body.appendChild(container);
+
+    try {
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
       });
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      let bedX = margin + 50;
-      for (let i = 0; i < beds.length; i++) {
-        const label = `Bed ${i + 1}:`;
-        const value = beds[i];
-        doc.setTextColor(120, 120, 120);
-        doc.text(label, bedX, y);
-        const labelW = doc.getTextWidth(label);
-        doc.setTextColor(20, 20, 20);
-        doc.text(` ${value}`, bedX + labelW, y);
-        bedX += labelW + doc.getTextWidth(` ${value}`) + 8;
-        if (bedX > pageW - margin - 20) {
-          bedX = margin + 50;
-          y += 5;
-        }
-      }
+      const imgData = canvas.toDataURL("image/png");
+      const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
 
-      y += 6;
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, y - 1, pageW - margin, y - 1);
-
-      if (y > 270) {
+      let heightLeft = imgH;
+      let position = 0;
+      doc.addImage(imgData, "PNG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        position = heightLeft - imgH;
         doc.addPage();
-        y = margin;
+        doc.addImage(imgData, "PNG", 0, position, imgW, imgH);
+        heightLeft -= pageH;
       }
+
+      const safeName = title.replace(/[^a-zA-Z0-9\-_.\s]/g, "").replace(/\s+/g, "_").slice(0, 40);
+      doc.save(`${safeName}_rooms.pdf`);
+    } finally {
+      document.body.removeChild(container);
     }
-
-    if (sorted.length === 0) {
-      doc.setFontSize(10);
-      doc.setTextColor(140, 140, 140);
-      doc.text("No rooms yet", margin, y);
-      y += 8;
-    }
-
-    // Summary
-    y += 6;
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`${beds_assigned} of ${beds_total} beds assigned · ${sorted.length} room${sorted.length === 1 ? "" : "s"}`, margin, y);
-
-    const safeName = title.replace(/[^a-zA-Z0-9\-_.\s]/g, "").replace(/\s+/g, "_").slice(0, 40);
-    doc.save(`${safeName}_rooms.pdf`);
   };
+
+
 
 
   return (
