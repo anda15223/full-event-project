@@ -287,6 +287,21 @@ export default function FestivalScheduling() {
             <Copy className="h-4 w-4" />
             Copy staff list
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              try {
+                await exportScheduleByDayByConcept(festival);
+              } catch (e) {
+                console.error(e);
+                toast.error("Couldn't export schedule");
+              }
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Export schedule PDF
+          </Button>
         </div>
         <TabsContent value="positions" className="mt-6">
           <PositionManager festivalId={festival.id} />
