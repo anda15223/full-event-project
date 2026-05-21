@@ -664,8 +664,8 @@ export function AccommodationBookingCard({
           </h4>
           <div className="flex gap-1">
             {rooms.length > 0 && (
-              <Button size="sm" variant="outline" className="h-7" onClick={printAllocation}>
-                <Printer className="h-3 w-3" /> Print
+              <Button size="sm" variant="outline" className="h-7" onClick={exportAllocation}>
+                <Download className="h-3 w-3" /> Export
               </Button>
             )}
             {partialGeneration && (
