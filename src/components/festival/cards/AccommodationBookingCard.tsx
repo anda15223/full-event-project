@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   BedDouble, Upload, FileText, Download, Loader2, Trash2, Plus, Pencil, Sparkles,
-  Eye, EyeOff, ChevronDown, ChevronUp, Printer,
+  Eye, EyeOff, ChevronDown, ChevronUp, Download,
 } from "lucide-react";
 import {
   computeBookingStatus, ACC_STATUS_PILL,
