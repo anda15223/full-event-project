@@ -22,6 +22,7 @@ import {
 } from "@/lib/accommodationStatus";
 import { toIsoDate } from "@/lib/parseDate";
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 const sb = supabase as any;
 
