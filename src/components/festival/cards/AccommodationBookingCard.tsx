@@ -627,6 +627,11 @@ export function AccommodationBookingCard({
             Rooms ({rooms.length}{targetRooms > 0 ? ` / ${targetRooms}` : ""})
           </h4>
           <div className="flex gap-1">
+            {rooms.length > 0 && (
+              <Button size="sm" variant="outline" className="h-7" onClick={printAllocation}>
+                <Printer className="h-3 w-3" /> Print
+              </Button>
+            )}
             {partialGeneration && (
               <Button size="sm" variant="outline" className="h-7" onClick={() => generateRooms.mutate()} disabled={generateRooms.isPending}>
                 <Plus className="h-3 w-3" /> Generate {targetRooms - rooms.length} more
@@ -636,6 +641,7 @@ export function AccommodationBookingCard({
               <Plus className="h-3 w-3" /> Add room
             </Button>
           </div>
+
         </div>
 
         {needsGeneration ? (
