@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
+import { formatHoursMinutes } from "@/lib/scheduling";
 
 type Festival = { id: string; name: string; slug: string; start_date: string; end_date: string };
 type Concept = { id: string; name: string };
