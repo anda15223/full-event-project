@@ -266,7 +266,7 @@ function StaffDoc({
                       {SCHEDULE_DAYS.map((d) => (
                         <Text key={d.date} style={styles.shiftDay}></Text>
                       ))}
-                      <Text style={styles.shiftTotal}>{round1(conceptTotal)}h</Text>
+                      <Text style={styles.shiftTotal}>{formatHoursMinutes(conceptTotal)}</Text>
                     </View>
                   )}
                 </View>
