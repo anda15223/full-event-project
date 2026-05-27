@@ -108,9 +108,12 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
         const list = cMap.get(pid)!.slice().sort((a: any, b: any) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
         const label = posInfo.get(pid)!.label;
         list.forEach((s: any, idx: number) => {
+          const staffName = s.staff?.name ?? "—";
+          const total = s.festival_staff_id ? (totalsByStaff.get(s.festival_staff_id) ?? 0) : 0;
+          const totalStr = s.festival_staff_id ? ` [${formatHoursMinutes(total)} total]` : "";
           html += `<tr>
             <td style="padding:4px 6px;border:1px solid #e5e7eb;">${idx === 0 ? esc(label) : ""}</td>
-            <td style="padding:4px 6px;border:1px solid #e5e7eb;">${esc(s.staff?.name ?? "—")}</td>
+            <td style="padding:4px 6px;border:1px solid #e5e7eb;"><strong>${esc(staffName)}</strong><span style="color:#6b7280;">${esc(totalStr)}</span></td>
             <td style="padding:4px 6px;border:1px solid #e5e7eb;">${esc(formatTimeHHMM(s.start_time))}–${esc(formatTimeHHMM(s.end_time))}</td>
             <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right;">${esc(formatHoursMinutes(Number(s.computed_hours) || 0))}</td>
           </tr>`;
