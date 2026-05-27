@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
+import { formatHoursMinutes } from "@/lib/scheduling";
 
 type Festival = { id: string; name: string; slug: string; start_date: string; end_date: string };
 type Concept = { id: string; name: string };
@@ -200,7 +201,7 @@ function StaffDoc({
               return (
                 <View key={p.id} style={styles.row} wrap={false}>
                   <Text style={styles.cellName}>{N(p.name || "—")}</Text>
-                  <Text style={styles.cellHrs}>{h ? `${round1(h)}h` : "—"}</Text>
+                  <Text style={styles.cellHrs}>{h ? formatHoursMinutes(h) : "—"}</Text>
                   <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
                   <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
                   <Text style={styles.cellSrc}>{N(SOURCE_LABEL[p.staff_source] ?? p.staff_source)}</Text>
@@ -249,11 +250,11 @@ function StaffDoc({
                           const label = list.map((s) => `${fmt(s.start_time)}-${fmt(s.end_time)}`).join(", ");
                           return (
                             <Text key={d.date} style={styles.shiftDay}>
-                              {label}{dayH ? ` (${round1(dayH)}h)` : ""}
+                              {label}{dayH ? ` (${formatHoursMinutes(dayH)})` : ""}
                             </Text>
                           );
                         })}
-                        <Text style={styles.shiftTotal}>{round1(r.total)}h</Text>
+                        <Text style={styles.shiftTotal}>{formatHoursMinutes(r.total)}</Text>
                       </View>
                     ))
                   )}
@@ -265,7 +266,7 @@ function StaffDoc({
                       {SCHEDULE_DAYS.map((d) => (
                         <Text key={d.date} style={styles.shiftDay}></Text>
                       ))}
-                      <Text style={styles.shiftTotal}>{round1(conceptTotal)}h</Text>
+                      <Text style={styles.shiftTotal}>{formatHoursMinutes(conceptTotal)}</Text>
                     </View>
                   )}
                 </View>
