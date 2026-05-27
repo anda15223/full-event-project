@@ -250,7 +250,7 @@ function StaffDoc({
                           const label = list.map((s) => `${fmt(s.start_time)}-${fmt(s.end_time)}`).join(", ");
                           return (
                             <Text key={d.date} style={styles.shiftDay}>
-                              {label}{dayH ? ` (${round1(dayH)}h)` : ""}
+                              {label}{dayH ? ` (${formatHoursMinutes(dayH)})` : ""}
                             </Text>
                           );
                         })}
