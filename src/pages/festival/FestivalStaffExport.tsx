@@ -254,7 +254,7 @@ function StaffDoc({
                             </Text>
                           );
                         })}
-                        <Text style={styles.shiftTotal}>{round1(r.total)}h</Text>
+                        <Text style={styles.shiftTotal}>{formatHoursMinutes(r.total)}</Text>
                       </View>
                     ))
                   )}
