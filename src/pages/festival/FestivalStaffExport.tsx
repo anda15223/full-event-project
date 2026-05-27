@@ -201,7 +201,7 @@ function StaffDoc({
               return (
                 <View key={p.id} style={styles.row} wrap={false}>
                   <Text style={styles.cellName}>{N(p.name || "—")}</Text>
-                  <Text style={styles.cellHrs}>{h ? `${round1(h)}h` : "—"}</Text>
+                  <Text style={styles.cellHrs}>{h ? formatHoursMinutes(h) : "—"}</Text>
                   <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
                   <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
                   <Text style={styles.cellSrc}>{N(SOURCE_LABEL[p.staff_source] ?? p.staff_source)}</Text>
