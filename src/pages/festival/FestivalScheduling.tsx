@@ -24,7 +24,7 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
       .eq("festival_id", festival.id),
     supabase
       .from("festival_schedule_shift")
-      .select("id, schedule_position_id, shift_date, start_time, end_time, computed_hours, staff:festival_staff_id(name)")
+      .select("id, schedule_position_id, festival_staff_id, shift_date, start_time, end_time, computed_hours, staff:festival_staff_id(name)")
       .order("start_time"),
     supabase.from("concepts").select("id, name, short_name, display_order").order("display_order"),
   ]);
