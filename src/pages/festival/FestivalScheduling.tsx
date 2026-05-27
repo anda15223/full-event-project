@@ -24,7 +24,7 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
       .eq("festival_id", festival.id),
     supabase
       .from("festival_schedule_shift")
-      .select("id, schedule_position_id, shift_date, start_time, end_time, computed_hours, staff:festival_staff_id(name)")
+      .select("id, schedule_position_id, festival_staff_id, shift_date, start_time, end_time, computed_hours, staff:festival_staff_id(name)")
       .order("start_time"),
     supabase.from("concepts").select("id, name, short_name, display_order").order("display_order"),
   ]);
@@ -36,6 +36,13 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
   const posIds = new Set(positions.map((p) => p.id));
   const shifts = ((shiftsRes.data ?? []) as any[]).filter((s) => posIds.has(s.schedule_position_id));
   const concepts = (conceptsRes.data ?? []) as any[];
+
+  // total hours per staff across the whole festival
+  const totalsByStaff = new Map<string, number>();
+  for (const s of shifts) {
+    if (!s.festival_staff_id) continue;
+    totalsByStaff.set(s.festival_staff_id, (totalsByStaff.get(s.festival_staff_id) ?? 0) + (Number(s.computed_hours) || 0));
+  }
 
   // sibling counts for station labels
   const sib = new Map<string, number>();
@@ -101,9 +108,12 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
         const list = cMap.get(pid)!.slice().sort((a: any, b: any) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
         const label = posInfo.get(pid)!.label;
         list.forEach((s: any, idx: number) => {
+          const staffName = s.staff?.name ?? "—";
+          const total = s.festival_staff_id ? (totalsByStaff.get(s.festival_staff_id) ?? 0) : 0;
+          const totalStr = s.festival_staff_id ? ` [${formatHoursMinutes(total)} total]` : "";
           html += `<tr>
             <td style="padding:4px 6px;border:1px solid #e5e7eb;">${idx === 0 ? esc(label) : ""}</td>
-            <td style="padding:4px 6px;border:1px solid #e5e7eb;">${esc(s.staff?.name ?? "—")}</td>
+            <td style="padding:4px 6px;border:1px solid #e5e7eb;"><strong>${esc(staffName)}</strong><span style="color:#6b7280;">${esc(totalStr)}</span></td>
             <td style="padding:4px 6px;border:1px solid #e5e7eb;">${esc(formatTimeHHMM(s.start_time))}–${esc(formatTimeHHMM(s.end_time))}</td>
             <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right;">${esc(formatHoursMinutes(Number(s.computed_hours) || 0))}</td>
           </tr>`;
