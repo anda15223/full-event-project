@@ -37,6 +37,13 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
   const shifts = ((shiftsRes.data ?? []) as any[]).filter((s) => posIds.has(s.schedule_position_id));
   const concepts = (conceptsRes.data ?? []) as any[];
 
+  // total hours per staff across the whole festival
+  const totalsByStaff = new Map<string, number>();
+  for (const s of shifts) {
+    if (!s.festival_staff_id) continue;
+    totalsByStaff.set(s.festival_staff_id, (totalsByStaff.get(s.festival_staff_id) ?? 0) + (Number(s.computed_hours) || 0));
+  }
+
   // sibling counts for station labels
   const sib = new Map<string, number>();
   for (const p of positions) {
