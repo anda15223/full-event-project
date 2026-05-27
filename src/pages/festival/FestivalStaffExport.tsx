@@ -32,13 +32,20 @@ type Staff = {
   station: string | null;
   notes: string | null;
 };
-type Shift = {
-  concept_id: string;
+type ScheduleShift = {
+  festival_staff_id: string | null;
+  schedule_position_id: string;
   shift_date: string;
   start_time: string;
   end_time: string;
-  crosses_midnight: boolean | null;
-  notes: string | null;
+  computed_hours: number | null;
+};
+type SchedulePosition = {
+  id: string;
+  concept_id: string;
+  station_id: string | null;
+  position_number: number | null;
+  display_name: string | null;
 };
 
 const STATION_LABEL: Record<string, string> = {
@@ -68,13 +75,7 @@ const SCHEDULE_DAYS = [
 ] as const;
 
 const fmt = (t?: string | null) => (t ? t.slice(0, 5) : "—");
-function hoursBetween(start: string, end: string, crosses: boolean) {
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  let mins = eh * 60 + em - (sh * 60 + sm);
-  if (mins <= 0 || crosses) mins += 24 * 60;
-  return Math.round((mins / 60) * 10) / 10;
-}
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 const styles = StyleSheet.create({
   page: { padding: 28, fontFamily: "Inter", fontSize: 9, color: "#111" },
@@ -85,6 +86,7 @@ const styles = StyleSheet.create({
   subTitle: { fontSize: 10, fontWeight: 700, marginTop: 8, marginBottom: 4 },
   row: { flexDirection: "row", borderBottom: "0.25pt solid #ddd", paddingVertical: 3 },
   rowHead: { flexDirection: "row", borderBottom: "0.5pt solid #555", paddingVertical: 3, fontWeight: 700, backgroundColor: "#f4f4f5" },
+  cellHrs: { width: 32, textAlign: "right", paddingHorizontal: 3, fontWeight: 700 },
   cellName: { flex: 2, paddingHorizontal: 3 },
   cellLoc: { flex: 1.4, paddingHorizontal: 3 },
   cellStn: { flex: 1.4, paddingHorizontal: 3 },
@@ -106,14 +108,20 @@ function StaffDoc({
   staff,
   concepts,
   shifts,
+  positions,
 }: {
   festival: Festival;
   staff: Staff[];
   concepts: Concept[];
-  shifts: Shift[];
+  shifts: ScheduleShift[];
+  positions: SchedulePosition[];
 }) {
-  const conceptName = (id: string | null) =>
-    !id ? "—" : concepts.find((c) => c.id === id)?.name ?? "—";
+  // hours per staff (total across festival)
+  const hoursByStaff = new Map<string, number>();
+  for (const s of shifts) {
+    if (!s.festival_staff_id) continue;
+    hoursByStaff.set(s.festival_staff_id, (hoursByStaff.get(s.festival_staff_id) ?? 0) + (Number(s.computed_hours) || 0));
+  }
 
   const groups = [
     { id: "__mgmt__", name: "Management", people: staff.filter((s) => s.role === "management") },
@@ -132,7 +140,31 @@ function StaffDoc({
   const confirmedCount = staff.filter((s) => s.confirmed).length;
   const needAccom = staff.filter((s) => s.needs_accommodation).length;
 
-  const scheduleConcepts = concepts.filter((c) => /fish|gyros/i.test(c.name));
+  // schedule: map position -> concept; group shifts by concept then by staff
+  const posById = new Map(positions.map((p) => [p.id, p]));
+  const conceptById = new Map(concepts.map((c) => [c.id, c]));
+  const staffById = new Map(staff.map((s) => [s.id, s]));
+
+  type PerStaffSchedule = { staffId: string; name: string; perDay: Map<string, ScheduleShift[]>; total: number };
+  const conceptSchedules = new Map<string, Map<string, PerStaffSchedule>>();
+  for (const s of shifts) {
+    if (!s.festival_staff_id) continue;
+    const pos = posById.get(s.schedule_position_id);
+    if (!pos) continue;
+    let m = conceptSchedules.get(pos.concept_id);
+    if (!m) { m = new Map(); conceptSchedules.set(pos.concept_id, m); }
+    let row = m.get(s.festival_staff_id);
+    if (!row) {
+      row = { staffId: s.festival_staff_id, name: staffById.get(s.festival_staff_id)?.name ?? "—", perDay: new Map(), total: 0 };
+      m.set(s.festival_staff_id, row);
+    }
+    const list = row.perDay.get(s.shift_date) ?? [];
+    list.push(s);
+    row.perDay.set(s.shift_date, list);
+    row.total += Number(s.computed_hours) || 0;
+  }
+
+  const scheduleConceptIds = Array.from(conceptSchedules.keys()).filter((id) => conceptById.has(id));
 
   return (
     <Document>
@@ -149,6 +181,7 @@ function StaffDoc({
             <Text style={styles.sectionTitle}>{N(`${group.name} (${group.people.length})`)}</Text>
             <View style={styles.rowHead}>
               <Text style={styles.cellName}>Name</Text>
+              <Text style={styles.cellHrs}>Hrs</Text>
               <Text style={styles.cellLoc}>Location</Text>
               <Text style={styles.cellStn}>Station</Text>
               <Text style={styles.cellSrc}>Source</Text>
@@ -162,48 +195,39 @@ function StaffDoc({
               <Text style={styles.cellAcc}>aU</Text>
               <Text style={styles.cellConf}>OK</Text>
             </View>
-            {group.people.map((p) => (
-              <View key={p.id} style={styles.row} wrap={false}>
-                <Text style={styles.cellName}>{N(p.name || "—")}</Text>
-                <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
-                <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
-                <Text style={styles.cellSrc}>{N(SOURCE_LABEL[p.staff_source] ?? p.staff_source)}</Text>
-                <Text style={styles.cellDay}>{p.works_thursday ? "✓" : "·"}</Text>
-                <Text style={styles.cellDay}>{p.works_friday ? "✓" : "·"}</Text>
-                <Text style={styles.cellDay}>{p.works_saturday ? "✓" : "·"}</Text>
-                <Text style={styles.cellDay}>{p.works_sunday ? "✓" : "·"}</Text>
-                <Text style={styles.cellAcc}>{p.accom_thursday ? "✓" : "·"}</Text>
-                <Text style={styles.cellAcc}>{p.accom_friday ? "✓" : "·"}</Text>
-                <Text style={styles.cellAcc}>{p.accom_saturday ? "✓" : "·"}</Text>
-                <Text style={styles.cellAcc}>{p.accom_sunday ? "✓" : "·"}</Text>
-                <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
-              </View>
-            ))}
+            {group.people.map((p) => {
+              const h = hoursByStaff.get(p.id) ?? 0;
+              return (
+                <View key={p.id} style={styles.row} wrap={false}>
+                  <Text style={styles.cellName}>{N(p.name || "—")}</Text>
+                  <Text style={styles.cellHrs}>{h ? `${round1(h)}h` : "—"}</Text>
+                  <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
+                  <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
+                  <Text style={styles.cellSrc}>{N(SOURCE_LABEL[p.staff_source] ?? p.staff_source)}</Text>
+                  <Text style={styles.cellDay}>{p.works_thursday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellDay}>{p.works_friday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellDay}>{p.works_saturday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellDay}>{p.works_sunday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellAcc}>{p.accom_thursday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellAcc}>{p.accom_friday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellAcc}>{p.accom_saturday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellAcc}>{p.accom_sunday ? "✓" : "·"}</Text>
+                  <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
+                </View>
+              );
+            })}
           </View>
         ))}
 
-        {scheduleConcepts.length > 0 && (
+        {scheduleConceptIds.length > 0 && (
           <View style={styles.section} wrap>
             <Text style={styles.sectionTitle}>Shift schedule · Thu–Sun</Text>
-            {scheduleConcepts.map((c) => {
-              const conceptRows = shifts.filter(
-                (r) => r.concept_id === c.id && (r.notes ?? "").trim()
-              );
-              const byName = new Map<string, Shift[]>();
-              conceptRows.forEach((r) => {
-                const n = (r.notes ?? "").trim();
-                if (!byName.has(n)) byName.set(n, []);
-                byName.get(n)!.push(r);
-              });
-              const names = Array.from(byName.keys()).sort((a, b) => {
-                const aLate = (byName.get(a)!.find((r) => r.shift_date === "2026-05-21")?.end_time ?? "").startsWith("02");
-                const bLate = (byName.get(b)!.find((r) => r.shift_date === "2026-05-21")?.end_time ?? "").startsWith("02");
-                if (aLate !== bLate) return aLate ? -1 : 1;
-                return a.localeCompare(b);
-              });
-              let conceptTotal = 0;
+            {scheduleConceptIds.map((cid) => {
+              const c = conceptById.get(cid)!;
+              const rows = Array.from(conceptSchedules.get(cid)!.values()).sort((a, b) => a.name.localeCompare(b.name));
+              const conceptTotal = rows.reduce((acc, r) => acc + r.total, 0);
               return (
-                <View key={c.id} wrap>
+                <View key={cid} wrap>
                   <Text style={styles.subTitle}>{N(c.name)}</Text>
                   <View style={styles.shiftHead}>
                     <Text style={styles.shiftName}>Name</Text>
@@ -212,34 +236,28 @@ function StaffDoc({
                     ))}
                     <Text style={styles.shiftTotal}>Total</Text>
                   </View>
-                  {names.length === 0 ? (
+                  {rows.length === 0 ? (
                     <Text style={[styles.small, { padding: 4 }]}>No shifts.</Text>
                   ) : (
-                    names.map((name) => {
-                      const personRows = byName.get(name)!;
-                      let personTotal = 0;
-                      const cells = SCHEDULE_DAYS.map((d) => {
-                        const r = personRows.find((x) => x.shift_date === d.date);
-                        if (!r) return { key: d.date, label: "—", h: 0 };
-                        const h = hoursBetween(r.start_time, r.end_time, !!r.crosses_midnight);
-                        personTotal += h;
-                        return { key: d.date, label: `${fmt(r.start_time)}-${fmt(r.end_time)}`, h };
-                      });
-                      conceptTotal += personTotal;
-                      return (
-                        <View key={name} style={styles.shiftRow} wrap={false}>
-                          <Text style={styles.shiftName}>{N(name)}</Text>
-                          {cells.map((cell) => (
-                            <Text key={cell.key} style={styles.shiftDay}>
-                              {cell.label}{cell.h ? ` (${cell.h}h)` : ""}
+                    rows.map((r) => (
+                      <View key={r.staffId} style={styles.shiftRow} wrap={false}>
+                        <Text style={styles.shiftName}>{N(r.name)}</Text>
+                        {SCHEDULE_DAYS.map((d) => {
+                          const list = (r.perDay.get(d.date) ?? []).slice().sort((a, b) => a.start_time.localeCompare(b.start_time));
+                          if (list.length === 0) return <Text key={d.date} style={styles.shiftDay}>—</Text>;
+                          const dayH = list.reduce((acc, s) => acc + (Number(s.computed_hours) || 0), 0);
+                          const label = list.map((s) => `${fmt(s.start_time)}-${fmt(s.end_time)}`).join(", ");
+                          return (
+                            <Text key={d.date} style={styles.shiftDay}>
+                              {label}{dayH ? ` (${round1(dayH)}h)` : ""}
                             </Text>
-                          ))}
-                          <Text style={styles.shiftTotal}>{Math.round(personTotal * 10) / 10}h</Text>
-                        </View>
-                      );
-                    })
+                          );
+                        })}
+                        <Text style={styles.shiftTotal}>{round1(r.total)}h</Text>
+                      </View>
+                    ))
                   )}
-                  {names.length > 0 && (
+                  {rows.length > 0 && (
                     <View style={[styles.shiftRow, { backgroundColor: "#f4f4f5" }]} wrap={false}>
                       <Text style={[styles.shiftName, { fontWeight: 700 }]}>
                         {N(`${c.name} total`)}
@@ -247,14 +265,14 @@ function StaffDoc({
                       {SCHEDULE_DAYS.map((d) => (
                         <Text key={d.date} style={styles.shiftDay}></Text>
                       ))}
-                      <Text style={styles.shiftTotal}>{Math.round(conceptTotal * 10) / 10}h</Text>
+                      <Text style={styles.shiftTotal}>{round1(conceptTotal)}h</Text>
                     </View>
                   )}
                 </View>
               );
             })}
             <Text style={[styles.small, { marginTop: 6 }]}>
-              Legend: Th/Fr/Sa/Su = works that day · aT/aF/aS/aU = needs accommodation that night · OK = confirmed.
+              Legend: Hrs = total scheduled hours · Th/Fr/Sa/Su = works that day · aT/aF/aS/aU = needs accommodation that night · OK = confirmed.
             </Text>
           </View>
         )}
@@ -273,7 +291,8 @@ export default function FestivalStaffExport() {
   const [festival, setFestival] = useState<Festival | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [concepts, setConcepts] = useState<Concept[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [shifts, setShifts] = useState<ScheduleShift[]>([]);
+  const [positions, setPositions] = useState<SchedulePosition[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -287,7 +306,7 @@ export default function FestivalStaffExport() {
       if (!f) { setLoading(false); return; }
       setFestival(f as Festival);
 
-      const [staffRes, contractsRes, shiftsRes] = await Promise.all([
+      const [staffRes, contractsRes, posRes] = await Promise.all([
         supabase
           .from("festival_staff")
           .select("id, name, home_location, confirmed, needs_accommodation, concept_id, works_thursday, works_friday, works_saturday, works_sunday, accom_thursday, accom_friday, accom_saturday, accom_sunday, staff_source, role, station, notes")
@@ -299,16 +318,26 @@ export default function FestivalStaffExport() {
           .eq("festival_id", (f as any).id)
           .eq("is_active", true),
         supabase
-          .from("festival_shifts")
-          .select("concept_id, shift_date, start_time, end_time, crosses_midnight, notes")
-          .eq("festival_id", (f as any).id)
-          .in("shift_date", SCHEDULE_DAYS.map((d) => d.date))
-          .not("notes", "is", null),
+          .from("festival_schedule_position")
+          .select("id, concept_id, station_id, position_number, display_name")
+          .eq("festival_id", (f as any).id),
       ]);
+
+      const positionList = (posRes.data ?? []) as SchedulePosition[];
+      const posIds = positionList.map((p) => p.id);
+      let shiftList: ScheduleShift[] = [];
+      if (posIds.length > 0) {
+        const { data: sData } = await supabase
+          .from("festival_schedule_shift")
+          .select("festival_staff_id, schedule_position_id, shift_date, start_time, end_time, computed_hours")
+          .in("schedule_position_id", posIds);
+        shiftList = (sData ?? []) as ScheduleShift[];
+      }
 
       setStaff((staffRes.data ?? []) as Staff[]);
       setConcepts(((contractsRes.data ?? []) as any[]).map((c) => c.concepts).filter(Boolean) as Concept[]);
-      setShifts((shiftsRes.data ?? []) as Shift[]);
+      setPositions(positionList);
+      setShifts(shiftList);
       setLoading(false);
     })();
   }, [slug]);
@@ -323,7 +352,7 @@ export default function FestivalStaffExport() {
       <div className="border-b p-3 flex items-center justify-between">
         <Link to={`/festivals/${slug}/staff`} className="text-sm text-primary hover:underline">← Back</Link>
         <PDFDownloadLink
-          document={<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} />}
+          document={<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />}
           fileName={`${festival.slug}-staff.pdf`}
         >
           {({ loading }) => (
@@ -335,7 +364,7 @@ export default function FestivalStaffExport() {
       </div>
       <div className="flex-1">
         <PDFViewer width="100%" height="100%" showToolbar>
-          <StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} />
+          <StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />
         </PDFViewer>
       </div>
     </div>
