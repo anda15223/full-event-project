@@ -176,6 +176,12 @@ export default function FestivalContacts() {
 
   return (
     <div className="container max-w-5xl mx-auto p-6 space-y-6">
+      <ImportFromPreviousCard
+        cardLabel="contacts"
+        tables={CARD_TABLES.contacts}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
