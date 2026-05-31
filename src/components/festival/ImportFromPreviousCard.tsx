@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Check, X, Loader2 } from "lucide-react";
+import { Download, Check, X, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Festival = { id: string; name: string; year: number };
 
