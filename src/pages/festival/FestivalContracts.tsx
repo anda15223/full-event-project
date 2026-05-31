@@ -31,6 +31,7 @@ import {
 } from "@/lib/contracts";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
@@ -107,6 +108,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function FestivalContracts() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const focusContractId = searchParams.get("contract");
@@ -134,10 +136,10 @@ export default function FestivalContracts() {
   const conceptById = useMemo(() => new Map((conceptsQ.data ?? []).map(c => [c.id, c])), [conceptsQ.data]);
 
   const contractsQ = useQuery({
-    queryKey: ["festival-contracts", festival?.id], enabled: !!festival?.id,
+    queryKey: ["festival-contracts", festival?.id, draftMode], enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_contracts")
-        .select("*").eq("festival_id", festival!.id).eq("is_draft", false);
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", draftMode);
       if (error) throw error;
       // Phase 1: operating_entity / counterparty / payment_* moved to festival_contracts_finance.
       // Stub them as null on the public Contract shape until Phase 3 cleanup.
@@ -216,7 +218,7 @@ export default function FestivalContracts() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["festival-contracts", festival?.id] });
+      qc.invalidateQueries({ queryKey: ["festival-contracts", festival?.id, draftMode] });
       qc.invalidateQueries({ queryKey: ["contracts-overview"] });
       toast.success("Saved");
       setEditing(null);
@@ -231,7 +233,7 @@ export default function FestivalContracts() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["festival-contracts", festival?.id] });
+      qc.invalidateQueries({ queryKey: ["festival-contracts", festival?.id, draftMode] });
       toast.success("Contract deleted");
       setDeleteFor(null);
     },
@@ -405,7 +407,7 @@ export default function FestivalContracts() {
         contract={statusFor}
         festivalSlug={slug}
         onClose={() => setStatusFor(null)}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-contracts", festival?.id] })}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-contracts", festival?.id, draftMode] })}
       />
 
       <AlertDialog open={!!deleteFor} onOpenChange={(o) => !o && setDeleteFor(null)}>

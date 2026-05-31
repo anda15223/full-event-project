@@ -12,12 +12,14 @@ import {
 } from "@/components/festival/cards/CoolingUnitCard";
 import { computeFestivalCoolingRollup } from "@/lib/coolingStatus";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 
 export default function FestivalCooling() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
 
@@ -41,7 +43,7 @@ export default function FestivalCooling() {
     queryFn: async () => {
       const [unitsRes, contractsRes] = await Promise.all([
         supabase.from("festival_cooling_unit")
-          .select("*").eq("festival_id", festivalId).eq("is_draft", false).order("delivery_date", { ascending: true, nullsFirst: false }),
+          .select("*").eq("festival_id", festivalId).eq("is_draft", draftMode).order("delivery_date", { ascending: true, nullsFirst: false }),
         supabase.from("festival_contracts")
           .select("id, is_active, concepts!festival_contracts_concept_id_fkey(slug, name)")
           .eq("festival_id", festivalId),

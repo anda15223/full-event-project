@@ -34,6 +34,7 @@ import {
   Inbox, AlarmClock, Search, Calendar as CalendarIcon, FileDown, AlertTriangle,
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -116,6 +117,7 @@ function snoozeDate(option: "1d" | "3d" | "1w" | "monday"): string {
 }
 
 export default function FestivalActions() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -139,7 +141,7 @@ export default function FestivalActions() {
   });
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ["festival-contracts", festival?.id],
+    queryKey: ["festival-contracts", festival?.id, draftMode],
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
@@ -150,11 +152,11 @@ export default function FestivalActions() {
   });
 
   const { data: items = [], isLoading, refetch } = useQuery({
-    queryKey: ["festival-actions", festival?.id],
+    queryKey: ["festival-actions", festival?.id, draftMode],
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_action_items")
-        .select("*").eq("festival_id", festival!.id).eq("is_draft", false).order("created_at", { ascending: false });
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", draftMode).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ActionItem[];
     },
@@ -296,7 +298,7 @@ export default function FestivalActions() {
       const { error } = await supabase.from("festival_action_items").update(rest as any).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-actions", festival?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-actions", festival?.id, draftMode] }),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -305,7 +307,7 @@ export default function FestivalActions() {
       const { error } = await supabase.from("festival_action_items").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["festival-actions", festival?.id] }); },
+    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["festival-actions", festival?.id, draftMode] }); },
   });
 
   const upsertItem = useMutation({
@@ -322,7 +324,7 @@ export default function FestivalActions() {
     onSuccess: () => {
       toast.success("Saved");
       setDrawerOpen(false); setEditing(null);
-      qc.invalidateQueries({ queryKey: ["festival-actions", festival?.id] });
+      qc.invalidateQueries({ queryKey: ["festival-actions", festival?.id, draftMode] });
     },
     onError: (e: any) => toast.error(e.message),
   });

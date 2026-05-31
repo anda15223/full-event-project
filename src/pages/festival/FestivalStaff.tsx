@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Staff = {
   id: string;
@@ -116,6 +117,7 @@ const CONCEPT_STATION_PLAN: { match: (name: string) => boolean; slots: { station
 
 
 export default function FestivalStaff() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
 
@@ -136,14 +138,14 @@ export default function FestivalStaff() {
   const festivalId = festivalQ.data?.id;
 
   const staffQ = useQuery({
-    queryKey: ["festival-staff-page", festivalId],
+    queryKey: ["festival-staff-page", festivalId, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff")
         .select("*")
         .eq("festival_id", festivalId!)
-        .eq("is_draft", false)
+        .eq("is_draft", draftMode)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Staff[];
@@ -151,7 +153,7 @@ export default function FestivalStaff() {
   });
 
   const conceptsQ = useQuery({
-    queryKey: ["festival-concepts-for-staff", festivalId],
+    queryKey: ["festival-concepts-for-staff", festivalId, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -172,7 +174,7 @@ export default function FestivalStaff() {
       const { error } = await supabase.from("festival_staff").update(patch).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] }),
     onError: (e: any) => toast.error(e.message ?? "Update failed"),
   });
 
@@ -192,7 +194,7 @@ export default function FestivalStaff() {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] }),
     onError: (e: any) => toast.error(e.message ?? "Insert failed"),
   });
 
@@ -201,7 +203,7 @@ export default function FestivalStaff() {
       const { error } = await supabase.from("festival_staff").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] }),
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
 
@@ -1048,7 +1050,7 @@ function ShiftGroupsEditor({
   const conceptIds = concepts.map((c) => c.id);
 
   const shiftsQ = useQuery({
-    queryKey: ["shift-groups", festivalId, conceptIds.join(",")],
+    queryKey: ["shift-groups", festivalId, conceptIds.join(","), draftMode],
     enabled: conceptIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -1092,7 +1094,7 @@ function ShiftGroupsEditor({
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["shift-groups", festivalId] });
+      qc.invalidateQueries({ queryKey: ["shift-groups", festivalId, draftMode] });
       toast.success("Shift updated");
     },
     onError: (e: any) => toast.error(e.message ?? "Swap failed"),
@@ -1230,7 +1232,7 @@ function ShiftScheduleCard({
   const dates = SCHEDULE_DAYS.map((d) => d.date);
 
   const shiftsQ = useQuery({
-    queryKey: ["shift-schedule", festivalId, conceptIds.join(",")],
+    queryKey: ["shift-schedule", festivalId, conceptIds.join(","), draftMode],
     enabled: conceptIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase

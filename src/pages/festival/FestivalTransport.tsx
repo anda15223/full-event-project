@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
@@ -129,6 +130,7 @@ function StaffOptions({
 
 // ============================================================
 export default function FestivalTransport() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const [searchParams] = useSearchParams();
   const focusLegId = searchParams.get("leg");
@@ -188,7 +190,7 @@ export default function FestivalTransport() {
   });
 
   const { data: staff = [] } = useQuery({
-    queryKey: ["festival-staff", festival?.id],
+    queryKey: ["festival-staff", festival?.id, draftMode],
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -1389,7 +1391,7 @@ function LegEditDrawer({
           const [{ data: allStaff }, { data: allVehicles }] = await Promise.all([
             supabase.from("festival_staff")
               .select("id,name,requires_transport").eq("festival_id", fid).eq("requires_transport", true),
-            supabase.from("festival_transport").select("id").eq("festival_id", fid).eq("is_draft", false),
+            supabase.from("festival_transport").select("id").eq("festival_id", fid).eq("is_draft", draftMode),
           ]);
           const vids = (allVehicles ?? []).map((v: any) => v.id);
           if (vids.length === 0) return;

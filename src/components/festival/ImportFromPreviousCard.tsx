@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Check, X, Loader2 } from "lucide-react";
+import { Download, Check, X, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Festival = { id: string; name: string; year: number };
 
@@ -30,6 +31,7 @@ export function ImportFromPreviousCard({
   onCommitted,
 }: Props) {
   const { toast } = useToast();
+  const { draftMode, setDraftMode } = useDraftMode();
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [sourceId, setSourceId] = useState<string>("");
   const [draftCount, setDraftCount] = useState<number>(0);
@@ -77,7 +79,12 @@ export function ImportFromPreviousCard({
       const res = await call("import");
       const total = Object.values(res.imported ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(total);
-      toast({ title: "Draft imported", description: `${total} rows staged from previous festival.` });
+      setDraftMode(true);
+      toast({
+        title: "Draft imported",
+        description: `${total} rows staged. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
+      });
+      onCommitted?.();
     } catch (e) {
       toast({ title: "Import failed", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -91,6 +98,7 @@ export function ImportFromPreviousCard({
       const res = await call("commit");
       const total = Object.values(res.promoted ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(0);
+      setDraftMode(false);
       toast({ title: "Set up for this event", description: `${total} rows are now live.` });
       onCommitted?.();
     } catch (e) {
@@ -105,7 +113,9 @@ export function ImportFromPreviousCard({
     try {
       await call("discard");
       setDraftCount(0);
+      setDraftMode(false);
       toast({ title: "Draft discarded" });
+      onCommitted?.();
     } catch (e) {
       toast({ title: "Discard failed", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -114,11 +124,32 @@ export function ImportFromPreviousCard({
   }
 
   return (
-    <div className="rounded-xl border border-dashed bg-muted/30 p-3 text-sm space-y-2">
+    <div
+      className={
+        "rounded-xl border p-3 text-sm space-y-2 " +
+        (draftMode
+          ? "border-amber-300 bg-amber-50/60"
+          : "border-dashed bg-muted/30")
+      }
+    >
       <div className="flex items-center gap-2 text-muted-foreground">
         <Download className="h-3.5 w-3.5" />
         <span className="font-medium">Import {cardLabel} from another festival</span>
+        {draftMode && (
+          <span className="ml-auto text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+            Preview mode · editing drafts
+          </span>
+        )}
       </div>
+
+      {draftMode && (
+        <p className="text-xs text-amber-800">
+          The list below shows imported draft rows. Edit or delete what you
+          don't need, then click <strong>Set up for this event</strong> to make
+          them live. Click <strong>Exit preview</strong> to keep them as drafts
+          and continue later.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={sourceId} onValueChange={setSourceId}>
@@ -142,6 +173,29 @@ export function ImportFromPreviousCard({
         >
           {busy === "import" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Import as draft"}
         </Button>
+
+        {draftCount > 0 && !draftMode && (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8"
+            onClick={() => setDraftMode(true)}
+          >
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Preview & edit {draftCount} draft{draftCount === 1 ? "" : "s"}
+          </Button>
+        )}
+        {draftMode && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8"
+            onClick={() => setDraftMode(false)}
+          >
+            <EyeOff className="h-3.5 w-3.5 mr-1" />
+            Exit preview
+          </Button>
+        )}
       </div>
 
       {draftCount > 0 && (

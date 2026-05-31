@@ -12,12 +12,14 @@ import {
   type AccommodationRoomRow,
 } from "@/components/festival/cards/AccommodationBookingCard";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 const sb = supabase as any;
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 
 export default function FestivalAccommodation() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
 
@@ -40,7 +42,7 @@ export default function FestivalAccommodation() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data: bookings, error: be } = await sb.from("festival_accommodation")
-        .select("*").eq("festival_id", festivalId).eq("is_draft", false)
+        .select("*").eq("festival_id", festivalId).eq("is_draft", draftMode)
         .order("check_in_date", { ascending: true, nullsFirst: false });
       if (be) throw be;
       const ids = (bookings ?? []).map((b: any) => b.id);
@@ -56,7 +58,7 @@ export default function FestivalAccommodation() {
   });
 
   const staffQ = useQuery({
-    queryKey: ["accommodation-staff", festivalId],
+    queryKey: ["accommodation-staff", festivalId, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await sb.from("festival_staff")

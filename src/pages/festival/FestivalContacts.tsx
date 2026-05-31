@@ -29,6 +29,7 @@ import {
   Plus, Mail, Phone, Pencil, Trash2, Star, Building2, Copy, FileDown, ArrowLeft, Users,
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type ContactType = "festival_organizer" | "operator" | "internal" | "supplier";
 
@@ -77,6 +78,7 @@ function dedupKey(c: { email: string | null; full_name: string; organization: st
 }
 
 export default function FestivalContacts() {
+  const { draftMode } = useDraftMode();
   const { slug } = useParams<{ slug: string }>();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -96,13 +98,13 @@ export default function FestivalContacts() {
   const festivalId = festival?.id ?? null;
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ["festival-contacts-all", festivalId],
+    queryKey: ["festival-contacts-all", festivalId, draftMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contacts")
         .select("id, festival_id, full_name, role, email, phone, organization, is_primary, contact_type, notes, last_contact_date")
         .eq("festival_id", festivalId!)
-        .eq("is_draft", false)
+        .eq("is_draft", draftMode)
         .order("is_primary", { ascending: false })
         .order("full_name", { ascending: true });
       if (error) throw error;
@@ -132,7 +134,7 @@ export default function FestivalContacts() {
     if (!festivalId) return;
     const ch = supabase.channel(`contacts-${festivalId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "festival_contacts", filter: `festival_id=eq.${festivalId}` },
-        () => qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId] }))
+        () => qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [festivalId, qc]);
@@ -160,7 +162,7 @@ export default function FestivalContacts() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId] });
+      qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] });
       qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
       toast.success("Contact deleted");
       setDeleteId(null);
@@ -267,7 +269,7 @@ export default function FestivalContacts() {
         aggMap={aggMap}
         existingPrimaryByType={grouped}
         onSaved={() => {
-          qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId] });
+          qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] });
           qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
           setCreating(false); setEditing(null);
         }}
