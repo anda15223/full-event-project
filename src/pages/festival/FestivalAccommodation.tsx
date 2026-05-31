@@ -11,6 +11,7 @@ import {
   type AccommodationRow,
   type AccommodationRoomRow,
 } from "@/components/festival/cards/AccommodationBookingCard";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 const sb = supabase as any;
 
@@ -39,7 +40,7 @@ export default function FestivalAccommodation() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data: bookings, error: be } = await sb.from("festival_accommodation")
-        .select("*").eq("festival_id", festivalId)
+        .select("*").eq("festival_id", festivalId).eq("is_draft", false)
         .order("check_in_date", { ascending: true, nullsFirst: false });
       if (be) throw be;
       const ids = (bookings ?? []).map((b: any) => b.id);
@@ -220,6 +221,13 @@ export default function FestivalAccommodation() {
           </Button>
         )}
       </div>
+
+      <ImportFromPreviousCard
+        cardLabel="accommodation"
+        tables={CARD_TABLES.accommodation}
+        currentFestivalId={festivalId}
+        onCommitted={() => qc.invalidateQueries({ queryKey: ["accommodation-page", slug] })}
+      />
 
       {/* Summary pills */}
       {summary.bookings > 0 && (

@@ -28,6 +28,7 @@ import { formatDateRange } from "@/lib/dateFormat";
 import {
   Plus, Mail, Phone, Pencil, Trash2, Star, Building2, Copy, FileDown, ArrowLeft, Users,
 } from "lucide-react";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 type ContactType = "festival_organizer" | "operator" | "internal" | "supplier";
 
@@ -101,6 +102,7 @@ export default function FestivalContacts() {
         .from("festival_contacts")
         .select("id, festival_id, full_name, role, email, phone, organization, is_primary, contact_type, notes, last_contact_date")
         .eq("festival_id", festivalId!)
+        .eq("is_draft", false)
         .order("is_primary", { ascending: false })
         .order("full_name", { ascending: true });
       if (error) throw error;
@@ -174,6 +176,12 @@ export default function FestivalContacts() {
 
   return (
     <div className="container max-w-5xl mx-auto p-6 space-y-6">
+      <ImportFromPreviousCard
+        cardLabel="contacts"
+        tables={CARD_TABLES.contacts}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

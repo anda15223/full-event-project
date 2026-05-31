@@ -22,6 +22,7 @@ import {
   ArrowUp, ArrowDown, AlertCircle, Link2, X,
 } from "lucide-react";
 import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 type PhaseSource = {
   id: string;
@@ -471,6 +472,13 @@ export default function FestivalSetup() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+
+      <ImportFromPreviousCard
+        cardLabel="setup"
+        tables={CARD_TABLES.setup}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       {/* Header */}
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">

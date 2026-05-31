@@ -21,6 +21,7 @@ import {
   Star, Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 type Event = {
   id: string;
@@ -151,7 +152,7 @@ export default function FestivalTimeline() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data } = await (supabase as any).from("festival_timeline_event")
-        .select("*").eq("festival_id", festivalId)
+        .select("*").eq("festival_id", festivalId).eq("is_draft", false)
         .order("event_date").order("event_time", { nullsFirst: false });
       return (data ?? []) as Event[];
     },
@@ -280,6 +281,13 @@ export default function FestivalTimeline() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+
+      <ImportFromPreviousCard
+        cardLabel="timeline"
+        tables={CARD_TABLES.timeline}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       {/* Header */}
       <div>
         <div className="flex items-center justify-between gap-2 flex-wrap print:hidden">

@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 type Staff = {
   id: string;
@@ -142,6 +143,7 @@ export default function FestivalStaff() {
         .from("festival_staff")
         .select("*")
         .eq("festival_id", festivalId!)
+        .eq("is_draft", false)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Staff[];
@@ -258,6 +260,12 @@ export default function FestivalStaff() {
 
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
+      <ImportFromPreviousCard
+        cardLabel="staff"
+        tables={CARD_TABLES.staff}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>

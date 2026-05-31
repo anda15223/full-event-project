@@ -11,6 +11,7 @@ import {
   CoolingUnitCard, type CoolingUnitRow, type AssignedConcept,
 } from "@/components/festival/cards/CoolingUnitCard";
 import { computeFestivalCoolingRollup } from "@/lib/coolingStatus";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
@@ -40,7 +41,7 @@ export default function FestivalCooling() {
     queryFn: async () => {
       const [unitsRes, contractsRes] = await Promise.all([
         supabase.from("festival_cooling_unit")
-          .select("*").eq("festival_id", festivalId).order("delivery_date", { ascending: true, nullsFirst: false }),
+          .select("*").eq("festival_id", festivalId).eq("is_draft", false).order("delivery_date", { ascending: true, nullsFirst: false }),
         supabase.from("festival_contracts")
           .select("id, is_active, concepts!festival_contracts_concept_id_fkey(slug, name)")
           .eq("festival_id", festivalId),
@@ -142,6 +143,13 @@ export default function FestivalCooling() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+
+      <ImportFromPreviousCard
+        cardLabel="cooling"
+        tables={CARD_TABLES.cooling}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       {/* Header */}
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
