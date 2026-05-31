@@ -179,7 +179,6 @@ export default function FestivalContacts() {
   return (
     <div className="container max-w-5xl mx-auto p-6 space-y-6">
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="contacts"
         tables={CARD_TABLES.contacts}
         currentFestivalId={festivalId ?? ""}

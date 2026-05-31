@@ -260,7 +260,6 @@ export default function FestivalContracts() {
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="contracts"
         tables={CARD_TABLES.contracts}
         currentFestivalId={festival?.id ?? ""}

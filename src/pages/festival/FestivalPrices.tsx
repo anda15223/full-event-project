@@ -118,7 +118,6 @@ export default function FestivalPrices() {
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="prices"
         tables={CARD_TABLES.prices}
         currentFestivalId={festivalId ?? ""}

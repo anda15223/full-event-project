@@ -225,7 +225,6 @@ export default function FestivalAccommodation() {
       </div>
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="accommodation"
         tables={CARD_TABLES.accommodation}
         currentFestivalId={festivalId}

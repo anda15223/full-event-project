@@ -263,7 +263,6 @@ export default function FestivalStaff() {
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="staff"
         tables={CARD_TABLES.staff}
         currentFestivalId={festivalId ?? ""}

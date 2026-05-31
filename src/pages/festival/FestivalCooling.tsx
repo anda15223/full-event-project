@@ -147,7 +147,6 @@ export default function FestivalCooling() {
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="cooling"
         tables={CARD_TABLES.cooling}
         currentFestivalId={festivalId ?? ""}

@@ -116,7 +116,6 @@ export default function FestivalSafety() {
       </div>
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="safety"
         tables={CARD_TABLES.safety}
         currentFestivalId={festivalId}

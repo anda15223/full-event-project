@@ -285,7 +285,6 @@ export default function FestivalTimeline() {
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="timeline"
         tables={CARD_TABLES.timeline}
         currentFestivalId={festivalId ?? ""}

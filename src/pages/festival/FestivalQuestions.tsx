@@ -298,7 +298,6 @@ export default function FestivalQuestions() {
     <div className="max-w-6xl mx-auto space-y-5">
 
       <ImportFromPreviousCard
-import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="questions"
         tables={CARD_TABLES.questions}
         currentFestivalId={festival?.id ?? ""}
