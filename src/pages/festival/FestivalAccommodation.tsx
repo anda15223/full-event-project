@@ -19,6 +19,7 @@ const sb = supabase as any;
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 
 export default function FestivalAccommodation() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
 
@@ -57,7 +58,7 @@ export default function FestivalAccommodation() {
   });
 
   const staffQ = useQuery({
-    queryKey: ["accommodation-staff", festivalId],
+    queryKey: ["accommodation-staff", festivalId, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await sb.from("festival_staff")

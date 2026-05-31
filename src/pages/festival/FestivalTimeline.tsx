@@ -131,6 +131,7 @@ const EMPTY_FORM: Partial<Event> = {
 };
 
 export default function FestivalTimeline() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const qc = useQueryClient();
@@ -149,7 +150,7 @@ export default function FestivalTimeline() {
   const festivalId = festivalQ.data?.id as string | undefined;
 
   const eventsQ = useQuery({
-    queryKey: ["timeline-events", festivalId],
+    queryKey: ["timeline-events", festivalId, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data } = await (supabase as any).from("festival_timeline_event")
@@ -161,7 +162,7 @@ export default function FestivalTimeline() {
 
   // Fetch contracts to know which concepts are active (for is_active filter)
   const contractsQ = useQuery({
-    queryKey: ["festival-contracts-active", festivalId],
+    queryKey: ["festival-contracts-active", festivalId, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -186,7 +187,7 @@ export default function FestivalTimeline() {
     if (!festivalId) return;
     const ch = supabase.channel(`timeline-${festivalId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "festival_timeline_event", filter: `festival_id=eq.${festivalId}` },
-        () => qc.invalidateQueries({ queryKey: ["timeline-events", festivalId] }))
+        () => qc.invalidateQueries({ queryKey: ["timeline-events", festivalId, draftMode] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [festivalId, qc]);
@@ -256,13 +257,13 @@ export default function FestivalTimeline() {
     }
     toast({ title: form.id ? "Event updated" : "Event created" });
     setDrawerOpen(false); setEditing(null);
-    qc.invalidateQueries({ queryKey: ["timeline-events", festivalId] });
+    qc.invalidateQueries({ queryKey: ["timeline-events", festivalId, draftMode] });
   }
 
   async function quickUpdate(id: string, patch: Partial<Event>) {
     const { error } = await (supabase as any).from("festival_timeline_event").update(patch).eq("id", id);
     if (error) { toast({ title: "Update failed", description: error.message, variant: "destructive" }); return; }
-    qc.invalidateQueries({ queryKey: ["timeline-events", festivalId] });
+    qc.invalidateQueries({ queryKey: ["timeline-events", festivalId, draftMode] });
   }
 
   async function deleteEvent(id: string) {
@@ -270,7 +271,7 @@ export default function FestivalTimeline() {
     const { error } = await (supabase as any).from("festival_timeline_event").delete().eq("id", id);
     if (error) { toast({ title: "Delete failed", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Event deleted" });
-    qc.invalidateQueries({ queryKey: ["timeline-events", festivalId] });
+    qc.invalidateQueries({ queryKey: ["timeline-events", festivalId, draftMode] });
   }
 
   if (festivalQ.isLoading || !festivalQ.data) return (

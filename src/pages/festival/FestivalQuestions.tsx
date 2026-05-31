@@ -106,6 +106,7 @@ function deadlineChip(iso: string | null) {
 }
 
 export default function FestivalQuestions() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -129,7 +130,7 @@ export default function FestivalQuestions() {
   });
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ["festival-contracts-q", festival?.id],
+    queryKey: ["festival-contracts-q", festival?.id, draftMode],
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
@@ -140,7 +141,7 @@ export default function FestivalQuestions() {
   });
 
   const { data: questions = [], isLoading, refetch } = useQuery({
-    queryKey: ["festival-questions", festival?.id],
+    queryKey: ["festival-questions", festival?.id, draftMode],
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("festival_open_questions")
@@ -250,7 +251,7 @@ export default function FestivalQuestions() {
       const { error } = await (supabase as any).from("festival_open_questions").update(rest).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id, draftMode] }),
     onError: (e: any) => toast.error(e.message),
   });
   const deleteQ = useMutation({
@@ -258,7 +259,7 @@ export default function FestivalQuestions() {
       const { error } = await (supabase as any).from("festival_open_questions").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id] }); },
+    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id, draftMode] }); },
   });
   const upsertQ = useMutation({
     mutationFn: async (payload: Partial<OpenQuestion>) => {
@@ -274,7 +275,7 @@ export default function FestivalQuestions() {
     onSuccess: () => {
       toast.success("Saved");
       setDrawerOpen(false); setEditing(null);
-      qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id] });
+      qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id, draftMode] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -438,7 +439,7 @@ import { useDraftMode } from "@/hooks/useDraftMode";
         question={resolving}
         contracts={contracts}
         onClose={() => setResolving(null)}
-        onDone={() => qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id] })}
+        onDone={() => qc.invalidateQueries({ queryKey: ["festival-questions", festival?.id, draftMode] })}
       />
 
       {/* Defer dialog */}

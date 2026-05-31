@@ -78,6 +78,7 @@ function dedupKey(c: { email: string | null; full_name: string; organization: st
 }
 
 export default function FestivalContacts() {
+  const { draftMode } = useDraftMode();
   const { slug } = useParams<{ slug: string }>();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -97,7 +98,7 @@ export default function FestivalContacts() {
   const festivalId = festival?.id ?? null;
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ["festival-contacts-all", festivalId],
+    queryKey: ["festival-contacts-all", festivalId, draftMode],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contacts")
@@ -133,7 +134,7 @@ export default function FestivalContacts() {
     if (!festivalId) return;
     const ch = supabase.channel(`contacts-${festivalId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "festival_contacts", filter: `festival_id=eq.${festivalId}` },
-        () => qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId] }))
+        () => qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [festivalId, qc]);
@@ -161,7 +162,7 @@ export default function FestivalContacts() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId] });
+      qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] });
       qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
       toast.success("Contact deleted");
       setDeleteId(null);
@@ -269,7 +270,7 @@ import { useDraftMode } from "@/hooks/useDraftMode";
         aggMap={aggMap}
         existingPrimaryByType={grouped}
         onSaved={() => {
-          qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId] });
+          qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] });
           qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
           setCreating(false); setEditing(null);
         }}

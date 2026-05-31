@@ -17,6 +17,7 @@ const sb = supabase as any;
 type Festival = { id: string; slug: string; name: string };
 
 export default function FestivalPrices() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
 
   const festivalQ = useQuery({

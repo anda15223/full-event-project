@@ -19,6 +19,7 @@ const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 
 export default function FestivalCooling() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
 

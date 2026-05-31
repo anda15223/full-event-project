@@ -17,6 +17,7 @@ const sb = supabase as any;
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 
 export default function FestivalSafety() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const qc = useQueryClient();
 

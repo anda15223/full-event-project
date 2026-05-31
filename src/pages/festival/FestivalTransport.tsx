@@ -130,6 +130,7 @@ function StaffOptions({
 
 // ============================================================
 export default function FestivalTransport() {
+  const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
   const [searchParams] = useSearchParams();
   const focusLegId = searchParams.get("leg");
@@ -189,7 +190,7 @@ export default function FestivalTransport() {
   });
 
   const { data: staff = [] } = useQuery({
-    queryKey: ["festival-staff", festival?.id],
+    queryKey: ["festival-staff", festival?.id, draftMode],
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase
