@@ -26,10 +26,10 @@ import { cn } from "@/lib/utils";
 import { formatDateRange } from "@/lib/dateFormat";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import {
-import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
   Plus, CheckCircle2, Pencil, Trash2, Pause, Flame,
   AlertTriangle, Search, FileDown, HelpCircle,
 } from "lucide-react";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 type Status = "open" | "resolved" | "deferred";
 type Priority = "critical" | "high" | "medium" | "low";

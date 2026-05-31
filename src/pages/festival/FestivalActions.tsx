@@ -30,10 +30,10 @@ import { cn } from "@/lib/utils";
 import { formatDateRange } from "@/lib/dateFormat";
 import { CONCEPT_EMOJI, CONCEPT_LABELS, type ConceptSlug } from "@/components/concept/types";
 import {
-import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
   Plus, CheckCircle2, Clock, User, Pencil, Trash2, Mail, FileText, Brain,
   Inbox, AlarmClock, Search, Calendar as CalendarIcon, FileDown, AlertTriangle,
 } from "lucide-react";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
 type Priority = "critical" | "high" | "medium" | "low";
