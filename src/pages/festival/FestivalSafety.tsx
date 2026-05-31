@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SafetyZoneCard, type SafetyZoneRow } from "@/components/festival/cards/SafetyZoneCard";
 import { FestivalSafetyCard } from "@/components/festival/cards/FestivalSafetyCard";
 import { computeZoneSafetyStatus, computeFestivalCertStatus } from "@/lib/safetyStatus";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 const sb = supabase as any;
 
@@ -48,7 +49,7 @@ export default function FestivalSafety() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await sb.from("festival_safety_zone")
-        .select("*").eq("festival_id", festivalId)
+        .select("*").eq("festival_id", festivalId).eq("is_draft", false)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -111,6 +112,16 @@ export default function FestivalSafety() {
           <Link to={`/festivals/${slug}/safety/export`}><FileDown className="h-4 w-4 mr-1" />Export PDF</Link>
         </Button>
       </div>
+
+      <ImportFromPreviousCard
+        cardLabel="safety"
+        tables={CARD_TABLES.safety}
+        currentFestivalId={festivalId}
+        onCommitted={() => {
+          qc.invalidateQueries({ queryKey: ["safety-zones", slug] });
+          qc.invalidateQueries({ queryKey: ["festival-safety", slug] });
+        }}
+      />
 
       {/* Summary pills */}
       <div className="flex flex-wrap gap-2 text-xs">
