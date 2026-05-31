@@ -143,6 +143,7 @@ export default function FestivalStaff() {
         .from("festival_staff")
         .select("*")
         .eq("festival_id", festivalId!)
+        .eq("is_draft", false)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Staff[];

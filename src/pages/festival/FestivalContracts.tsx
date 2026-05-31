@@ -137,7 +137,7 @@ export default function FestivalContracts() {
     queryKey: ["festival-contracts", festival?.id], enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_contracts")
-        .select("*").eq("festival_id", festival!.id);
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", false);
       if (error) throw error;
       // Phase 1: operating_entity / counterparty / payment_* moved to festival_contracts_finance.
       // Stub them as null on the public Contract shape until Phase 3 cleanup.

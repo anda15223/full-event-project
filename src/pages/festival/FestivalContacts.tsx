@@ -102,6 +102,7 @@ export default function FestivalContacts() {
         .from("festival_contacts")
         .select("id, festival_id, full_name, role, email, phone, organization, is_primary, contact_type, notes, last_contact_date")
         .eq("festival_id", festivalId!)
+        .eq("is_draft", false)
         .order("is_primary", { ascending: false })
         .order("full_name", { ascending: true });
       if (error) throw error;

@@ -154,7 +154,7 @@ export default function FestivalActions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_action_items")
-        .select("*").eq("festival_id", festival!.id).order("created_at", { ascending: false });
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", false).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ActionItem[];
     },

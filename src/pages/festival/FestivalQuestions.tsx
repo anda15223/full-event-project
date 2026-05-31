@@ -143,7 +143,7 @@ export default function FestivalQuestions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("festival_open_questions")
-        .select("*").eq("festival_id", festival!.id).eq("visibility", "public").order("created_at", { ascending: false });
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", false).eq("visibility", "public").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as OpenQuestion[];
     },
