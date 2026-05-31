@@ -79,7 +79,12 @@ export function ImportFromPreviousCard({
       const res = await call("import");
       const total = Object.values(res.imported ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(total);
-      toast({ title: "Draft imported", description: `${total} rows staged from previous festival.` });
+      setDraftMode(true);
+      toast({
+        title: "Draft imported",
+        description: `${total} rows staged. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
+      });
+      onCommitted?.();
     } catch (e) {
       toast({ title: "Import failed", description: (e as Error).message, variant: "destructive" });
     } finally {
