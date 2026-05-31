@@ -1334,6 +1334,7 @@ function LegEditDrawer({
   leg?: Leg; defaultCapacity?: number | null;
 }) {
   const qc = useQueryClient();
+  const { draftMode } = useDraftMode();
   const [form, setForm] = useState({
     leg_label: leg?.leg_label ?? "",
     leg_phase: leg?.leg_phase ?? "setup_outbound",
