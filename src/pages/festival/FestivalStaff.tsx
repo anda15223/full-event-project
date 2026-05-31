@@ -1047,6 +1047,7 @@ function ShiftGroupsEditor({
   concepts: Concept[];
 }) {
   const qc = useQueryClient();
+  const { draftMode } = useDraftMode();
   const conceptIds = concepts.map((c) => c.id);
 
   const shiftsQ = useQuery({
@@ -1228,6 +1229,7 @@ function ShiftScheduleCard({
   festivalId: string;
   concepts: Concept[];
 }) {
+  const { draftMode } = useDraftMode();
   const conceptIds = concepts.map((c) => c.id);
   const dates = SCHEDULE_DAYS.map((d) => d.date);
 
