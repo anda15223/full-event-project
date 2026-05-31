@@ -38,6 +38,7 @@ export function ImportFromPreviousCard({
   const [busy, setBusy] = useState<null | "import" | "commit" | "discard">(null);
 
   useEffect(() => {
+    if (!currentFestivalId) return;
     supabase
       .from("festivals")
       .select("id,name,year")
@@ -49,6 +50,9 @@ export function ImportFromPreviousCard({
   }, [currentFestivalId]);
 
   async function call(action: "import" | "commit" | "discard" | "count") {
+    if (!currentFestivalId || !tables || tables.length === 0) {
+      return {} as Record<string, Record<string, number>>;
+    }
     const { data, error } = await supabase.functions.invoke("clone-card-data", {
       body: {
         action,
@@ -246,7 +250,7 @@ export const CARD_TABLES: Record<string, string[]> = {
   prices: ["festival_concept_prices"],
   safety: ["festival_safety", "festival_safety_zone"],
   setup: ["festival_setup"],
-  staff: ["festival_staff", "festival_staff_vehicles"],
+  staff: ["festival_staff", "festival_staff_vehicles", "festival_schedule_position", "festival_shifts"],
   transport: ["festival_transport"],
   scheduling: ["festival_schedule_position", "festival_shifts"],
   timeline: ["festival_timeline_event", "festival_deadlines"],
