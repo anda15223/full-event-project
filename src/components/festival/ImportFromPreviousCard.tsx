@@ -98,6 +98,7 @@ export function ImportFromPreviousCard({
       const res = await call("commit");
       const total = Object.values(res.promoted ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(0);
+      setDraftMode(false);
       toast({ title: "Set up for this event", description: `${total} rows are now live.` });
       onCommitted?.();
     } catch (e) {
