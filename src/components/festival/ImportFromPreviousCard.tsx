@@ -31,6 +31,7 @@ export function ImportFromPreviousCard({
   onCommitted,
 }: Props) {
   const { toast } = useToast();
+  const { draftMode, setDraftMode } = useDraftMode();
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [sourceId, setSourceId] = useState<string>("");
   const [draftCount, setDraftCount] = useState<number>(0);
