@@ -303,7 +303,7 @@ export default function FestivalTransport() {
       <ImportFromPreviousCard
         cardLabel="transport"
         tables={CARD_TABLES.transport}
-        currentFestivalId={festivalId ?? ""}
+        currentFestivalId={festival?.id ?? ""}
         onCommitted={() => window.location.reload()}
       />
       {/* Print header (only in print) */}

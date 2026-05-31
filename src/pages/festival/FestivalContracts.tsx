@@ -260,7 +260,7 @@ export default function FestivalContracts() {
       <ImportFromPreviousCard
         cardLabel="contracts"
         tables={CARD_TABLES.contracts}
-        currentFestivalId={festivalId ?? ""}
+        currentFestivalId={festival?.id ?? ""}
         onCommitted={() => window.location.reload()}
       />
       {/* Header */}
