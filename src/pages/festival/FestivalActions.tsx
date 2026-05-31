@@ -34,6 +34,7 @@ import {
   Inbox, AlarmClock, Search, Calendar as CalendarIcon, FileDown, AlertTriangle,
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -154,7 +155,7 @@ export default function FestivalActions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_action_items")
-        .select("*").eq("festival_id", festival!.id).eq("is_draft", false).order("created_at", { ascending: false });
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", draftMode).order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ActionItem[];
     },
@@ -348,6 +349,7 @@ export default function FestivalActions() {
     <div className="max-w-6xl mx-auto space-y-5">
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="actions"
         tables={CARD_TABLES.actions}
         currentFestivalId={festival?.id ?? ""}

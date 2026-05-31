@@ -9,6 +9,7 @@ import {
 } from "@/components/festival/cards/PricesConceptCard";
 import type { ConceptSlug } from "@/components/concept/types";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 const SLUG_ORDER: ConceptSlug[] = ["fish-chips", "gyros", "creperie", "chicks"];
 const sb = supabase as any;
@@ -47,7 +48,7 @@ export default function FestivalPrices() {
 
       // existing prices rows
       const { data: pricesRows, error: pErr } = await sb
-        .from("festival_concept_prices").select("*").eq("festival_id", festivalId).eq("is_draft", false);
+        .from("festival_concept_prices").select("*").eq("festival_id", festivalId).eq("is_draft", draftMode);
       if (pErr) throw pErr;
       const prices = (pricesRows ?? []) as PriceRow[];
 
@@ -116,6 +117,7 @@ export default function FestivalPrices() {
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="prices"
         tables={CARD_TABLES.prices}
         currentFestivalId={festivalId ?? ""}

@@ -10,6 +10,7 @@ import { SafetyZoneCard, type SafetyZoneRow } from "@/components/festival/cards/
 import { FestivalSafetyCard } from "@/components/festival/cards/FestivalSafetyCard";
 import { computeZoneSafetyStatus, computeFestivalCertStatus } from "@/lib/safetyStatus";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 const sb = supabase as any;
 
@@ -49,7 +50,7 @@ export default function FestivalSafety() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await sb.from("festival_safety_zone")
-        .select("*").eq("festival_id", festivalId).eq("is_draft", false)
+        .select("*").eq("festival_id", festivalId).eq("is_draft", draftMode)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -114,6 +115,7 @@ export default function FestivalSafety() {
       </div>
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="safety"
         tables={CARD_TABLES.safety}
         currentFestivalId={festivalId}

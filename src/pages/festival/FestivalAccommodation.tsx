@@ -12,6 +12,7 @@ import {
   type AccommodationRoomRow,
 } from "@/components/festival/cards/AccommodationBookingCard";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 const sb = supabase as any;
 
@@ -40,7 +41,7 @@ export default function FestivalAccommodation() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data: bookings, error: be } = await sb.from("festival_accommodation")
-        .select("*").eq("festival_id", festivalId).eq("is_draft", false)
+        .select("*").eq("festival_id", festivalId).eq("is_draft", draftMode)
         .order("check_in_date", { ascending: true, nullsFirst: false });
       if (be) throw be;
       const ids = (bookings ?? []).map((b: any) => b.id);
@@ -223,6 +224,7 @@ export default function FestivalAccommodation() {
       </div>
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="accommodation"
         tables={CARD_TABLES.accommodation}
         currentFestivalId={festivalId}

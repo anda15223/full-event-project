@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
@@ -301,6 +302,7 @@ export default function FestivalTransport() {
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 print:max-w-full print:space-y-4">
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="transport"
         tables={CARD_TABLES.transport}
         currentFestivalId={festival?.id ?? ""}
@@ -1389,7 +1391,7 @@ function LegEditDrawer({
           const [{ data: allStaff }, { data: allVehicles }] = await Promise.all([
             supabase.from("festival_staff")
               .select("id,name,requires_transport").eq("festival_id", fid).eq("requires_transport", true),
-            supabase.from("festival_transport").select("id").eq("festival_id", fid).eq("is_draft", false),
+            supabase.from("festival_transport").select("id").eq("festival_id", fid).eq("is_draft", draftMode),
           ]);
           const vids = (allVehicles ?? []).map((v: any) => v.id);
           if (vids.length === 0) return;

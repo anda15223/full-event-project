@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Staff = {
   id: string;
@@ -143,7 +144,7 @@ export default function FestivalStaff() {
         .from("festival_staff")
         .select("*")
         .eq("festival_id", festivalId!)
-        .eq("is_draft", false)
+        .eq("is_draft", draftMode)
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Staff[];
@@ -261,6 +262,7 @@ export default function FestivalStaff() {
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="staff"
         tables={CARD_TABLES.staff}
         currentFestivalId={festivalId ?? ""}

@@ -30,6 +30,7 @@ import {
   AlertTriangle, Search, FileDown, HelpCircle,
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Status = "open" | "resolved" | "deferred";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -143,7 +144,7 @@ export default function FestivalQuestions() {
     enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("festival_open_questions")
-        .select("*").eq("festival_id", festival!.id).eq("is_draft", false).eq("visibility", "public").order("created_at", { ascending: false });
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", draftMode).eq("visibility", "public").order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as OpenQuestion[];
     },
@@ -296,6 +297,7 @@ export default function FestivalQuestions() {
     <div className="max-w-6xl mx-auto space-y-5">
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="questions"
         tables={CARD_TABLES.questions}
         currentFestivalId={festival?.id ?? ""}

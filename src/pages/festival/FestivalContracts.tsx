@@ -31,6 +31,7 @@ import {
 } from "@/lib/contracts";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
@@ -137,7 +138,7 @@ export default function FestivalContracts() {
     queryKey: ["festival-contracts", festival?.id], enabled: !!festival?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_contracts")
-        .select("*").eq("festival_id", festival!.id).eq("is_draft", false);
+        .select("*").eq("festival_id", festival!.id).eq("is_draft", draftMode);
       if (error) throw error;
       // Phase 1: operating_entity / counterparty / payment_* moved to festival_contracts_finance.
       // Stub them as null on the public Contract shape until Phase 3 cleanup.
@@ -258,6 +259,7 @@ export default function FestivalContracts() {
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
+import { useDraftMode } from "@/hooks/useDraftMode";
         cardLabel="contracts"
         tables={CARD_TABLES.contracts}
         currentFestivalId={festival?.id ?? ""}
