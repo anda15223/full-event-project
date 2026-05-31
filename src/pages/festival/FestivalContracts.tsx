@@ -30,6 +30,7 @@ import {
   formatDKK, daysBetween, pushStatusEntry,
 } from "@/lib/contracts";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
@@ -255,6 +256,13 @@ export default function FestivalContracts() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+
+      <ImportFromPreviousCard
+        cardLabel="contracts"
+        tables={CARD_TABLES.contracts}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       {/* Header */}
       <div>
         <div className="flex items-center justify-between gap-2 flex-wrap">

@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { formatDateRange } from "@/lib/dateFormat";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import {
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
   Plus, CheckCircle2, Pencil, Trash2, Pause, Flame,
   AlertTriangle, Search, FileDown, HelpCircle,
 } from "lucide-react";
@@ -293,6 +294,13 @@ export default function FestivalQuestions() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-5">
+
+      <ImportFromPreviousCard
+        cardLabel="questions"
+        tables={CARD_TABLES.questions}
+        currentFestivalId={festival?.id ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← {festival.name}</Link>
 
       <header className="flex flex-wrap items-end justify-between gap-3">

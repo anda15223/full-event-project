@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatDateRange } from "@/lib/dateFormat";
 import {
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
   Plus, Mail, Phone, Pencil, Trash2, Star, Building2, Copy, FileDown, ArrowLeft, Users,
 } from "lucide-react";
 

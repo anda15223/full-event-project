@@ -8,6 +8,7 @@ import {
   PricesConceptCard, type PriceRow, type PriceItemRow,
 } from "@/components/festival/cards/PricesConceptCard";
 import type { ConceptSlug } from "@/components/concept/types";
+import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 
 const SLUG_ORDER: ConceptSlug[] = ["fish-chips", "gyros", "creperie", "chicks"];
 const sb = supabase as any;
@@ -46,7 +47,7 @@ export default function FestivalPrices() {
 
       // existing prices rows
       const { data: pricesRows, error: pErr } = await sb
-        .from("festival_concept_prices").select("*").eq("festival_id", festivalId);
+        .from("festival_concept_prices").select("*").eq("festival_id", festivalId).eq("is_draft", false);
       if (pErr) throw pErr;
       const prices = (pricesRows ?? []) as PriceRow[];
 
@@ -113,6 +114,13 @@ export default function FestivalPrices() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+
+      <ImportFromPreviousCard
+        cardLabel="prices"
+        tables={CARD_TABLES.prices}
+        currentFestivalId={festivalId ?? ""}
+        onCommitted={() => window.location.reload()}
+      />
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}
