@@ -113,7 +113,9 @@ export function ImportFromPreviousCard({
     try {
       await call("discard");
       setDraftCount(0);
+      setDraftMode(false);
       toast({ title: "Draft discarded" });
+      onCommitted?.();
     } catch (e) {
       toast({ title: "Discard failed", description: (e as Error).message, variant: "destructive" });
     } finally {
