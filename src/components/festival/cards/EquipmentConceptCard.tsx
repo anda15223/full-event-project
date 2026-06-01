@@ -49,6 +49,23 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
   const grouped = groupByCategory(rows);
   const vehicle = vehicles.find((v) => v.id === assignedVehicleId);
 
+  // Tally plugs per power-type from powered equipment rows
+  const plugTally = useMemo(() => {
+    const counts = new Map<PowerType | "unset", { count: number; items: string[] }>();
+    rows.forEach((r) => {
+      if (!r.is_powered) return;
+      const key = (r.power_type as PowerType) || "unset";
+      const entry = counts.get(key) ?? { count: 0, items: [] };
+      entry.count += r.quantity;
+      entry.items.push(`${r.equipment_name}×${r.quantity}`);
+      counts.set(key, entry);
+    });
+    return POWER_TYPES
+      .map((t) => ({ type: t as PowerType | "unset", ...(counts.get(t) ?? { count: 0, items: [] }) }))
+      .concat(counts.has("unset") ? [{ type: "unset" as const, ...counts.get("unset")! }] : [])
+      .filter((r) => r.count > 0);
+  }, [rows]);
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["equipment-page"] });
   };
