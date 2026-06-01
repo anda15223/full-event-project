@@ -651,6 +651,9 @@ export default function FestivalStaff() {
                             availableStations={availableStations}
                             onAdd={(stationId) => addSlot.mutate({ conceptId: group.id, stationId })}
                             onRemove={(stationId) => removeSlot.mutate({ conceptId: group.id, stationId })}
+                            currentFestivalId={festivalId!}
+                            onImport={(fromFestivalId) => importSlots.mutate({ conceptId: group.id, fromFestivalId })}
+                            importPending={importSlots.isPending}
                           />
                         )}
                       </div>
