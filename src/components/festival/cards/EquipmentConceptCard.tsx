@@ -265,6 +265,7 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
   const [kw, setKw] = useState(row.power_kw == null ? "" : String(row.power_kw));
   const [powered, setPowered] = useState(row.is_powered);
   const [soborg, setSoborg] = useState(row.loads_from_soborg);
+  const [ptype, setPtype] = useState<string>(row.power_type ?? "unset");
 
   async function save() {
     const { error } = await supabase.from("festival_power_equipment").update({
@@ -273,6 +274,7 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
       power_kw: powered && kw ? Number(kw) : null,
       is_powered: powered,
       loads_from_soborg: soborg,
+      power_type: powered && ptype !== "unset" ? ptype : null,
     }).eq("id", row.id);
     if (error) return toast.error(error.message);
     setEditing(false);
