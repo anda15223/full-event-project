@@ -10,6 +10,7 @@ import { VehicleSelector } from "./VehicleSelector";
 import { ConceptToggle } from "./ConceptToggle";
 import { useConceptIsActive } from "@/hooks/useConceptIsActive";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 export interface ConceptContract {
   contract_id: string;
@@ -49,6 +50,7 @@ interface ContractRow {
   concept_variation_note: string | null;
   stall_count: number | null;
   assigned_vehicle_id: string | null;
+  is_draft?: boolean | null;
   concept: {
     id: string;
     slug: ConceptSlug;
@@ -70,6 +72,7 @@ export function ConceptCardGrid({
   festivalSlug,
 }: Props) {
   const qc = useQueryClient();
+  const { draftMode } = useDraftMode();
 
   const hasFinanceAccess = useFinanceAccess();
 
@@ -79,7 +82,7 @@ export function ConceptCardGrid({
       const { data, error } = await supabase
         .from("festival_contracts")
         .select(
-          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, assigned_vehicle_id, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
+          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, assigned_vehicle_id, is_draft, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
         )
         .eq("festival_id", festivalId);
       if (error) throw error;
@@ -165,7 +168,10 @@ export function ConceptCardGrid({
   const verifyQuestions = verifyQ.data ?? [];
 
   const sortedRows = useMemo(() => {
-    const rows = (contractsQ.data ?? []).slice();
+    const rows = (contractsQ.data ?? []).slice().filter((r) => {
+      // Hide draft contracts unless user is in draft preview mode.
+      return draftMode ? true : !r.is_draft;
+    });
     rows.sort((a, b) => {
       const ao = a.concept?.display_order ?? 999;
       const bo = b.concept?.display_order ?? 999;
@@ -173,7 +179,7 @@ export function ConceptCardGrid({
       return (a.concept_alias ?? "").localeCompare(b.concept_alias ?? "");
     });
     return rows;
-  }, [contractsQ.data]);
+  }, [contractsQ.data, draftMode]);
 
   if (contractsQ.isLoading) {
     return (
@@ -315,6 +321,11 @@ function ConceptCardItem({
               <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 text-xs font-semibold rounded-full px-3 py-1 uppercase tracking-wide">
                 <EyeOff size={12} />
                 Hidden from reports
+              </span>
+            )}
+            {row.is_draft && (
+              <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-semibold rounded-full px-3 py-1 uppercase tracking-wide">
+                Draft
               </span>
             )}
           </div>
