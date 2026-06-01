@@ -10,6 +10,7 @@ export type FestivalTileCounts = {
   facadeApprovedCount: number | null;
   powerCount: number | null;
   powerTotalKw: number | null;
+  powerOrderUploadedCount: number | null;
   safetyOpenCount: number | null;
   safetyTotalCount: number | null;
   accommodationCount: number | null;
@@ -56,7 +57,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
           ? sb.from("festival_facade").select("id, design_status").in("festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),
         inContracts
-          ? sb.from("festival_power").select("id, total_kw_estimate").in("festival_contract_id", contractIds)
+          ? sb.from("festival_power").select("id, total_kw_estimate, order_list_file_path").in("festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),
         sb.from("festival_safety").select("id").eq("festival_id", fid),
         sb.from("festival_accommodation").select("id, check_in_date, check_out_date, capacity, assigned_staff_count").eq("festival_id", fid),
@@ -80,6 +81,9 @@ export function useFestivalTileCounts(festivalId: string | null) {
       // Power
       const powerRows = (power.data ?? []) as any[];
       const powerCount = powerRows.length || null;
+      const powerOrderUploadedCount = powerRows.length
+        ? powerRows.filter((r) => !!r.order_list_file_path).length
+        : null;
       const powerTotalKw = powerRows.length
         ? Math.round(powerRows.reduce((s, r) => s + (Number(r.total_kw_estimate) || 0), 0))
         : null;
@@ -116,6 +120,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
         facadeApprovedCount,
         powerCount,
         powerTotalKw,
+        powerOrderUploadedCount,
         safetyOpenCount: null,
         safetyTotalCount: ((safety.data ?? []) as any[]).length || null,
         accommodationCount,

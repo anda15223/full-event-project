@@ -538,7 +538,7 @@ const CARD_TILES: CardTile[] = [
   { key: "cooling", name: "Cooling", icon: Snowflake },
   { key: "equipment", name: "Equipment", icon: Wrench },
   { key: "facade", name: "Facade", icon: ImageIcon, route: (s: string) => `/festivals/${s}/facade` },
-  { key: "power", name: "Power", icon: Zap },
+  { key: "power", name: "Power & Production order", icon: Zap },
   { key: "safety", name: "Safety", icon: ShieldAlert, route: (s: string) => `/festivals/${s}/safety` },
   { key: "contracts", name: "Contracts", icon: FileSignature },
   { key: "accommodation", name: "Accommodation", icon: BedDouble, route: (s: string) => `/festivals/${s}/accommodation` },
@@ -869,12 +869,21 @@ export default function FestivalOverview() {
 
             const pwN = tileCounts.powerCount ?? 0;
             const pwKw = tileCounts.powerTotalKw ?? 0;
+            const pwUploaded = tileCounts.powerOrderUploadedCount ?? 0;
+            const pwStatus: "green" | "amber" | "red" | "gray" =
+              pwN === 0
+                ? "red"
+                : pwUploaded >= pwN
+                ? "green"
+                : pwUploaded > 0
+                ? "amber"
+                : "red";
             tilesByKey["power"] = (
               <FestivalTile key="power" href={`/festivals/${slug}/power`}
-                icon={Zap} iconAccent="amber" title="Power"
-                primaryStat={`${pwN} records`}
+                icon={Zap} iconAccent="amber" title="Power & Production order"
+                primaryStat={pwN > 0 ? `${pwUploaded}/${pwN} uploaded` : "No records"}
                 secondaryStat={pwKw > 0 ? `${pwKw} kW total` : undefined}
-                status={pwN > 0 ? "green" : "gray"} />
+                status={pwStatus} />
             );
 
             const cTotal = contractsCountQ.data?.total ?? 0;
