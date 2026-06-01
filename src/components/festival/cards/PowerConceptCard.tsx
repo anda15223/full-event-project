@@ -566,8 +566,17 @@ export function PowerConceptCard({
         </div>
       </div>
     </div>
+    <FestivalOrderListCard
+      festivalId={festivalId}
+      conceptSlug={conceptSlug}
+      powerId={power.id}
+      orderListFilePath={power.order_list_file_path ?? null}
+      orderListParsedAt={power.order_list_parsed_at ?? null}
+    />
+    </div>
   );
 }
+
 
 const PLUG_OPTIONS = [
   { value: "230V_socket", label: "230V plug (Schuko)" },
