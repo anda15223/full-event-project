@@ -797,6 +797,116 @@ export default function FestivalStaff() {
   );
 }
 
+function StationsEditorPopover({
+  conceptId,
+  conceptName,
+  slots,
+  availableStations,
+  onAdd,
+  onRemove,
+}: {
+  conceptId: string;
+  conceptName: string;
+  slots: PlanSlot[];
+  availableStations: StationRow[];
+  onAdd: (stationId: string) => void;
+  onRemove: (stationId: string) => void;
+}) {
+  const { Popover, PopoverContent, PopoverTrigger } = require("@/components/ui/popover");
+  const [pendingStationId, setPendingStationId] = useState<string>("");
+
+  // Build a quick lookup of current counts by stationId
+  const countById = new Map<string, number>();
+  slots.forEach((s) => countById.set(s.stationId, s.count));
+
+  // Stations not yet in plan
+  const notInPlan = availableStations.filter((s) => !countById.has(s.id));
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          title={`Edit stations for ${conceptName}`}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide mb-2 text-foreground/80">
+          Stations · {conceptName}
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Slots here drive the Schedule grid and Crew Portal.
+        </p>
+        <div className="space-y-1.5 mb-3">
+          {slots.length === 0 && (
+            <p className="text-xs italic text-muted-foreground">No stations yet.</p>
+          )}
+          {slots.map((s) => (
+            <div key={s.stationId} className="flex items-center justify-between gap-2">
+              <span className="text-sm truncate">{s.label}</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => onRemove(s.stationId)}
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <span className="text-xs w-5 text-center tabular-nums">{s.count}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => onAdd(s.stationId)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {notInPlan.length > 0 && (
+          <div className="border-t pt-2 space-y-2">
+            <div className="text-[11px] uppercase font-semibold text-muted-foreground">
+              Add a station
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Select value={pendingStationId} onValueChange={setPendingStationId}>
+                <SelectTrigger className="h-8 flex-1">
+                  <SelectValue placeholder="Pick station…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {notInPlan.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                disabled={!pendingStationId}
+                onClick={() => {
+                  if (!pendingStationId) return;
+                  onAdd(pendingStationId);
+                  setPendingStationId("");
+                }}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function FilterChip({
   active,
   onClick,
