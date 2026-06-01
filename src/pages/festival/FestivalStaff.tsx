@@ -268,6 +268,14 @@ export default function FestivalStaff() {
         currentFestivalId={festivalId ?? ""}
         onCommitted={() => window.location.reload()}
       />
+      <CrewRegisterCard
+        festivalId={festivalId}
+        initialUrl={festivalQ.data?.crew_register_url ?? ""}
+        initialUsername={festivalQ.data?.crew_register_username ?? ""}
+        initialPassword={festivalQ.data?.crew_register_password ?? ""}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
+      />
+
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
