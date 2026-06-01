@@ -52,7 +52,10 @@ export function useFestivalTileCounts(festivalId: string | null) {
           ? sb.from("festival_topskilt").select("id", { count: "exact", head: true }).in("festival_contract_id", contractIds)
           : Promise.resolve({ count: 0 }),
         sb.from("festival_setup").select("id", { count: "exact", head: true }).eq("festival_id", fid),
-        sb.from("festival_equipment").select("qty").eq("festival_id", fid),
+        inContracts
+          ? sb.from("festival_power_equipment").select("quantity, festival_power!inner(festival_contract_id)").in("festival_power.festival_contract_id", contractIds)
+          : Promise.resolve({ data: [] }),
+
         inContracts
           ? sb.from("festival_facade").select("id, design_status").in("festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),
