@@ -1911,6 +1911,7 @@ export type Database = {
           display_order: number
           id: string
           is_gluten_free: boolean
+          is_pescatarian: boolean
           is_vegan: boolean
           is_vegetarian: boolean
           notes: string | null
@@ -1924,6 +1925,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_gluten_free?: boolean
+          is_pescatarian?: boolean
           is_vegan?: boolean
           is_vegetarian?: boolean
           notes?: string | null
@@ -1937,6 +1939,7 @@ export type Database = {
           display_order?: number
           id?: string
           is_gluten_free?: boolean
+          is_pescatarian?: boolean
           is_vegan?: boolean
           is_vegetarian?: boolean
           notes?: string | null

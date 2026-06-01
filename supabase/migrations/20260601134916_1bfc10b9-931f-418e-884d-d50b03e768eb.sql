@@ -1,0 +1,1 @@
+ALTER TABLE public.festival_concept_price_item ADD COLUMN is_pescatarian boolean NOT NULL DEFAULT false;
