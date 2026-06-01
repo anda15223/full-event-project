@@ -67,11 +67,12 @@ export function useFestivalTileCounts(festivalId: string | null) {
         sb.from("festival_concept_prices").select("id, festival_concept_price_item(id)").eq("festival_id", fid),
       ]);
 
-      // Equipment: sum qty
+      // Equipment: sum quantity from festival_power_equipment via festival_power -> festival_contract
       const eqRows = (equipment.data ?? []) as any[];
       const equipmentCount = eqRows.length
-        ? eqRows.reduce((s, r) => s + (r.qty ?? 1), 0)
+        ? eqRows.reduce((s, r) => s + (r.quantity ?? 1), 0)
         : null;
+
 
       // Facade
       const facadeRows = (facade.data ?? []) as any[];
