@@ -976,3 +976,56 @@ function StatusFlowDrawer({ contract, festivalSlug, onClose, onSaved }: {
     </Sheet>
   );
 }
+
+function ContractSummarySection({ contract: c, fileUrl }: { contract: Contract; fileUrl: string | null }) {
+  const qc = useQueryClient();
+  const [parsing, setParsing] = useState(false);
+
+  const handleParse = async () => {
+    if (!fileUrl) {
+      toast.error("Upload a contract PDF first");
+      return;
+    }
+    setParsing(true);
+    try {
+      toast.message("Extracting PDF text…");
+      const text = await extractPdfText(fileUrl);
+      if (!text || text.trim().length < 20) {
+        throw new Error("Could not extract text from PDF");
+      }
+      toast.message("Parsing with AI…");
+      await parseContractSummary(text, c.id);
+      toast.success("Contract details parsed");
+      qc.invalidateQueries({ queryKey: ["festival-contracts"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Parse failed");
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-2 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Contract details</div>
+        <div className="flex items-center gap-2">
+          {c.parsed_at && (
+            <span className="text-[10px] text-muted-foreground italic">Parsed {timeAgo(c.parsed_at)}</span>
+          )}
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" onClick={handleParse} disabled={parsing || !c.contract_file_path}>
+            {parsing ? "Parsing…" : c.summary ? "Re-parse" : "Parse details"}
+          </Button>
+        </div>
+      </div>
+      {c.summary ? (
+        <ContractSummaryView summary={c.summary} />
+      ) : (
+        <div className="text-[11px] text-muted-foreground">
+          {c.contract_file_path
+            ? "No structured summary yet. Click \"Parse details\" to extract."
+            : "Upload a contract PDF to enable AI parsing."}
+        </div>
+      )}
+    </div>
+  );
+}
