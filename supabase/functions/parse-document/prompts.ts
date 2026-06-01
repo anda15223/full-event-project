@@ -370,7 +370,8 @@ Schema:
       "unit_price": number | null,
       "total_price": number | null,
       "currency": string | null,
-      "notes": string | null
+      "notes": string | null,
+      "concept_name": string | null
     }
   ],
   "raw_notes": string
