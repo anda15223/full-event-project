@@ -489,18 +489,20 @@ Deno.serve(async (req) => {
       const forceVisionForPdf = format === "pdf" && documentType === "prices";
 
       if (forceVisionForPdf) {
+        const formText = await extractPdfFormFields(buf);
         const base64 = arrayBufferToBase64(buf);
         userContent = [
           {
             type: "document",
             source: { type: "base64", media_type: "application/pdf", data: base64 },
           },
+          ...(formText ? [{ type: "text", text: formText }] : []),
           {
             type: "text",
-            text: "Read the PDF (including any filled form fields and page images) and extract structured data per the system prompt.",
+            text: "Read the PDF, the visible page, and any PDF form-field values above. Extract ONLY real filled-in menu dishes with a positive price. Ignore empty template rows like RET NR. 1/2/3, labels, and placeholder fields.",
           },
         ];
-        rawTextExcerpt = "[prices PDF — vision/document mode]";
+        rawTextExcerpt = formText ? formText.slice(0, 500) : "[prices PDF — vision/document mode]";
         visionFallbackUsed = true;
       } else {
         try {
@@ -594,6 +596,10 @@ Deno.serve(async (req) => {
         claudeOutputExcerpt: (claudeText ?? "").slice(0, 800),
         rawTextExcerpt: rawTextExcerpt ?? "",
       }, 502);
+    }
+
+    if (documentType === "prices") {
+      parsed = normalizePricesParsed(parsed);
     }
 
     if (documentType === "festival_order" && extractedText) {
