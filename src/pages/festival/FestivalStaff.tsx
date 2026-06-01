@@ -29,6 +29,7 @@ import { useDraftMode } from "@/hooks/useDraftMode";
 type Staff = {
   id: string;
   festival_id: string;
+  staff_number: number | null;
   name: string | null;
   home_location: string | null;
   confirmed: boolean | null;
