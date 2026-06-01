@@ -1243,3 +1243,133 @@ function ShiftScheduleCard({
     </div>
   );
 }
+
+function CrewRegisterCard({
+  festivalId,
+  initialUrl,
+  initialUsername,
+  initialPassword,
+  onSaved,
+}: {
+  festivalId: string | undefined;
+  initialUrl: string;
+  initialUsername: string;
+  initialPassword: string;
+  onSaved: () => void;
+}) {
+  const [url, setUrl] = useState(initialUrl);
+  const [username, setUsername] = useState(initialUsername);
+  const [password, setPassword] = useState(initialPassword);
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setUrl(initialUrl); }, [initialUrl]);
+  useEffect(() => { setUsername(initialUsername); }, [initialUsername]);
+  useEffect(() => { setPassword(initialPassword); }, [initialPassword]);
+
+  const dirty =
+    url !== initialUrl ||
+    username !== initialUsername ||
+    password !== initialPassword;
+
+  const save = async () => {
+    if (!festivalId) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("festivals")
+      .update({
+        crew_register_url: url || null,
+        crew_register_username: username || null,
+        crew_register_password: password || null,
+      })
+      .eq("id", festivalId);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Crew register saved");
+      onSaved();
+    }
+  };
+
+  const copy = async (val: string, label: string) => {
+    if (!val) return;
+    await navigator.clipboard.writeText(val);
+    toast.success(`${label} copied`);
+  };
+
+  const normalizedUrl = url && !/^https?:\/\//i.test(url) ? `https://${url}` : url;
+
+  return (
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-heading font-semibold text-base">Crew register access</h2>
+        </div>
+        {normalizedUrl && (
+          <Button size="sm" variant="outline" asChild>
+            <a href={normalizedUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+            </a>
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground">Link</label>
+          <div className="flex gap-1 mt-1">
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://crew-register.example.com/..."
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={() => copy(url, "Link")} disabled={!url}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Username</label>
+          <div className="flex gap-1 mt-1">
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="user@example.com"
+              autoComplete="off"
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={() => copy(username, "Username")} disabled={!username}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground">Password</label>
+          <div className="flex gap-1 mt-1">
+            <Input
+              type={showPw ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="off"
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={() => setShowPw((v) => !v)}>
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+            <Button type="button" size="icon" variant="ghost" onClick={() => copy(password, "Password")} disabled={!password}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end mt-3">
+        <Button size="sm" onClick={save} disabled={!dirty || saving || !festivalId}>
+          {saving ? "Saving..." : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
