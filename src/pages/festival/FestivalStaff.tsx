@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Check, X, FileDown, ExternalLink, Copy, Eye, EyeOff, KeyRound } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, X, FileDown, ExternalLink, Copy, Eye, EyeOff, KeyRound, Pencil, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
