@@ -165,6 +165,31 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
           <Stat label="kW" value={summary.kw.toFixed(1)} accent="amber" />
           <Stat label="Travels with" value={vehicle ? vehicle.vehicle_type.split(" ").slice(0, 2).join(" ") : "—"} small />
         </div>
+
+        {/* Plugs needed tally */}
+        {plugTally.length > 0 && (
+          <div className="rounded-md border bg-background/50 p-2 space-y-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Plugs needed
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {plugTally.map((p) => (
+                <span
+                  key={p.type}
+                  title={p.items.join(", ")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border tabular-nums ${
+                    p.type === "unset"
+                      ? "bg-muted text-muted-foreground border-dashed"
+                      : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                  }`}
+                >
+                  <span className="font-semibold">{p.count}×</span>
+                  {p.type === "unset" ? "no type set" : POWER_TYPE_LABEL[p.type]}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-0 divide-y">
