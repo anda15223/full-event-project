@@ -284,7 +284,7 @@ function ItemRow({ row, onChanged }: { row: OrderItem; onChanged: () => void }) 
 
   return (
     <div className={cn("rounded-lg border bg-card p-3 space-y-3", dirty && "border-primary/30 bg-accent/20")}>
-      <div className="grid gap-3 md:grid-cols-[minmax(140px,0.85fr)_minmax(220px,2fr)]">
+      <div className="grid gap-3">
         <div className="space-y-1.5 min-w-0">
           <div className={labelClass}>Category</div>
         <Select value={r.category ?? "other"} onValueChange={(v) => setR({ ...r, category: v })}>
