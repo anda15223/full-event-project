@@ -734,6 +734,40 @@ export function AccommodationBookingCard({
             ))}
           </div>
         )}
+        {staffList.length > 0 && (() => {
+          const unassigned = staffList.filter(
+            (s) => !effectiveAssignmentMap.has(s.name.trim().toLowerCase())
+          );
+          if (unassigned.length === 0) return null;
+          return (
+            <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-amber-700 dark:text-amber-300">
+                  Without accommodation ({unassigned.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {unassigned.map((s) => (
+                  <span
+                    key={s.id}
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-background border text-xs"
+                  >
+                    <span
+                      className={cn(
+                        "inline-block h-1.5 w-1.5 rounded-full",
+                        s.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                      )}
+                    />
+                    {s.name}
+                    {s.home_location && (
+                      <span className="text-[10px] text-muted-foreground">· {s.home_location}</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Room expectations */}
