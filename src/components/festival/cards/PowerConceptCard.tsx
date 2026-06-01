@@ -436,14 +436,15 @@ export function PowerConceptCard({
         </button>
         {eqOpen && (
           <div className="mt-2 space-y-2">
+            <PlugSummary equipment={equipment.filter((e) => e.is_powered !== false)} />
             <div className="rounded-lg border divide-y text-xs">
               <div className="grid grid-cols-12 gap-2 p-2 items-center bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
                 <div className="col-span-4">Equipment</div>
-                <div className="col-span-2 text-right">Qty</div>
-                <div className="col-span-2 text-right">kW</div>
+                <div className="col-span-1 text-right">Qty</div>
+                <div className="col-span-1 text-right">kW</div>
                 <div className="col-span-2">Plug</div>
                 <div className="col-span-1 text-right">Total</div>
-                <div className="col-span-1"></div>
+                <div className="col-span-3 text-right">Actions</div>
               </div>
               {equipment.filter((e) => e.is_powered !== false).length === 0 ? (
                 <div className="p-3 text-muted-foreground italic">No powered equipment yet — add one below.</div>
