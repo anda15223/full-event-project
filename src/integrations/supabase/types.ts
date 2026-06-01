@@ -6987,6 +6987,7 @@ export type Database = {
           notes: string | null
           requires_transport: boolean
           role: string
+          staff_number: number | null
           staff_source: string
           staff_type: string | null
           station: string | null
@@ -7016,6 +7017,7 @@ export type Database = {
           notes?: string | null
           requires_transport?: boolean
           role: string
+          staff_number?: number | null
           staff_source: string
           staff_type?: string | null
           station?: string | null
@@ -7045,6 +7047,7 @@ export type Database = {
           notes?: string | null
           requires_transport?: boolean
           role?: string
+          staff_number?: number | null
           staff_source?: string
           staff_type?: string | null
           station?: string | null
