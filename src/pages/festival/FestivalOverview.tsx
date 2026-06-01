@@ -870,18 +870,14 @@ export default function FestivalOverview() {
             const pwN = tileCounts.powerCount ?? 0;
             const pwKw = tileCounts.powerTotalKw ?? 0;
             const pwUploaded = tileCounts.powerOrderUploadedCount ?? 0;
+            const powerFilled = pwN > 0;
+            const productionUploaded = pwUploaded > 0;
             const pwStatus: "green" | "amber" | "red" | "gray" =
-              pwN === 0
-                ? "red"
-                : pwUploaded >= pwN
-                ? "green"
-                : pwUploaded > 0
-                ? "amber"
-                : "red";
+              powerFilled && productionUploaded ? "green" : "red";
             tilesByKey["power"] = (
               <FestivalTile key="power" href={`/festivals/${slug}/power`}
                 icon={Zap} iconAccent="amber" title="Power & Production order"
-                primaryStat={pwN > 0 ? `${pwUploaded}/${pwN} uploaded` : "No records"}
+                primaryStat={`${powerFilled ? "Power filled" : "Power missing"} · ${productionUploaded ? "Order uploaded" : "Order missing"}`}
                 secondaryStat={pwKw > 0 ? `${pwKw} kW total` : undefined}
                 status={pwStatus} />
             );
