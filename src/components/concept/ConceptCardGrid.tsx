@@ -168,9 +168,12 @@ export function ConceptCardGrid({
   const verifyQuestions = verifyQ.data ?? [];
 
   const sortedRows = useMemo(() => {
-    const rows = (contractsQ.data ?? []).slice().filter((r) => {
+    const rows = (contractsQ.data ?? []).slice().filter((r: any) => {
       // Hide draft contracts unless user is in draft preview mode.
-      return draftMode ? true : !r.is_draft;
+      if (r.is_draft && !draftMode) return false;
+      // Hide unassigned (toggled-off) concepts entirely.
+      if (r.is_active === false) return false;
+      return true;
     });
     rows.sort((a, b) => {
       const ao = a.concept?.display_order ?? 999;
