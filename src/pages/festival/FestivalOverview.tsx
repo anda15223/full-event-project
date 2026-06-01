@@ -494,7 +494,7 @@ function useConceptStats(festivalId: string | null) {
         supabase.from("festival_contracts").select("concept_id, contract_signed_date").eq("festival_id", fid),
         supabase.from("festival_setup").select("concept_id").eq("festival_id", fid),
         supabase.from("festival_equipment").select("concept_id, qty").eq("festival_id", fid),
-        supabase.from("festival_cooling_unit").select("id").eq("festival_id", fid),
+        supabase.from("festival_cooling_unit").select("id, status").eq("festival_id", fid),
         supabase.from("festival_action_items").select("priority, status").eq("festival_id", fid).neq("status", "closed"),
       ]);
       const byConcept: Record<string, any> = {};
@@ -514,7 +514,13 @@ function useConceptStats(festivalId: string | null) {
       (setup.data ?? []).forEach((r: any) => get(r.concept_id).setupCount++);
       (equip.data ?? []).forEach((r: any) => get(r.concept_id).equipQty += (r.qty ?? 1));
       // cooling has no concept_id reliably — just total
-      const totalCooling = (cooling.data ?? []).length;
+      const coolingRows = cooling.data ?? [];
+      const totalCooling = coolingRows.length;
+      const confirmedCooling = coolingRows.filter((r: any) => {
+        const s = (r.status ?? "").toLowerCase();
+        return s === "confirmed" || s === "delivered";
+      }).length;
+      const notOrderedCooling = coolingRows.filter((r: any) => (r.status ?? "").toLowerCase() === "not_ordered").length;
       // attribute action priorities by ... no concept on action items? It has no concept_id col reliably.
       // Just keep festival-wide totals on each concept for the simple view.
       let crit = 0, high = 0, normal = 0;
@@ -523,7 +529,7 @@ function useConceptStats(festivalId: string | null) {
         else if (r.priority === "high") high++;
         else normal++;
       });
-      return { byConcept, totalCooling, actionTotals: { crit, high, normal } };
+      return { byConcept, totalCooling, confirmedCooling, notOrderedCooling, actionTotals: { crit, high, normal } };
     },
   });
 }
@@ -797,11 +803,19 @@ export default function FestivalOverview() {
 
 
             const coolN = statsQ.data?.totalCooling ?? 0;
+            const coolConfirmed = statsQ.data?.confirmedCooling ?? 0;
+            const coolNotOrdered = statsQ.data?.notOrderedCooling ?? 0;
+            const coolStatus: "green" | "amber" | "red" | "gray" =
+              coolN === 0 ? "gray"
+              : coolNotOrdered > 0 ? "red"
+              : coolConfirmed === coolN ? "green"
+              : "amber";
             tilesByKey["cooling"] = (
               <FestivalTile key="cooling" href={`/festivals/${slug}/cooling`}
                 icon={Snowflake} iconAccent="blue" title="Cooling"
                 primaryStat={`${coolN} units`}
-                status={coolN > 0 ? "green" : "gray"} />
+                secondaryStat={coolN > 0 ? `${coolConfirmed}/${coolN} confirmed` : undefined}
+                status={coolStatus} />
             );
 
             const facN = tileCounts.facadeCount ?? 0;
