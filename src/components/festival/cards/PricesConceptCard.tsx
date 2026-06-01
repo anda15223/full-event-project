@@ -587,8 +587,8 @@ function ItemRow({
 
   return (
     <div>
-      <div className="flex items-center gap-2 py-1.5 px-2 -mx-2 rounded hover:bg-muted/30 group">
-        <div className="flex flex-col -my-1 opacity-0 group-hover:opacity-100">
+      <div className="flex items-center gap-1.5 py-1.5 px-2 -mx-2 rounded hover:bg-muted/30 group min-w-0">
+        <div className="flex flex-col -my-1 opacity-0 group-hover:opacity-100 shrink-0">
           <button disabled={isFirst} onClick={() => onMove(-1)} className="text-muted-foreground disabled:opacity-30">
             <ArrowUp className="h-2.5 w-2.5" />
           </button>
@@ -602,7 +602,7 @@ function ItemRow({
           onBlur={commitName}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           placeholder="Item name"
-          className="flex-1 bg-transparent border-0 outline-none text-sm focus:bg-muted/50 px-2 py-1 rounded"
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm focus:bg-muted/50 px-2 py-1 rounded"
         />
         <input
           type="number"
@@ -611,9 +611,9 @@ function ItemRow({
           onChange={(e) => setPrice(e.target.value)}
           onBlur={commitPrice}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-          className="w-20 text-right tabular-nums bg-transparent border-0 outline-none text-sm focus:bg-muted/50 px-2 py-1 rounded"
+          className="w-16 shrink-0 text-right tabular-nums bg-transparent border-0 outline-none text-sm focus:bg-muted/50 px-2 py-1 rounded"
         />
-        <span className="text-xs text-muted-foreground w-10">{currency}</span>
+        <span className="text-xs text-muted-foreground w-8 shrink-0">{currency}</span>
         <Select
           value={
             item.is_vegan ? "vegan" :
@@ -628,7 +628,7 @@ function ItemRow({
             else onSave({ is_vegetarian: false, is_vegan: false, is_pescatarian: false });
           }}
         >
-          <SelectTrigger className="h-7 w-[120px] text-xs px-2">
+          <SelectTrigger className="h-7 w-11 shrink-0 text-xs px-1 [&>svg]:hidden justify-center" title="Diet">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -638,7 +638,7 @@ function ItemRow({
             <SelectItem value="vegan">🌿 Vegan</SelectItem>
           </SelectContent>
         </Select>
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5 shrink-0">
           {item.is_gluten_free && <WheatOff className="h-3 w-3 text-amber-600" />}
           <button onClick={onToggleExpand} className="hover:text-foreground text-muted-foreground" title="Edit details">
             {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
