@@ -163,7 +163,7 @@ export default function FestivalSafety() {
       </div>
 
       {zonesQ.isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[0, 1].map((i) => <Skeleton key={i} className="h-96 w-full" />)}
         </div>
       ) : (zonesQ.data?.length ?? 0) === 0 ? (
@@ -179,7 +179,7 @@ export default function FestivalSafety() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {zonesQ.data!.map((z) => (
               <SafetyZoneCard key={z.id} festivalId={festivalId} festivalSlug={slug} zone={z} />
             ))}

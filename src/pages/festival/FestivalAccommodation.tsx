@@ -296,7 +296,7 @@ export default function FestivalAccommodation() {
 
       {/* Body */}
       {pageQ.isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[0, 1].map((i) => <Skeleton key={i} className="h-96 w-full" />)}
         </div>
       ) : summary.bookings === 0 ? (
@@ -316,7 +316,7 @@ export default function FestivalAccommodation() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {pageQ.data!.bookings.map((b) => (
               <AccommodationBookingCard
                 key={b.id}
