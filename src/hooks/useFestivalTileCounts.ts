@@ -120,6 +120,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
         facadeApprovedCount,
         powerCount,
         powerTotalKw,
+        powerOrderUploadedCount,
         safetyOpenCount: null,
         safetyTotalCount: ((safety.data ?? []) as any[]).length || null,
         accommodationCount,
