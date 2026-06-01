@@ -6,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Upload, FileText, Loader2, Plus, Trash2, Save, Sparkles, Download } from "lucide-react";
+import { Upload, Loader2, Plus, Trash2, Save, Sparkles, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OrderItem {
@@ -191,34 +191,30 @@ export function FestivalOrderListCard({
         <div className="text-sm text-muted-foreground italic">Loading…</div>
       ) : (
         <>
-          <div className="rounded-lg border divide-y text-xs">
-            <div className="grid grid-cols-12 gap-2 p-2 items-center bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
-              <div className="col-span-2">Category</div>
-              <div className="col-span-3">Item</div>
-              <div className="col-span-1 text-right">Qty</div>
-              <div className="col-span-1">Unit</div>
-              <div className="col-span-1 text-right">Unit price</div>
-              <div className="col-span-1 text-right">Total</div>
-              <div className="col-span-2">Notes</div>
-              <div className="col-span-1 text-right">Actions</div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3 text-[11px] uppercase tracking-wider text-muted-foreground">
+              <span>Order items</span>
+              {items.length > 0 && <span>{items.length} lines</span>}
             </div>
             {items.length === 0 ? (
-              <div className="p-3 text-muted-foreground italic">
+              <div className="rounded-lg border p-4 text-sm text-muted-foreground italic">
                 No items yet — upload an order list above or add rows manually.
               </div>
             ) : (
-              items.map((it) => (
-                <ItemRow key={it.id} row={it} onChanged={load} />
-              ))
+              <div className="space-y-3">
+                {items.map((it) => (
+                  <ItemRow key={it.id} row={it} onChanged={load} />
+                ))}
+              </div>
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={addRow}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button size="sm" variant="outline" className="h-9 w-full gap-2 sm:w-auto" onClick={addRow}>
               <Plus className="h-3.5 w-3.5" /> Add item
             </Button>
             {totalAll > 0 && (
-              <div className="text-sm font-semibold tabular-nums">
+              <div className="text-right text-base font-semibold tabular-nums">
                 Total: {totalAll.toLocaleString()} {currency}
               </div>
             )}
@@ -283,40 +279,69 @@ function ItemRow({ row, onChanged }: { row: OrderItem; onChanged: () => void }) 
   };
 
   const noSpin = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  const labelClass = "text-[10px] font-medium uppercase tracking-wider text-muted-foreground";
+  const inputClass = "h-10 text-sm";
 
   return (
-    <div className={cn("grid grid-cols-12 gap-2 p-2 items-center", dirty && "bg-amber-500/5")}>
-      <div className="col-span-2">
+    <div className={cn("rounded-lg border bg-card p-3 space-y-3", dirty && "border-primary/30 bg-accent/20")}>
+      <div className="grid gap-3 md:grid-cols-[minmax(140px,0.85fr)_minmax(220px,2fr)]">
+        <div className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Category</div>
         <Select value={r.category ?? "other"} onValueChange={(v) => setR({ ...r, category: v })}>
-          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className={inputClass}><SelectValue /></SelectTrigger>
           <SelectContent>
             {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
-      <Input className="col-span-3 h-7 text-xs" value={r.item_name}
-        onChange={(e) => setR({ ...r, item_name: e.target.value })} />
-      <Input className={cn("col-span-1 h-7 text-xs text-right tabular-nums", noSpin)}
-        type="text" inputMode="decimal" placeholder="0"
-        value={qtyStr} onChange={(e) => setQtyStr(e.target.value)} />
-      <Input className="col-span-1 h-7 text-xs" value={r.unit ?? ""}
-        onChange={(e) => setR({ ...r, unit: e.target.value || null })} />
-      <Input className={cn("col-span-1 h-7 text-xs text-right tabular-nums", noSpin)}
-        type="text" inputMode="decimal" placeholder="0.00"
-        value={unitPriceStr} onChange={(e) => setUnitPriceStr(e.target.value)} />
-      <div className="col-span-1 h-7 text-xs text-right tabular-nums flex items-center justify-end px-2 rounded-md bg-muted/40 text-muted-foreground"
-        title="Auto = qty × unit price">
-        {computedTotal != null ? computedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+        <label className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Item</div>
+          <Input className={inputClass} value={r.item_name}
+            onChange={(e) => setR({ ...r, item_name: e.target.value })} />
+        </label>
       </div>
-      <Input className="col-span-2 h-7 text-xs" value={r.notes ?? ""}
-        onChange={(e) => setR({ ...r, notes: e.target.value || null })} />
-      <div className="col-span-1 flex items-center justify-end gap-1">
-        <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={!dirty || saving} onClick={save} title="Save">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Quantity</div>
+          <Input className={cn(inputClass, "text-right tabular-nums", noSpin)}
+            type="text" inputMode="decimal" placeholder="0"
+            value={qtyStr} onChange={(e) => setQtyStr(e.target.value)} />
+        </label>
+        <label className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Unit</div>
+          <Input className={inputClass} value={r.unit ?? ""}
+            onChange={(e) => setR({ ...r, unit: e.target.value || null })} />
+        </label>
+        <label className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Unit price</div>
+          <Input className={cn(inputClass, "text-right tabular-nums", noSpin)}
+            type="text" inputMode="decimal" placeholder="0.00"
+            value={unitPriceStr} onChange={(e) => setUnitPriceStr(e.target.value)} />
+        </label>
+        <div className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Total</div>
+          <div className="flex h-10 items-center justify-end rounded-md border bg-muted/40 px-3 text-sm tabular-nums text-foreground" title="Auto = quantity × unit price">
+            {computedTotal != null ? computedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="space-y-1.5 min-w-0">
+          <div className={labelClass}>Notes</div>
+          <Input className={inputClass} value={r.notes ?? ""}
+            onChange={(e) => setR({ ...r, notes: e.target.value || null })} />
+        </label>
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="outline" className="h-10 gap-2" disabled={!dirty || saving} onClick={save} title="Save">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save
         </Button>
-        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={remove} title="Delete">
-          <Trash2 className="h-3.5 w-3.5" />
+          <Button size="sm" variant="ghost" className="h-10 w-10 p-0 text-destructive" onClick={remove} title="Delete">
+            <Trash2 className="h-4 w-4" />
         </Button>
+        </div>
       </div>
     </div>
   );
