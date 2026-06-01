@@ -864,7 +864,7 @@ export default function FestivalOverview() {
               <FestivalTile key="equipment" href={`/festivals/${slug}/equipment`}
                 icon={Wrench} iconAccent="slate" title="Equipment"
                 primaryStat={`${eqN} items`}
-                status="gray" />
+                status={eqN > 0 ? "green" : "gray"} />
             );
 
             const pwN = tileCounts.powerCount ?? 0;
