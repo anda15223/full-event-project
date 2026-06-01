@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, Truck, Package, AlertTriangle, Snowflake, Download,
-  Flame, Square, Anchor, ShoppingCart, CreditCard, Droplet, Tent, Type, FileImage,
+  Flame, Square, Anchor, ShoppingCart, CreditCard, Droplet, Tent, Type, FileImage, ArrowLeft,
 } from "lucide-react";
+
 import {
   getSoborgLoadingManifest, sortedCategories, categoryLabel, regroupForSoborgPDF,
   type SoborgLoadingManifest, type LoadingItem,
