@@ -356,6 +356,7 @@ function AddRow({ powerId, category, onAdded, compact }:
   const [kw, setKw] = useState("");
   const [powered, setPowered] = useState(true);
   const [soborg, setSoborg] = useState(true);
+  const [ptype, setPtype] = useState<string>("unset");
   const [busy, setBusy] = useState(false);
 
   async function add() {
@@ -369,6 +370,7 @@ function AddRow({ powerId, category, onAdded, compact }:
       is_powered: powered,
       power_kw: powered && kw ? Number(kw) : null,
       loads_from_soborg: soborg,
+      power_type: powered && ptype !== "unset" ? ptype : null,
     });
     setBusy(false);
     if (error) return toast.error(error.message);
