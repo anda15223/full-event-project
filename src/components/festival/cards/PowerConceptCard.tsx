@@ -56,8 +56,11 @@ interface Props {
   festivalSlug: string;
   conceptSlug: string;
   conceptName: string;
+  contractId: string;
   power: PowerRow;
   equipment: PowerEquipmentRow[];
+  mergedChildren?: SiblingConcept[];
+  mergeTargets?: SiblingConcept[];
 }
 
 function timeAgo(iso: string | null): string {
