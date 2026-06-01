@@ -196,7 +196,7 @@ export default function FestivalPower() {
 
       {/* Body */}
       {pageQ.isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid gap-6 grid-cols-1 [grid-template-columns:repeat(auto-fit,minmax(520px,1fr))]">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-96 w-full" />)}
         </div>
       ) : pageQ.error ? (
@@ -208,7 +208,7 @@ export default function FestivalPower() {
           No active concepts at this festival.
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid gap-6 grid-cols-1 [grid-template-columns:repeat(auto-fit,minmax(520px,1fr))]">
           {items.map(({ concept, power, contractId, mergedChildren, mergeTargets }) => (
             <PowerConceptCard
               key={power.id}
