@@ -499,7 +499,7 @@ export default function FestivalStaff() {
               <TableHead className="min-w-[220px] text-sm">Name</TableHead>
               <TableHead className="w-[90px] text-[10px]">From</TableHead>
               <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
-              <TableHead className="w-[100px] text-[10px]">Station</TableHead>
+              
               <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
               <TableHead className="w-[80px] text-[10px]">Source</TableHead>
               <TableHead className="text-center w-8">T</TableHead>
@@ -989,22 +989,6 @@ function StaffRow({
             <SelectItem value="__mgmt__">Management</SelectItem>
             {concepts.map((c) => (
               <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell>
-        <Select
-          value={staff.station ?? "__none__"}
-          onValueChange={(v) => onPatch({ station: v === "__none__" ? null : v })}
-        >
-          <SelectTrigger className="h-7 text-xs px-2">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— None —</SelectItem>
-            {STATION_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
