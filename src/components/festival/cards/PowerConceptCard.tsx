@@ -19,6 +19,7 @@ import {
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 import { ImportPowerEquipmentControl } from "@/components/festival/cards/ImportPowerEquipmentControl";
+import { FestivalOrderListCard } from "@/components/festival/cards/FestivalOrderListCard";
 
 export interface PowerRow {
   id: string;
@@ -40,7 +41,10 @@ export interface PowerRow {
   last_parsed_at: string | null;
   parse_summary: string | null;
   notes: string | null;
+  order_list_file_path?: string | null;
+  order_list_parsed_at?: string | null;
 }
+
 
 export interface PowerEquipmentRow {
   id: string;
