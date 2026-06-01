@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Check, X, FileDown, ExternalLink, Copy, Eye, EyeOff, KeyRound } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, X, FileDown, ExternalLink, Copy, Eye, EyeOff, KeyRound, Pencil, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
@@ -63,6 +64,10 @@ const SOURCE_OPTIONS = [
   { value: "unknown", label: "Unknown" },
 ];
 
+// Fallback station catalog (used for legacy rows / exports). The live source of
+// truth comes from the `station` table (queried below) and per-festival slot
+// counts come from `festival_schedule_position` so edits here also drive the
+// Schedule page and Crew Portal.
 const STATION_OPTIONS = [
   { value: "cash_register", label: "Cash register" },
   { value: "assembly", label: "Assembly" },
@@ -74,46 +79,40 @@ const STATION_OPTIONS = [
   { value: "burger_bun_grill", label: "Burger bun grill" },
   { value: "crepes", label: "Crepes" },
 ];
-const STATION_LABEL: Record<string, string> = Object.fromEntries(
+const FALLBACK_STATION_LABEL: Record<string, string> = Object.fromEntries(
   STATION_OPTIONS.map((s) => [s.value, s.label])
 );
 
-// Required station slots per concept (matched by lowercased concept name substring)
-const CONCEPT_STATION_PLAN: { match: (name: string) => boolean; slots: { station: string; count: number }[] }[] = [
-  {
-    match: (n) => n.includes("gyros"),
-    slots: [
-      { station: "cash_register", count: 2 },
-      { station: "pita_wrapper", count: 2 },
-      { station: "assembly", count: 3 },
-      { station: "fryer", count: 1 },
-      { station: "oven", count: 1 },
-      { station: "pita_griddle", count: 1 },
-    ],
-  },
-  {
-    match: (n) => n.includes("fish"),
-    slots: [
-      { station: "cash_register", count: 2 },
-      { station: "assembly", count: 1 },
-      { station: "fryer", count: 1 },
-    ],
-  },
-  {
-    match: (n) => n.includes("chick") || n.includes("buns"),
-    slots: [
-      { station: "cash_register", count: 2 },
-      { station: "fryer", count: 2 },
-      { station: "assembly", count: 2 },
-      { station: "burger", count: 3 },
-      { station: "burger_bun_grill", count: 1 },
-    ],
-  },
-  {
-    match: (n) => n.includes("crepe"),
-    slots: [{ station: "crepes", count: 4 }],
-  },
-];
+// Map station.code (catalog) -> festival_staff.station (legacy free-text code)
+const STATION_CODE_TO_STAFF: Record<string, string> = {
+  cash: "cash_register",
+  pita_wrap: "pita_wrapper",
+  bun_grill: "burger_bun_grill",
+};
+const staffCodeForStation = (code: string) =>
+  STATION_CODE_TO_STAFF[code] ?? code;
+
+type StationRow = {
+  id: string;
+  concept_id: string | null;
+  code: string;
+  label: string;
+  display_order: number | null;
+};
+type PositionRow = {
+  id: string;
+  festival_id: string;
+  concept_id: string;
+  station_id: string;
+  position_number: number;
+  display_order: number;
+};
+type PlanSlot = {
+  stationId: string;
+  stationCode: string; // staff-code form (e.g. "cash_register")
+  label: string;
+  count: number;
+};
 
 
 export default function FestivalStaff() {
@@ -168,6 +167,140 @@ export default function FestivalStaff() {
     },
   });
   const concepts = conceptsQ.data ?? [];
+
+  // Station catalog (live source: `station` table)
+  const stationsQ = useQuery({
+    queryKey: ["staff-stations"],
+    queryFn: async (): Promise<StationRow[]> => {
+      const { data, error } = await supabase
+        .from("station")
+        .select("id, concept_id, code, label, display_order")
+        .eq("is_active", true)
+        .order("concept_id")
+        .order("display_order")
+        .order("label");
+      if (error) throw error;
+      return (data ?? []) as StationRow[];
+    },
+  });
+  const stations = stationsQ.data ?? [];
+  const stationById = useMemo(() => {
+    const m = new Map<string, StationRow>();
+    stations.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [stations]);
+  const stationsByConcept = useMemo(() => {
+    const m = new Map<string, StationRow[]>();
+    stations.forEach((s) => {
+      if (!s.concept_id) return;
+      const list = m.get(s.concept_id) ?? [];
+      list.push(s);
+      m.set(s.concept_id, list);
+    });
+    return m;
+  }, [stations]);
+
+  // Per-festival station slots (source of truth shared with Schedule + Crew Portal)
+  const positionsQ = useQuery({
+    queryKey: ["staff-positions", festivalId, draftMode],
+    enabled: !!festivalId,
+    queryFn: async (): Promise<PositionRow[]> => {
+      const { data, error } = await supabase
+        .from("festival_schedule_position")
+        .select("id, festival_id, concept_id, station_id, position_number, display_order")
+        .eq("festival_id", festivalId!)
+        .eq("is_draft", draftMode);
+      if (error) throw error;
+      return (data ?? []) as PositionRow[];
+    },
+  });
+
+  // Build plan: concept_id -> ordered slots derived from positions
+  const planByConcept = useMemo(() => {
+    const map = new Map<string, PlanSlot[]>();
+    const grouped = new Map<string, Map<string, number>>(); // conceptId -> stationId -> count
+    (positionsQ.data ?? []).forEach((p) => {
+      const inner = grouped.get(p.concept_id) ?? new Map();
+      inner.set(p.station_id, (inner.get(p.station_id) ?? 0) + 1);
+      grouped.set(p.concept_id, inner);
+    });
+    grouped.forEach((inner, conceptId) => {
+      const slots: PlanSlot[] = [];
+      inner.forEach((count, stationId) => {
+        const s = stationById.get(stationId);
+        if (!s) return;
+        slots.push({
+          stationId,
+          stationCode: staffCodeForStation(s.code),
+          label: s.label,
+          count,
+        });
+      });
+      slots.sort((a, b) => {
+        const sa = stationById.get(a.stationId);
+        const sb = stationById.get(b.stationId);
+        return (sa?.display_order ?? 0) - (sb?.display_order ?? 0);
+      });
+      map.set(conceptId, slots);
+    });
+    return map;
+  }, [positionsQ.data, stationById]);
+
+  // Live station label lookup (staff-code form first, falls back to legacy map)
+  const STATION_LABEL = useMemo(() => {
+    const m: Record<string, string> = { ...FALLBACK_STATION_LABEL };
+    stations.forEach((s) => {
+      m[staffCodeForStation(s.code)] = s.label;
+    });
+    return m;
+  }, [stations]);
+
+  // --- Slot editor mutations -------------------------------------------------
+  const addSlot = useMutation({
+    mutationFn: async ({ conceptId, stationId }: { conceptId: string; stationId: string }) => {
+      const existing = (positionsQ.data ?? []).filter(
+        (p) => p.concept_id === conceptId,
+      );
+      const same = existing.filter((p) => p.station_id === stationId);
+      const nextPos = same.reduce((m, p) => Math.max(m, p.position_number), 0) + 1;
+      const nextOrder = existing.reduce((m, p) => Math.max(m, p.display_order), 0) + 1;
+      const { error } = await supabase.from("festival_schedule_position").insert({
+        festival_id: festivalId!,
+        concept_id: conceptId,
+        station_id: stationId,
+        position_number: nextPos,
+        display_order: nextOrder,
+        is_draft: draftMode,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff-positions", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to add slot"),
+  });
+
+  const removeSlot = useMutation({
+    mutationFn: async ({ conceptId, stationId }: { conceptId: string; stationId: string }) => {
+      const same = (positionsQ.data ?? [])
+        .filter((p) => p.concept_id === conceptId && p.station_id === stationId)
+        .sort((a, b) => b.position_number - a.position_number);
+      const victim = same[0];
+      if (!victim) return;
+      const { error } = await supabase
+        .from("festival_schedule_position")
+        .delete()
+        .eq("id", victim.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff-positions", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to remove slot"),
+  });
+
 
   const updateStaff = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Staff> }) => {
@@ -240,19 +373,19 @@ export default function FestivalStaff() {
         : !s.needs_accommodation
     );
 
-  // Empty-slot calculation across concept plans
+  // Empty-slot calculation across concept plans (from live positions)
   const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
   concepts.forEach((c) => {
-    const plan = CONCEPT_STATION_PLAN.find((p) => p.match(c.name.toLowerCase()));
-    if (!plan) return;
+    const slots = planByConcept.get(c.id);
+    if (!slots || slots.length === 0) return;
     const conceptPeople = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
-    plan.slots.forEach((slot) => {
-      const filled = conceptPeople.filter((p) => p.station === slot.station).length;
+    slots.forEach((slot) => {
+      const filled = conceptPeople.filter((p) => p.station === slot.stationCode).length;
       const missing = slot.count - Math.min(filled, slot.count);
       if (missing > 0) {
         emptySlots.push({
           conceptName: c.name,
-          stationLabel: STATION_LABEL[slot.station] ?? slot.station,
+          stationLabel: slot.label,
           missing,
         });
       }
@@ -436,113 +569,136 @@ export default function FestivalStaff() {
               {groups.map((group) => {
                 const isMgmt = group.id === "__mgmt__";
                 const isNone = group.id === "__none__";
-                const plan = !isMgmt && !isNone
-                  ? CONCEPT_STATION_PLAN.find((p) => p.match(group.name.toLowerCase()))
+                const slots: PlanSlot[] | undefined = !isMgmt && !isNone
+                  ? (planByConcept.get(group.id) ?? [])
                   : undefined;
+                const hasPlan = !isMgmt && !isNone;
 
-                const totalSlots = plan?.slots.reduce((a, s) => a + s.count, 0) ?? 0;
-                const filledTotal = plan
-                  ? plan.slots.reduce((acc, slot) => {
-                      const count = group.people.filter((p) => p.station === slot.station).length;
+                const totalSlots = slots?.reduce((a, s) => a + s.count, 0) ?? 0;
+                const filledTotal = slots
+                  ? slots.reduce((acc, slot) => {
+                      const count = group.people.filter((p) => p.station === slot.stationCode).length;
                       return acc + Math.min(count, slot.count);
                     }, 0)
                   : group.people.length;
+
+                const availableStations = !isMgmt && !isNone
+                  ? (stationsByConcept.get(group.id) ?? [])
+                  : [];
 
                 return (
                   <div key={group.id} className="rounded-xl border bg-card p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-3 pb-2 border-b">
                       <h3 className="font-heading font-semibold text-base">{group.name}</h3>
-                      {plan ? (
-                        <span className="text-xs font-medium text-muted-foreground tabular-nums">
-                          {filledTotal}/{totalSlots}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          {group.people.length}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {hasPlan ? (
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                            {filledTotal}/{totalSlots}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {group.people.length}
+                          </span>
+                        )}
+                        {!isMgmt && !isNone && (
+                          <StationsEditorPopover
+                            conceptId={group.id}
+                            conceptName={group.name}
+                            slots={slots ?? []}
+                            availableStations={availableStations}
+                            onAdd={(stationId) => addSlot.mutate({ conceptId: group.id, stationId })}
+                            onRemove={(stationId) => removeSlot.mutate({ conceptId: group.id, stationId })}
+                          />
+                        )}
+                      </div>
                     </div>
 
-                    {plan ? (
-                      (() => {
-                        const usedHere = new Set<string>();
-                        return (
-                          <div className="space-y-3">
-                            {plan.slots.map((slot) => {
-                              const occupants = group.people
-                                .filter((p) => p.station === slot.station)
-                                .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-                              return (
-                                <div key={slot.station} className="space-y-1.5">
-                                  <div className="flex items-center justify-between">
-                                    <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
-                                      {STATION_LABEL[slot.station]}
+                    {hasPlan ? (
+                      slots && slots.length > 0 ? (
+                        (() => {
+                          const usedHere = new Set<string>();
+                          return (
+                            <div className="space-y-3">
+                              {slots.map((slot) => {
+                                const occupants = group.people
+                                  .filter((p) => p.station === slot.stationCode)
+                                  .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                                return (
+                                  <div key={slot.stationId} className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                        {slot.label}
+                                      </div>
+                                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                                        {Math.min(occupants.length, slot.count)}/{slot.count}
+                                      </span>
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground tabular-nums">
-                                      {Math.min(occupants.length, slot.count)}/{slot.count}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1">
-                                    {Array.from({ length: slot.count }).map((_, idx) => {
-                                      const current = occupants[idx];
-                                      if (current) usedHere.add(current.id);
-                                      return (
-                                        <SlotPicker
-                                          key={`${slot.station}-${idx}`}
-                                          current={current}
-                                          crewPool={crewPool}
-                                          assignmentMap={assignmentMap}
-                                          onAssign={(personId) => {
-                                            if (personId === "__empty__") {
-                                              if (current) {
-                                                updateStaff.mutate({
-                                                  id: current.id,
-                                                  patch: { station: null, concept_id: null },
-                                                });
+                                    <div className="space-y-1">
+                                      {Array.from({ length: slot.count }).map((_, idx) => {
+                                        const current = occupants[idx];
+                                        if (current) usedHere.add(current.id);
+                                        return (
+                                          <SlotPicker
+                                            key={`${slot.stationId}-${idx}`}
+                                            current={current}
+                                            crewPool={crewPool}
+                                            assignmentMap={assignmentMap}
+                                            onAssign={(personId) => {
+                                              if (personId === "__empty__") {
+                                                if (current) {
+                                                  updateStaff.mutate({
+                                                    id: current.id,
+                                                    patch: { station: null, concept_id: null },
+                                                  });
+                                                }
+                                                return;
                                               }
-                                              return;
-                                            }
-                                            updateStaff.mutate({
-                                              id: personId,
-                                              patch: {
-                                                concept_id: group.id,
-                                                station: slot.station,
-                                                role: "crew",
-                                              },
-                                            });
-                                          }}
-                                        />
-                                      );
-                                    })}
+                                              updateStaff.mutate({
+                                                id: personId,
+                                                patch: {
+                                                  concept_id: group.id,
+                                                  station: slot.stationCode,
+                                                  role: "crew",
+                                                },
+                                              });
+                                            }}
+                                          />
+                                        );
+                                      })}
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
 
-                            {(() => {
-                              const extras = group.people.filter((p) => !usedHere.has(p.id));
-                              if (extras.length === 0) return null;
-                              return (
-                                <div className="pt-2 border-t">
-                                  <div className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-1">
-                                    Extra · {extras.length}
+                              {(() => {
+                                const extras = group.people.filter((p) => !usedHere.has(p.id));
+                                if (extras.length === 0) return null;
+                                return (
+                                  <div className="pt-2 border-t">
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-1">
+                                      Extra · {extras.length}
+                                    </div>
+                                    <ul className="space-y-1">
+                                      {extras.map((p) => (
+                                        <li key={p.id} className="text-sm flex items-center justify-between gap-2">
+                                          <span className="truncate">{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
+                                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted shrink-0">
+                                            {p.station ? (STATION_LABEL[p.station] ?? p.station) : "no station"}
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
                                   </div>
-                                  <ul className="space-y-1">
-                                    {extras.map((p) => (
-                                      <li key={p.id} className="text-sm flex items-center justify-between gap-2">
-                                        <span className="truncate">{p.name || <em className="text-muted-foreground">Unnamed</em>}</span>
-                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted shrink-0">
-                                          {p.station ? (STATION_LABEL[p.station] ?? p.station) : "no station"}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        );
-                      })()
+                                );
+                              })()}
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">
+                          No stations yet — click the pencil to add some, or import from a previous festival.
+                        </p>
+                      )
                     ) : group.people.length === 0 ? (
                       <p className="text-xs text-muted-foreground italic">No one assigned</p>
                     ) : (
@@ -639,6 +795,115 @@ export default function FestivalStaff() {
         This list is shared across Transport, Setup and other festival sections.
       </p>
     </div>
+  );
+}
+
+function StationsEditorPopover({
+  conceptId,
+  conceptName,
+  slots,
+  availableStations,
+  onAdd,
+  onRemove,
+}: {
+  conceptId: string;
+  conceptName: string;
+  slots: PlanSlot[];
+  availableStations: StationRow[];
+  onAdd: (stationId: string) => void;
+  onRemove: (stationId: string) => void;
+}) {
+  const [pendingStationId, setPendingStationId] = useState<string>("");
+
+  // Build a quick lookup of current counts by stationId
+  const countById = new Map<string, number>();
+  slots.forEach((s) => countById.set(s.stationId, s.count));
+
+  // Stations not yet in plan
+  const notInPlan = availableStations.filter((s) => !countById.has(s.id));
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          title={`Edit stations for ${conceptName}`}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-3">
+        <div className="text-xs font-semibold uppercase tracking-wide mb-2 text-foreground/80">
+          Stations · {conceptName}
+        </div>
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Slots here drive the Schedule grid and Crew Portal.
+        </p>
+        <div className="space-y-1.5 mb-3">
+          {slots.length === 0 && (
+            <p className="text-xs italic text-muted-foreground">No stations yet.</p>
+          )}
+          {slots.map((s) => (
+            <div key={s.stationId} className="flex items-center justify-between gap-2">
+              <span className="text-sm truncate">{s.label}</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => onRemove(s.stationId)}
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <span className="text-xs w-5 text-center tabular-nums">{s.count}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => onAdd(s.stationId)}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {notInPlan.length > 0 && (
+          <div className="border-t pt-2 space-y-2">
+            <div className="text-[11px] uppercase font-semibold text-muted-foreground">
+              Add a station
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Select value={pendingStationId} onValueChange={setPendingStationId}>
+                <SelectTrigger className="h-8 flex-1">
+                  <SelectValue placeholder="Pick station…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {notInPlan.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                disabled={!pendingStationId}
+                onClick={() => {
+                  if (!pendingStationId) return;
+                  onAdd(pendingStationId);
+                  setPendingStationId("");
+                }}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
