@@ -958,7 +958,7 @@ function StaffRow({
             if (name !== (staff.name ?? "")) onPatch({ name });
           }}
           placeholder="Name"
-          className="h-7 text-xs px-2"
+          className="h-8 text-sm font-medium px-2"
         />
       </TableCell>
       <TableCell>
