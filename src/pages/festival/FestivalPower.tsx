@@ -89,17 +89,19 @@ export default function FestivalPower() {
     },
   });
 
-  const powerIds = useMemo(
-    () => (pageQ.data?.items ?? []).map((i) => i.power.id),
-    [pageQ.data]
-  );
+  // All power row IDs at this festival (incl. merged-child power rows, for equipment aggregation)
+  const allPowerIds = useMemo(() => {
+    const map = pageQ.data?.powerByContract;
+    if (!map) return [] as string[];
+    return Array.from(map.values()).map((p) => p.id);
+  }, [pageQ.data]);
 
   const equipmentQ = useQuery({
-    queryKey: ["power-equipment", slug, powerIds.join(",")],
-    enabled: powerIds.length > 0,
+    queryKey: ["power-equipment", slug, allPowerIds.join(",")],
+    enabled: allPowerIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_power_equipment")
-        .select("*").in("festival_power_id", powerIds).order("position");
+        .select("*").in("festival_power_id", allPowerIds).order("position");
       if (error) throw error;
       const map = new Map<string, PowerEquipmentRow[]>();
       (data ?? []).forEach((e: any) => {
@@ -112,10 +114,24 @@ export default function FestivalPower() {
   });
 
   const items = pageQ.data?.items ?? [];
+  const powerByContract = pageQ.data?.powerByContract;
+
+  /** Combine equipment from a primary + all its merged-children's power rows */
+  const combinedEquipmentFor = (primaryPowerId: string, mergedChildren: SiblingConcept[]): PowerEquipmentRow[] => {
+    const base = equipmentQ.data?.get(primaryPowerId) ?? [];
+    if (!mergedChildren.length || !powerByContract) return base;
+    const extras: PowerEquipmentRow[] = [];
+    mergedChildren.forEach((ch) => {
+      const cp = powerByContract.get(ch.contractId);
+      if (cp) extras.push(...(equipmentQ.data?.get(cp.id) ?? []));
+    });
+    return [...base, ...extras];
+  };
+
   const summary = useMemo(() => {
     let allocated = 0, demand = 0, shortages = 0;
-    items.forEach(({ power }) => {
-      const eq = equipmentQ.data?.get(power.id) ?? [];
+    items.forEach(({ power, mergedChildren }) => {
+      const eq = combinedEquipmentFor(power.id, mergedChildren);
       const d = computeDemandKw(eq);
       const a = Number(power.allocated_kw ?? 0);
       allocated += a;
@@ -124,7 +140,7 @@ export default function FestivalPower() {
       if (st.status === "red") shortages++;
     });
     return { total: items.length, allocated, demand, shortages };
-  }, [items, equipmentQ.data]);
+  }, [items, equipmentQ.data, powerByContract]);
 
   if (festivalQ.isLoading) {
     return <div className="p-6 max-w-6xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
