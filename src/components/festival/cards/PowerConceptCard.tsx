@@ -693,19 +693,6 @@ function KwToAmpsCalculator({ defaultKw }: { defaultKw: number }) {
               </span>
             </div>
           )}
-          <div className="pt-1.5 border-t space-y-0.5">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Plugs needed (any tier)</div>
-            {tiers.map((t) => {
-              const n = Math.max(1, Math.ceil(kwNum / t.kw));
-              const isPick = pick && t.a === pick.a;
-              return (
-                <div key={t.a} className={`flex justify-between tabular-nums ${isPick ? "font-semibold" : "text-muted-foreground"}`}>
-                  <span>{t.a}A {phase === "3" ? "400V (3ph)" : "230V (1ph)"}</span>
-                  <span>{n} × {t.a}A</span>
-                </div>
-              );
-            })}
-          </div>
           <div className="text-[10px] text-muted-foreground pt-1 border-t">
             Formula: I = P / ({phase === "3" ? "√3 × " : ""}{v}V × {pfNum.toFixed(2)}) · +10% headroom
           </div>
