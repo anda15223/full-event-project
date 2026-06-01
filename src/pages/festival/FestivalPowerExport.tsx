@@ -12,6 +12,7 @@ import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
+import { POWER_TYPE_LABEL, type PowerType } from "@/lib/powerGapAnalysis";
 
 type EquipmentRow = {
   id: string;
@@ -20,6 +21,7 @@ type EquipmentRow = {
   quantity: number | null;
   power_kw: number | null;
   is_powered: boolean | null;
+  power_type: PowerType | null;
   category: string | null;
   position: number | null;
 };
