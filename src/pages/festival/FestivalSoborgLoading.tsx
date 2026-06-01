@@ -73,8 +73,12 @@ export default function FestivalSoborgLoading() {
 
   return (
     <div className="space-y-6 max-w-5xl">
+      <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+        <ArrowLeft className="h-3.5 w-3.5" /> {data.festival.name}
+      </Link>
       <div className="flex items-start justify-between gap-4">
         <div>
+
           <h1 className="text-3xl font-bold tracking-tight">Søborg Loading Manifest</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {data.festival.name} · {data.total_items} items total ·{" "}
