@@ -57,7 +57,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
           ? sb.from("festival_facade").select("id, design_status").in("festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),
         inContracts
-          ? sb.from("festival_power").select("id, total_kw_estimate, order_list_file_path").in("festival_contract_id", contractIds)
+          ? sb.from("festival_power").select("id, total_kw_estimate, order_list_file_path, festival_power_equipment(id)").in("festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),
         sb.from("festival_safety").select("id").eq("festival_id", fid),
         sb.from("festival_accommodation").select("id, check_in_date, check_out_date, capacity, assigned_staff_count").eq("festival_id", fid),
@@ -78,8 +78,14 @@ export function useFestivalTileCounts(festivalId: string | null) {
         ? facadeRows.filter((r) => printedSet.has(String(r.design_status))).length
         : null;
 
-      // Power
-      const powerRows = (power.data ?? []) as any[];
+      // Power — only count rows that actually have content (equipment items, kW estimate, or uploaded order list)
+      const allPowerRows = (power.data ?? []) as any[];
+      const powerRows = allPowerRows.filter((r) => {
+        const hasEquip = Array.isArray(r.festival_power_equipment) && r.festival_power_equipment.length > 0;
+        const hasKw = Number(r.total_kw_estimate) > 0;
+        const hasOrder = !!r.order_list_file_path;
+        return hasEquip || hasKw || hasOrder;
+      });
       const powerCount = powerRows.length || null;
       const powerOrderUploadedCount = powerRows.length
         ? powerRows.filter((r) => !!r.order_list_file_path).length
