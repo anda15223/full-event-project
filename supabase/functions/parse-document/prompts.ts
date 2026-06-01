@@ -322,12 +322,14 @@ Schema:
 export const FESTIVAL_ORDER_SYSTEM_PROMPT = `You parse festival ORDER LISTS from organisers. These are documents listing everything ordered for a stand: tents, electricity hookups, water, waste, furniture, lighting, decking, signage, etc. Source may be Danish or English. Format may be PDF, Excel, Word, or email. Return ONLY valid JSON, no markdown fences, no prose.
 
 CRITICAL — quantity and price are MANDATORY when shown in source:
-- ALWAYS look for a quantity column (Danish: "Antal", "Stk", "Mængde"; English: "Qty", "Quantity", "Amount", "No.", "#"). Capture as "quantity" (number). If no quantity is shown, default to 1 — never null.
-- ALWAYS look for prices. Columns may be labelled "Pris", "Stk. pris", "Enhedspris", "Unit price", "À pris", "Beløb", "Total", "Sum", "I alt", "Amount". Capture per-unit price as "unit_price" and line total as "total_price".
+- Spreadsheet/table text may be TSV/CSV with row numbers (R1, R2...). First identify the header row, then map each following row by column position. Do NOT guess from nearby text if the table has columns.
+- ALWAYS look for a quantity column (Danish: "Antal", "Stk", "Mængde", "Terminaler", "Stik", "Udtag"; English: "Qty", "Quantity", "Amount", "No.", "#", "Terminals", "Plugs", "Sockets"). Capture as "quantity" (number). If a row says "3 x terminal", "3 terminals", "3 stk", or the number sits under the terminal/plug/count column, quantity = 3. If no quantity is shown, default to 1 — never null.
+- ALWAYS look for prices. Columns may be labelled "Pris", "Stk. pris", "Enhedspris", "Unit price", "À pris", "Beløb", "Total", "Sum", "I alt", "Amount", "Line total". Capture per-unit price as "unit_price" and line total as "total_price".
 - Numbers may use Danish format ("." thousands, "," decimal): "1.250,00" = 1250.00, "2,5" = 2.5. Output raw JSON numbers (no thousands separators, dot decimal). Strip currency symbols ("kr", "DKK", "€", "$").
 - If only unit_price + quantity exist, compute total_price = quantity * unit_price. If only total_price + quantity (>1) exist, compute unit_price = total_price / quantity. Otherwise leave missing one null.
 - Currency: "kr"/"DKK" -> "DKK", "€" -> "EUR", "$" -> "USD". Default "DKK" if unclear.
-- Extract EVERY row as its own item. Do not skip, merge, or summarise.
+- Extract EVERY row as its own item. Do not skip, merge, or summarise. This includes rows named only "terminal", "plug", "socket", "16A", "32A", "CEE", "Schuko", "power outlet", or similar.
+- If the document has both electricity connection type and terminal/plug count, keep the connection type in item_name/notes and put the terminal/plug count in quantity.
 
 For each item also extract:
 - category: one of "tent", "electricity", "water", "waste", "furniture", "lighting", "decor", "signage", "kitchen", "cleaning", "security", "internet", "other"
