@@ -319,16 +319,21 @@ Schema:
   "raw_notes": string
 }`;
 
-export const FESTIVAL_ORDER_SYSTEM_PROMPT = `You parse festival ORDER LISTS from organisers. These are documents listing everything ordered for a stand: tents, electricity hookups, water, waste, furniture, lighting, decking, signage, etc. Source may be Danish or English. Format may be PDF, Excel, Word, or email. Return ONLY valid JSON.
+export const FESTIVAL_ORDER_SYSTEM_PROMPT = `You parse festival ORDER LISTS from organisers. These are documents listing everything ordered for a stand: tents, electricity hookups, water, waste, furniture, lighting, decking, signage, etc. Source may be Danish or English. Format may be PDF, Excel, Word, or email. Return ONLY valid JSON, no markdown fences, no prose.
 
-For each line item, extract:
+CRITICAL — quantity and price are MANDATORY when shown in source:
+- ALWAYS look for a quantity column (Danish: "Antal", "Stk", "Mængde"; English: "Qty", "Quantity", "Amount", "No.", "#"). Capture as "quantity" (number). If no quantity is shown, default to 1 — never null.
+- ALWAYS look for prices. Columns may be labelled "Pris", "Stk. pris", "Enhedspris", "Unit price", "À pris", "Beløb", "Total", "Sum", "I alt", "Amount". Capture per-unit price as "unit_price" and line total as "total_price".
+- Numbers may use Danish format ("." thousands, "," decimal): "1.250,00" = 1250.00, "2,5" = 2.5. Output raw JSON numbers (no thousands separators, dot decimal). Strip currency symbols ("kr", "DKK", "€", "$").
+- If only unit_price + quantity exist, compute total_price = quantity * unit_price. If only total_price + quantity (>1) exist, compute unit_price = total_price / quantity. Otherwise leave missing one null.
+- Currency: "kr"/"DKK" -> "DKK", "€" -> "EUR", "$" -> "USD". Default "DKK" if unclear.
+- Extract EVERY row as its own item. Do not skip, merge, or summarise.
+
+For each item also extract:
 - category: one of "tent", "electricity", "water", "waste", "furniture", "lighting", "decor", "signage", "kitchen", "cleaning", "security", "internet", "other"
-- item_name: the human-readable name as written (in English if possible, otherwise keep original)
-- quantity: number
-- unit: e.g. "pcs", "m", "m2", "kW", "A", "days"; null if not stated
-- unit_price / total_price: numbers or null
-- currency: ISO code (DKK, EUR, USD); default "DKK" for "kr"
-- notes: any extra detail (size, color, location, voltage)
+- item_name: human-readable name (English if possible, else original)
+- unit: e.g. "pcs", "stk", "m", "m2", "kW", "A", "days"; null if not stated
+- notes: extra detail (size, color, location, voltage, dates)
 
 Schema:
 {
@@ -338,7 +343,7 @@ Schema:
     {
       "category": string,
       "item_name": string,
-      "quantity": number | null,
+      "quantity": number,
       "unit": string | null,
       "unit_price": number | null,
       "total_price": number | null,
@@ -347,9 +352,7 @@ Schema:
     }
   ],
   "raw_notes": string
-}
-
-Extract EVERY line item. Do not skip. Do not group different items together.`;
+}`;
 
 export function getSystemPrompt(documentType: string): string {
   switch (documentType) {
