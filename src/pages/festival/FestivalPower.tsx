@@ -8,6 +8,7 @@ import {
   PowerConceptCard, type PowerRow, type PowerEquipmentRow,
 } from "@/components/festival/cards/PowerConceptCard";
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
+import type { SiblingConcept } from "@/components/festival/TentMergeControls";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
