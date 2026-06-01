@@ -7589,6 +7589,7 @@ export type Database = {
           id: string
           is_draft: boolean
           license_plate: string | null
+          loading_date: string | null
           notes: string | null
           pickup_date: string | null
           pickup_location: string | null
@@ -7617,6 +7618,7 @@ export type Database = {
           id?: string
           is_draft?: boolean
           license_plate?: string | null
+          loading_date?: string | null
           notes?: string | null
           pickup_date?: string | null
           pickup_location?: string | null
@@ -7645,6 +7647,7 @@ export type Database = {
           id?: string
           is_draft?: boolean
           license_plate?: string | null
+          loading_date?: string | null
           notes?: string | null
           pickup_date?: string | null
           pickup_location?: string | null
