@@ -13,6 +13,7 @@ import {
   ALL_CATEGORIES, CATEGORY_META, EquipCategory, EquipmentRow,
   computeConceptEquipmentStatus, groupByCategory, summarizeConceptEquipment,
 } from "@/lib/equipmentStatus";
+import { POWER_TYPES, POWER_TYPE_LABEL, type PowerType } from "@/lib/powerGapAnalysis";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { useFestivalVehicles } from "@/hooks/useFestivalVehicles";
 import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
@@ -47,6 +48,23 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
   const summary = summarizeConceptEquipment(rows);
   const grouped = groupByCategory(rows);
   const vehicle = vehicles.find((v) => v.id === assignedVehicleId);
+
+  // Tally plugs per power-type from powered equipment rows
+  const plugTally = useMemo(() => {
+    const counts = new Map<PowerType | "unset", { count: number; items: string[] }>();
+    rows.forEach((r) => {
+      if (!r.is_powered) return;
+      const key = (r.power_type as PowerType) || "unset";
+      const entry = counts.get(key) ?? { count: 0, items: [] };
+      entry.count += r.quantity;
+      entry.items.push(`${r.equipment_name}×${r.quantity}`);
+      counts.set(key, entry);
+    });
+    return POWER_TYPES
+      .map((t) => ({ type: t as PowerType | "unset", ...(counts.get(t) ?? { count: 0, items: [] }) }))
+      .concat(counts.has("unset") ? [{ type: "unset" as const, ...counts.get("unset")! }] : [])
+      .filter((r) => r.count > 0);
+  }, [rows]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["equipment-page"] });
@@ -147,6 +165,31 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
           <Stat label="kW" value={summary.kw.toFixed(1)} accent="amber" />
           <Stat label="Travels with" value={vehicle ? vehicle.vehicle_type.split(" ").slice(0, 2).join(" ") : "—"} small />
         </div>
+
+        {/* Plugs needed tally */}
+        {plugTally.length > 0 && (
+          <div className="rounded-md border bg-background/50 p-2 space-y-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <Zap className="h-3 w-3" /> Plugs needed
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {plugTally.map((p) => (
+                <span
+                  key={p.type}
+                  title={p.items.join(", ")}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border tabular-nums ${
+                    p.type === "unset"
+                      ? "bg-muted text-muted-foreground border-dashed"
+                      : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                  }`}
+                >
+                  <span className="font-semibold">{p.count}×</span>
+                  {p.type === "unset" ? "no type set" : POWER_TYPE_LABEL[p.type]}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-0 divide-y">
@@ -222,6 +265,7 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
   const [kw, setKw] = useState(row.power_kw == null ? "" : String(row.power_kw));
   const [powered, setPowered] = useState(row.is_powered);
   const [soborg, setSoborg] = useState(row.loads_from_soborg);
+  const [ptype, setPtype] = useState<string>(row.power_type ?? "unset");
 
   async function save() {
     const { error } = await supabase.from("festival_power_equipment").update({
@@ -230,6 +274,7 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
       power_kw: powered && kw ? Number(kw) : null,
       is_powered: powered,
       loads_from_soborg: soborg,
+      power_type: powered && ptype !== "unset" ? ptype : null,
     }).eq("id", row.id);
     if (error) return toast.error(error.message);
     setEditing(false);
@@ -253,9 +298,20 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
             <Button size="sm" className="h-7 text-xs" onClick={save}>Save</Button>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
           <label className="inline-flex items-center gap-1.5"><Switch checked={powered} onCheckedChange={setPowered} /> Powered</label>
           <label className="inline-flex items-center gap-1.5"><Switch checked={soborg} onCheckedChange={setSoborg} /> Søborg</label>
+          {powered && (
+            <Select value={ptype} onValueChange={setPtype}>
+              <SelectTrigger className="h-6 text-[11px] w-auto min-w-[110px] px-2"><SelectValue placeholder="Plug type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">— plug type —</SelectItem>
+                {POWER_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>{POWER_TYPE_LABEL[t]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <button onClick={del} className="ml-auto text-destructive hover:underline inline-flex items-center gap-1">
             <Trash2 className="h-3 w-3" /> Delete
           </button>
@@ -300,6 +356,7 @@ function AddRow({ powerId, category, onAdded, compact }:
   const [kw, setKw] = useState("");
   const [powered, setPowered] = useState(true);
   const [soborg, setSoborg] = useState(true);
+  const [ptype, setPtype] = useState<string>("unset");
   const [busy, setBusy] = useState(false);
 
   async function add() {
@@ -313,6 +370,7 @@ function AddRow({ powerId, category, onAdded, compact }:
       is_powered: powered,
       power_kw: powered && kw ? Number(kw) : null,
       loads_from_soborg: soborg,
+      power_type: powered && ptype !== "unset" ? ptype : null,
     });
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -343,9 +401,20 @@ function AddRow({ powerId, category, onAdded, compact }:
           <Plus className="h-3 w-3" /> Add
         </Button>
       </div>
-      <div className="flex items-center gap-4 text-[11px] text-muted-foreground px-1">
+      <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground px-1">
         <label className="inline-flex items-center gap-1.5"><Switch checked={powered} onCheckedChange={setPowered} /> Powered</label>
         <label className="inline-flex items-center gap-1.5"><Switch checked={soborg} onCheckedChange={setSoborg} /> Søborg</label>
+        {powered && (
+          <Select value={ptype} onValueChange={setPtype}>
+            <SelectTrigger className="h-6 text-[11px] w-auto min-w-[110px] px-2"><SelectValue placeholder="Plug type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unset">— plug type —</SelectItem>
+              {POWER_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{POWER_TYPE_LABEL[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
     </div>
   );
