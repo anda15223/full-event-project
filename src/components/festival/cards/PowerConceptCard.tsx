@@ -382,6 +382,10 @@ export function PowerConceptCard({
         })()}
       </div>
 
+      {/* kW → Amps calculator */}
+      <KwToAmpsCalculator defaultKw={demand_kw} />
+
+
       {/* Equipment */}
       <div>
         <button
