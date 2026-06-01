@@ -2467,6 +2467,7 @@ export type Database = {
           summary: Json | null
           tent_cost_handling: string | null
           tent_floor: string | null
+          tent_primary_contract_id: string | null
           tent_provided_by: string | null
           tent_shared_with_concept_id: string | null
           tent_size: string | null
@@ -2553,6 +2554,7 @@ export type Database = {
           summary?: Json | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
+          tent_primary_contract_id?: string | null
           tent_provided_by?: string | null
           tent_shared_with_concept_id?: string | null
           tent_size?: string | null
@@ -2639,6 +2641,7 @@ export type Database = {
           summary?: Json | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
+          tent_primary_contract_id?: string | null
           tent_provided_by?: string | null
           tent_shared_with_concept_id?: string | null
           tent_size?: string | null
@@ -2759,6 +2762,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_contracts_tent_primary_contract_id_fkey"
+            columns: ["tent_primary_contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "festival_contracts_tent_shared_with_concept_id_fkey"
