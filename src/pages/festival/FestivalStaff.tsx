@@ -63,6 +63,10 @@ const SOURCE_OPTIONS = [
   { value: "unknown", label: "Unknown" },
 ];
 
+// Fallback station catalog (used for legacy rows / exports). The live source of
+// truth comes from the `station` table (queried below) and per-festival slot
+// counts come from `festival_schedule_position` so edits here also drive the
+// Schedule page and Crew Portal.
 const STATION_OPTIONS = [
   { value: "cash_register", label: "Cash register" },
   { value: "assembly", label: "Assembly" },
@@ -74,46 +78,40 @@ const STATION_OPTIONS = [
   { value: "burger_bun_grill", label: "Burger bun grill" },
   { value: "crepes", label: "Crepes" },
 ];
-const STATION_LABEL: Record<string, string> = Object.fromEntries(
+const FALLBACK_STATION_LABEL: Record<string, string> = Object.fromEntries(
   STATION_OPTIONS.map((s) => [s.value, s.label])
 );
 
-// Required station slots per concept (matched by lowercased concept name substring)
-const CONCEPT_STATION_PLAN: { match: (name: string) => boolean; slots: { station: string; count: number }[] }[] = [
-  {
-    match: (n) => n.includes("gyros"),
-    slots: [
-      { station: "cash_register", count: 2 },
-      { station: "pita_wrapper", count: 2 },
-      { station: "assembly", count: 3 },
-      { station: "fryer", count: 1 },
-      { station: "oven", count: 1 },
-      { station: "pita_griddle", count: 1 },
-    ],
-  },
-  {
-    match: (n) => n.includes("fish"),
-    slots: [
-      { station: "cash_register", count: 2 },
-      { station: "assembly", count: 1 },
-      { station: "fryer", count: 1 },
-    ],
-  },
-  {
-    match: (n) => n.includes("chick") || n.includes("buns"),
-    slots: [
-      { station: "cash_register", count: 2 },
-      { station: "fryer", count: 2 },
-      { station: "assembly", count: 2 },
-      { station: "burger", count: 3 },
-      { station: "burger_bun_grill", count: 1 },
-    ],
-  },
-  {
-    match: (n) => n.includes("crepe"),
-    slots: [{ station: "crepes", count: 4 }],
-  },
-];
+// Map station.code (catalog) -> festival_staff.station (legacy free-text code)
+const STATION_CODE_TO_STAFF: Record<string, string> = {
+  cash: "cash_register",
+  pita_wrap: "pita_wrapper",
+  bun_grill: "burger_bun_grill",
+};
+const staffCodeForStation = (code: string) =>
+  STATION_CODE_TO_STAFF[code] ?? code;
+
+type StationRow = {
+  id: string;
+  concept_id: string | null;
+  code: string;
+  label: string;
+  display_order: number | null;
+};
+type PositionRow = {
+  id: string;
+  festival_id: string;
+  concept_id: string;
+  station_id: string;
+  position_number: number;
+  display_order: number;
+};
+type PlanSlot = {
+  stationId: string;
+  stationCode: string; // staff-code form (e.g. "cash_register")
+  label: string;
+  count: number;
+};
 
 
 export default function FestivalStaff() {
