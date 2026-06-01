@@ -803,11 +803,19 @@ export default function FestivalOverview() {
 
 
             const coolN = statsQ.data?.totalCooling ?? 0;
+            const coolConfirmed = statsQ.data?.confirmedCooling ?? 0;
+            const coolNotOrdered = statsQ.data?.notOrderedCooling ?? 0;
+            const coolStatus: "green" | "amber" | "red" | "gray" =
+              coolN === 0 ? "gray"
+              : coolNotOrdered > 0 ? "red"
+              : coolConfirmed === coolN ? "green"
+              : "amber";
             tilesByKey["cooling"] = (
               <FestivalTile key="cooling" href={`/festivals/${slug}/cooling`}
                 icon={Snowflake} iconAccent="blue" title="Cooling"
                 primaryStat={`${coolN} units`}
-                status={coolN > 0 ? "green" : "gray"} />
+                secondaryStat={coolN > 0 ? `${coolConfirmed}/${coolN} confirmed` : undefined}
+                status={coolStatus} />
             );
 
             const facN = tileCounts.facadeCount ?? 0;
