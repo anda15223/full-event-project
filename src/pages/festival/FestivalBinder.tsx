@@ -77,7 +77,7 @@ export default function FestivalBinder() {
   const filename = `${data.festival.slug}_operations_binder.pdf`;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-5">
+    <div className="p-6 max-w-7xl mx-auto space-y-5">
       <div className="flex items-start justify-between">
         <div>
           <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← Back to festival</Link>

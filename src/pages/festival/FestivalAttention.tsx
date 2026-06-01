@@ -34,7 +34,7 @@ export default function FestivalAttention() {
   const bucketsToShow = bucketParam ? [bucketParam] : BUCKET_ORDER;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← {festivalName}</Link>
       <div>
         <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">Attention — {festivalName}</h1>

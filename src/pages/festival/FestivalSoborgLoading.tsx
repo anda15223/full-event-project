@@ -384,7 +384,7 @@ export default function FestivalSoborgLoading() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-7xl">
       <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
         <ArrowLeft className="h-3.5 w-3.5" /> {data.festival.name}
       </Link>

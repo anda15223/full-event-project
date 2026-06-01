@@ -110,12 +110,12 @@ export default function FestivalPrices() {
   }, [orderedConcepts, items, prices, pricesByConcept, itemsByPriceId]);
 
   if (festivalQ.isLoading) {
-    return <div className="p-6 max-w-6xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
+    return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
 
       <ImportFromPreviousCard
         cardLabel="prices"

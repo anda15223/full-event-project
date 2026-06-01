@@ -291,11 +291,11 @@ export default function FestivalQuestions() {
     setDrawerOpen(true);
   }
 
-  if (!festival) return <div className="max-w-6xl mx-auto p-6"><Skeleton className="h-40 w-full" /></div>;
+  if (!festival) return <div className="max-w-7xl mx-auto p-6"><Skeleton className="h-40 w-full" /></div>;
   const daysToFestival = dayDiff(festival.start_date);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5">
+    <div className="max-w-7xl mx-auto space-y-5">
 
       <ImportFromPreviousCard
         cardLabel="questions"
