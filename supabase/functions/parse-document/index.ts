@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
     const { fileUrl, documentType, context } = body as {
       fileUrl: string;
       documentType: string;
-      context?: { festival_name?: string; festival_start?: string; festival_end?: string };
+      context?: { festival_name?: string; festival_start?: string; festival_end?: string; concept_name?: string; concept_slug?: string };
     };
     if (!ALLOWED_TYPES.has(documentType)) {
       return jsonResponse({
@@ -399,6 +399,9 @@ Deno.serve(async (req) => {
         context.festival_name ? `- Festival: ${context.festival_name}` : "",
         context.festival_start ? `- Festival starts: ${context.festival_start}` : "",
         context.festival_end ? `- Festival ends: ${context.festival_end}` : "",
+        context.concept_name ? `- Target stand/concept: ${context.concept_name}` : "",
+        context.concept_slug ? `- Target concept slug: ${context.concept_slug}` : "",
+        context.concept_name || context.concept_slug ? "For festival_order documents: extract ONLY rows explicitly ordered for this target stand/concept. Do not import the organiser's catalogue/pricelist rows where quantity is 0, blank, or not selected. Ignore other stands and general available products." : "",
         "If the document shows dates without a year (e.g. 'Sat 18 May'), assume the year that places the dates ON or NEAR the festival window above. NEVER default to a past year.",
       ].filter(Boolean).join("\n");
       systemPrompt = systemPrompt + "\n" + ctxLines;
