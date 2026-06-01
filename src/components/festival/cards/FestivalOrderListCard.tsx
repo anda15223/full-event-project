@@ -70,6 +70,62 @@ export function FestivalOrderListCard({
       await supabase.from("festival_power")
         .update({ order_list_file_path: path } as any)
         .eq("id", powerId);
+
+      // Find tent-mates: other concepts sharing the same tent on this festival.
+      // We use festival_contracts.tent_primary_contract_id to detect tent groups.
+      const { data: myPow } = await supabase
+        .from("festival_power")
+        .select("festival_contract_id")
+        .eq("id", powerId)
+        .maybeSingle();
+      const myContractId = (myPow as any)?.festival_contract_id as string | undefined;
+
+      const { data: myContract } = myContractId
+        ? await supabase
+            .from("festival_contracts")
+            .select("id, tent_primary_contract_id")
+            .eq("id", myContractId)
+            .maybeSingle()
+        : { data: null as any };
+      const primaryId =
+        (myContract as any)?.tent_primary_contract_id ?? (myContract as any)?.id ?? null;
+
+      // All sibling contracts in the same tent group (primary + secondaries) on this festival
+      type Sibling = {
+        contract_id: string;
+        concept_name: string;
+        power_id: string;
+      };
+      const siblings: Sibling[] = [];
+      if (primaryId) {
+        const { data: sibContracts } = await supabase
+          .from("festival_contracts")
+          .select("id, concept_id, tent_primary_contract_id, concepts:concept_id(name)")
+          .eq("festival_id", festivalId)
+          .eq("is_active", true)
+          .or(`id.eq.${primaryId},tent_primary_contract_id.eq.${primaryId}`);
+        const contractIds = (sibContracts ?? []).map((c: any) => c.id);
+        const { data: sibPowers } = contractIds.length
+          ? await supabase
+              .from("festival_power")
+              .select("id, festival_contract_id")
+              .in("festival_contract_id", contractIds)
+          : { data: [] as any[] };
+        const powerByContract = new Map<string, string>();
+        (sibPowers ?? []).forEach((p: any) =>
+          powerByContract.set(p.festival_contract_id, p.id),
+        );
+        (sibContracts ?? []).forEach((c: any) => {
+          const pid = powerByContract.get(c.id);
+          if (pid && c.concepts?.name) {
+            siblings.push({ contract_id: c.id, concept_name: c.concepts.name, power_id: pid });
+          }
+        });
+      }
+      const tentMates = siblings
+        .filter((s) => s.power_id !== powerId)
+        .map((s) => ({ name: s.concept_name }));
+
       toast.success("Uploaded — parsing with AI…");
 
       setParsing(true);
@@ -80,7 +136,11 @@ export function FestivalOrderListCard({
         body: {
           fileUrl: signed.signedUrl,
           documentType: "festival_order",
-          context: { concept_name: conceptName, concept_slug: conceptSlug },
+          context: {
+            concept_name: conceptName,
+            concept_slug: conceptSlug,
+            tent_mates: tentMates,
+          },
         },
       });
       if (pErr) throw pErr;
@@ -91,23 +151,71 @@ export function FestivalOrderListCard({
         toast.message("AI parsed but found no items — add manually");
       } else {
         const filteredItems = rawItems.filter((it) => Number(it.quantity ?? 1) > 0);
-        const nextPos = items.length;
-        const rows = filteredItems.map((it, i) => ({
-          festival_power_id: powerId,
-          category: typeof it.category === "string" ? it.category.toLowerCase().slice(0, 40) : "other",
-          item_name: String(it.item_name ?? "Unnamed").slice(0, 200),
-          quantity: it.quantity != null ? Number(it.quantity) : 1,
-          unit: it.unit ? String(it.unit).slice(0, 20) : null,
-          unit_price: it.unit_price != null ? Number(it.unit_price) : null,
-          total_price: it.total_price != null ? Number(it.total_price) : null,
-          currency: it.currency ? String(it.currency).slice(0, 8) : null,
-          notes: it.notes ? String(it.notes).slice(0, 400) : null,
-          source_file_path: path,
-          position: nextPos + i,
-        }));
-        const { error: insErr } = await supabase.from("festival_power_order_items").insert(rows as any);
-        if (insErr) throw insErr;
-        toast.success(`Imported ${rows.length} items — please review`);
+
+        // Build {normalized concept name -> power_id} for routing
+        const normalize = (s: string) =>
+          (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        const powerByConcept = new Map<string, string>();
+        siblings.forEach((s) =>
+          powerByConcept.set(normalize(s.concept_name), s.power_id),
+        );
+        powerByConcept.set(normalize(conceptName), powerId);
+
+        // Group items by target power_id
+        const groups = new Map<string, any[]>();
+        filteredItems.forEach((it) => {
+          const target =
+            (it.concept_name && powerByConcept.get(normalize(String(it.concept_name)))) ||
+            powerId;
+          if (!groups.has(target)) groups.set(target, []);
+          groups.get(target)!.push(it);
+        });
+
+        // Insert per group, set source_file_path on each, positions per group
+        let importedTotal = 0;
+        for (const [targetPowerId, list] of groups.entries()) {
+          // Get current item count for that power to continue position
+          const { count } = await supabase
+            .from("festival_power_order_items")
+            .select("*", { count: "exact", head: true })
+            .eq("festival_power_id", targetPowerId);
+          const startPos = count ?? 0;
+          const rows = list.map((it, i) => ({
+            festival_power_id: targetPowerId,
+            category: typeof it.category === "string" ? it.category.toLowerCase().slice(0, 40) : "other",
+            item_name: String(it.item_name ?? "Unnamed").slice(0, 200),
+            quantity: it.quantity != null ? Number(it.quantity) : 1,
+            unit: it.unit ? String(it.unit).slice(0, 20) : null,
+            unit_price: it.unit_price != null ? Number(it.unit_price) : null,
+            total_price: it.total_price != null ? Number(it.total_price) : null,
+            currency: it.currency ? String(it.currency).slice(0, 8) : null,
+            notes: it.notes ? String(it.notes).slice(0, 400) : null,
+            source_file_path: path,
+            position: startPos + i,
+          }));
+          const { error: insErr } = await supabase
+            .from("festival_power_order_items")
+            .insert(rows as any);
+          if (insErr) throw insErr;
+          importedTotal += rows.length;
+
+          // Mark parsed_at + file path on tent-mate power rows too
+          if (targetPowerId !== powerId) {
+            await supabase
+              .from("festival_power")
+              .update({
+                order_list_file_path: path,
+                order_list_parsed_at: new Date().toISOString(),
+              } as any)
+              .eq("id", targetPowerId);
+          }
+        }
+        const groupCount = groups.size;
+        toast.success(
+          groupCount > 1
+            ? `Imported ${importedTotal} items across ${groupCount} stands — please review`
+            : `Imported ${importedTotal} items — please review`,
+        );
       }
       await supabase.from("festival_power")
         .update({ order_list_parsed_at: new Date().toISOString() } as any)
