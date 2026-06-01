@@ -49,10 +49,162 @@ function extractExcel(buf: ArrayBuffer): string {
   const wb = XLSX.read(new Uint8Array(buf), { type: "array" });
   const parts: string[] = [];
   for (const name of wb.SheetNames) {
-    const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name]);
-    parts.push(`=== Sheet: ${name} ===\n${csv}`);
+    const rows = XLSX.utils.sheet_to_json<string[]>(wb.Sheets[name], {
+      header: 1,
+      raw: false,
+      defval: "",
+      blankrows: false,
+    });
+    const tsv = rows
+      .map((row, idx) => `R${idx + 1}\t${row.map((cell) => String(cell ?? "").trim()).join("\t")}`)
+      .join("\n");
+    parts.push(`=== Sheet: ${name} ===\n${tsv}`);
   }
   return parts.join("\n\n");
+}
+
+type FestivalOrderItem = {
+  category?: string | null;
+  item_name?: string | null;
+  quantity?: number | string | null;
+  unit?: string | null;
+  unit_price?: number | string | null;
+  total_price?: number | string | null;
+  currency?: string | null;
+  notes?: string | null;
+};
+
+function parseLocaleNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  let s = value
+    .replace(/\b(DKK|EUR|USD|SEK|NOK)\b/gi, "")
+    .replace(/[€$£]|kr\.?/gi, "")
+    .replace(/\s/g, "")
+    .trim();
+  if (!s) return null;
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  if (hasComma && hasDot) s = s.replace(/\./g, "").replace(",", ".");
+  else if (hasComma) s = s.replace(",", ".");
+  const n = Number(s.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeKey(value: string): string {
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function splitTableLine(line: string): string[] {
+  const clean = line.replace(/^R\d+\t/, "");
+  if (clean.includes("\t")) return clean.split("\t").map((x) => x.trim());
+  if (clean.includes(";")) return clean.split(";").map((x) => x.trim());
+  if ((clean.match(/,/g) ?? []).length >= 2) return clean.split(",").map((x) => x.trim());
+  return clean.split(/\s{2,}/).map((x) => x.trim()).filter(Boolean);
+}
+
+function findHeaderIndexes(cells: string[]) {
+  const keys = cells.map(normalizeKey);
+  const find = (aliases: string[]) => keys.findIndex((k) => aliases.some((a) => k === a || k.includes(a)));
+  return {
+    item: find(["item", "product", "produkt", "vare", "ydelse", "description", "beskrivelse", "equipment", "navn", "type"]),
+    qty: find(["antal", "stk", "qty", "quantity", "mangde", "number", "no", "terminal", "terminaler", "stik", "udtag"]),
+    unit: find(["unit", "enhed"]),
+    unitPrice: find(["unit price", "enhedspris", "stk pris", "pris stk", "a pris", "apris", "each"]),
+    totalPrice: find(["total", "belob", "sum", "i alt", "amount", "line total"]),
+    genericPrice: find(["pris", "price", "cost", "omkostning"]),
+    currency: find(["currency", "valuta"]),
+    notes: find(["note", "notes", "bemark", "comment", "kommentar"]),
+  };
+}
+
+function currencyFromText(text: string): string | null {
+  if (/\bDKK\b|\bkr\.?\b/i.test(text)) return "DKK";
+  if (/€|\bEUR\b/i.test(text)) return "EUR";
+  if (/\$|\bUSD\b/i.test(text)) return "USD";
+  return null;
+}
+
+function extractFestivalOrderCandidates(text: string): FestivalOrderItem[] {
+  const lines = text.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const candidates: FestivalOrderItem[] = [];
+  let header: ReturnType<typeof findHeaderIndexes> | null = null;
+  let width = 0;
+
+  for (const line of lines) {
+    const cells = splitTableLine(line);
+    if (cells.length < 2) continue;
+    const keyLine = normalizeKey(cells.join(" "));
+    const looksLikeHeader = /(antal|qty|quantity|stk|pris|price|total|belob|item|produkt|vare|description|beskrivelse|terminal)/.test(keyLine)
+      && /(item|produkt|vare|description|beskrivelse|terminal|stik|udtag)/.test(keyLine);
+    if (looksLikeHeader) {
+      header = findHeaderIndexes(cells);
+      width = cells.length;
+      continue;
+    }
+    if (!header || cells.length < Math.max(2, Math.min(width, 3))) continue;
+
+    const itemCell = header.item >= 0 ? cells[header.item] : cells.find((c) => /[A-Za-zÆØÅæøå]/.test(c));
+    if (!itemCell || itemCell.length < 2) continue;
+    const qty = header.qty >= 0 ? parseLocaleNumber(cells[header.qty]) : null;
+    let unitPrice = header.unitPrice >= 0 ? parseLocaleNumber(cells[header.unitPrice]) : null;
+    let totalPrice = header.totalPrice >= 0 ? parseLocaleNumber(cells[header.totalPrice]) : null;
+    const genericPrice = header.genericPrice >= 0 ? parseLocaleNumber(cells[header.genericPrice]) : null;
+    if (genericPrice != null && unitPrice == null && totalPrice == null) {
+      if (qty != null && qty > 1) totalPrice = genericPrice;
+      else { unitPrice = genericPrice; totalPrice = genericPrice; }
+    }
+    candidates.push({
+      item_name: itemCell,
+      quantity: qty,
+      unit: header.unit >= 0 ? cells[header.unit] || null : null,
+      unit_price: unitPrice,
+      total_price: totalPrice,
+      currency: (header.currency >= 0 ? cells[header.currency] : null) || currencyFromText(line),
+      notes: header.notes >= 0 ? cells[header.notes] || null : null,
+    });
+  }
+  return candidates;
+}
+
+function itemsMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  const aa = normalizeKey(a ?? "");
+  const bb = normalizeKey(b ?? "");
+  if (!aa || !bb) return false;
+  if (aa.includes(bb) || bb.includes(aa)) return true;
+  const aTokens = new Set(aa.split(" ").filter((t) => t.length > 2));
+  const bTokens = bb.split(" ").filter((t) => t.length > 2);
+  if (!aTokens.size || !bTokens.length) return false;
+  const overlap = bTokens.filter((t) => aTokens.has(t)).length;
+  return overlap / Math.min(aTokens.size, bTokens.length) >= 0.5;
+}
+
+function normalizeFestivalOrderParsed(parsed: unknown, sourceText: string): unknown {
+  if (!parsed || typeof parsed !== "object" || !("items" in parsed) || !Array.isArray((parsed as { items?: unknown[] }).items)) return parsed;
+  const result = parsed as { items: FestivalOrderItem[] };
+  const candidates = extractFestivalOrderCandidates(sourceText);
+  const used = new Set<number>();
+  result.items = result.items.map((item) => {
+    const matchIndex = candidates.findIndex((candidate, idx) => !used.has(idx) && itemsMatch(item.item_name, candidate.item_name));
+    const candidate = matchIndex >= 0 ? candidates[matchIndex] : null;
+    if (matchIndex >= 0) used.add(matchIndex);
+    const quantity = parseLocaleNumber(item.quantity) ?? (candidate ? parseLocaleNumber(candidate.quantity) : null) ?? 1;
+    const unitPrice = parseLocaleNumber(item.unit_price) ?? (candidate ? parseLocaleNumber(candidate.unit_price) : null);
+    const totalPrice = parseLocaleNumber(item.total_price) ?? (candidate ? parseLocaleNumber(candidate.total_price) : null);
+    return {
+      ...item,
+      quantity,
+      unit: item.unit ?? candidate?.unit ?? null,
+      unit_price: unitPrice ?? (totalPrice != null && quantity > 0 ? Number((totalPrice / quantity).toFixed(2)) : null),
+      total_price: totalPrice ?? (unitPrice != null ? Number((unitPrice * quantity).toFixed(2)) : null),
+      currency: item.currency ?? candidate?.currency ?? currencyFromText(sourceText) ?? "DKK",
+      notes: item.notes ?? candidate?.notes ?? null,
+    };
+  });
+  for (const [idx, candidate] of candidates.entries()) {
+    if (!used.has(idx) && candidate.item_name) result.items.push(candidate);
+  }
+  return result;
 }
 
 async function extractDocx(buf: ArrayBuffer): Promise<string> {
