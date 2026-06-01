@@ -19,10 +19,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
   Upload, FileText, Download, Loader2, Trash2, Plus, Pencil, Sparkles,
-  Leaf, Sprout, WheatOff, ArrowUp, ArrowDown, ChevronDown, ChevronUp,
+  Leaf, Sprout, WheatOff, ArrowUp, ArrowDown, ChevronDown, ChevronUp, EyeOff,
 } from "lucide-react";
 import { computePricesStatus, PRICES_STATUS_PILL } from "@/lib/pricesStatus";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import { useConceptToggle } from "@/hooks/useConceptToggle";
 
 const sb = supabase as any;
 const BUCKET = "festival-prices-docs";
