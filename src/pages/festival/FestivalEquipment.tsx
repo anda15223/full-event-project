@@ -98,11 +98,24 @@ export default function FestivalEquipment() {
 
   const items = pageQ.data?.items ?? [];
   const rowsByPower = pageQ.data?.rowsByPower ?? new Map();
+  const powerByContract = pageQ.data?.powerByContract ?? new Map<string, string>();
+
+  /** Combine equipment rows from a primary + any merged children. */
+  const combinedRowsFor = (powerId: string, mergedChildren: any[]): EquipmentRow[] => {
+    const base = rowsByPower.get(powerId) ?? [];
+    if (!mergedChildren?.length) return base;
+    const extras: EquipmentRow[] = [];
+    mergedChildren.forEach((ch: any) => {
+      const cpId = powerByContract.get(ch.contractId);
+      if (cpId) extras.push(...(rowsByPower.get(cpId) ?? []));
+    });
+    return [...base, ...extras];
+  };
 
   const summary = useMemo(() => {
     let totalItems = 0, totalPowered = 0, totalKw = 0, unassigned = 0;
     items.forEach((it: any) => {
-      const rows = rowsByPower.get(it.powerId) ?? [];
+      const rows = combinedRowsFor(it.powerId, it.mergedChildren);
       const s = summarizeConceptEquipment(rows);
       totalItems += s.items;
       totalPowered += s.powered;
@@ -110,7 +123,7 @@ export default function FestivalEquipment() {
       if (!it.assignedVehicleId && rows.length > 0) unassigned++;
     });
     return { concepts: items.length, items: totalItems, powered: totalPowered, kw: Math.round(totalKw * 10) / 10, unassigned };
-  }, [items, rowsByPower]);
+  }, [items, rowsByPower, powerByContract]);
 
   if (festivalQ.isLoading) {
     return <div className="p-6 max-w-6xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
