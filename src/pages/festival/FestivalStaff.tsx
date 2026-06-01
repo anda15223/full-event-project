@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Trash2, Check, X, FileDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, X, FileDown, ExternalLink, Copy, Eye, EyeOff, KeyRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,7 +127,7 @@ export default function FestivalStaff() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, slug")
+        .select("id, name, slug, crew_register_url, crew_register_username, crew_register_password")
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
@@ -268,6 +268,14 @@ export default function FestivalStaff() {
         currentFestivalId={festivalId ?? ""}
         onCommitted={() => window.location.reload()}
       />
+      <CrewRegisterCard
+        festivalId={festivalId}
+        initialUrl={festivalQ.data?.crew_register_url ?? ""}
+        initialUsername={festivalQ.data?.crew_register_username ?? ""}
+        initialPassword={festivalQ.data?.crew_register_password ?? ""}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
+      />
+
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" asChild>
@@ -1231,6 +1239,136 @@ function ShiftScheduleCard({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+function CrewRegisterCard({
+  festivalId,
+  initialUrl,
+  initialUsername,
+  initialPassword,
+  onSaved,
+}: {
+  festivalId: string | undefined;
+  initialUrl: string;
+  initialUsername: string;
+  initialPassword: string;
+  onSaved: () => void;
+}) {
+  const [url, setUrl] = useState(initialUrl);
+  const [username, setUsername] = useState(initialUsername);
+  const [password, setPassword] = useState(initialPassword);
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { setUrl(initialUrl); }, [initialUrl]);
+  useEffect(() => { setUsername(initialUsername); }, [initialUsername]);
+  useEffect(() => { setPassword(initialPassword); }, [initialPassword]);
+
+  const dirty =
+    url !== initialUrl ||
+    username !== initialUsername ||
+    password !== initialPassword;
+
+  const save = async () => {
+    if (!festivalId) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("festivals")
+      .update({
+        crew_register_url: url || null,
+        crew_register_username: username || null,
+        crew_register_password: password || null,
+      })
+      .eq("id", festivalId);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else {
+      toast.success("Crew register saved");
+      onSaved();
+    }
+  };
+
+  const copy = async (val: string, label: string) => {
+    if (!val) return;
+    await navigator.clipboard.writeText(val);
+    toast.success(`${label} copied`);
+  };
+
+  const normalizedUrl = url && !/^https?:\/\//i.test(url) ? `https://${url}` : url;
+
+  return (
+    <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-heading font-semibold text-base">Crew register access</h2>
+        </div>
+        {normalizedUrl && (
+          <Button size="sm" variant="outline" asChild>
+            <a href={normalizedUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+            </a>
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-3">
+          <label className="text-xs font-medium text-muted-foreground">Link</label>
+          <div className="flex gap-1 mt-1">
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://crew-register.example.com/..."
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={() => copy(url, "Link")} disabled={!url}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Username</label>
+          <div className="flex gap-1 mt-1">
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="user@example.com"
+              autoComplete="off"
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={() => copy(username, "Username")} disabled={!username}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="text-xs font-medium text-muted-foreground">Password</label>
+          <div className="flex gap-1 mt-1">
+            <Input
+              type={showPw ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="off"
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={() => setShowPw((v) => !v)}>
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+            <Button type="button" size="icon" variant="ghost" onClick={() => copy(password, "Password")} disabled={!password}>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end mt-3">
+        <Button size="sm" onClick={save} disabled={!dirty || saving || !festivalId}>
+          {saving ? "Saving..." : "Save"}
+        </Button>
       </div>
     </div>
   );
