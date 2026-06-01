@@ -208,7 +208,7 @@ function normalizeFestivalOrderParsed(parsed: unknown, sourceText: string): unkn
 }
 
 async function extractDocx(buf: ArrayBuffer): Promise<string> {
-  const result = await mammoth.convertToMarkdown({ arrayBuffer: buf });
+  const result = await (mammoth as any).convertToMarkdown({ arrayBuffer: buf });
   return result.value || "";
 }
 
