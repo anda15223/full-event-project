@@ -457,11 +457,31 @@ export function CoolingUnitCard({
           placeholder="Order reference, special instructions, etc."
           rows={2}
         />
-        {unit.parse_summary && (
-          <div className="text-[11px] text-muted-foreground italic mt-1">
-            AI summary: {unit.parse_summary}
-          </div>
-        )}
+        {unit.parse_summary && (() => {
+          const lines = unit.parse_summary.split("\n").map((l) => l.trim()).filter(Boolean);
+          const bullets = lines.filter((l) => l.startsWith("•")).map((l) => l.replace(/^•\s*/, ""));
+          const rest = lines.filter((l) => !l.startsWith("•"));
+          return (
+            <div className="mt-3 rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                AI extracted details
+              </div>
+              {bullets.length > 0 ? (
+                <ul className="text-xs text-foreground space-y-1 list-disc pl-4">
+                  {bullets.map((b, i) => <li key={i}>{b}</li>)}
+                </ul>
+              ) : (
+                <div className="text-xs text-foreground whitespace-pre-wrap">{unit.parse_summary}</div>
+              )}
+              {rest.length > 0 && (
+                <div className="text-[10px] text-muted-foreground italic pt-1 border-t whitespace-pre-wrap">
+                  {rest.join("\n")}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Footer */}
