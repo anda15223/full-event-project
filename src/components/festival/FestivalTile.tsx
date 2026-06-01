@@ -91,7 +91,7 @@ export function FestivalTile({
         <div className="font-semibold text-base leading-tight">{title}</div>
         <div className="text-sm text-muted-foreground mt-1">{primaryStat}</div>
         {secondaryStat && (
-          <div className="text-xs text-muted-foreground/80 mt-0.5">{secondaryStat}</div>
+          <div className={cn("text-xs mt-0.5 font-medium", status ? STATUS_TEXT[status] : "text-muted-foreground/80")}>{secondaryStat}</div>
         )}
 
         {disabled && (
