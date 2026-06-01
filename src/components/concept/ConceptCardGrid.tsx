@@ -168,7 +168,10 @@ export function ConceptCardGrid({
   const verifyQuestions = verifyQ.data ?? [];
 
   const sortedRows = useMemo(() => {
-    const rows = (contractsQ.data ?? []).slice();
+    const rows = (contractsQ.data ?? []).slice().filter((r) => {
+      // Hide draft contracts unless user is in draft preview mode.
+      return draftMode ? true : !r.is_draft;
+    });
     rows.sort((a, b) => {
       const ao = a.concept?.display_order ?? 999;
       const bo = b.concept?.display_order ?? 999;
@@ -176,7 +179,7 @@ export function ConceptCardGrid({
       return (a.concept_alias ?? "").localeCompare(b.concept_alias ?? "");
     });
     return rows;
-  }, [contractsQ.data]);
+  }, [contractsQ.data, draftMode]);
 
   if (contractsQ.isLoading) {
     return (
