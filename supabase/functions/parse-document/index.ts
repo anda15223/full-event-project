@@ -328,7 +328,7 @@ Deno.serve(async (req) => {
     }
 
     // First Claude call — bigger budget for staff_roster (large tabular extraction)
-    const maxTokens = documentType === "staff_roster" ? 16000 : 4000;
+    const maxTokens = (documentType === "staff_roster" || documentType === "festival_order") ? 16000 : 4000;
     let { text: claudeText, usage, stopReason } = await callClaude(apiKey, systemPrompt, userContent, maxTokens);
     let parsed = tryParseJson(claudeText);
 
