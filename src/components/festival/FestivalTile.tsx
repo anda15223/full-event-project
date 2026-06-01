@@ -14,6 +14,7 @@ interface FestivalTileProps {
   secondaryStat?: string;
   status?: TileStatus;
   disabled?: boolean;
+  sequence?: number;
 }
 
 const ACCENT: Record<TileAccent, string> = {
