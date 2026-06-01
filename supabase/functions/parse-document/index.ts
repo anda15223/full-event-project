@@ -401,7 +401,12 @@ Deno.serve(async (req) => {
         context.festival_end ? `- Festival ends: ${context.festival_end}` : "",
         context.concept_name ? `- Target stand/concept: ${context.concept_name}` : "",
         context.concept_slug ? `- Target concept slug: ${context.concept_slug}` : "",
-        context.concept_name || context.concept_slug ? "For festival_order documents: extract ONLY rows explicitly ordered for this target stand/concept. Do not import the organiser's catalogue/pricelist rows where quantity is 0, blank, or not selected. Ignore other stands and general available products." : "",
+        Array.isArray(context.tent_mates) && context.tent_mates.length > 0
+          ? `- Tent shared with these other concepts (same tent on site): ${context.tent_mates.map((m: any) => m.name).join(", ")}`
+          : "",
+        context.concept_name || context.concept_slug
+          ? "For festival_order documents: extract ONLY rows ACTUALLY ordered (quantity > 0, checked/selected). NEVER import quantity 0 catalogue/pricelist rows. If the document covers MULTIPLE stands that share the same tent (see tent-mates above), include rows for ALL of those stands and set the 'concept_name' field on each item to the exact stand name it belongs to (target stand or tent-mate). Items without a clear stand owner default to the target stand. Ignore stands that are neither the target nor a tent-mate."
+          : "",
         "If the document shows dates without a year (e.g. 'Sat 18 May'), assume the year that places the dates ON or NEAR the festival window above. NEVER default to a past year.",
       ].filter(Boolean).join("\n");
       systemPrompt = systemPrompt + "\n" + ctxLines;
