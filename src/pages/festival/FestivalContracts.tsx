@@ -32,6 +32,9 @@ import {
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { ContractSummaryView } from "@/components/festival/ContractSummaryView";
+import { parseContractSummary } from "@/lib/parseContract";
+import { extractPdfText } from "@/lib/pdfText";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
