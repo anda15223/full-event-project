@@ -10,6 +10,7 @@ export type FestivalTileCounts = {
   facadeApprovedCount: number | null;
   powerCount: number | null;
   powerTotalKw: number | null;
+  powerOrderUploadedCount: number | null;
   safetyOpenCount: number | null;
   safetyTotalCount: number | null;
   accommodationCount: number | null;
