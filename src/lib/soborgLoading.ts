@@ -312,6 +312,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
         vehicle_id: groupKey,
         vehicle_type: canonicalName,
         license_plate: canonicalPlate,
+        loading_date: veh?.loading_date ?? null,
         concepts: [],
         car_total_items: 0,
       };
