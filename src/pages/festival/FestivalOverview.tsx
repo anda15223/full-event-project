@@ -659,7 +659,7 @@ export default function FestivalOverview() {
   const f = festivalQ.data;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between">
         <Link to="/festivals" className="text-xs text-muted-foreground hover:underline">← Festivals</Link>
         <div className="flex items-center gap-2">

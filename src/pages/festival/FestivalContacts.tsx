@@ -177,7 +177,7 @@ export default function FestivalContacts() {
   const totalCount = contacts.length;
 
   return (
-    <div className="container max-w-5xl mx-auto p-6 space-y-6">
+    <div className="container max-w-7xl mx-auto p-6 space-y-6">
       <ImportFromPreviousCard
         cardLabel="contacts"
         tables={CARD_TABLES.contacts}
