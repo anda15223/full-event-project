@@ -437,6 +437,12 @@ export function PowerConceptCard({
         </button>
         {eqOpen && (
           <div className="mt-2 space-y-2">
+            <ImportPowerEquipmentControl
+              currentFestivalId={festivalId}
+              conceptSlug={conceptSlug}
+              targetPowerId={power.id}
+              onImported={invalidate}
+            />
             <PlugSummary equipment={equipment.filter((e) => e.is_powered !== false)} />
             <div className="rounded-lg border divide-y text-xs">
               <div className="grid grid-cols-12 gap-2 p-2 items-center bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
