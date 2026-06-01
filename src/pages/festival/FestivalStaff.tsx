@@ -372,19 +372,19 @@ export default function FestivalStaff() {
         : !s.needs_accommodation
     );
 
-  // Empty-slot calculation across concept plans
+  // Empty-slot calculation across concept plans (from live positions)
   const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
   concepts.forEach((c) => {
-    const plan = CONCEPT_STATION_PLAN.find((p) => p.match(c.name.toLowerCase()));
-    if (!plan) return;
+    const slots = planByConcept.get(c.id);
+    if (!slots || slots.length === 0) return;
     const conceptPeople = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
-    plan.slots.forEach((slot) => {
-      const filled = conceptPeople.filter((p) => p.station === slot.station).length;
+    slots.forEach((slot) => {
+      const filled = conceptPeople.filter((p) => p.station === slot.stationCode).length;
       const missing = slot.count - Math.min(filled, slot.count);
       if (missing > 0) {
         emptySlots.push({
           conceptName: c.name,
-          stationLabel: STATION_LABEL[slot.station] ?? slot.station,
+          stationLabel: slot.label,
           missing,
         });
       }
