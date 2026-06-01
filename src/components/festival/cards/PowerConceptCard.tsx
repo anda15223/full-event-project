@@ -564,16 +564,67 @@ const PLUG_OPTIONS = [
   { value: "125A", label: "125A (3ph)" },
 ] as const;
 
+function PlugSummary({ equipment }: { equipment: PowerEquipmentRow[] }) {
+  const totals = new Map<string, { qty: number; kw: number }>();
+  equipment.forEach((e) => {
+    const key = e.power_type ?? "230V_socket";
+    const t = totals.get(key) ?? { qty: 0, kw: 0 };
+    const q = Number(e.quantity ?? 0);
+    t.qty += q;
+    t.kw += q * Number(e.power_kw ?? 0);
+    totals.set(key, t);
+  });
+  const entries = PLUG_OPTIONS.filter((o) => totals.has(o.value)).map((o) => ({
+    label: o.label, ...totals.get(o.value)!,
+  }));
+  if (entries.length === 0) return null;
+  const totalPlugs = entries.reduce((s, e) => s + e.qty, 0);
+  return (
+    <div className="rounded-lg border bg-muted/30 p-2.5 space-y-1.5">
+      <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span>Plug summary — from equipment</span>
+        <span className="tabular-nums">{totalPlugs} plug{totalPlugs === 1 ? "" : "s"} total</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {entries.map((e) => (
+          <span key={e.label}
+            className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-[11px] tabular-nums">
+            <span className="font-semibold text-amber-600 dark:text-amber-400">{e.qty}×</span>
+            <span>{e.label}</span>
+            <span className="text-muted-foreground">· {fmt(e.kw)} kW</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EquipmentRow({ row, onChanged }: { row: PowerEquipmentRow; onChanged: () => void }) {
   const [name, setName] = useState(row.equipment_name);
   const [qty, setQty] = useState<string>(String(row.quantity ?? 1));
   const [kw, setKw] = useState<string>(String(row.power_kw ?? 0));
+  const [ptype, setPtype] = useState<string>(row.power_type ?? "230V_socket");
+  const [saving, setSaving] = useState(false);
   const total = (Number(kw) || 0) * (Number(qty) || 0);
 
-  const save = async (patch: Partial<PowerEquipmentRow>) => {
+  const dirty =
+    name !== row.equipment_name ||
+    Number(qty) !== Number(row.quantity ?? 1) ||
+    Number(kw) !== Number(row.power_kw ?? 0) ||
+    ptype !== (row.power_type ?? "230V_socket");
+
+  const save = async () => {
+    setSaving(true);
     const { error } = await supabase.from("festival_power_equipment")
-      .update(patch as any).eq("id", row.id);
-    if (error) toast.error(error.message); else onChanged();
+      .update({
+        equipment_name: name || "Unnamed",
+        quantity: Math.max(1, Math.round(Number(qty) || 1)),
+        power_kw: Number(kw) || 0,
+        power_type: ptype,
+      } as any).eq("id", row.id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success("Saved"); onChanged(); }
   };
 
   const remove = async () => {
@@ -584,26 +635,23 @@ function EquipmentRow({ row, onChanged }: { row: PowerEquipmentRow; onChanged: (
   };
 
   return (
-    <div className="grid grid-cols-12 gap-2 p-2 items-center">
+    <div className={cn("grid grid-cols-12 gap-2 p-2 items-center", dirty && "bg-amber-500/5")}>
       <Input
         value={name} onChange={(e) => setName(e.target.value)}
-        onBlur={() => name !== row.equipment_name && save({ equipment_name: name || "Unnamed" })}
         className="col-span-4 h-7 text-xs"
       />
       <Input
         type="text" inputMode="numeric" value={qty}
         onChange={(e) => setQty(e.target.value.replace(/[^\d]/g, ""))}
-        onBlur={() => Number(qty) !== Number(row.quantity ?? 1) && save({ quantity: Math.max(1, Math.round(Number(qty) || 1)) })}
-        className="col-span-2 h-7 text-xs text-right tabular-nums"
+        className="col-span-1 h-7 text-xs text-right tabular-nums"
       />
       <Input
         type="text" inputMode="decimal" value={kw}
         onChange={(e) => setKw(e.target.value.replace(/[^\d.]/g, ""))}
-        onBlur={() => Number(kw) !== Number(row.power_kw ?? 0) && save({ power_kw: Number(kw) || 0 })}
-        className="col-span-2 h-7 text-xs text-right tabular-nums"
+        className="col-span-1 h-7 text-xs text-right tabular-nums"
       />
       <div className="col-span-2">
-        <Select value={row.power_type ?? "230V_socket"} onValueChange={(v) => save({ power_type: v })}>
+        <Select value={ptype} onValueChange={setPtype}>
           <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             {PLUG_OPTIONS.map((o) => (
@@ -613,13 +661,24 @@ function EquipmentRow({ row, onChanged }: { row: PowerEquipmentRow; onChanged: (
         </Select>
       </div>
       <div className="col-span-1 text-right tabular-nums font-medium">{fmt(total)} kW</div>
-      <button
-        onClick={remove}
-        className="col-span-1 justify-self-end text-muted-foreground hover:text-destructive p-1"
-        title="Delete"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      <div className="col-span-3 flex items-center justify-end gap-1">
+        <Button
+          size="sm"
+          variant={dirty ? "default" : "outline"}
+          className="h-7 text-xs px-2"
+          disabled={!dirty || saving}
+          onClick={save}
+        >
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : dirty ? "Save" : "Saved"}
+        </Button>
+        <button
+          onClick={remove}
+          className="text-muted-foreground hover:text-destructive p-1"
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
