@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { AccreditationCard } from "@/components/festival/AccreditationCard";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
