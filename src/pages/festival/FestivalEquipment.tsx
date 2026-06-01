@@ -184,7 +184,9 @@ export default function FestivalEquipment() {
               contractId={it.contractId}
               powerId={it.powerId}
               assignedVehicleId={it.assignedVehicleId}
-              rows={rowsByPower.get(it.powerId) ?? []}
+              rows={combinedRowsFor(it.powerId, it.mergedChildren)}
+              mergedChildren={it.mergedChildren}
+              mergeTargets={it.mergeTargets}
             />
           ))}
         </div>
