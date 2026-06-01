@@ -739,7 +739,10 @@ export default function FestivalOverview() {
       {/* BLOCK 6 — concept lineup */}
       {festivalId && (
         <section className="rounded-lg border bg-card p-4">
-          <h2 className="font-heading text-lg font-semibold mb-3">Concept lineup</h2>
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <h2 className="font-heading text-lg font-semibold">Concept lineup</h2>
+            <AddConceptDropdown festivalId={festivalId} />
+          </div>
           <ConceptCardGrid
             festivalId={festivalId}
             festivalSlug={slug}
