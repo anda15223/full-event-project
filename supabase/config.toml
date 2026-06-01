@@ -56,3 +56,6 @@ verify_jwt = false
 [functions.send-onboarding-link]
 verify_jwt = false
 
+
+[functions.parse-contract]
+verify_jwt = true
