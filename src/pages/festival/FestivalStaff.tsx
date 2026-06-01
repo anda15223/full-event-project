@@ -978,6 +978,43 @@ function StationsEditorPopover({
             </div>
           </div>
         )}
+        {importSources.length > 0 && (
+          <div className="border-t pt-2 mt-2 space-y-2">
+            <div className="text-[11px] uppercase font-semibold text-muted-foreground">
+              Import from previous festival
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Replaces current stations for {conceptName}.
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Select value={importFestivalId} onValueChange={setImportFestivalId}>
+                <SelectTrigger className="h-8 flex-1">
+                  <SelectValue placeholder="Pick festival…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {importSources.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!importFestivalId || importPending}
+                onClick={() => {
+                  if (!importFestivalId) return;
+                  if (slots.length > 0 && !confirm(`Replace current ${conceptName} stations with the ones from the selected festival?`)) return;
+                  onImport(importFestivalId);
+                  setImportFestivalId("");
+                }}
+              >
+                {importPending ? "…" : "Import"}
+              </Button>
+            </div>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   );
