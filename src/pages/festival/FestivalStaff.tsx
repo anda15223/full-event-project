@@ -491,24 +491,24 @@ export default function FestivalStaff() {
       )}
 
 
-      <div className="rounded-lg border bg-card overflow-x-auto">
-        <Table>
+      <div className="rounded-lg border bg-card overflow-hidden">
+        <Table className="text-xs [&_th]:px-2 [&_td]:px-2 [&_th]:py-2 [&_td]:py-1.5">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10">#</TableHead>
-              <TableHead className="min-w-[180px]">Name</TableHead>
-              <TableHead className="min-w-[140px]">Location</TableHead>
-              <TableHead className="min-w-[140px]">Concept</TableHead>
-              <TableHead className="min-w-[140px]">Station</TableHead>
-              <TableHead className="text-center min-w-[150px]">Accom. (Thu/Fri/Sat/Sun)</TableHead>
-              <TableHead className="min-w-[120px]">Source</TableHead>
-              <TableHead className="text-center">Thu</TableHead>
-              <TableHead className="text-center">Fri</TableHead>
-              <TableHead className="text-center">Sat</TableHead>
-              <TableHead className="text-center">Sun</TableHead>
-              <TableHead className="text-center">Confirmed</TableHead>
-              <TableHead className="min-w-[180px]">Notes</TableHead>
-              <TableHead className="w-10" />
+              <TableHead className="w-8 text-[10px]">#</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead className="w-[110px]">Location</TableHead>
+              <TableHead className="w-[120px]">Concept</TableHead>
+              <TableHead className="w-[110px]">Station</TableHead>
+              <TableHead className="text-center w-[120px]">Accom.</TableHead>
+              <TableHead className="w-[90px]">Source</TableHead>
+              <TableHead className="text-center w-8">T</TableHead>
+              <TableHead className="text-center w-8">F</TableHead>
+              <TableHead className="text-center w-8">S</TableHead>
+              <TableHead className="text-center w-8">S</TableHead>
+              <TableHead className="text-center w-10">✓</TableHead>
+              <TableHead className="w-[140px]">Notes</TableHead>
+              <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
           <TableBody>
