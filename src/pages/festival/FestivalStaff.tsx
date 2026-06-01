@@ -570,9 +570,9 @@ export default function FestivalStaff() {
                 const isMgmt = group.id === "__mgmt__";
                 const isNone = group.id === "__none__";
                 const slots: PlanSlot[] | undefined = !isMgmt && !isNone
-                  ? planByConcept.get(group.id)
+                  ? (planByConcept.get(group.id) ?? [])
                   : undefined;
-                const hasPlan = !!slots; // even an empty array means "editable concept"
+                const hasPlan = !isMgmt && !isNone;
 
                 const totalSlots = slots?.reduce((a, s) => a + s.count, 0) ?? 0;
                 const filledTotal = slots
