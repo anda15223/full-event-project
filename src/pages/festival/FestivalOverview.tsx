@@ -36,6 +36,7 @@ import { DisabledConceptsBanner } from "@/components/festival/DisabledConceptsBa
 import { FestivalIdentityStrip } from "@/components/festival/FestivalIdentityStrip";
 import { FestivalInfoCard } from "@/components/festival/FestivalInfoCard";
 import { FestivalTile } from "@/components/festival/FestivalTile";
+import { AddConceptDropdown } from "@/components/festival/AddConceptDropdown";
 
 
 // ---------- helpers ----------
