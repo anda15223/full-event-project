@@ -15,6 +15,7 @@ import {
 } from "@/lib/equipmentStatus";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { useFestivalVehicles } from "@/hooks/useFestivalVehicles";
+import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 
 type Vehicle = { id: string; vehicle_type: string };
 
