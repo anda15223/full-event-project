@@ -620,12 +620,6 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
           </ul>
         </div>
       )}
-      {c.key_obligations && (
-        <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-2 text-[12px]">
-          <div className="font-semibold text-amber-800 dark:text-amber-300 mb-0.5">Key obligation</div>
-          <div>{c.key_obligations}</div>
-        </div>
-      )}
       {c.last_parsed_at && (
         <div className="text-[10px] text-muted-foreground italic">
           AI parsed {timeAgo(c.last_parsed_at)}
