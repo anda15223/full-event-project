@@ -7984,6 +7984,10 @@ export type Database = {
       }
       festivals: {
         Row: {
+          accreditation_notes: string | null
+          accreditation_password: string | null
+          accreditation_url: string | null
+          accreditation_username: string | null
           address: string | null
           breakdown_date: string | null
           city: string | null
@@ -8034,6 +8038,10 @@ export type Database = {
           year: number
         }
         Insert: {
+          accreditation_notes?: string | null
+          accreditation_password?: string | null
+          accreditation_url?: string | null
+          accreditation_username?: string | null
           address?: string | null
           breakdown_date?: string | null
           city?: string | null
@@ -8084,6 +8092,10 @@ export type Database = {
           year: number
         }
         Update: {
+          accreditation_notes?: string | null
+          accreditation_password?: string | null
+          accreditation_url?: string | null
+          accreditation_username?: string | null
           address?: string | null
           breakdown_date?: string | null
           city?: string | null
