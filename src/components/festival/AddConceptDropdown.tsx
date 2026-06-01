@@ -23,6 +23,13 @@ interface ConceptRow {
   display_order: number | null;
 }
 
+interface ExistingConceptRow {
+  concept_id: string;
+  is_active: boolean | null;
+}
+
+type AddConceptOption = ConceptRow & { mode: "add" | "restore" };
+
 interface FestivalRow {
   id: string;
   name: string;
@@ -50,23 +57,36 @@ export function AddConceptDropdown({ festivalId }: Props) {
     },
   });
 
-  // Concepts already present at this festival (live or draft).
+  // Concepts already present at this festival (live, draft, or disabled).
   const existingQ = useQuery({
     queryKey: ["festival-contracts-concept-ids", festivalId],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("concept_id")
+        .select("concept_id, is_active")
         .eq("festival_id", festivalId);
       if (error) throw error;
-      return new Set((data ?? []).map((r: any) => r.concept_id as string));
+      const existing = new Map<string, ExistingConceptRow>();
+      (data ?? []).forEach((r: any) => {
+        const previous = existing.get(r.concept_id);
+        existing.set(r.concept_id, {
+          concept_id: r.concept_id,
+          is_active: previous?.is_active === true || r.is_active !== false,
+        });
+      });
+      return existing;
     },
   });
 
-  const missing = useMemo(() => {
-    const existing = existingQ.data ?? new Set<string>();
-    return (conceptsQ.data ?? []).filter((c) => !existing.has(c.id));
+  const options = useMemo<AddConceptOption[]>(() => {
+    const existing = existingQ.data ?? new Map<string, ExistingConceptRow>();
+    return (conceptsQ.data ?? []).flatMap<AddConceptOption>((c) => {
+      const row = existing.get(c.id);
+      if (!row) return [{ ...c, mode: "add" }];
+      if (row.is_active === false) return [{ ...c, mode: "restore" }];
+      return [];
+    });
   }, [conceptsQ.data, existingQ.data]);
 
   // Past festivals that have this concept (festival_contracts row).
@@ -118,25 +138,53 @@ export function AddConceptDropdown({ festivalId }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Import failed"),
   });
 
-  if (missing.length === 0) return null;
+  const restoreMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("festival_contracts")
+        .update({ is_active: true })
+        .eq("festival_id", festivalId)
+        .eq("concept_id", id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: (id) => {
+      const concept = conceptsQ.data?.find((c) => c.id === id);
+      toast.success(`${concept?.name ?? "Concept"} restored to this festival.`);
+      qc.invalidateQueries({ queryKey: ["festival-contracts-grid", festivalId] });
+      qc.invalidateQueries({ queryKey: ["festival-contracts-concept-ids", festivalId] });
+      qc.invalidateQueries({ queryKey: ["disabled-concepts"] });
+      qc.invalidateQueries({ queryKey: ["concept-active"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not restore concept"),
+  });
+
+  if (options.length === 0) return null;
 
   return (
     <>
       <Select
         value=""
         onValueChange={(v) => {
-          setConceptId(v);
+          const [mode, id] = v.split(":");
+          if (mode === "restore") {
+            restoreMut.mutate(id);
+            return;
+          }
+          setConceptId(id);
           setSourceFestivalId("");
           setOpen(true);
         }}
       >
         <SelectTrigger className="h-9 w-auto gap-2 border-dashed">
           <Plus className="h-4 w-4" />
-          <SelectValue placeholder="Add concept" />
+          <SelectValue placeholder={restoreMut.isPending ? "Restoring…" : "Add concept"} />
         </SelectTrigger>
         <SelectContent>
-          {missing.map((c) => (
-            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+          {options.map((c) => (
+            <SelectItem key={`${c.mode}:${c.id}`} value={`${c.mode}:${c.id}`}>
+              {c.name}{c.mode === "restore" ? " — restore disabled" : ""}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
