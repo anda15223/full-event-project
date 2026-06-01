@@ -813,7 +813,6 @@ function StationsEditorPopover({
   onAdd: (stationId: string) => void;
   onRemove: (stationId: string) => void;
 }) {
-  const { Popover, PopoverContent, PopoverTrigger } = require("@/components/ui/popover");
   const [pendingStationId, setPendingStationId] = useState<string>("");
 
   // Build a quick lookup of current counts by stationId
