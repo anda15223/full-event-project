@@ -994,22 +994,6 @@ function StaffRow({
         </Select>
       </TableCell>
       <TableCell>
-        <Select
-          value={staff.station ?? "__none__"}
-          onValueChange={(v) => onPatch({ station: v === "__none__" ? null : v })}
-        >
-          <SelectTrigger className="h-7 text-xs px-2">
-            <SelectValue placeholder="—" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">— None —</SelectItem>
-            {STATION_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell>
         <div className="flex items-center justify-center gap-1.5">
           {ACCOM_DAYS.map((d) => {
             const checked = !!staff[d.key];
