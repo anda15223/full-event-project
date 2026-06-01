@@ -94,13 +94,14 @@ export function FestivalOrderListCard({
       type Sibling = {
         contract_id: string;
         concept_name: string;
+        concept_slug: string | null;
         power_id: string;
       };
       const siblings: Sibling[] = [];
       if (primaryId) {
         const { data: sibContracts } = await supabase
           .from("festival_contracts")
-          .select("id, concept_id, tent_primary_contract_id, concepts:concept_id(name)")
+          .select("id, concept_id, tent_primary_contract_id, concepts:concept_id(name, slug)")
           .eq("festival_id", festivalId)
           .eq("is_active", true)
           .or(`id.eq.${primaryId},tent_primary_contract_id.eq.${primaryId}`);
@@ -118,13 +119,26 @@ export function FestivalOrderListCard({
         (sibContracts ?? []).forEach((c: any) => {
           const pid = powerByContract.get(c.id);
           if (pid && c.concepts?.name) {
-            siblings.push({ contract_id: c.id, concept_name: c.concepts.name, power_id: pid });
+            siblings.push({
+              contract_id: c.id,
+              concept_name: c.concepts.name,
+              concept_slug: c.concepts.slug ?? null,
+              power_id: pid,
+            });
           }
+        });
+      }
+      if (!siblings.some((s) => s.power_id === powerId)) {
+        siblings.push({
+          contract_id: myContractId ?? powerId,
+          concept_name: conceptName,
+          concept_slug: conceptSlug,
+          power_id: powerId,
         });
       }
       const tentMates = siblings
         .filter((s) => s.power_id !== powerId)
-        .map((s) => ({ name: s.concept_name }));
+        .map((s) => ({ name: s.concept_name, slug: s.concept_slug }));
 
       toast.success("Uploaded — parsing with AI…");
 
@@ -152,14 +166,23 @@ export function FestivalOrderListCard({
       } else {
         const filteredItems = rawItems.filter((it) => Number(it.quantity ?? 1) > 0);
 
-        // Build {normalized concept name -> power_id} for routing
+        // Build {normalized concept name/slug/aliases -> power_id} for routing
         const normalize = (s: string) =>
           (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
         const powerByConcept = new Map<string, string>();
-        siblings.forEach((s) =>
-          powerByConcept.set(normalize(s.concept_name), s.power_id),
-        );
+        const addConceptAlias = (alias: string | null | undefined, pid: string) => {
+          const key = normalize(alias ?? "");
+          if (key) powerByConcept.set(key, pid);
+        };
+        siblings.forEach((s) => {
+          addConceptAlias(s.concept_name, s.power_id);
+          addConceptAlias(s.concept_slug, s.power_id);
+          s.concept_name.split(/&|\+|\/|\band\b|\bog\b/i).forEach((part) =>
+            addConceptAlias(part, s.power_id),
+          );
+        });
         powerByConcept.set(normalize(conceptName), powerId);
+        powerByConcept.set(normalize(conceptSlug), powerId);
 
         // Group items by target power_id
         const groups = new Map<string, any[]>();
