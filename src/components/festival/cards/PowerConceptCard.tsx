@@ -157,7 +157,8 @@ const CONNECTION_TYPES = [
 ] as const;
 
 export function PowerConceptCard({
-  festivalId, festivalSlug, conceptSlug, conceptName, power, equipment,
+  festivalId, festivalSlug, conceptSlug, conceptName, contractId, power, equipment,
+  mergedChildren = [], mergeTargets = [],
 }: Props) {
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
