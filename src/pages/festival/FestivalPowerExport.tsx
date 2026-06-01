@@ -237,6 +237,7 @@ function PowerDoc({
                 <View style={styles.tableWrap}>
                   <View style={styles.tHead}>
                     <Text style={styles.colName}>Equipment</Text>
+                    <Text style={styles.colPlug}>Plug</Text>
                     <Text style={styles.colQty}>Qty</Text>
                     <Text style={styles.colKw}>kW each</Text>
                     <Text style={styles.colTot}>Total kW</Text>
@@ -246,6 +247,7 @@ function PowerDoc({
                     const kwEach = Number(e.power_kw ?? 0);
                     const total = qty * kwEach;
                     const isLast = idx === poweredEq.length - 1;
+                    const plug = e.power_type ? POWER_TYPE_LABEL[e.power_type] : "—";
                     return (
                       <View
                         key={e.id}
@@ -256,6 +258,7 @@ function PowerDoc({
                         ]}
                       >
                         <Text style={styles.colName}>{N(e.equipment_name)}</Text>
+                        <Text style={styles.colPlug}>{N(plug)}</Text>
                         <Text style={styles.colQty}>{qty}</Text>
                         <Text style={styles.colKw}>{kwEach.toFixed(2)}</Text>
                         <Text style={styles.colTot}>{total.toFixed(2)}</Text>
@@ -264,6 +267,7 @@ function PowerDoc({
                   })}
                   <View style={styles.tFoot}>
                     <Text style={styles.colName}>Total</Text>
+                    <Text style={styles.colPlug}></Text>
                     <Text style={styles.colQty}>
                       {poweredEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
                     </Text>
