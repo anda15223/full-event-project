@@ -81,6 +81,9 @@ export function useFestivalTileCounts(festivalId: string | null) {
       // Power
       const powerRows = (power.data ?? []) as any[];
       const powerCount = powerRows.length || null;
+      const powerOrderUploadedCount = powerRows.length
+        ? powerRows.filter((r) => !!r.order_list_file_path).length
+        : null;
       const powerTotalKw = powerRows.length
         ? Math.round(powerRows.reduce((s, r) => s + (Number(r.total_kw_estimate) || 0), 0))
         : null;
