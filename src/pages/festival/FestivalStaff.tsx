@@ -301,6 +301,49 @@ export default function FestivalStaff() {
     onError: (e: any) => toast.error(e.message ?? "Failed to remove slot"),
   });
 
+  // Import all slots for a concept from another festival (replaces current)
+  const importSlots = useMutation({
+    mutationFn: async ({ conceptId, fromFestivalId }: { conceptId: string; fromFestivalId: string }) => {
+      // Fetch source positions
+      const { data: src, error: srcErr } = await supabase
+        .from("festival_schedule_position")
+        .select("station_id, position_number, display_order")
+        .eq("festival_id", fromFestivalId)
+        .eq("concept_id", conceptId);
+      if (srcErr) throw srcErr;
+      if (!src || src.length === 0) throw new Error("No stations found in that festival for this concept.");
+
+      // Wipe current slots for this concept (current festival + draft mode)
+      const { error: delErr } = await supabase
+        .from("festival_schedule_position")
+        .delete()
+        .eq("festival_id", festivalId!)
+        .eq("concept_id", conceptId)
+        .eq("is_draft", draftMode);
+      if (delErr) throw delErr;
+
+      // Insert copies
+      const rows = src.map((p) => ({
+        festival_id: festivalId!,
+        concept_id: conceptId,
+        station_id: p.station_id,
+        position_number: p.position_number,
+        display_order: p.display_order,
+        is_draft: draftMode,
+      }));
+      const { error: insErr } = await supabase.from("festival_schedule_position").insert(rows);
+      if (insErr) throw insErr;
+      return rows.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Imported ${n} slot${n === 1 ? "" : "s"}`);
+      qc.invalidateQueries({ queryKey: ["staff-positions", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Import failed"),
+  });
+
+
 
   const updateStaff = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Staff> }) => {
