@@ -27,10 +27,17 @@ const ACCENT: Record<TileAccent, string> = {
 };
 
 const STATUS_DOT: Record<TileStatus, string> = {
-  green: "bg-emerald-500",
-  amber: "bg-amber-500",
-  red: "bg-rose-500",
-  gray: "bg-zinc-400",
+  green: "bg-emerald-500 shadow-emerald-500/40",
+  amber: "bg-amber-500 shadow-amber-500/40",
+  red: "bg-rose-500 shadow-rose-500/40",
+  gray: "bg-zinc-400 shadow-zinc-400/40",
+};
+
+const STATUS_TEXT: Record<TileStatus, string> = {
+  green: "text-emerald-700 dark:text-emerald-300",
+  amber: "text-amber-700 dark:text-amber-300",
+  red: "text-rose-700 dark:text-rose-300",
+  gray: "text-muted-foreground/80",
 };
 
 export function FestivalTile({
@@ -66,7 +73,7 @@ export function FestivalTile({
         {status && !disabled && (
           <div
             className={cn(
-              "absolute top-4 right-4 h-2.5 w-2.5 rounded-full",
+              "absolute top-3.5 right-3.5 h-3.5 w-3.5 rounded-full shadow-lg ring-2 ring-background",
               STATUS_DOT[status]
             )}
           />
@@ -84,7 +91,7 @@ export function FestivalTile({
         <div className="font-semibold text-base leading-tight">{title}</div>
         <div className="text-sm text-muted-foreground mt-1">{primaryStat}</div>
         {secondaryStat && (
-          <div className="text-xs text-muted-foreground/80 mt-0.5">{secondaryStat}</div>
+          <div className={cn("text-xs mt-0.5 font-medium", status ? STATUS_TEXT[status] : "text-muted-foreground/80")}>{secondaryStat}</div>
         )}
 
         {disabled && (
