@@ -102,9 +102,10 @@ const styles = StyleSheet.create({
     fontSize: 9, fontWeight: 700,
   },
   colName: { flex: 1, paddingRight: 4 },
-  colQty:  { width: 32, textAlign: "right", paddingRight: 4 },
-  colKw:   { width: 56, textAlign: "right", paddingRight: 4 },
-  colTot:  { width: 64, textAlign: "right" },
+  colPlug: { width: 76, paddingRight: 4 },
+  colQty:  { width: 28, textAlign: "right", paddingRight: 4 },
+  colKw:   { width: 52, textAlign: "right", paddingRight: 4 },
+  colTot:  { width: 56, textAlign: "right" },
   sumBox: { marginTop: 16, padding: 8, borderWidth: 1, borderColor: "#333", backgroundColor: "#f3f3f3" },
   sumTitle: { fontSize: 11, fontWeight: 700, marginBottom: 4 },
   footer: {
