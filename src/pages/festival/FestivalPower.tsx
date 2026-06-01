@@ -209,15 +209,18 @@ export default function FestivalPower() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {items.map(({ concept, power }) => (
+          {items.map(({ concept, power, contractId, mergedChildren, mergeTargets }) => (
             <PowerConceptCard
               key={power.id}
               festivalId={festivalId}
               festivalSlug={slug}
               conceptSlug={concept.slug}
               conceptName={concept.name}
+              contractId={contractId}
               power={power}
-              equipment={equipmentQ.data?.get(power.id) ?? []}
+              equipment={combinedEquipmentFor(power.id, mergedChildren)}
+              mergedChildren={mergedChildren}
+              mergeTargets={mergeTargets}
             />
           ))}
         </div>
