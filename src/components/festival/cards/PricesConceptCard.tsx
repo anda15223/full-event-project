@@ -307,8 +307,49 @@ export function PricesConceptCard({
               {CURRENCIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:text-rose-600"
+            title="Disable this concept at this festival"
+            onClick={() => setConfirmDisableOpen(true)}
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
+
+      <AlertDialog open={confirmDisableOpen} onOpenChange={setConfirmDisableOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Disable {conceptName} at this festival?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This concept will be hidden from prices, binder exports, Søborg loading, reports, and AI context for this festival. You can re-enable it from the concept card on the festival overview.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                try {
+                  await toggleConcept.mutateAsync({
+                    festivalSlug,
+                    conceptSlug: conceptSlug as string,
+                    isActive: false,
+                  });
+                  toast.success(`${conceptName} disabled at this festival`);
+                  setConfirmDisableOpen(false);
+                } catch (e: any) {
+                  toast.error(e?.message ?? "Failed to disable concept");
+                }
+              }}
+            >
+              Disable
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 text-sm">
