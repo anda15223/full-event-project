@@ -162,9 +162,24 @@ Deno.serve(async (req) => {
       let inserted = 0;
       for (let i = 0; i < cleaned.length; i += 200) {
         const chunk = cleaned.slice(i, i + 200);
-        const { error: insErr, count } = await supabase
-          .from(t)
-          .insert(chunk, { count: "exact" });
+        let insErr: { message: string; code?: string } | null = null;
+        let count: number | null = null;
+        const res = await supabase.from(t).insert(chunk, { count: "exact" });
+        insErr = res.error as any;
+        count = res.count;
+        // If unique violation against existing live rows, fall back to per-row insert skipping conflicts.
+        if (insErr && (insErr as any).code === "23505") {
+          insErr = null;
+          count = 0;
+          for (const row of chunk) {
+            const single = await supabase.from(t).insert(row, { count: "exact" });
+            if (single.error) {
+              if ((single.error as any).code === "23505") continue; // skip duplicate
+              return json({ error: `${t} insert: ${single.error.message}` }, 500);
+            }
+            count += single.count ?? 1;
+          }
+        }
         if (insErr) return json({ error: `${t} insert: ${insErr.message}` }, 500);
         inserted += count ?? chunk.length;
       }
