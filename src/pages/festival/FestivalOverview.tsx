@@ -786,9 +786,9 @@ export default function FestivalOverview() {
         <h2 className="font-heading text-lg font-semibold mb-3">Cards</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {(() => {
-            const tiles: React.ReactNode[] = [];
+            const tilesByKey: Record<string, React.ReactNode> = {};
             const veh = transportSummaryQ.data?.vehicleCount ?? 0;
-            tiles.push(
+            tilesByKey["transport"] = (
               <FestivalTile key="transport" href={`/festivals/${slug}/transport`}
                 icon={Truck} iconAccent="blue" title="Transport"
                 primaryStat={`${veh} vehicles`}
@@ -797,7 +797,7 @@ export default function FestivalOverview() {
 
 
             const coolN = statsQ.data?.totalCooling ?? 0;
-            tiles.push(
+            tilesByKey["cooling"] = (
               <FestivalTile key="cooling" href={`/festivals/${slug}/cooling`}
                 icon={Snowflake} iconAccent="blue" title="Cooling"
                 primaryStat={`${coolN} units`}
@@ -806,7 +806,7 @@ export default function FestivalOverview() {
 
             const facN = tileCounts.facadeCount ?? 0;
             const facA = tileCounts.facadeApprovedCount ?? 0;
-            tiles.push(
+            tilesByKey["facade"] = (
               <FestivalTile key="facade" href={`/festivals/${slug}/facade`}
                 icon={ImageIcon} iconAccent="rose" title="Facade"
                 primaryStat={`${facN} sets`}
@@ -815,7 +815,7 @@ export default function FestivalOverview() {
             );
 
             const safN = tileCounts.safetyTotalCount ?? 0;
-            tiles.push(
+            tilesByKey["safety"] = (
               <FestivalTile key="safety" href={`/festivals/${slug}/safety`}
                 icon={ShieldAlert} iconAccent="emerald" title="Safety"
                 primaryStat={`${safN} configured`}
@@ -824,7 +824,7 @@ export default function FestivalOverview() {
 
             const accN = tileCounts.accommodationCount ?? 0;
             const accNights = tileCounts.accommodationNights ?? 0;
-            tiles.push(
+            tilesByKey["accommodation"] = (
               <FestivalTile key="accommodation" href={`/festivals/${slug}/accommodation`}
                 icon={BedDouble} iconAccent="blue" title="Accommodation"
                 primaryStat={`${accN} bookings`}
@@ -834,7 +834,7 @@ export default function FestivalOverview() {
 
             const at = statsQ.data?.actionTotals;
             const atOpen = at ? at.crit + at.high + at.normal : 0;
-            tiles.push(
+            tilesByKey["actions"] = (
               <FestivalTile key="actions" href={`/festivals/${slug}/actions`}
                 icon={ListChecks} iconAccent="rose" title="Action Items"
                 primaryStat={`${atOpen} open`}
@@ -843,7 +843,7 @@ export default function FestivalOverview() {
             );
 
             const sb = soborgQ.data;
-            tiles.push(
+            tilesByKey["soborg"] = (
               <FestivalTile key="soborg" href={`/festivals/${slug}/soborg-loading`}
                 icon={Truck} iconAccent="violet" title="Søborg Loading"
                 primaryStat={sb ? `${sb.itemCount} items` : "—"}
@@ -852,7 +852,7 @@ export default function FestivalOverview() {
             );
 
             const setN = tileCounts.setupCount ?? 0;
-            tiles.push(
+            tilesByKey["setup"] = (
               <FestivalTile key="setup" href={`/festivals/${slug}/setup`}
                 icon={Calendar} iconAccent="emerald" title="Setup"
                 primaryStat={`${setN} phases`}
@@ -860,7 +860,7 @@ export default function FestivalOverview() {
             );
 
             const eqN = tileCounts.equipmentCount ?? 0;
-            tiles.push(
+            tilesByKey["equipment"] = (
               <FestivalTile key="equipment" href={`/festivals/${slug}/equipment`}
                 icon={Wrench} iconAccent="slate" title="Equipment"
                 primaryStat={`${eqN} items`}
@@ -869,7 +869,7 @@ export default function FestivalOverview() {
 
             const pwN = tileCounts.powerCount ?? 0;
             const pwKw = tileCounts.powerTotalKw ?? 0;
-            tiles.push(
+            tilesByKey["power"] = (
               <FestivalTile key="power" href={`/festivals/${slug}/power`}
                 icon={Zap} iconAccent="amber" title="Power"
                 primaryStat={`${pwN} records`}
@@ -879,7 +879,7 @@ export default function FestivalOverview() {
 
             const cTotal = contractsCountQ.data?.total ?? 0;
             const cSigned = contractsCountQ.data?.signed ?? 0;
-            tiles.push(
+            tilesByKey["contracts"] = (
               <FestivalTile key="contracts" href={`/festivals/${slug}/contracts`}
                 icon={FileSignature} iconAccent="violet" title="Contracts"
                 primaryStat={`${cTotal} concepts`}
@@ -888,7 +888,7 @@ export default function FestivalOverview() {
             );
 
             const ctN = contactsCountQ.data ?? 0;
-            tiles.push(
+            tilesByKey["contacts"] = (
               <FestivalTile key="contacts" href={`/festivals/${slug}/contacts`}
                 icon={Users} iconAccent="slate" title="Contacts"
                 primaryStat="Directory"
@@ -898,38 +898,48 @@ export default function FestivalOverview() {
 
             const prN = tileCounts.pricesConceptCount ?? 0;
             const prItems = tileCounts.pricesItemCount ?? 0;
-            tiles.push(
+            tilesByKey["prices"] = (
               <FestivalTile key="prices" href={`/festivals/${slug}/prices`}
                 icon={Tag} iconAccent="emerald" title="Prices"
                 primaryStat={prN > 0 ? `${prN} concept${prN === 1 ? "" : "s"}` : "Per concept"}
                 secondaryStat={prItems > 0 ? `${prItems} items` : "POS price lists"}
                 status={prItems > 0 ? "green" : "gray"} />
             );
-            tiles.push(
+            tilesByKey["staff"] = (
               <FestivalTile key="staff" href={`/festivals/${slug}/staff`}
                 icon={UserCog} iconAccent="slate" title="Staff"
                 primaryStat="Crew list"
                 secondaryStat="Names, days, locations" status="gray" />
             );
-            tiles.push(
+            tilesByKey["scheduling"] = (
               <FestivalTile key="scheduling" href={`/festivals/${slug}/scheduling`}
                 icon={Calendar} iconAccent="blue" title="Scheduling"
                 primaryStat="Positions + grid"
                 secondaryStat="Manual shift planner" status="gray" />
             );
-            tiles.push(
+            tilesByKey["crew-contracts"] = (
               <FestivalTile key="crew-contracts" href={`/festivals/${slug}/crew`}
                 icon={FileSignature} iconAccent="violet" title="Crew & Contracts"
                 primaryStat="Onboarding"
                 secondaryStat="Hires, links, contracts" status="gray" />
             );
-            tiles.push(
+            tilesByKey["groceries"] = (
               <FestivalTile key="groceries" href="#"
                 icon={ShoppingCart} iconAccent="slate" title="Groceries"
                 primaryStat="Coming soon" disabled />
             );
 
-            return tiles;
+            const ORDER = [
+              "contracts", "prices", "contacts", "actions", "equipment",
+              "power", "soborg", "setup", "facade", "safety",
+              "cooling", "staff", "transport", "accommodation", "scheduling",
+              "crew-contracts", "groceries",
+            ];
+            return ORDER.map((k, i) => {
+              const node = tilesByKey[k];
+              if (!React.isValidElement(node)) return null;
+              return React.cloneElement(node as React.ReactElement<any>, { sequence: i + 1 });
+            });
           })()}
         </div>
       </section>

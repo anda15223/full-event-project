@@ -14,6 +14,7 @@ interface FestivalTileProps {
   secondaryStat?: string;
   status?: TileStatus;
   disabled?: boolean;
+  sequence?: number;
 }
 
 const ACCENT: Record<TileAccent, string> = {
@@ -41,6 +42,7 @@ export function FestivalTile({
   secondaryStat,
   status,
   disabled,
+  sequence,
 }: FestivalTileProps) {
   return (
     <Link
@@ -56,6 +58,11 @@ export function FestivalTile({
             : "hover:shadow-md hover:-translate-y-0.5 hover:border-foreground/20 cursor-pointer"
         )}
       >
+        {typeof sequence === "number" && (
+          <div className="absolute top-3 left-3 h-6 w-6 rounded-full bg-muted text-foreground/80 text-[11px] font-semibold flex items-center justify-center tabular-nums">
+            {sequence}
+          </div>
+        )}
         {status && !disabled && (
           <div
             className={cn(
