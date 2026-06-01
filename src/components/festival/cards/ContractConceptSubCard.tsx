@@ -247,6 +247,13 @@ export function ContractConceptSubCard({
         </span>
       </div>
 
+      {/* Missing-contract notice */}
+      {!contract.contract_pdf_path && (
+        <div className="mb-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300 font-medium">
+          ⚠ No contract uploaded — please upload the signed contract PDF
+        </div>
+      )}
+
       {/* SECTION A — upload */}
       <div className="mb-4">
         {fileName && (
