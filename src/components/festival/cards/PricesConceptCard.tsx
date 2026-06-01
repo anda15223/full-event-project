@@ -77,6 +77,15 @@ function timeAgo(iso: string | null) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function isRealParsedPriceItem(item: { product_name: string; price: number; notes: string | null }) {
+  const name = item.product_name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  if (!name || item.price <= 0) return false;
+  if (/^ret\s*nr\s*\d+$/.test(name)) return false;
+  if (/^(dish|menu|item)\s*(no|nr)?\s*\d+$/.test(name)) return false;
+  if (/template|placeholder|no specific/i.test(item.notes ?? "")) return false;
+  return true;
+}
+
 export function PricesConceptCard({
   festivalId, festivalSlug, conceptId, conceptSlug, conceptName, prices, items,
 }: Props) {
@@ -224,18 +233,23 @@ export function PricesConceptCard({
         toast.message("Uploaded — AI found no items");
         return;
       }
-      setPreviewCurrency((p.currency as string) || currency || "DKK");
-      setPreviewItems(p.items.map((it: any) => ({
+      const parsedItems = p.items.map((it: any) => ({
         product_name: String(it.product_name ?? "").trim(),
         price: Number(it.price) || 0,
         notes: it.notes ?? null,
         checked: true,
-      })).filter((it: any) => it.product_name));
+      })).filter((it: any) => it.product_name && isRealParsedPriceItem(it));
+      if (parsedItems.length === 0) {
+        toast.error("AI only found empty template rows. Try exporting/scanning the filled price list as a normal PDF.");
+        return;
+      }
+      setPreviewCurrency((p.currency as string) || currency || "DKK");
+      setPreviewItems(parsedItems);
       setPreviewOpen(true);
       // store summary
       await sb.from("festival_concept_prices").update({
         last_parsed_at: new Date().toISOString(),
-        parse_summary: `Parsed ${p.items.length} items`,
+        parse_summary: `Parsed ${parsedItems.length} items`,
         currency: (p.currency as string) || currency || "DKK",
       }).eq("id", id);
     } catch (e: any) {
