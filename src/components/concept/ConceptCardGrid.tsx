@@ -72,6 +72,7 @@ export function ConceptCardGrid({
   festivalSlug,
 }: Props) {
   const qc = useQueryClient();
+  const { draftMode } = useDraftMode();
 
   const hasFinanceAccess = useFinanceAccess();
 
@@ -81,7 +82,7 @@ export function ConceptCardGrid({
       const { data, error } = await supabase
         .from("festival_contracts")
         .select(
-          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, assigned_vehicle_id, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
+          "id, concept_alias, operating_entity_cvr, contract_status, concept_variation_note, stall_count, assigned_vehicle_id, is_draft, concept:concepts!concept_id(id, slug, name, display_order, color_hex, short_name)",
         )
         .eq("festival_id", festivalId);
       if (error) throw error;
