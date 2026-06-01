@@ -52,7 +52,10 @@ export function useFestivalTileCounts(festivalId: string | null) {
           ? sb.from("festival_topskilt").select("id", { count: "exact", head: true }).in("festival_contract_id", contractIds)
           : Promise.resolve({ count: 0 }),
         sb.from("festival_setup").select("id", { count: "exact", head: true }).eq("festival_id", fid),
-        sb.from("festival_equipment").select("qty").eq("festival_id", fid),
+        inContracts
+          ? sb.from("festival_power_equipment").select("quantity, festival_power!inner(festival_contract_id)").in("festival_power.festival_contract_id", contractIds)
+          : Promise.resolve({ data: [] }),
+
         inContracts
           ? sb.from("festival_facade").select("id, design_status").in("festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),
@@ -64,11 +67,12 @@ export function useFestivalTileCounts(festivalId: string | null) {
         sb.from("festival_concept_prices").select("id, festival_concept_price_item(id)").eq("festival_id", fid),
       ]);
 
-      // Equipment: sum qty
+      // Equipment: sum quantity from festival_power_equipment via festival_power -> festival_contract
       const eqRows = (equipment.data ?? []) as any[];
       const equipmentCount = eqRows.length
-        ? eqRows.reduce((s, r) => s + (r.qty ?? 1), 0)
+        ? eqRows.reduce((s, r) => s + (r.quantity ?? 1), 0)
         : null;
+
 
       // Facade
       const facadeRows = (facade.data ?? []) as any[];
