@@ -472,9 +472,47 @@ function VehicleBlock({
   assignedIdsByDate: Map<string, Set<string>>;
   returnHomeAssignedIds: Set<string>;
 }) {
+  const qc = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
   const [addLegOpen, setAddLegOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const cancelled = vehicle.status === "cancelled";
+
+  const deleteVehicle = useMutation({
+    mutationFn: async () => {
+      // Delete assignments for this vehicle's legs first
+      const legIds = legs.map((l) => l.id);
+      if (legIds.length > 0) {
+        const { error: assignErr } = await supabase
+          .from("transport_leg_assignments")
+          .delete()
+          .in("leg_id", legIds);
+        if (assignErr) throw assignErr;
+      }
+      // Then delete legs
+      if (legIds.length > 0) {
+        const { error: legErr } = await supabase
+          .from("transport_legs")
+          .delete()
+          .in("id", legIds);
+        if (legErr) throw legErr;
+      }
+      // Finally delete the vehicle
+      const { error } = await supabase
+        .from("festival_transport")
+        .delete()
+        .eq("id", vehicle.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+      qc.invalidateQueries({ queryKey: ["transport-legs-all"] });
+      qc.invalidateQueries({ queryKey: ["transport-assignments-all"] });
+      toast.success("Vehicle deleted");
+      setDeleteOpen(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to delete vehicle"),
+  });
 
   return (
     <div
@@ -513,6 +551,9 @@ function VehicleBlock({
         <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} className="print:hidden">
           <Pencil className="h-4 w-4" />
         </Button>
+        <Button variant="ghost" size="icon" onClick={() => setDeleteOpen(true)} className="print:hidden text-destructive hover:text-destructive hover:bg-destructive/10">
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
       <AccreditationBlock vehicle={vehicle} slug={slug} />
@@ -544,6 +585,27 @@ function VehicleBlock({
         transportId={vehicle.id}
         defaultCapacity={vCapacity(vehicle)}
       />
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete vehicle?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <strong>{vName(vehicle)}</strong> and all {legs.length} leg{legs.length === 1 ? "" : "s"} associated with it. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteVehicle.mutate()}
+              disabled={deleteVehicle.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteVehicle.isPending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
