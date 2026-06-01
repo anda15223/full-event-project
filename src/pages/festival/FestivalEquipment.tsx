@@ -34,12 +34,12 @@ export default function FestivalEquipment() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, assigned_vehicle_id, concepts!concept_id(id, slug, name)")
+        .select("id, concept_id, assigned_vehicle_id, tent_primary_contract_id, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId).eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
       const cIds = list.map((c) => c.id);
-      if (cIds.length === 0) return { items: [] as any[], rowsByPower: new Map<string, EquipmentRow[]>() };
+      if (cIds.length === 0) return { items: [] as any[], rowsByPower: new Map<string, EquipmentRow[]>(), childrenByPrimary: new Map<string, any[]>(), powerByContract: new Map<string, string>() };
 
       const { data: powers, error: pErr } = await supabase
         .from("festival_power").select("id, festival_contract_id").in("festival_contract_id", cIds);
@@ -62,20 +62,37 @@ export default function FestivalEquipment() {
         });
       }
 
+      const childrenByPrimary = new Map<string, any[]>();
+      list.forEach((c) => {
+        const pid = c.tent_primary_contract_id as string | null;
+        if (pid && c.concepts) {
+          const arr = childrenByPrimary.get(pid) ?? [];
+          arr.push({ contractId: c.id, conceptName: c.concepts.name, conceptSlug: c.concepts.slug, mergedInto: pid });
+          childrenByPrimary.set(pid, arr);
+        }
+      });
+
       const items = list
-        .filter((c) => c.concepts && powerByContract.has(c.id))
-        .map((c) => ({
-          contractId: c.id as string,
-          assignedVehicleId: (c.assigned_vehicle_id ?? null) as string | null,
-          concept: c.concepts,
-          powerId: powerByContract.get(c.id)!,
-        }))
+        .filter((c) => c.concepts && powerByContract.has(c.id) && !c.tent_primary_contract_id)
+        .map((c) => {
+          const targets = list
+            .filter((o) => o.id !== c.id && o.concepts && !o.tent_primary_contract_id && !childrenByPrimary.has(o.id))
+            .map((o) => ({ contractId: o.id, conceptName: o.concepts.name, conceptSlug: o.concepts.slug, mergedInto: null }));
+          return {
+            contractId: c.id as string,
+            assignedVehicleId: (c.assigned_vehicle_id ?? null) as string | null,
+            concept: c.concepts,
+            powerId: powerByContract.get(c.id)!,
+            mergedChildren: childrenByPrimary.get(c.id) ?? [],
+            mergeTargets: childrenByPrimary.has(c.id) ? [] : targets,
+          };
+        })
         .sort((a, b) => {
           const ai = SLUG_ORDER.indexOf(a.concept.slug);
           const bi = SLUG_ORDER.indexOf(b.concept.slug);
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-      return { items, rowsByPower };
+      return { items, rowsByPower, childrenByPrimary, powerByContract };
     },
   });
 
