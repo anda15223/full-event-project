@@ -605,6 +605,7 @@ function ItemRow({
               </Select>
             </div>
             <div className="flex flex-wrap gap-3 items-end">
+              <Toggle label="Pesc" checked={item.is_pescatarian} onChange={(v) => onSave({ is_pescatarian: v })} />
               <Toggle label="Veg" checked={item.is_vegetarian} onChange={(v) => onSave({ is_vegetarian: v })} />
               <Toggle label="Vegan" checked={item.is_vegan} onChange={(v) => onSave({ is_vegan: v })} />
               <Toggle label="GF" checked={item.is_gluten_free} onChange={(v) => onSave({ is_gluten_free: v })} />
