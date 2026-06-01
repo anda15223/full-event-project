@@ -878,13 +878,13 @@ export default function FestivalOverview() {
             );
 
             const cTotal = contractsCountQ.data?.total ?? 0;
-            const cSigned = contractsCountQ.data?.signed ?? 0;
+            const cUploaded = contractsCountQ.data?.uploaded ?? 0;
             tilesByKey["contracts"] = (
               <FestivalTile key="contracts" href={`/festivals/${slug}/contracts`}
                 icon={FileSignature} iconAccent="violet" title="Contracts"
                 primaryStat={`${cTotal} concepts`}
-                secondaryStat={cTotal > 0 ? `${cSigned} signed` : undefined}
-                status={cTotal === 0 ? "gray" : cSigned >= cTotal ? "green" : cSigned > 0 ? "amber" : "red"} />
+                secondaryStat={cTotal > 0 ? `${cUploaded} uploaded` : undefined}
+                status={cTotal === 0 ? "gray" : cUploaded >= cTotal ? "green" : cUploaded > 0 ? "amber" : "red"} />
             );
 
             const ctN = contactsCountQ.data ?? 0;
