@@ -73,7 +73,7 @@ export function FestivalTile({
         {status && !disabled && (
           <div
             className={cn(
-              "absolute top-4 right-4 h-2.5 w-2.5 rounded-full",
+              "absolute top-3.5 right-3.5 h-3.5 w-3.5 rounded-full shadow-lg ring-2 ring-background",
               STATUS_DOT[status]
             )}
           />
