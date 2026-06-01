@@ -514,7 +514,13 @@ function useConceptStats(festivalId: string | null) {
       (setup.data ?? []).forEach((r: any) => get(r.concept_id).setupCount++);
       (equip.data ?? []).forEach((r: any) => get(r.concept_id).equipQty += (r.qty ?? 1));
       // cooling has no concept_id reliably — just total
-      const totalCooling = (cooling.data ?? []).length;
+      const coolingRows = cooling.data ?? [];
+      const totalCooling = coolingRows.length;
+      const confirmedCooling = coolingRows.filter((r: any) => {
+        const s = (r.status ?? "").toLowerCase();
+        return s === "confirmed" || s === "delivered";
+      }).length;
+      const notOrderedCooling = coolingRows.filter((r: any) => (r.status ?? "").toLowerCase() === "not_ordered").length;
       // attribute action priorities by ... no concept on action items? It has no concept_id col reliably.
       // Just keep festival-wide totals on each concept for the simple view.
       let crit = 0, high = 0, normal = 0;
@@ -523,7 +529,7 @@ function useConceptStats(festivalId: string | null) {
         else if (r.priority === "high") high++;
         else normal++;
       });
-      return { byConcept, totalCooling, actionTotals: { crit, high, normal } };
+      return { byConcept, totalCooling, confirmedCooling, notOrderedCooling, actionTotals: { crit, high, normal } };
     },
   });
 }
