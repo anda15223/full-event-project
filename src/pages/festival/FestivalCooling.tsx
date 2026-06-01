@@ -197,7 +197,7 @@ export default function FestivalCooling() {
 
       {/* Body */}
       {pageQ.isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {[0, 1].map((i) => <Skeleton key={i} className="h-96 w-full" />)}
         </div>
       ) : summary.total === 0 ? (
@@ -222,7 +222,7 @@ export default function FestivalCooling() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {cards.map(({ unit, assigned, unassigned }) => (
               <CoolingUnitCard
                 key={unit.id}
