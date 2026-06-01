@@ -229,18 +229,36 @@ export function FestivalOrderListCard({
   );
 }
 
+function parseNum(v: string): number | null {
+  if (v.trim() === "") return null;
+  const cleaned = v.replace(/\s/g, "").replace(",", ".");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
 function ItemRow({ row, onChanged }: { row: OrderItem; onChanged: () => void }) {
   const [r, setR] = useState(row);
+  const [qtyStr, setQtyStr] = useState(row.quantity?.toString() ?? "");
+  const [unitPriceStr, setUnitPriceStr] = useState(row.unit_price?.toString() ?? "");
   const [saving, setSaving] = useState(false);
-  useEffect(() => { setR(row); }, [row.id]);
+
+  useEffect(() => {
+    setR(row);
+    setQtyStr(row.quantity?.toString() ?? "");
+    setUnitPriceStr(row.unit_price?.toString() ?? "");
+  }, [row.id]);
+
+  const qty = parseNum(qtyStr);
+  const unitPrice = parseNum(unitPriceStr);
+  const computedTotal = qty != null && unitPrice != null ? qty * unitPrice : r.total_price;
 
   const dirty =
     r.category !== row.category ||
     r.item_name !== row.item_name ||
-    r.quantity !== row.quantity ||
+    qty !== row.quantity ||
     r.unit !== row.unit ||
-    r.unit_price !== row.unit_price ||
-    r.total_price !== row.total_price ||
+    unitPrice !== row.unit_price ||
+    computedTotal !== row.total_price ||
     r.notes !== row.notes;
 
   const save = async () => {
@@ -248,10 +266,10 @@ function ItemRow({ row, onChanged }: { row: OrderItem; onChanged: () => void }) 
     const { error } = await supabase.from("festival_power_order_items").update({
       category: r.category,
       item_name: r.item_name,
-      quantity: r.quantity,
+      quantity: qty,
       unit: r.unit,
-      unit_price: r.unit_price,
-      total_price: r.total_price,
+      unit_price: unitPrice,
+      total_price: computedTotal,
       notes: r.notes,
     } as any).eq("id", r.id);
     setSaving(false);
@@ -263,6 +281,8 @@ function ItemRow({ row, onChanged }: { row: OrderItem; onChanged: () => void }) 
     const { error } = await supabase.from("festival_power_order_items").delete().eq("id", r.id);
     if (error) toast.error(error.message); else onChanged();
   };
+
+  const noSpin = "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
     <div className={cn("grid grid-cols-12 gap-2 p-2 items-center", dirty && "bg-amber-500/5")}>
@@ -276,14 +296,18 @@ function ItemRow({ row, onChanged }: { row: OrderItem; onChanged: () => void }) 
       </div>
       <Input className="col-span-3 h-7 text-xs" value={r.item_name}
         onChange={(e) => setR({ ...r, item_name: e.target.value })} />
-      <Input className="col-span-1 h-7 text-xs text-right tabular-nums" type="number"
-        value={r.quantity ?? ""} onChange={(e) => setR({ ...r, quantity: e.target.value === "" ? null : Number(e.target.value) })} />
+      <Input className={cn("col-span-1 h-7 text-xs text-right tabular-nums", noSpin)}
+        type="text" inputMode="decimal" placeholder="0"
+        value={qtyStr} onChange={(e) => setQtyStr(e.target.value)} />
       <Input className="col-span-1 h-7 text-xs" value={r.unit ?? ""}
         onChange={(e) => setR({ ...r, unit: e.target.value || null })} />
-      <Input className="col-span-1 h-7 text-xs text-right tabular-nums" type="number"
-        value={r.unit_price ?? ""} onChange={(e) => setR({ ...r, unit_price: e.target.value === "" ? null : Number(e.target.value) })} />
-      <Input className="col-span-1 h-7 text-xs text-right tabular-nums" type="number"
-        value={r.total_price ?? ""} onChange={(e) => setR({ ...r, total_price: e.target.value === "" ? null : Number(e.target.value) })} />
+      <Input className={cn("col-span-1 h-7 text-xs text-right tabular-nums", noSpin)}
+        type="text" inputMode="decimal" placeholder="0.00"
+        value={unitPriceStr} onChange={(e) => setUnitPriceStr(e.target.value)} />
+      <div className="col-span-1 h-7 text-xs text-right tabular-nums flex items-center justify-end px-2 rounded-md bg-muted/40 text-muted-foreground"
+        title="Auto = qty × unit price">
+        {computedTotal != null ? computedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
+      </div>
       <Input className="col-span-2 h-7 text-xs" value={r.notes ?? ""}
         onChange={(e) => setR({ ...r, notes: e.target.value || null })} />
       <div className="col-span-1 flex items-center justify-end gap-1">
