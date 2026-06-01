@@ -265,9 +265,9 @@ export function PowerConceptCard({
   };
 
   return (
-  return (
     <div className="space-y-4">
     <div className="rounded-2xl border bg-card p-6 space-y-4">
+
 
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
