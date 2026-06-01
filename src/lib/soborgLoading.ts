@@ -311,6 +311,7 @@ export async function getSoborgLoadingManifest(festivalSlug: string): Promise<So
     if (!vg) {
       vg = {
         vehicle_id: groupKey,
+        transport_id: vehId,
         vehicle_type: canonicalName,
         license_plate: canonicalPlate,
         loading_date: veh?.loading_date ?? null,
