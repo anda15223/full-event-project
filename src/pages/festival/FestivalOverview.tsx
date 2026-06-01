@@ -597,10 +597,10 @@ export default function FestivalOverview() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data } = await supabase.from("festival_contracts")
-        .select("contract_status, is_active").eq("festival_id", festivalId!).eq("is_active", true);
+        .select("contract_status, is_active, contract_file_path, contract_pdf_path").eq("festival_id", festivalId!).eq("is_active", true);
       const total = data?.length ?? 0;
-      const signed = (data ?? []).filter((c: any) => c.contract_status === "signed").length;
-      return { total, signed };
+      const uploaded = (data ?? []).filter((c: any) => !!c.contract_file_path || !!c.contract_pdf_path).length;
+      return { total, uploaded };
     },
   });
 
