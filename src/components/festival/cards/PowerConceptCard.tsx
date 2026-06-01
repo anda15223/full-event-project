@@ -263,9 +263,23 @@ export function PowerConceptCard({
     <div className="rounded-2xl border bg-card p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xl">{emoji}</span>
-          <h3 className="text-xl font-bold truncate">{conceptName}</h3>
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          {mergedChildren.length > 0 ? (
+            <h3 className="text-xl font-bold truncate">
+              <span className="mr-1">{emoji}</span>{conceptName}
+              {mergedChildren.map((c) => (
+                <span key={c.contractId}>
+                  <span className="text-muted-foreground mx-1.5">+</span>
+                  <span className="mr-1">{CONCEPT_EMOJI[c.conceptSlug as ConceptSlug] ?? "🎪"}</span>{c.conceptName}
+                </span>
+              ))}
+            </h3>
+          ) : (
+            <>
+              <span className="text-xl">{emoji}</span>
+              <h3 className="text-xl font-bold truncate">{conceptName}</h3>
+            </>
+          )}
           {mergedChildren.length > 0 && (
             <span className="text-[10px] uppercase tracking-wider rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-2 py-0.5">
               Shared tent

@@ -64,10 +64,24 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
       <CardHeader className="space-y-3 pb-4 border-b bg-gradient-to-br from-card to-muted/30">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-2xl">{CONCEPT_EMOJI[conceptSlug] ?? "🍽️"}</span>
+            {mergedChildren.length === 0 && (
+              <span className="text-2xl">{CONCEPT_EMOJI[conceptSlug] ?? "🍽️"}</span>
+            )}
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-base truncate">{conceptName}</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                {mergedChildren.length > 0 ? (
+                  <h3 className="font-semibold text-base truncate">
+                    <span className="mr-1">{CONCEPT_EMOJI[conceptSlug] ?? "🍽️"}</span>{conceptName}
+                    {mergedChildren.map((c) => (
+                      <span key={c.contractId}>
+                        <span className="text-muted-foreground mx-1.5">+</span>
+                        <span className="mr-1">{CONCEPT_EMOJI[c.conceptSlug as ConceptSlug] ?? "🍽️"}</span>{c.conceptName}
+                      </span>
+                    ))}
+                  </h3>
+                ) : (
+                  <h3 className="font-semibold text-base truncate">{conceptName}</h3>
+                )}
                 {mergedChildren.length > 0 && (
                   <span className="text-[10px] uppercase tracking-wider rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-2 py-0.5">
                     Shared tent
