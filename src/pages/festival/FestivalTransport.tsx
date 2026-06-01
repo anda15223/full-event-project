@@ -302,6 +302,8 @@ export default function FestivalTransport() {
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 print:max-w-full print:space-y-4">
 
+      {festival?.id && <AccreditationCard festivalId={festival.id} />}
+
       <ImportFromPreviousCard
         cardLabel="transport"
         tables={CARD_TABLES.transport}
