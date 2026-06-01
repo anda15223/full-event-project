@@ -958,7 +958,7 @@ function StaffRow({
             if (name !== (staff.name ?? "")) onPatch({ name });
           }}
           placeholder="Name"
-          className="h-8"
+          className="h-7 text-xs px-2"
         />
       </TableCell>
       <TableCell>
@@ -969,7 +969,7 @@ function StaffRow({
             if (location !== (staff.home_location ?? "")) onPatch({ home_location: location });
           }}
           placeholder="e.g. Copenhaga"
-          className="h-8"
+          className="h-7 text-xs px-2"
         />
       </TableCell>
       <TableCell>
@@ -981,7 +981,7 @@ function StaffRow({
             else onPatch({ role: "crew", concept_id: v });
           }}
         >
-          <SelectTrigger className="h-8">
+          <SelectTrigger className="h-7 text-xs px-2">
             <SelectValue placeholder="—" />
           </SelectTrigger>
           <SelectContent>
@@ -998,7 +998,7 @@ function StaffRow({
           value={staff.station ?? "__none__"}
           onValueChange={(v) => onPatch({ station: v === "__none__" ? null : v })}
         >
-          <SelectTrigger className="h-8">
+          <SelectTrigger className="h-7 text-xs px-2">
             <SelectValue placeholder="—" />
           </SelectTrigger>
           <SelectContent>
@@ -1044,7 +1044,7 @@ function StaffRow({
           value={staff.staff_source}
           onValueChange={(v) => onPatch({ staff_source: v })}
         >
-          <SelectTrigger className="h-8">
+          <SelectTrigger className="h-7 text-xs px-2">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1083,7 +1083,7 @@ function StaffRow({
             if (notes !== (staff.notes ?? "")) onPatch({ notes: notes || null });
           }}
           placeholder="Notes"
-          className="h-8"
+          className="h-7 text-xs px-2"
         />
       </TableCell>
       <TableCell>
