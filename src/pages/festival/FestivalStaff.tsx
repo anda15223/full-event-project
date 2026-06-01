@@ -415,7 +415,8 @@ export default function FestivalStaff() {
         : accomFilter === "yes"
         ? !!s.needs_accommodation
         : !s.needs_accommodation
-    );
+    )
+    .sort((a, b) => (a.staff_number ?? 9999) - (b.staff_number ?? 9999));
 
   // Empty-slot calculation across concept plans (from live positions)
   const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
