@@ -34,10 +34,13 @@ export interface EquipmentConceptCardProps {
   powerId: string;
   assignedVehicleId: string | null;
   rows: EquipmentRow[];
+  mergedChildren?: SiblingConcept[];
+  mergeTargets?: SiblingConcept[];
 }
 
 export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
-  const { festivalId, conceptSlug, conceptName, contractId, powerId, assignedVehicleId, rows } = props;
+  const { festivalId, conceptSlug, conceptName, contractId, powerId, assignedVehicleId, rows,
+    mergedChildren = [], mergeTargets = [] } = props;
   const qc = useQueryClient();
   const { vehicles } = useFestivalVehicles(festivalId);
   const status = computeConceptEquipmentStatus(rows);
