@@ -247,9 +247,14 @@ export function CoolingUnitCard({
               if (cur === "DKK") upd.cost_dkk = p.cost_total;
             }
             const ev = p._extraction_evidence;
+            const bullets: string[] = Array.isArray(p.bullet_points)
+              ? p.bullet_points.filter((b: any) => typeof b === "string" && b.trim().length > 0)
+              : [];
+            const bulletBlock = bullets.map((b) => `• ${b.trim()}`).join("\n");
             const evNote = ev?.matched_text ? `[${ev.evidence_type ?? "ai"}] ${ev.matched_text}` : null;
-            const summary = [evNote, p.raw_notes].filter(Boolean).join(" — ");
-            if (summary) upd.parse_summary = summary.slice(0, 500);
+            const summary = [bulletBlock, evNote, p.raw_notes].filter(Boolean).join("\n");
+            if (summary) upd.parse_summary = summary.slice(0, 4000);
+
             await supabase.from("festival_cooling_unit").update(upd).eq("id", unit.id);
             toast.success("AI parse complete — please review");
             invalidate();
@@ -452,11 +457,31 @@ export function CoolingUnitCard({
           placeholder="Order reference, special instructions, etc."
           rows={2}
         />
-        {unit.parse_summary && (
-          <div className="text-[11px] text-muted-foreground italic mt-1">
-            AI summary: {unit.parse_summary}
-          </div>
-        )}
+        {unit.parse_summary && (() => {
+          const lines = unit.parse_summary.split("\n").map((l) => l.trim()).filter(Boolean);
+          const bullets = lines.filter((l) => l.startsWith("•")).map((l) => l.replace(/^•\s*/, ""));
+          const rest = lines.filter((l) => !l.startsWith("•"));
+          return (
+            <div className="mt-3 rounded-lg border bg-muted/30 p-3 space-y-2">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                AI extracted details
+              </div>
+              {bullets.length > 0 ? (
+                <ul className="text-xs text-foreground space-y-1 list-disc pl-4">
+                  {bullets.map((b, i) => <li key={i}>{b}</li>)}
+                </ul>
+              ) : (
+                <div className="text-xs text-foreground whitespace-pre-wrap">{unit.parse_summary}</div>
+              )}
+              {rest.length > 0 && (
+                <div className="text-[10px] text-muted-foreground italic pt-1 border-t whitespace-pre-wrap">
+                  {rest.join("\n")}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
       </div>
 
       {/* Footer */}

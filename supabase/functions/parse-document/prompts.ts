@@ -90,6 +90,19 @@ After extracting, document what text you matched for the most important fields.
 - evidence_type = "none_found" if document doesn't look like a cooling order at all.
 - matched_text: short quote of the strongest signal you found.
 
+**contact (NEW — required if visible):**
+1. Extract the supplier contact person, phone, and email from the document (signature block, "Contact:", "Kontaktperson", "Sælger", "Driver", reply-to email).
+2. Return null fields if not present. Do not invent.
+
+**delivery_address (NEW):**
+1. Where the unit is delivered on site (festival name, gate, address, GPS).
+
+**bullet_points (NEW — REQUIRED, human readable):**
+1. Produce 6–14 short bullet strings summarising EVERYTHING important from the document in plain business English.
+2. MUST include (when present): supplier, unit type & size, quantity, delivery date + time, pickup date + time, delivery address, contact person + phone + email, electricity requirement (kW / amperage / voltage / phase / plug), temperature range, rental period, cost incl. currency and VAT note, order/reference number, deposit, cancellation terms, special instructions.
+3. One fact per bullet. Keep each bullet under ~120 chars. Format like: "Delivery: Wed 25 Jun 2026, 08:00", "Electricity: 16A 3-phase 400V (~11 kW)", "Cost: 12 500 DKK incl. VAT".
+4. Do NOT include marketing fluff or generic disclaimers.
+
 Schema:
 {
   "supplier": string | null,
@@ -99,10 +112,15 @@ Schema:
   "unit_count": number | null,
   "delivery_date": string | null,
   "pickup_date": string | null,
+  "delivery_address": string | null,
+  "contact_name": string | null,
+  "contact_phone": string | null,
+  "contact_email": string | null,
   "power_required_kw": number | null,
   "cost_total": number | null,
   "currency": string,
   "order_reference": string | null,
+  "bullet_points": string[],
   "raw_notes": string,
   "_extraction_evidence": {
     "evidence_type": "explicit_order" | "email_body" | "partial" | "none_found",
@@ -111,6 +129,7 @@ Schema:
 }
 
 ALL dates MUST be ISO format YYYY-MM-DD. If you can't determine the year confidently, return null for that date.`;
+
 
 export const FACADE_SYSTEM_PROMPT = `You parse facade and tent dimension documents for festival booths. Return ONLY valid JSON.
 
