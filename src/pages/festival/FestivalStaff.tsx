@@ -851,6 +851,9 @@ function StationsEditorPopover({
   availableStations,
   onAdd,
   onRemove,
+  currentFestivalId,
+  onImport,
+  importPending,
 }: {
   conceptId: string;
   conceptName: string;
@@ -858,8 +861,12 @@ function StationsEditorPopover({
   availableStations: StationRow[];
   onAdd: (stationId: string) => void;
   onRemove: (stationId: string) => void;
+  currentFestivalId: string;
+  onImport: (fromFestivalId: string) => void;
+  importPending: boolean;
 }) {
   const [pendingStationId, setPendingStationId] = useState<string>("");
+  const [importFestivalId, setImportFestivalId] = useState<string>("");
 
   // Build a quick lookup of current counts by stationId
   const countById = new Map<string, number>();
@@ -867,6 +874,29 @@ function StationsEditorPopover({
 
   // Stations not yet in plan
   const notInPlan = availableStations.filter((s) => !countById.has(s.id));
+
+  // Other festivals that have stations configured for this concept
+  const importSourcesQ = useQuery({
+    queryKey: ["staff-import-sources", conceptId, currentFestivalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_schedule_position")
+        .select("festival_id, festivals:festival_id(id, name, start_date)")
+        .eq("concept_id", conceptId)
+        .neq("festival_id", currentFestivalId);
+      if (error) throw error;
+      const seen = new Map<string, { id: string; name: string; start_date: string | null }>();
+      (data ?? []).forEach((r: any) => {
+        const f = r.festivals;
+        if (f && !seen.has(f.id)) seen.set(f.id, f);
+      });
+      return Array.from(seen.values()).sort((a, b) =>
+        (b.start_date ?? "").localeCompare(a.start_date ?? ""),
+      );
+    },
+  });
+  const importSources = importSourcesQ.data ?? [];
+
 
   return (
     <Popover>
