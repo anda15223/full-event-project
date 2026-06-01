@@ -509,6 +509,10 @@ Deno.serve(async (req) => {
       }, 502);
     }
 
+    if (documentType === "festival_order" && extractedText) {
+      parsed = normalizeFestivalOrderParsed(parsed, extractedText);
+    }
+
     return jsonResponse({
       ok: true,
       documentType,
