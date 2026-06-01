@@ -298,9 +298,20 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
             <Button size="sm" className="h-7 text-xs" onClick={save}>Save</Button>
           </div>
         </div>
-        <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
           <label className="inline-flex items-center gap-1.5"><Switch checked={powered} onCheckedChange={setPowered} /> Powered</label>
           <label className="inline-flex items-center gap-1.5"><Switch checked={soborg} onCheckedChange={setSoborg} /> Søborg</label>
+          {powered && (
+            <Select value={ptype} onValueChange={setPtype}>
+              <SelectTrigger className="h-6 text-[11px] w-auto min-w-[110px] px-2"><SelectValue placeholder="Plug type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">— plug type —</SelectItem>
+                {POWER_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>{POWER_TYPE_LABEL[t]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <button onClick={del} className="ml-auto text-destructive hover:underline inline-flex items-center gap-1">
             <Trash2 className="h-3 w-3" /> Delete
           </button>
