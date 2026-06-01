@@ -86,7 +86,13 @@ function parseLocaleNumber(value: unknown): number | null {
   const hasComma = s.includes(",");
   const hasDot = s.includes(".");
   if (hasComma && hasDot) s = s.replace(/\./g, "").replace(",", ".");
-  else if (hasComma) s = s.replace(",", ".");
+  else if (hasComma) {
+    const [, after = ""] = s.split(",");
+    s = after.length === 3 ? s.replace(/,/g, "") : s.replace(",", ".");
+  } else if (hasDot) {
+    const [, after = ""] = s.split(".");
+    if (after.length === 3) s = s.replace(/\./g, "");
+  }
   const n = Number(s.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : null;
 }
@@ -201,9 +207,6 @@ function normalizeFestivalOrderParsed(parsed: unknown, sourceText: string): unkn
       notes: item.notes ?? candidate?.notes ?? null,
     };
   });
-  for (const [idx, candidate] of candidates.entries()) {
-    if (!used.has(idx) && candidate.item_name) result.items.push(candidate);
-  }
   return result;
 }
 
