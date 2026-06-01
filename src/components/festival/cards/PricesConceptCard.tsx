@@ -49,6 +49,7 @@ export interface PriceItemRow {
   category: string | null;
   is_vegetarian: boolean;
   is_vegan: boolean;
+  is_pescatarian: boolean;
   is_gluten_free: boolean;
   display_order: number;
   notes: string | null;
