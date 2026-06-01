@@ -144,6 +144,12 @@ Schema:
 
 export const PRICES_SYSTEM_PROMPT = `You parse POS menu price lists. Return ONLY valid JSON.
 
+CRITICAL:
+- Extract ONLY real filled-in menu products/dishes with an actual positive sales price.
+- Ignore blank template rows, labels, and placeholders like "RET NR. 1", "RET NR. 2", "Rettens navn", "Udsalgspris".
+- If a PDF is a fillable form, read the entered field values, not only the printed static template labels.
+- Never return a product with price 0. If the real product name or price is not visible, omit that row.
+
 Schema:
 {
   "currency": string,
