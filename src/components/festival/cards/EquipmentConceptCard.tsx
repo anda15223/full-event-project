@@ -13,6 +13,7 @@ import {
   ALL_CATEGORIES, CATEGORY_META, EquipCategory, EquipmentRow,
   computeConceptEquipmentStatus, groupByCategory, summarizeConceptEquipment,
 } from "@/lib/equipmentStatus";
+import { POWER_TYPES, POWER_TYPE_LABEL, type PowerType } from "@/lib/powerGapAnalysis";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { useFestivalVehicles } from "@/hooks/useFestivalVehicles";
 import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
