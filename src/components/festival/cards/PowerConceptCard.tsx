@@ -19,6 +19,7 @@ import {
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 import { ImportPowerEquipmentControl } from "@/components/festival/cards/ImportPowerEquipmentControl";
+import { FestivalOrderListCard } from "@/components/festival/cards/FestivalOrderListCard";
 
 export interface PowerRow {
   id: string;
@@ -40,7 +41,10 @@ export interface PowerRow {
   last_parsed_at: string | null;
   parse_summary: string | null;
   notes: string | null;
+  order_list_file_path?: string | null;
+  order_list_parsed_at?: string | null;
 }
+
 
 export interface PowerEquipmentRow {
   id: string;
@@ -261,7 +265,10 @@ export function PowerConceptCard({
   };
 
   return (
+    <div className="space-y-4">
     <div className="rounded-2xl border bg-card p-6 space-y-4">
+
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -559,8 +566,17 @@ export function PowerConceptCard({
         </div>
       </div>
     </div>
+    <FestivalOrderListCard
+      festivalId={festivalId}
+      conceptSlug={conceptSlug}
+      powerId={power.id}
+      orderListFilePath={power.order_list_file_path ?? null}
+      orderListParsedAt={power.order_list_parsed_at ?? null}
+    />
+    </div>
   );
 }
+
 
 const PLUG_OPTIONS = [
   { value: "230V_socket", label: "230V plug (Schuko)" },

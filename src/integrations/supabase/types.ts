@@ -5281,6 +5281,8 @@ export type Database = {
           id: string
           last_parsed_at: string | null
           notes: string | null
+          order_list_file_path: string | null
+          order_list_parsed_at: string | null
           order_reference: string | null
           ordered_date: string | null
           parse_summary: string | null
@@ -5314,6 +5316,8 @@ export type Database = {
           id?: string
           last_parsed_at?: string | null
           notes?: string | null
+          order_list_file_path?: string | null
+          order_list_parsed_at?: string | null
           order_reference?: string | null
           ordered_date?: string | null
           parse_summary?: string | null
@@ -5347,6 +5351,8 @@ export type Database = {
           id?: string
           last_parsed_at?: string | null
           notes?: string | null
+          order_list_file_path?: string | null
+          order_list_parsed_at?: string | null
           order_reference?: string | null
           ordered_date?: string | null
           parse_summary?: string | null
@@ -5574,6 +5580,65 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_power_order_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          currency: string | null
+          festival_power_id: string
+          id: string
+          item_name: string
+          notes: string | null
+          position: number
+          quantity: number | null
+          source_file_path: string | null
+          total_price: number | null
+          unit: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          festival_power_id: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          position?: number
+          quantity?: number | null
+          source_file_path?: string | null
+          total_price?: number | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          festival_power_id?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          position?: number
+          quantity?: number | null
+          source_file_path?: string | null
+          total_price?: number | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_power_order_items_festival_power_id_fkey"
+            columns: ["festival_power_id"]
+            isOneToOne: false
+            referencedRelation: "festival_power"
+            referencedColumns: ["id"]
           },
         ]
       }

@@ -8,8 +8,9 @@ import { getSystemPrompt } from "./prompts.ts";
 
 const ALLOWED_TYPES = new Set([
   "contract", "electricity", "cooling", "facade",
-  "prices", "accommodation", "setup", "staff_roster", "generic",
+  "prices", "accommodation", "setup", "staff_roster", "festival_order", "generic",
 ]);
+
 
 const MODEL = "claude-sonnet-4-20250514";
 const MAX_TEXT_CHARS = 100_000;
