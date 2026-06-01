@@ -401,9 +401,20 @@ function AddRow({ powerId, category, onAdded, compact }:
           <Plus className="h-3 w-3" /> Add
         </Button>
       </div>
-      <div className="flex items-center gap-4 text-[11px] text-muted-foreground px-1">
+      <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground px-1">
         <label className="inline-flex items-center gap-1.5"><Switch checked={powered} onCheckedChange={setPowered} /> Powered</label>
         <label className="inline-flex items-center gap-1.5"><Switch checked={soborg} onCheckedChange={setSoborg} /> Søborg</label>
+        {powered && (
+          <Select value={ptype} onValueChange={setPtype}>
+            <SelectTrigger className="h-6 text-[11px] w-auto min-w-[110px] px-2"><SelectValue placeholder="Plug type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unset">— plug type —</SelectItem>
+              {POWER_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{POWER_TYPE_LABEL[t]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
     </div>
   );
