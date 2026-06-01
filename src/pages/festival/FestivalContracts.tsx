@@ -526,6 +526,13 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
         <StatusPill status={c.contract_status} />
       </div>
 
+      {!c.contract_file_path && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[12px] font-medium text-red-700 dark:text-red-300">
+          ⚠ No contract uploaded — please upload the signed contract PDF
+        </div>
+      )}
+
+
       {/* Metadata */}
       <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
         {hasFinanceAccess && (
