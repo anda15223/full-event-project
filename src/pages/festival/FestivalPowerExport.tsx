@@ -12,6 +12,7 @@ import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
+import { POWER_TYPE_LABEL, type PowerType } from "@/lib/powerGapAnalysis";
 
 type EquipmentRow = {
   id: string;
@@ -20,6 +21,7 @@ type EquipmentRow = {
   quantity: number | null;
   power_kw: number | null;
   is_powered: boolean | null;
+  power_type: PowerType | null;
   category: string | null;
   position: number | null;
 };
@@ -100,9 +102,10 @@ const styles = StyleSheet.create({
     fontSize: 9, fontWeight: 700,
   },
   colName: { flex: 1, paddingRight: 4 },
-  colQty:  { width: 32, textAlign: "right", paddingRight: 4 },
-  colKw:   { width: 56, textAlign: "right", paddingRight: 4 },
-  colTot:  { width: 64, textAlign: "right" },
+  colPlug: { width: 76, paddingRight: 4 },
+  colQty:  { width: 28, textAlign: "right", paddingRight: 4 },
+  colKw:   { width: 52, textAlign: "right", paddingRight: 4 },
+  colTot:  { width: 56, textAlign: "right" },
   sumBox: { marginTop: 16, padding: 8, borderWidth: 1, borderColor: "#333", backgroundColor: "#f3f3f3" },
   sumTitle: { fontSize: 11, fontWeight: 700, marginBottom: 4 },
   footer: {
@@ -234,6 +237,7 @@ function PowerDoc({
                 <View style={styles.tableWrap}>
                   <View style={styles.tHead}>
                     <Text style={styles.colName}>Equipment</Text>
+                    <Text style={styles.colPlug}>Plug</Text>
                     <Text style={styles.colQty}>Qty</Text>
                     <Text style={styles.colKw}>kW each</Text>
                     <Text style={styles.colTot}>Total kW</Text>
@@ -243,6 +247,7 @@ function PowerDoc({
                     const kwEach = Number(e.power_kw ?? 0);
                     const total = qty * kwEach;
                     const isLast = idx === poweredEq.length - 1;
+                    const plug = e.power_type ? POWER_TYPE_LABEL[e.power_type] : "—";
                     return (
                       <View
                         key={e.id}
@@ -253,6 +258,7 @@ function PowerDoc({
                         ]}
                       >
                         <Text style={styles.colName}>{N(e.equipment_name)}</Text>
+                        <Text style={styles.colPlug}>{N(plug)}</Text>
                         <Text style={styles.colQty}>{qty}</Text>
                         <Text style={styles.colKw}>{kwEach.toFixed(2)}</Text>
                         <Text style={styles.colTot}>{total.toFixed(2)}</Text>
@@ -261,6 +267,7 @@ function PowerDoc({
                   })}
                   <View style={styles.tFoot}>
                     <Text style={styles.colName}>Total</Text>
+                    <Text style={styles.colPlug}></Text>
                     <Text style={styles.colQty}>
                       {poweredEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
                     </Text>
