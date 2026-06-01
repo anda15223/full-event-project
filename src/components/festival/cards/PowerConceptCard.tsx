@@ -584,3 +584,82 @@ function EquipmentRow({ row, onChanged }: { row: PowerEquipmentRow; onChanged: (
     </div>
   );
 }
+
+// kW → Amps calculator. Recommends festival 3-phase connections (16/32/63/125A @ 400V)
+// or 1-phase 16A @ 230V. Formula: I = P / (√3 × V × PF) for 3ph, I = P / (V × PF) for 1ph.
+function KwToAmpsCalculator({ defaultKw }: { defaultKw: number }) {
+  const [kw, setKw] = useState<string>(defaultKw > 0 ? defaultKw.toFixed(1) : "");
+  const [phase, setPhase] = useState<"3" | "1">("3");
+  const [pf, setPf] = useState<string>("1");
+
+  const kwNum = parseFloat(kw) || 0;
+  const pfNum = Math.min(Math.max(parseFloat(pf) || 1, 0.1), 1);
+  const v = phase === "3" ? 400 : 230;
+  const amps = kwNum > 0
+    ? (phase === "3" ? (kwNum * 1000) / (Math.sqrt(3) * v * pfNum) : (kwNum * 1000) / (v * pfNum))
+    : 0;
+
+  // Recommend smallest standard circuit at this phase that covers amps (with 10% headroom)
+  const targetA = amps * 1.1;
+  const tiers = phase === "3"
+    ? [{ a: 16, kw: 11 }, { a: 32, kw: 22 }, { a: 63, kw: 43.6 }, { a: 125, kw: 86.6 }]
+    : [{ a: 16, kw: 3.7 }];
+  const pick = tiers.find((t) => t.a >= targetA) ?? tiers[tiers.length - 1];
+  const count = pick && kwNum > 0 ? Math.max(1, Math.ceil(kwNum / pick.kw)) : 0;
+
+  return (
+    <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold">kW → Amps calculator</h4>
+        <span className="text-[10px] text-muted-foreground">{phase === "3" ? "3-phase 400V" : "1-phase 230V"}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <label className="space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Power (kW)</div>
+          <Input
+            type="text" inputMode="decimal" value={kw}
+            onChange={(e) => setKw(e.target.value.replace(/[^\d.]/g, ""))}
+            placeholder="e.g. 22" className="h-8 text-sm tabular-nums"
+          />
+        </label>
+        <label className="space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Phase</div>
+          <Select value={phase} onValueChange={(v) => setPhase(v as "1" | "3")}>
+            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3-phase (400V)</SelectItem>
+              <SelectItem value="1">1-phase (230V)</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+        <label className="space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Power factor</div>
+          <Input
+            type="text" inputMode="decimal" value={pf}
+            onChange={(e) => setPf(e.target.value.replace(/[^\d.]/g, ""))}
+            placeholder="1.0" className="h-8 text-sm tabular-nums"
+          />
+        </label>
+      </div>
+      {kwNum > 0 && (
+        <div className="rounded-md border bg-background p-2 text-xs space-y-1">
+          <div className="flex justify-between tabular-nums">
+            <span className="text-muted-foreground">Current draw</span>
+            <span className="font-semibold">{amps.toFixed(1)} A</span>
+          </div>
+          {pick && (
+            <div className="flex justify-between tabular-nums">
+              <span className="text-muted-foreground">Order</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                {count}× {pick.a}A {phase === "3" ? "400V" : "230V"}
+              </span>
+            </div>
+          )}
+          <div className="text-[10px] text-muted-foreground pt-1 border-t">
+            Formula: I = P / ({phase === "3" ? "√3 × " : ""}{v}V × {pfNum.toFixed(2)}) · +10% headroom
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
