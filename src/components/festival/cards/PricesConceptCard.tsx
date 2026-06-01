@@ -555,15 +555,30 @@ function ItemRow({
           className="w-20 text-right tabular-nums bg-transparent border-0 outline-none text-sm focus:bg-muted/50 px-2 py-1 rounded"
         />
         <span className="text-xs text-muted-foreground w-10">{currency}</span>
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
-          {item.is_vegetarian && <Leaf className="h-3 w-3 text-emerald-600" />}
-          {item.is_vegan && <Sprout className="h-3 w-3 text-emerald-700" />}
+        <Select
+          value={item.is_vegan ? "vegan" : item.is_vegetarian ? "vegetarian" : "non_vegetarian"}
+          onValueChange={(v) => {
+            if (v === "vegan") onSave({ is_vegan: true, is_vegetarian: true });
+            else if (v === "vegetarian") onSave({ is_vegetarian: true, is_vegan: false });
+            else onSave({ is_vegetarian: false, is_vegan: false });
+          }}
+        >
+          <SelectTrigger className="h-7 w-[120px] text-xs px-2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="non_vegetarian">Non-vegetarian</SelectItem>
+            <SelectItem value="vegetarian">🌱 Vegetarian</SelectItem>
+            <SelectItem value="vegan">🌿 Vegan</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex gap-0.5">
           {item.is_gluten_free && <WheatOff className="h-3 w-3 text-amber-600" />}
           <button onClick={onToggleExpand} className="hover:text-foreground text-muted-foreground" title="Edit details">
-            {expanded ? <ChevronUp className="h-3 w-3" /> : <Pencil className="h-3 w-3" />}
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
           </button>
           <button onClick={onDelete} className="hover:text-rose-600 text-muted-foreground" title="Delete">
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
