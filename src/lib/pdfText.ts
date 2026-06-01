@@ -1,13 +1,13 @@
 // Browser-side PDF text extraction using pdfjs-dist.
-// Lazy-loaded to keep initial bundle small.
+// Matches the worker-loading pattern used elsewhere in the app.
 
 export async function extractPdfText(url: string): Promise<string> {
-  const pdfjs: any = await import("pdfjs-dist/build/pdf");
-  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min?url" as any)).default
-    ?? (await import("pdfjs-dist/build/pdf.worker.min.js?url" as any)).default;
-  if (workerSrc) pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+  const pdfjs: any = await import("pdfjs-dist");
+  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.js?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
-  const loadingTask = pdfjs.getDocument({ url });
+  const buf = await (await fetch(url)).arrayBuffer();
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buf) });
   const pdf = await loadingTask.promise;
   const pages: string[] = [];
   for (let i = 1; i <= pdf.numPages; i++) {
