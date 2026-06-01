@@ -495,13 +495,13 @@ export default function FestivalStaff() {
         <Table className="text-xs [&_th]:px-2 [&_td]:px-2 [&_th]:py-2 [&_td]:py-1.5">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-8 text-[10px]">#</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead className="w-[110px]">Location</TableHead>
-              <TableHead className="w-[120px]">Concept</TableHead>
-              <TableHead className="w-[110px]">Station</TableHead>
-              <TableHead className="text-center w-[120px]">Accom.</TableHead>
-              <TableHead className="w-[90px]">Source</TableHead>
+              <TableHead className="w-7 text-[10px]">#</TableHead>
+              <TableHead className="min-w-[220px] text-sm">Name</TableHead>
+              <TableHead className="w-[90px] text-[10px]">From</TableHead>
+              <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
+              <TableHead className="w-[100px] text-[10px]">Station</TableHead>
+              <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
+              <TableHead className="w-[80px] text-[10px]">Source</TableHead>
               <TableHead className="text-center w-8">T</TableHead>
               <TableHead className="text-center w-8">F</TableHead>
               <TableHead className="text-center w-8">S</TableHead>
@@ -958,7 +958,7 @@ function StaffRow({
             if (name !== (staff.name ?? "")) onPatch({ name });
           }}
           placeholder="Name"
-          className="h-7 text-xs px-2"
+          className="h-8 text-sm font-medium px-2"
         />
       </TableCell>
       <TableCell>
