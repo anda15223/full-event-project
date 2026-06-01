@@ -301,6 +301,49 @@ export default function FestivalStaff() {
     onError: (e: any) => toast.error(e.message ?? "Failed to remove slot"),
   });
 
+  // Import all slots for a concept from another festival (replaces current)
+  const importSlots = useMutation({
+    mutationFn: async ({ conceptId, fromFestivalId }: { conceptId: string; fromFestivalId: string }) => {
+      // Fetch source positions
+      const { data: src, error: srcErr } = await supabase
+        .from("festival_schedule_position")
+        .select("station_id, position_number, display_order")
+        .eq("festival_id", fromFestivalId)
+        .eq("concept_id", conceptId);
+      if (srcErr) throw srcErr;
+      if (!src || src.length === 0) throw new Error("No stations found in that festival for this concept.");
+
+      // Wipe current slots for this concept (current festival + draft mode)
+      const { error: delErr } = await supabase
+        .from("festival_schedule_position")
+        .delete()
+        .eq("festival_id", festivalId!)
+        .eq("concept_id", conceptId)
+        .eq("is_draft", draftMode);
+      if (delErr) throw delErr;
+
+      // Insert copies
+      const rows = src.map((p) => ({
+        festival_id: festivalId!,
+        concept_id: conceptId,
+        station_id: p.station_id,
+        position_number: p.position_number,
+        display_order: p.display_order,
+        is_draft: draftMode,
+      }));
+      const { error: insErr } = await supabase.from("festival_schedule_position").insert(rows);
+      if (insErr) throw insErr;
+      return rows.length;
+    },
+    onSuccess: (n) => {
+      toast.success(`Imported ${n} slot${n === 1 ? "" : "s"}`);
+      qc.invalidateQueries({ queryKey: ["staff-positions", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Import failed"),
+  });
+
+
 
   const updateStaff = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Staff> }) => {
@@ -608,6 +651,9 @@ export default function FestivalStaff() {
                             availableStations={availableStations}
                             onAdd={(stationId) => addSlot.mutate({ conceptId: group.id, stationId })}
                             onRemove={(stationId) => removeSlot.mutate({ conceptId: group.id, stationId })}
+                            currentFestivalId={festivalId!}
+                            onImport={(fromFestivalId) => importSlots.mutate({ conceptId: group.id, fromFestivalId })}
+                            importPending={importSlots.isPending}
                           />
                         )}
                       </div>
@@ -805,6 +851,9 @@ function StationsEditorPopover({
   availableStations,
   onAdd,
   onRemove,
+  currentFestivalId,
+  onImport,
+  importPending,
 }: {
   conceptId: string;
   conceptName: string;
@@ -812,8 +861,12 @@ function StationsEditorPopover({
   availableStations: StationRow[];
   onAdd: (stationId: string) => void;
   onRemove: (stationId: string) => void;
+  currentFestivalId: string;
+  onImport: (fromFestivalId: string) => void;
+  importPending: boolean;
 }) {
   const [pendingStationId, setPendingStationId] = useState<string>("");
+  const [importFestivalId, setImportFestivalId] = useState<string>("");
 
   // Build a quick lookup of current counts by stationId
   const countById = new Map<string, number>();
@@ -821,6 +874,29 @@ function StationsEditorPopover({
 
   // Stations not yet in plan
   const notInPlan = availableStations.filter((s) => !countById.has(s.id));
+
+  // Other festivals that have stations configured for this concept
+  const importSourcesQ = useQuery({
+    queryKey: ["staff-import-sources", conceptId, currentFestivalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_schedule_position")
+        .select("festival_id, festivals:festival_id(id, name, start_date)")
+        .eq("concept_id", conceptId)
+        .neq("festival_id", currentFestivalId);
+      if (error) throw error;
+      const seen = new Map<string, { id: string; name: string; start_date: string | null }>();
+      (data ?? []).forEach((r: any) => {
+        const f = r.festivals;
+        if (f && !seen.has(f.id)) seen.set(f.id, f);
+      });
+      return Array.from(seen.values()).sort((a, b) =>
+        (b.start_date ?? "").localeCompare(a.start_date ?? ""),
+      );
+    },
+  });
+  const importSources = importSourcesQ.data ?? [];
+
 
   return (
     <Popover>
@@ -898,6 +974,43 @@ function StationsEditorPopover({
                 }}
               >
                 Add
+              </Button>
+            </div>
+          </div>
+        )}
+        {importSources.length > 0 && (
+          <div className="border-t pt-2 mt-2 space-y-2">
+            <div className="text-[11px] uppercase font-semibold text-muted-foreground">
+              Import from previous festival
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Replaces current stations for {conceptName}.
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Select value={importFestivalId} onValueChange={setImportFestivalId}>
+                <SelectTrigger className="h-8 flex-1">
+                  <SelectValue placeholder="Pick festival…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {importSources.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!importFestivalId || importPending}
+                onClick={() => {
+                  if (!importFestivalId) return;
+                  if (slots.length > 0 && !confirm(`Replace current ${conceptName} stations with the ones from the selected festival?`)) return;
+                  onImport(importFestivalId);
+                  setImportFestivalId("");
+                }}
+              >
+                {importPending ? "…" : "Import"}
               </Button>
             </div>
           </div>
