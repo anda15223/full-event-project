@@ -633,6 +633,11 @@ function ContractCard({ contract: c, concept, festivalSlug, onEdit, onStatus, on
         </div>
       )}
 
+      {/* Rich contract summary (parse-contract) */}
+      <ContractSummarySection contract={c} fileUrl={fileUrl} />
+
+
+
       {/* Actions */}
       <div className="flex flex-wrap gap-1 pt-1 border-t">
         <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onEdit}><Pencil className="h-3.5 w-3.5 mr-1" />Edit</Button>
