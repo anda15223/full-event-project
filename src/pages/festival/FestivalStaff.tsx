@@ -167,6 +167,140 @@ export default function FestivalStaff() {
   });
   const concepts = conceptsQ.data ?? [];
 
+  // Station catalog (live source: `station` table)
+  const stationsQ = useQuery({
+    queryKey: ["staff-stations"],
+    queryFn: async (): Promise<StationRow[]> => {
+      const { data, error } = await supabase
+        .from("station")
+        .select("id, concept_id, code, label, display_order")
+        .eq("is_active", true)
+        .order("concept_id")
+        .order("display_order")
+        .order("label");
+      if (error) throw error;
+      return (data ?? []) as StationRow[];
+    },
+  });
+  const stations = stationsQ.data ?? [];
+  const stationById = useMemo(() => {
+    const m = new Map<string, StationRow>();
+    stations.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [stations]);
+  const stationsByConcept = useMemo(() => {
+    const m = new Map<string, StationRow[]>();
+    stations.forEach((s) => {
+      if (!s.concept_id) return;
+      const list = m.get(s.concept_id) ?? [];
+      list.push(s);
+      m.set(s.concept_id, list);
+    });
+    return m;
+  }, [stations]);
+
+  // Per-festival station slots (source of truth shared with Schedule + Crew Portal)
+  const positionsQ = useQuery({
+    queryKey: ["staff-positions", festivalId, draftMode],
+    enabled: !!festivalId,
+    queryFn: async (): Promise<PositionRow[]> => {
+      const { data, error } = await supabase
+        .from("festival_schedule_position")
+        .select("id, festival_id, concept_id, station_id, position_number, display_order")
+        .eq("festival_id", festivalId!)
+        .eq("is_draft", draftMode);
+      if (error) throw error;
+      return (data ?? []) as PositionRow[];
+    },
+  });
+
+  // Build plan: concept_id -> ordered slots derived from positions
+  const planByConcept = useMemo(() => {
+    const map = new Map<string, PlanSlot[]>();
+    const grouped = new Map<string, Map<string, number>>(); // conceptId -> stationId -> count
+    (positionsQ.data ?? []).forEach((p) => {
+      const inner = grouped.get(p.concept_id) ?? new Map();
+      inner.set(p.station_id, (inner.get(p.station_id) ?? 0) + 1);
+      grouped.set(p.concept_id, inner);
+    });
+    grouped.forEach((inner, conceptId) => {
+      const slots: PlanSlot[] = [];
+      inner.forEach((count, stationId) => {
+        const s = stationById.get(stationId);
+        if (!s) return;
+        slots.push({
+          stationId,
+          stationCode: staffCodeForStation(s.code),
+          label: s.label,
+          count,
+        });
+      });
+      slots.sort((a, b) => {
+        const sa = stationById.get(a.stationId);
+        const sb = stationById.get(b.stationId);
+        return (sa?.display_order ?? 0) - (sb?.display_order ?? 0);
+      });
+      map.set(conceptId, slots);
+    });
+    return map;
+  }, [positionsQ.data, stationById]);
+
+  // Live station label lookup (staff-code form first, falls back to legacy map)
+  const STATION_LABEL = useMemo(() => {
+    const m: Record<string, string> = { ...FALLBACK_STATION_LABEL };
+    stations.forEach((s) => {
+      m[staffCodeForStation(s.code)] = s.label;
+    });
+    return m;
+  }, [stations]);
+
+  // --- Slot editor mutations -------------------------------------------------
+  const addSlot = useMutation({
+    mutationFn: async ({ conceptId, stationId }: { conceptId: string; stationId: string }) => {
+      const existing = (positionsQ.data ?? []).filter(
+        (p) => p.concept_id === conceptId,
+      );
+      const same = existing.filter((p) => p.station_id === stationId);
+      const nextPos = same.reduce((m, p) => Math.max(m, p.position_number), 0) + 1;
+      const nextOrder = existing.reduce((m, p) => Math.max(m, p.display_order), 0) + 1;
+      const { error } = await supabase.from("festival_schedule_position").insert({
+        festival_id: festivalId!,
+        concept_id: conceptId,
+        station_id: stationId,
+        position_number: nextPos,
+        display_order: nextOrder,
+        is_draft: draftMode,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff-positions", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to add slot"),
+  });
+
+  const removeSlot = useMutation({
+    mutationFn: async ({ conceptId, stationId }: { conceptId: string; stationId: string }) => {
+      const same = (positionsQ.data ?? [])
+        .filter((p) => p.concept_id === conceptId && p.station_id === stationId)
+        .sort((a, b) => b.position_number - a.position_number);
+      const victim = same[0];
+      if (!victim) return;
+      const { error } = await supabase
+        .from("festival_schedule_position")
+        .delete()
+        .eq("id", victim.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff-positions", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["sched-positions", festivalId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to remove slot"),
+  });
+
+
   const updateStaff = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Staff> }) => {
       const { error } = await supabase.from("festival_staff").update(patch).eq("id", id);
