@@ -33,6 +33,7 @@ export type ConceptGroup = {
 
 export type VehicleGroup = {
   vehicle_id: string;
+  transport_id: string;
   vehicle_type: string;
   license_plate: string | null;
   loading_date: string | null;
