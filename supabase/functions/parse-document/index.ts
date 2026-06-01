@@ -441,67 +441,86 @@ Deno.serve(async (req) => {
         { type: "text", text: "Extract structured data per system prompt." },
       ];
     } else {
-      try {
-        if (format === "pdf") extractedText = await extractPdf(buf);
-        else if (format === "excel") extractedText = extractExcel(buf);
-        else if (format === "docx") extractedText = await extractDocx(buf);
-        else if (format === "email") extractedText = await extractEml(buf);
-        else if (format === "text") extractedText = new TextDecoder().decode(buf);
-        else {
-          return jsonResponse({
-            ok: false, error: "UNSUPPORTED_FORMAT",
-            message: `Could not detect a supported format from ${fileUrl}`, rawTextExcerpt: null,
-          }, 415);
-        }
-      } catch (e) {
-        const code = format === "pdf" ? "PDF_PARSE_FAILED"
-          : format === "excel" ? "EXCEL_PARSE_FAILED"
-          : format === "docx" ? "DOCX_PARSE_FAILED"
-          : format === "email" ? "EML_PARSE_FAILED"
-          : "EXTRACT_FAILED";
-        return jsonResponse({
-          ok: false, error: code,
-          message: e instanceof Error ? e.message : "Failed to extract text",
-          rawTextExcerpt: null,
-        }, 422);
-      }
+      // For "prices" PDFs, always use vision/document path — these are often fillable
+      // AcroForm PDFs (e.g. Tinderbox "Bodens sortiment" template) where text extraction
+      // only returns the static labels and misses the user-filled values.
+      const forceVisionForPdf = format === "pdf" && documentType === "prices";
 
-      const textIsUsable = !!extractedText &&
-        extractedText.replace(/\s/g, "").length > 20;
-
-      if (!textIsUsable) {
-        if (format === "pdf") {
-          // Vision fallback: send raw PDF to Claude as a document content block
-          // (Anthropic natively supports PDF document inputs — internally rendered as images + text).
-          const base64 = arrayBufferToBase64(buf);
-          userContent = [
-            {
-              type: "document",
-              source: { type: "base64", media_type: "application/pdf", data: base64 },
-            },
-            {
-              type: "text",
-              text: "This PDF has no extractable text layer. Read the page images and extract structured data per the system prompt.",
-            },
-          ];
-          rawTextExcerpt = "[image-only PDF — vision fallback]";
-          visionFallbackUsed = true;
-        } else {
-          return jsonResponse({
-            ok: false,
-            error: "EMPTY_DOCUMENT",
-            message: "The uploaded file appears to contain no extractable text or images. If this is a PDF, try a different file or ensure it isn't password-protected.",
-            format,
-            rawTextExcerpt: null,
-          }, 200);
-        }
+      if (forceVisionForPdf) {
+        const base64 = arrayBufferToBase64(buf);
+        userContent = [
+          {
+            type: "document",
+            source: { type: "base64", media_type: "application/pdf", data: base64 },
+          },
+          {
+            type: "text",
+            text: "Read the PDF (including any filled form fields and page images) and extract structured data per the system prompt.",
+          },
+        ];
+        rawTextExcerpt = "[prices PDF — vision/document mode]";
+        visionFallbackUsed = true;
       } else {
-        if (extractedText.length > MAX_TEXT_CHARS) {
-          extractedText = extractedText.slice(0, MAX_TEXT_CHARS) +
-            `\n\n[TRUNCATED: original was ${extractedText.length} chars; cut to ${MAX_TEXT_CHARS}]`;
+        try {
+          if (format === "pdf") extractedText = await extractPdf(buf);
+          else if (format === "excel") extractedText = extractExcel(buf);
+          else if (format === "docx") extractedText = await extractDocx(buf);
+          else if (format === "email") extractedText = await extractEml(buf);
+          else if (format === "text") extractedText = new TextDecoder().decode(buf);
+          else {
+            return jsonResponse({
+              ok: false, error: "UNSUPPORTED_FORMAT",
+              message: `Could not detect a supported format from ${fileUrl}`, rawTextExcerpt: null,
+            }, 415);
+          }
+        } catch (e) {
+          const code = format === "pdf" ? "PDF_PARSE_FAILED"
+            : format === "excel" ? "EXCEL_PARSE_FAILED"
+            : format === "docx" ? "DOCX_PARSE_FAILED"
+            : format === "email" ? "EML_PARSE_FAILED"
+            : "EXTRACT_FAILED";
+          return jsonResponse({
+            ok: false, error: code,
+            message: e instanceof Error ? e.message : "Failed to extract text",
+            rawTextExcerpt: null,
+          }, 422);
         }
-        rawTextExcerpt = extractedText.slice(0, 500);
-        userContent = [{ type: "text", text: extractedText }];
+
+        const textIsUsable = !!extractedText &&
+          extractedText.replace(/\s/g, "").length > 20;
+
+        if (!textIsUsable) {
+          if (format === "pdf") {
+            const base64 = arrayBufferToBase64(buf);
+            userContent = [
+              {
+                type: "document",
+                source: { type: "base64", media_type: "application/pdf", data: base64 },
+              },
+              {
+                type: "text",
+                text: "This PDF has no extractable text layer. Read the page images and extract structured data per the system prompt.",
+              },
+            ];
+            rawTextExcerpt = "[image-only PDF — vision fallback]";
+            visionFallbackUsed = true;
+          } else {
+            return jsonResponse({
+              ok: false,
+              error: "EMPTY_DOCUMENT",
+              message: "The uploaded file appears to contain no extractable text or images. If this is a PDF, try a different file or ensure it isn't password-protected.",
+              format,
+              rawTextExcerpt: null,
+            }, 200);
+          }
+        } else {
+          if (extractedText.length > MAX_TEXT_CHARS) {
+            extractedText = extractedText.slice(0, MAX_TEXT_CHARS) +
+              `\n\n[TRUNCATED: original was ${extractedText.length} chars; cut to ${MAX_TEXT_CHARS}]`;
+          }
+          rawTextExcerpt = extractedText.slice(0, 500);
+          userContent = [{ type: "text", text: extractedText }];
+        }
       }
     }
 
