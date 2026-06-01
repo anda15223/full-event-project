@@ -27,10 +27,17 @@ const ACCENT: Record<TileAccent, string> = {
 };
 
 const STATUS_DOT: Record<TileStatus, string> = {
-  green: "bg-emerald-500",
-  amber: "bg-amber-500",
-  red: "bg-rose-500",
-  gray: "bg-zinc-400",
+  green: "bg-emerald-500 shadow-emerald-500/40",
+  amber: "bg-amber-500 shadow-amber-500/40",
+  red: "bg-rose-500 shadow-rose-500/40",
+  gray: "bg-zinc-400 shadow-zinc-400/40",
+};
+
+const STATUS_TEXT: Record<TileStatus, string> = {
+  green: "text-emerald-700 dark:text-emerald-300",
+  amber: "text-amber-700 dark:text-amber-300",
+  red: "text-rose-700 dark:text-rose-300",
+  gray: "text-muted-foreground/80",
 };
 
 export function FestivalTile({
