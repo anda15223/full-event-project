@@ -17,6 +17,7 @@ import {
   computePowerStatus, POWER_STATUS_PILL, computeDemandKw,
 } from "@/lib/powerStatus";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 
 export interface PowerRow {
   id: string;
