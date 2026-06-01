@@ -70,6 +70,8 @@ interface Contract {
   last_parsed_at: string | null;
   parse_summary: string | null;
   contract_pdf_path: string | null;
+  summary: import("@/lib/parseContract").ContractSummary | null;
+  parsed_at: string | null;
 }
 
 const STATUS_FILTERS: (ContractStatus | "all")[] = ["all", "signed", "pending_signature", "in_negotiation", "not_started", "stalled"];
