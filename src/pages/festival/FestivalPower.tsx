@@ -8,6 +8,7 @@ import {
   PowerConceptCard, type PowerRow, type PowerEquipmentRow,
 } from "@/components/festival/cards/PowerConceptCard";
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
+import type { SiblingConcept } from "@/components/festival/TentMergeControls";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
@@ -37,13 +38,13 @@ export default function FestivalPower() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, concepts!concept_id(id, slug, name)")
+        .select("id, concept_id, tent_primary_contract_id, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId)
         .eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
       const contractIds = list.map((c) => c.id);
-      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow }> };
+      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow; contractId: string; mergedChildren: SiblingConcept[]; mergeTargets: SiblingConcept[] }> };
 
       const { data: powers, error: pErr } = await supabase
         .from("festival_power").select("*").in("festival_contract_id", contractIds);
@@ -51,29 +52,56 @@ export default function FestivalPower() {
       const pmap = new Map<string, PowerRow>();
       (powers ?? []).forEach((p: any) => pmap.set(p.festival_contract_id, p as PowerRow));
 
+      // Build merge maps
+      const childrenByPrimary = new Map<string, SiblingConcept[]>();
+      list.forEach((c) => {
+        const pid = c.tent_primary_contract_id as string | null;
+        if (pid && c.concepts) {
+          const arr = childrenByPrimary.get(pid) ?? [];
+          arr.push({ contractId: c.id, conceptName: c.concepts.name, conceptSlug: c.concepts.slug, mergedInto: pid });
+          childrenByPrimary.set(pid, arr);
+        }
+      });
+
       const items = list
-        .filter((c) => c.concepts && pmap.has(c.id))
-        .map((c) => ({ concept: c.concepts as Concept, power: pmap.get(c.id)! }))
+        .filter((c) => c.concepts && pmap.has(c.id) && !c.tent_primary_contract_id)
+        .map((c) => {
+          // Targets: other concepts that are NOT already a primary of something
+          // (allow only flat merging — pick a sibling that is itself standalone & has no children)
+          const targets: SiblingConcept[] = list
+            .filter((o) => o.id !== c.id && o.concepts && !o.tent_primary_contract_id && !childrenByPrimary.has(o.id))
+            .map((o) => ({ contractId: o.id, conceptName: o.concepts.name, conceptSlug: o.concepts.slug, mergedInto: null }));
+          return {
+            contractId: c.id as string,
+            concept: c.concepts as Concept,
+            power: pmap.get(c.id)!,
+            mergedChildren: childrenByPrimary.get(c.id) ?? [],
+            mergeTargets: childrenByPrimary.has(c.id) ? [] : targets,
+          };
+        })
         .sort((a, b) => {
           const ai = SLUG_ORDER.indexOf(a.concept.slug);
           const bi = SLUG_ORDER.indexOf(b.concept.slug);
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-      return { items };
+      // Stash full power map (including children's power rows) for equipment aggregation
+      return { items, powerByContract: pmap, childrenByPrimary };
     },
   });
 
-  const powerIds = useMemo(
-    () => (pageQ.data?.items ?? []).map((i) => i.power.id),
-    [pageQ.data]
-  );
+  // All power row IDs at this festival (incl. merged-child power rows, for equipment aggregation)
+  const allPowerIds = useMemo(() => {
+    const map = pageQ.data?.powerByContract;
+    if (!map) return [] as string[];
+    return Array.from(map.values()).map((p) => p.id);
+  }, [pageQ.data]);
 
   const equipmentQ = useQuery({
-    queryKey: ["power-equipment", slug, powerIds.join(",")],
-    enabled: powerIds.length > 0,
+    queryKey: ["power-equipment", slug, allPowerIds.join(",")],
+    enabled: allPowerIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase.from("festival_power_equipment")
-        .select("*").in("festival_power_id", powerIds).order("position");
+        .select("*").in("festival_power_id", allPowerIds).order("position");
       if (error) throw error;
       const map = new Map<string, PowerEquipmentRow[]>();
       (data ?? []).forEach((e: any) => {
@@ -86,10 +114,24 @@ export default function FestivalPower() {
   });
 
   const items = pageQ.data?.items ?? [];
+  const powerByContract = pageQ.data?.powerByContract;
+
+  /** Combine equipment from a primary + all its merged-children's power rows */
+  const combinedEquipmentFor = (primaryPowerId: string, mergedChildren: SiblingConcept[]): PowerEquipmentRow[] => {
+    const base = equipmentQ.data?.get(primaryPowerId) ?? [];
+    if (!mergedChildren.length || !powerByContract) return base;
+    const extras: PowerEquipmentRow[] = [];
+    mergedChildren.forEach((ch) => {
+      const cp = powerByContract.get(ch.contractId);
+      if (cp) extras.push(...(equipmentQ.data?.get(cp.id) ?? []));
+    });
+    return [...base, ...extras];
+  };
+
   const summary = useMemo(() => {
     let allocated = 0, demand = 0, shortages = 0;
-    items.forEach(({ power }) => {
-      const eq = equipmentQ.data?.get(power.id) ?? [];
+    items.forEach(({ power, mergedChildren }) => {
+      const eq = combinedEquipmentFor(power.id, mergedChildren);
       const d = computeDemandKw(eq);
       const a = Number(power.allocated_kw ?? 0);
       allocated += a;
@@ -98,7 +140,7 @@ export default function FestivalPower() {
       if (st.status === "red") shortages++;
     });
     return { total: items.length, allocated, demand, shortages };
-  }, [items, equipmentQ.data]);
+  }, [items, equipmentQ.data, powerByContract]);
 
   if (festivalQ.isLoading) {
     return <div className="p-6 max-w-6xl mx-auto"><Skeleton className="h-32 w-full" /></div>;
@@ -167,15 +209,18 @@ export default function FestivalPower() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {items.map(({ concept, power }) => (
+          {items.map(({ concept, power, contractId, mergedChildren, mergeTargets }) => (
             <PowerConceptCard
               key={power.id}
               festivalId={festivalId}
               festivalSlug={slug}
               conceptSlug={concept.slug}
               conceptName={concept.name}
+              contractId={contractId}
               power={power}
-              equipment={equipmentQ.data?.get(power.id) ?? []}
+              equipment={combinedEquipmentFor(power.id, mergedChildren)}
+              mergedChildren={mergedChildren}
+              mergeTargets={mergeTargets}
             />
           ))}
         </div>

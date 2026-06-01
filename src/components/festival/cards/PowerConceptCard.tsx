@@ -17,6 +17,7 @@ import {
   computePowerStatus, POWER_STATUS_PILL, computeDemandKw,
 } from "@/lib/powerStatus";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
+import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 
 export interface PowerRow {
   id: string;
@@ -55,8 +56,11 @@ interface Props {
   festivalSlug: string;
   conceptSlug: string;
   conceptName: string;
+  contractId: string;
   power: PowerRow;
   equipment: PowerEquipmentRow[];
+  mergedChildren?: SiblingConcept[];
+  mergeTargets?: SiblingConcept[];
 }
 
 function timeAgo(iso: string | null): string {
@@ -153,7 +157,8 @@ const CONNECTION_TYPES = [
 ] as const;
 
 export function PowerConceptCard({
-  festivalId, festivalSlug, conceptSlug, conceptName, power, equipment,
+  festivalId, festivalSlug, conceptSlug, conceptName, contractId, power, equipment,
+  mergedChildren = [], mergeTargets = [],
 }: Props) {
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
@@ -261,8 +266,20 @@ export function PowerConceptCard({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xl">{emoji}</span>
           <h3 className="text-xl font-bold truncate">{conceptName}</h3>
+          {mergedChildren.length > 0 && (
+            <span className="text-[10px] uppercase tracking-wider rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-2 py-0.5">
+              Shared tent
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {mergedChildren.length === 0 && (
+            <MergeIntoControl
+              contractId={contractId}
+              targets={mergeTargets}
+              invalidateKeys={[["power-page", festivalSlug], ["equipment-page", festivalSlug]]}
+            />
+          )}
           <Select value={power.status ?? "drawing"} onValueChange={(v) => update.mutate({ status: v })}>
             <SelectTrigger className="h-7 w-[110px] text-xs">
               <SelectValue />
@@ -284,6 +301,13 @@ export function PowerConceptCard({
           </span>
         </div>
       </div>
+
+      {mergedChildren.length > 0 && (
+        <TentMergedBanner
+          children={mergedChildren}
+          invalidateKeys={[["power-page", festivalSlug], ["equipment-page", festivalSlug]]}
+        />
+      )}
 
       {/* Shortage banner */}
       {isShort && (

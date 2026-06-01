@@ -15,6 +15,7 @@ import {
 } from "@/lib/equipmentStatus";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { useFestivalVehicles } from "@/hooks/useFestivalVehicles";
+import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 
 type Vehicle = { id: string; vehicle_type: string };
 
@@ -33,10 +34,13 @@ export interface EquipmentConceptCardProps {
   powerId: string;
   assignedVehicleId: string | null;
   rows: EquipmentRow[];
+  mergedChildren?: SiblingConcept[];
+  mergeTargets?: SiblingConcept[];
 }
 
 export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
-  const { festivalId, conceptSlug, conceptName, contractId, powerId, assignedVehicleId, rows } = props;
+  const { festivalId, conceptSlug, conceptName, contractId, powerId, assignedVehicleId, rows,
+    mergedChildren = [], mergeTargets = [] } = props;
   const qc = useQueryClient();
   const { vehicles } = useFestivalVehicles(festivalId);
   const status = computeConceptEquipmentStatus(rows);
@@ -62,7 +66,14 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-2xl">{CONCEPT_EMOJI[conceptSlug] ?? "🍽️"}</span>
             <div className="min-w-0">
-              <h3 className="font-semibold text-base truncate">{conceptName}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-base truncate">{conceptName}</h3>
+                {mergedChildren.length > 0 && (
+                  <span className="text-[10px] uppercase tracking-wider rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-2 py-0.5">
+                    Shared tent
+                  </span>
+                )}
+              </div>
               <Link to={`/festivals/${props.festivalSlug}/power`}
                 className="text-[11px] text-muted-foreground hover:underline inline-flex items-center gap-1">
                 Power demand → <ExternalLink className="h-3 w-3" />
@@ -70,6 +81,13 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {mergedChildren.length === 0 && (
+              <MergeIntoControl
+                contractId={contractId}
+                targets={mergeTargets}
+                invalidateKeys={[["equipment-page", props.festivalSlug], ["power-page", props.festivalSlug]]}
+              />
+            )}
             <a
               href={`/festivals/${props.festivalSlug}/equipment/export?concept=${conceptSlug}`}
               target="_blank" rel="noopener noreferrer"
@@ -83,6 +101,13 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             </span>
           </div>
         </div>
+
+        {mergedChildren.length > 0 && (
+          <TentMergedBanner
+            children={mergedChildren}
+            invalidateKeys={[["equipment-page", props.festivalSlug], ["power-page", props.festivalSlug]]}
+          />
+        )}
 
         {/* Pack into vehicle */}
         <div className="flex items-center gap-2 text-xs">
