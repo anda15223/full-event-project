@@ -2442,6 +2442,7 @@ export type Database = {
           operating_entity_cvr: string | null
           operating_hours_summary: string | null
           parse_summary: string | null
+          parsed_at: string | null
           payment_method_cashless: boolean | null
           pos_provider: string | null
           pos_terminal_extra_cost_dkk: number | null
@@ -2460,6 +2461,7 @@ export type Database = {
           stalled_since: string | null
           status_changed_at: string | null
           status_history: Json | null
+          summary: Json | null
           tent_cost_handling: string | null
           tent_floor: string | null
           tent_provided_by: string | null
@@ -2526,6 +2528,7 @@ export type Database = {
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           parse_summary?: string | null
+          parsed_at?: string | null
           payment_method_cashless?: boolean | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
@@ -2544,6 +2547,7 @@ export type Database = {
           stalled_since?: string | null
           status_changed_at?: string | null
           status_history?: Json | null
+          summary?: Json | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
           tent_provided_by?: string | null
@@ -2610,6 +2614,7 @@ export type Database = {
           operating_entity_cvr?: string | null
           operating_hours_summary?: string | null
           parse_summary?: string | null
+          parsed_at?: string | null
           payment_method_cashless?: boolean | null
           pos_provider?: string | null
           pos_terminal_extra_cost_dkk?: number | null
@@ -2628,6 +2633,7 @@ export type Database = {
           stalled_since?: string | null
           status_changed_at?: string | null
           status_history?: Json | null
+          summary?: Json | null
           tent_cost_handling?: string | null
           tent_floor?: string | null
           tent_provided_by?: string | null
