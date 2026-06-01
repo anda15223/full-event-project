@@ -29,6 +29,7 @@ import { useDraftMode } from "@/hooks/useDraftMode";
 type Staff = {
   id: string;
   festival_id: string;
+  staff_number: number | null;
   name: string | null;
   home_location: string | null;
   confirmed: boolean | null;
@@ -414,7 +415,8 @@ export default function FestivalStaff() {
         : accomFilter === "yes"
         ? !!s.needs_accommodation
         : !s.needs_accommodation
-    );
+    )
+    .sort((a, b) => (a.staff_number ?? 9999) - (b.staff_number ?? 9999));
 
   // Empty-slot calculation across concept plans (from live positions)
   const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
@@ -559,7 +561,7 @@ export default function FestivalStaff() {
               <StaffRow
                 key={s.id}
                 staff={s}
-                index={i + 1}
+                index={s.staff_number ?? i + 1}
                 concepts={concepts}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
