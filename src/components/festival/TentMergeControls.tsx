@@ -69,7 +69,6 @@ export function MergeIntoControl({
   invalidateKeys: string[][];
 }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
   const merge = useMutation({
     mutationFn: async (primaryId: string) => {
       const { error } = await supabase.from("festival_contracts")
@@ -79,33 +78,33 @@ export function MergeIntoControl({
     onSuccess: () => {
       invalidateKeys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
       toast.success("Merged into shared tent");
-      setOpen(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
   if (targets.length === 0) return null;
-  if (!open) {
-    return (
-      <Button
-        size="sm" variant="outline"
-        className="h-7 text-xs gap-1"
-        onClick={() => setOpen(true)}
-        title="Merge this concept's Power & Equipment into another concept that shares the same tent"
-      >
-        <Tent className="h-3 w-3" /> Same tent as…
-      </Button>
-    );
-  }
   return (
-    <Select onValueChange={(v) => merge.mutate(v)} onOpenChange={(o) => !o && setOpen(false)} open>
-      <SelectTrigger className="h-7 w-[160px] text-xs"><SelectValue placeholder="Pick concept…" /></SelectTrigger>
-      <SelectContent>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm" variant="outline"
+          className="h-7 text-xs gap-1"
+          disabled={merge.isPending}
+          title="Merge this concept's Power & Equipment into another concept that shares the same tent"
+        >
+          <Tent className="h-3 w-3" /> Same tent as…
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Merge into…
+        </DropdownMenuLabel>
         {targets.map((t) => (
-          <SelectItem key={t.contractId} value={t.contractId}>
-            {CONCEPT_EMOJI[t.conceptSlug as ConceptSlug] ?? "🎪"} {t.conceptName}
-          </SelectItem>
+          <DropdownMenuItem key={t.contractId} onSelect={() => merge.mutate(t.contractId)}>
+            <span className="mr-2">{CONCEPT_EMOJI[t.conceptSlug as ConceptSlug] ?? "🎪"}</span>
+            {t.conceptName}
+          </DropdownMenuItem>
         ))}
-      </SelectContent>
-    </Select>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
