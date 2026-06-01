@@ -247,9 +247,14 @@ export function CoolingUnitCard({
               if (cur === "DKK") upd.cost_dkk = p.cost_total;
             }
             const ev = p._extraction_evidence;
+            const bullets: string[] = Array.isArray(p.bullet_points)
+              ? p.bullet_points.filter((b: any) => typeof b === "string" && b.trim().length > 0)
+              : [];
+            const bulletBlock = bullets.map((b) => `• ${b.trim()}`).join("\n");
             const evNote = ev?.matched_text ? `[${ev.evidence_type ?? "ai"}] ${ev.matched_text}` : null;
-            const summary = [evNote, p.raw_notes].filter(Boolean).join(" — ");
-            if (summary) upd.parse_summary = summary.slice(0, 500);
+            const summary = [bulletBlock, evNote, p.raw_notes].filter(Boolean).join("\n");
+            if (summary) upd.parse_summary = summary.slice(0, 4000);
+
             await supabase.from("festival_cooling_unit").update(upd).eq("id", unit.id);
             toast.success("AI parse complete — please review");
             invalidate();
