@@ -38,13 +38,13 @@ export default function FestivalPower() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, concepts!concept_id(id, slug, name)")
+        .select("id, concept_id, tent_primary_contract_id, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId)
         .eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
       const contractIds = list.map((c) => c.id);
-      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow }> };
+      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow; contractId: string; mergedChildren: SiblingConcept[]; mergeTargets: SiblingConcept[] }> };
 
       const { data: powers, error: pErr } = await supabase
         .from("festival_power").select("*").in("festival_contract_id", contractIds);
@@ -52,15 +52,40 @@ export default function FestivalPower() {
       const pmap = new Map<string, PowerRow>();
       (powers ?? []).forEach((p: any) => pmap.set(p.festival_contract_id, p as PowerRow));
 
+      // Build merge maps
+      const childrenByPrimary = new Map<string, SiblingConcept[]>();
+      list.forEach((c) => {
+        const pid = c.tent_primary_contract_id as string | null;
+        if (pid && c.concepts) {
+          const arr = childrenByPrimary.get(pid) ?? [];
+          arr.push({ contractId: c.id, conceptName: c.concepts.name, conceptSlug: c.concepts.slug, mergedInto: pid });
+          childrenByPrimary.set(pid, arr);
+        }
+      });
+
       const items = list
-        .filter((c) => c.concepts && pmap.has(c.id))
-        .map((c) => ({ concept: c.concepts as Concept, power: pmap.get(c.id)! }))
+        .filter((c) => c.concepts && pmap.has(c.id) && !c.tent_primary_contract_id)
+        .map((c) => {
+          // Targets: other concepts that are NOT already a primary of something
+          // (allow only flat merging — pick a sibling that is itself standalone & has no children)
+          const targets: SiblingConcept[] = list
+            .filter((o) => o.id !== c.id && o.concepts && !o.tent_primary_contract_id && !childrenByPrimary.has(o.id))
+            .map((o) => ({ contractId: o.id, conceptName: o.concepts.name, conceptSlug: o.concepts.slug, mergedInto: null }));
+          return {
+            contractId: c.id as string,
+            concept: c.concepts as Concept,
+            power: pmap.get(c.id)!,
+            mergedChildren: childrenByPrimary.get(c.id) ?? [],
+            mergeTargets: childrenByPrimary.has(c.id) ? [] : targets,
+          };
+        })
         .sort((a, b) => {
           const ai = SLUG_ORDER.indexOf(a.concept.slug);
           const bi = SLUG_ORDER.indexOf(b.concept.slug);
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
-      return { items };
+      // Stash full power map (including children's power rows) for equipment aggregation
+      return { items, powerByContract: pmap, childrenByPrimary };
     },
   });
 
