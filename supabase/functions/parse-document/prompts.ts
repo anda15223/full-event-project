@@ -319,6 +319,38 @@ Schema:
   "raw_notes": string
 }`;
 
+export const FESTIVAL_ORDER_SYSTEM_PROMPT = `You parse festival ORDER LISTS from organisers. These are documents listing everything ordered for a stand: tents, electricity hookups, water, waste, furniture, lighting, decking, signage, etc. Source may be Danish or English. Format may be PDF, Excel, Word, or email. Return ONLY valid JSON.
+
+For each line item, extract:
+- category: one of "tent", "electricity", "water", "waste", "furniture", "lighting", "decor", "signage", "kitchen", "cleaning", "security", "internet", "other"
+- item_name: the human-readable name as written (in English if possible, otherwise keep original)
+- quantity: number
+- unit: e.g. "pcs", "m", "m2", "kW", "A", "days"; null if not stated
+- unit_price / total_price: numbers or null
+- currency: ISO code (DKK, EUR, USD); default "DKK" for "kr"
+- notes: any extra detail (size, color, location, voltage)
+
+Schema:
+{
+  "supplier": string | null,
+  "order_reference": string | null,
+  "items": [
+    {
+      "category": string,
+      "item_name": string,
+      "quantity": number | null,
+      "unit": string | null,
+      "unit_price": number | null,
+      "total_price": number | null,
+      "currency": string | null,
+      "notes": string | null
+    }
+  ],
+  "raw_notes": string
+}
+
+Extract EVERY line item. Do not skip. Do not group different items together.`;
+
 export function getSystemPrompt(documentType: string): string {
   switch (documentType) {
     case "contract": return CONTRACT_SYSTEM_PROMPT;
@@ -329,7 +361,9 @@ export function getSystemPrompt(documentType: string): string {
     case "accommodation": return ACCOMMODATION_SYSTEM_PROMPT;
     case "setup": return SETUP_SYSTEM_PROMPT;
     case "staff_roster": return STAFF_ROSTER_SYSTEM_PROMPT;
+    case "festival_order": return FESTIVAL_ORDER_SYSTEM_PROMPT;
     default: return GENERIC_SYSTEM_PROMPT;
   }
 }
+
 
