@@ -81,10 +81,10 @@ export function AddConceptDropdown({ festivalId }: Props) {
 
   const options = useMemo<AddConceptOption[]>(() => {
     const existing = existingQ.data ?? new Map<string, ExistingConceptRow>();
-    return (conceptsQ.data ?? []).flatMap((c) => {
+    return (conceptsQ.data ?? []).flatMap<AddConceptOption>((c) => {
       const row = existing.get(c.id);
-      if (!row) return [{ ...c, mode: "add" as const }];
-      if (row.is_active === false) return [{ ...c, mode: "restore" as const }];
+      if (!row) return [{ ...c, mode: "add" }];
+      if (row.is_active === false) return [{ ...c, mode: "restore" }];
       return [];
     });
   }, [conceptsQ.data, existingQ.data]);
