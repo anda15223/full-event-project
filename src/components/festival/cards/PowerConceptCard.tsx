@@ -266,8 +266,20 @@ export function PowerConceptCard({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xl">{emoji}</span>
           <h3 className="text-xl font-bold truncate">{conceptName}</h3>
+          {mergedChildren.length > 0 && (
+            <span className="text-[10px] uppercase tracking-wider rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/30 px-2 py-0.5">
+              Shared tent
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {mergedChildren.length === 0 && (
+            <MergeIntoControl
+              contractId={contractId}
+              targets={mergeTargets}
+              invalidateKeys={[["power-page", festivalSlug], ["equipment-page", festivalSlug]]}
+            />
+          )}
           <Select value={power.status ?? "drawing"} onValueChange={(v) => update.mutate({ status: v })}>
             <SelectTrigger className="h-7 w-[110px] text-xs">
               <SelectValue />
@@ -289,6 +301,13 @@ export function PowerConceptCard({
           </span>
         </div>
       </div>
+
+      {mergedChildren.length > 0 && (
+        <TentMergedBanner
+          children={mergedChildren}
+          invalidateKeys={[["power-page", festivalSlug], ["equipment-page", festivalSlug]]}
+        />
+      )}
 
       {/* Shortage banner */}
       {isShort && (
