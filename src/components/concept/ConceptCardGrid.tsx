@@ -10,6 +10,7 @@ import { VehicleSelector } from "./VehicleSelector";
 import { ConceptToggle } from "./ConceptToggle";
 import { useConceptIsActive } from "@/hooks/useConceptIsActive";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 export interface ConceptContract {
   contract_id: string;
