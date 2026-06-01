@@ -45,6 +45,25 @@ async function extractPdf(buf: ArrayBuffer): Promise<string> {
   return Array.isArray(text) ? text.join("\n") : text;
 }
 
+async function extractPdfFormFields(buf: ArrayBuffer): Promise<string> {
+  const pdf = await getDocumentProxy(new Uint8Array(buf));
+  const getFieldObjects = (pdf as unknown as { getFieldObjects?: () => Promise<Record<string, unknown[]>> }).getFieldObjects;
+  if (!getFieldObjects) return "";
+  const fields = await getFieldObjects.call(pdf).catch(() => null);
+  if (!fields) return "";
+  const lines: string[] = [];
+  for (const [name, widgets] of Object.entries(fields)) {
+    for (const widget of widgets ?? []) {
+      const value = (widget as { value?: unknown; fieldValue?: unknown; textContent?: unknown }).value
+        ?? (widget as { fieldValue?: unknown }).fieldValue
+        ?? (widget as { textContent?: unknown }).textContent;
+      const text = String(value ?? "").trim();
+      if (text) lines.push(`${name}: ${text}`);
+    }
+  }
+  return lines.length ? `=== PDF FORM FIELD VALUES ===\n${lines.join("\n")}` : "";
+}
+
 function extractExcel(buf: ArrayBuffer): string {
   const wb = XLSX.read(new Uint8Array(buf), { type: "array" });
   const parts: string[] = [];
@@ -342,6 +361,29 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function normalizePricesParsed(parsed: unknown): unknown {
+  if (!parsed || typeof parsed !== "object" || !("items" in parsed)) return parsed;
+  const p = parsed as { currency?: string; items?: Array<{ product_name?: unknown; price?: unknown; notes?: unknown }> };
+  if (!Array.isArray(p.items)) return parsed;
+  p.items = p.items
+    .map((item) => ({
+      ...item,
+      product_name: String(item.product_name ?? "").trim(),
+      price: parseLocaleNumber(item.price) ?? 0,
+      notes: item.notes == null ? null : String(item.notes).trim(),
+    }))
+    .filter((item) => {
+      const name = normalizeKey(String(item.product_name ?? ""));
+      const price = Number(item.price) || 0;
+      if (!name || price <= 0) return false;
+      if (/^ret\s*nr\s*\d+$/.test(name)) return false;
+      if (/^(dish|menu|item)\s*(no|nr)?\s*\d+$/.test(name)) return false;
+      if (/template|placeholder|no specific/i.test(String(item.notes ?? ""))) return false;
+      return true;
+    });
+  return p;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -447,18 +489,20 @@ Deno.serve(async (req) => {
       const forceVisionForPdf = format === "pdf" && documentType === "prices";
 
       if (forceVisionForPdf) {
+        const formText = await extractPdfFormFields(buf);
         const base64 = arrayBufferToBase64(buf);
         userContent = [
           {
             type: "document",
             source: { type: "base64", media_type: "application/pdf", data: base64 },
           },
+          ...(formText ? [{ type: "text", text: formText }] : []),
           {
             type: "text",
-            text: "Read the PDF (including any filled form fields and page images) and extract structured data per the system prompt.",
+            text: "Read the PDF, the visible page, and any PDF form-field values above. Extract ONLY real filled-in menu dishes with a positive price. Ignore empty template rows like RET NR. 1/2/3, labels, and placeholder fields.",
           },
         ];
-        rawTextExcerpt = "[prices PDF — vision/document mode]";
+        rawTextExcerpt = formText ? formText.slice(0, 500) : "[prices PDF — vision/document mode]";
         visionFallbackUsed = true;
       } else {
         try {
@@ -552,6 +596,10 @@ Deno.serve(async (req) => {
         claudeOutputExcerpt: (claudeText ?? "").slice(0, 800),
         rawTextExcerpt: rawTextExcerpt ?? "",
       }, 502);
+    }
+
+    if (documentType === "prices") {
+      parsed = normalizePricesParsed(parsed);
     }
 
     if (documentType === "festival_order" && extractedText) {
