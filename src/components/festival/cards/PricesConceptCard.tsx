@@ -557,11 +557,17 @@ function ItemRow({
         />
         <span className="text-xs text-muted-foreground w-10">{currency}</span>
         <Select
-          value={item.is_vegan ? "vegan" : item.is_vegetarian ? "vegetarian" : "non_vegetarian"}
+          value={
+            item.is_vegan ? "vegan" :
+            item.is_vegetarian ? "vegetarian" :
+            item.is_pescatarian ? "pescatarian" :
+            "non_vegetarian"
+          }
           onValueChange={(v) => {
-            if (v === "vegan") onSave({ is_vegan: true, is_vegetarian: true });
-            else if (v === "vegetarian") onSave({ is_vegetarian: true, is_vegan: false });
-            else onSave({ is_vegetarian: false, is_vegan: false });
+            if (v === "vegan") onSave({ is_vegan: true, is_vegetarian: true, is_pescatarian: false });
+            else if (v === "vegetarian") onSave({ is_vegetarian: true, is_vegan: false, is_pescatarian: false });
+            else if (v === "pescatarian") onSave({ is_pescatarian: true, is_vegetarian: false, is_vegan: false });
+            else onSave({ is_vegetarian: false, is_vegan: false, is_pescatarian: false });
           }}
         >
           <SelectTrigger className="h-7 w-[120px] text-xs px-2">
@@ -569,6 +575,7 @@ function ItemRow({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="non_vegetarian">Non-vegetarian</SelectItem>
+            <SelectItem value="pescatarian">🐟 Pescatarian</SelectItem>
             <SelectItem value="vegetarian">🌱 Vegetarian</SelectItem>
             <SelectItem value="vegan">🌿 Vegan</SelectItem>
           </SelectContent>
