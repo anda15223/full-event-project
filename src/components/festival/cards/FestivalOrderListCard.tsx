@@ -31,13 +31,14 @@ const CATEGORIES = [
 interface Props {
   festivalId: string;
   conceptSlug: string;
+  conceptName: string;
   powerId: string;
   orderListFilePath: string | null;
   orderListParsedAt: string | null;
 }
 
 export function FestivalOrderListCard({
-  festivalId, conceptSlug, powerId, orderListFilePath, orderListParsedAt,
+  festivalId, conceptSlug, conceptName, powerId, orderListFilePath, orderListParsedAt,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -76,7 +77,11 @@ export function FestivalOrderListCard({
       if (!signed?.signedUrl) throw new Error("Could not sign upload");
 
       const { data: parsed, error: pErr } = await supabase.functions.invoke("parse-document", {
-        body: { fileUrl: signed.signedUrl, documentType: "festival_order" },
+        body: {
+          fileUrl: signed.signedUrl,
+          documentType: "festival_order",
+          context: { concept_name: conceptName, concept_slug: conceptSlug },
+        },
       });
       if (pErr) throw pErr;
       if (!parsed?.ok) throw new Error(parsed?.message ?? "Parse failed");
@@ -85,12 +90,13 @@ export function FestivalOrderListCard({
       if (rawItems.length === 0) {
         toast.message("AI parsed but found no items — add manually");
       } else {
+        const filteredItems = rawItems.filter((it) => Number(it.quantity ?? 1) > 0);
         const nextPos = items.length;
-        const rows = rawItems.map((it, i) => ({
+        const rows = filteredItems.map((it, i) => ({
           festival_power_id: powerId,
           category: typeof it.category === "string" ? it.category.toLowerCase().slice(0, 40) : "other",
           item_name: String(it.item_name ?? "Unnamed").slice(0, 200),
-          quantity: it.quantity != null ? Number(it.quantity) : null,
+          quantity: it.quantity != null ? Number(it.quantity) : 1,
           unit: it.unit ? String(it.unit).slice(0, 20) : null,
           unit_price: it.unit_price != null ? Number(it.unit_price) : null,
           total_price: it.total_price != null ? Number(it.total_price) : null,
