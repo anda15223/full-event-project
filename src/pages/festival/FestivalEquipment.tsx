@@ -73,18 +73,15 @@ export default function FestivalEquipment() {
       });
 
       const items = list
-        .filter((c) => c.concepts && powerByContract.has(c.id) && !c.tent_primary_contract_id)
+        .filter((c) => c.concepts && powerByContract.has(c.id))
         .map((c) => {
-          const targets = list
-            .filter((o) => o.id !== c.id && o.concepts && !o.tent_primary_contract_id && !childrenByPrimary.has(o.id))
-            .map((o) => ({ contractId: o.id, conceptName: o.concepts.name, conceptSlug: o.concepts.slug, mergedInto: null }));
           return {
             contractId: c.id as string,
             assignedVehicleId: (c.assigned_vehicle_id ?? null) as string | null,
             concept: c.concepts,
             powerId: powerByContract.get(c.id)!,
-            mergedChildren: childrenByPrimary.get(c.id) ?? [],
-            mergeTargets: childrenByPrimary.has(c.id) ? [] : targets,
+            mergedChildren: [] as any[],
+            mergeTargets: [] as any[],
           };
         })
         .sort((a, b) => {
@@ -92,6 +89,7 @@ export default function FestivalEquipment() {
           const bi = SLUG_ORDER.indexOf(b.concept.slug);
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
+
       return { items, rowsByPower, childrenByPrimary, powerByContract };
     },
   });
