@@ -323,6 +323,11 @@ function ConceptCardItem({
                 Hidden from reports
               </span>
             )}
+            {row.is_draft && (
+              <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-semibold rounded-full px-3 py-1 uppercase tracking-wide">
+                Draft
+              </span>
+            )}
           </div>
           {(subtitle || verifyQuestion) && (
             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
