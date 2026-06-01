@@ -154,7 +154,7 @@ export default function FestivalPrices() {
       )}
 
       {pageQ.isLoading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-96 w-full" />)}
         </div>
       ) : orderedConcepts.length === 0 ? (
@@ -162,7 +162,7 @@ export default function FestivalPrices() {
           No active concepts at this festival.
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {orderedConcepts.map((c) => {
             const p = pricesByConcept.get(c.id) ?? null;
             const its = p ? (itemsByPriceId.get(p.id) ?? []) : [];
