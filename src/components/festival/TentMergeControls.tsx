@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 import { Tent, Link2Off } from "lucide-react";
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 
