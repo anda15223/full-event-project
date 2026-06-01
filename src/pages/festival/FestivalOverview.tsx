@@ -893,7 +893,7 @@ export default function FestivalOverview() {
                 icon={Users} iconAccent="slate" title="Contacts"
                 primaryStat="Directory"
                 secondaryStat={ctN > 0 ? `${ctN} contacts` : undefined}
-                status="gray" />
+                status={ctN > 0 ? "green" : "gray"} />
             );
 
             const prN = tileCounts.pricesConceptCount ?? 0;
