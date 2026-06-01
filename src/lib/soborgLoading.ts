@@ -35,6 +35,7 @@ export type VehicleGroup = {
   vehicle_id: string;
   vehicle_type: string;
   license_plate: string | null;
+  loading_date: string | null;
   concepts: ConceptGroup[];
   car_total_items: number;
 };
