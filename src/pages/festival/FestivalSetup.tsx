@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import FidibusBriefBlock from "@/components/festival/FidibusBriefBlock";
 
 type PhaseSource = {
   id: string;
