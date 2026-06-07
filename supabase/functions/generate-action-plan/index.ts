@@ -127,13 +127,16 @@ ${(info?.raw_text ?? "").slice(0, 12000)}`;
     try { parsed = JSON.parse(content); } catch { parsed = { actions: [] }; }
 
     const allowedPriority = new Set(["critical", "high", "medium", "low"]);
-    const allowedOwner = new Set(["alexandra artimon", "marius", "costel", "marko", "anca"]);
+    const ownerMap: Record<string, string> = {
+      "alexandra artimon": "Alexandra Artimon", "alexandra": "Alexandra Artimon", "fif": "Alexandra Artimon",
+      "marius": "Marius", "costel": "Costel", "marko": "Marko", "anca": "Anca",
+    };
     const actions = (parsed.actions ?? []).map((a: any) => ({
       title: String(a.title ?? "").slice(0, 200),
       description: a.description ? String(a.description).slice(0, 1000) : null,
       priority: allowedPriority.has(a.priority) ? a.priority : "medium",
       due_date: a.due_date && /^\d{4}-\d{2}-\d{2}$/.test(a.due_date) ? a.due_date : null,
-      owner: a.owner && allowedOwner.has(String(a.owner).toLowerCase()) ? String(a.owner).toLowerCase() : null,
+      owner: a.owner ? (ownerMap[String(a.owner).toLowerCase()] ?? null) : null,
       category: a.category ? String(a.category).slice(0, 60) : null,
     })).filter((a: any) => a.title);
 
