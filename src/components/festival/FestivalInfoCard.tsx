@@ -112,6 +112,7 @@ export function FestivalInfoCard({ festival, defaultOpen = false }: FestivalInfo
               festivalSlug={festival.slug}
             />
             <FestivalInfoSummary festivalId={festival.id} />
+            <FestivalInfoChat festivalId={festival.id} />
           </div>
         </div>
       </div>
