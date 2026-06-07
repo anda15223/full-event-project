@@ -18,6 +18,7 @@ import {
   getSoborgLoadingManifest, sortedCategories, categoryLabel, regroupForSoborgPDF,
   type SoborgLoadingManifest, type LoadingItem,
 } from "@/lib/soborgLoading";
+import { TrolleyLibraryCard } from "@/components/festival/TrolleyLibraryCard";
 
 const sb: any = supabase;
 
@@ -415,6 +416,8 @@ export default function FestivalSoborgLoading() {
           </CardContent>
         </Card>
       )}
+
+      <TrolleyLibraryCard />
 
       {data.vehicles.map((veh) => (
         <Card key={veh.vehicle_id}>
