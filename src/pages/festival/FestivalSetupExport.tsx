@@ -145,7 +145,7 @@ export default function FestivalSetupExport() {
         powerRows = (pw ?? []).map((p: any) => ({ ...p, concept_name: byId.get(p.festival_contract_id) ?? "—" }));
       }
 
-      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender, powerRows });
+      setData({ festival: f, run, phases: phases ?? [], allocMap, attachments: attRender, powerRows, buildout: buildout ?? [] });
     })();
   }, [slug]);
 
