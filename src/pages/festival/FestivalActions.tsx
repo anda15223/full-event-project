@@ -34,6 +34,7 @@ import {
   Inbox, AlarmClock, Search, Calendar as CalendarIcon, FileDown, AlertTriangle,
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { AIActionPlanButton } from "@/components/festival/AIActionPlanButton";
 import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
