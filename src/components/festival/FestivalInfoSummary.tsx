@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Sparkles, Loader2, RefreshCw, Plane, LogOut, ShieldAlert, Clock, KeyRound, Car, Tent, UtensilsCrossed, Siren, Phone, MoreHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Sparkles, Loader2, RefreshCw, Plane, LogOut, ShieldAlert, Clock, KeyRound, Car, Tent, UtensilsCrossed, Siren, Phone, MoreHorizontal, Upload, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
