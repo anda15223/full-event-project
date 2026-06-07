@@ -9680,6 +9680,77 @@ export type Database = {
           },
         ]
       }
+      trolley_template_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          quantity: number | null
+          sort_order: number
+          trolley_id: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          quantity?: number | null
+          sort_order?: number
+          trolley_id: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          quantity?: number | null
+          sort_order?: number
+          trolley_id?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trolley_template_items_trolley_id_fkey"
+            columns: ["trolley_id"]
+            isOneToOne: false
+            referencedRelation: "trolley_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trolley_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
