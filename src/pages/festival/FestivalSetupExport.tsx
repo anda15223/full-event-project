@@ -161,20 +161,33 @@ export default function FestivalSetupExport() {
   const phaseAttachments = attachments.filter((a) => a.setup_phase_id);
   const allocMap: Map<string, { vehicle_name: string; driver_name: string | null }> = data.allocMap;
   const powerRows: any[] = data.powerRows ?? [];
+  const buildout: any[] = data.buildout ?? [];
+
+  // Report-only spelling normalization: Soborg (no o-slash), facade (no cedilla).
+  const repFix = (s: string | null | undefined) =>
+    s == null ? "" : String(s).replace(/Ø/g, "O").replace(/ø/g, "o").replace(/Façade/g, "Facade").replace(/façade/g, "facade").replace(/Ç/g, "C").replace(/ç/g, "c");
+
+  const fmtDT = (iso: string | null) =>
+    iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 
   const header = (
     <View>
-      <Text style={[r.body, { fontWeight: 700, marginBottom: 4 }]}>Setup run</Text>
+      <Text style={[r.body, { fontWeight: 700, marginBottom: 4 }]}>Setup run — prepared for Fidibus</Text>
       <Text style={r.small}>
-        Date: {fmtDate(run.setup_date)} · Søborg meet: {fmtTime(run.soborg_meet_time) || "—"} · Arrival Jelling: {fmtTime(run.arrival_time) || "—"}
+        {repFix(f.name)} · Date: {fmtDate(run.setup_date)} · Soborg meet: {fmtTime(run.soborg_meet_time) || "—"} · Arrival: {fmtTime(run.arrival_time) || "—"}
       </Text>
-      <Text style={r.small}>Destination: {run.destination_address ?? "—"}</Text>
+      <Text style={r.small}>Destination: {repFix(run.destination_address) || "—"}</Text>
     </View>
   );
 
   const phasesByConcept = (c: string) => phases.filter((p) => p.concept === c);
   const allTagged = runAttachments.filter((a) => a.concept === "all");
   const attByConcept = (c: string) => runAttachments.filter((a) => a.concept === c);
+
+  const CATEGORIES = ["tent","power","water","gas","cooling","daka","tables","facade","other"] as const;
+  const buildoutByCat: Record<string, any[]> = {};
+  CATEGORIES.forEach((c) => { buildoutByCat[c] = []; });
+  buildout.forEach((b: any) => { (buildoutByCat[b.category] ||= []).push(b); });
 
   const renderPhase = (p: any) => {
     const alloc = p.transport_allocation_id ? allocMap.get(p.transport_allocation_id) : null;
