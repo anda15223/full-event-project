@@ -6,6 +6,7 @@ import { FestivalHeader } from "@/components/festival/FestivalHeader";
 import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
+import { FestivalInfoSummary } from "@/components/festival/FestivalInfoSummary";
 
 export interface FestivalInfoCardProps {
   festival: {
@@ -109,6 +110,7 @@ export function FestivalInfoCard({ festival, defaultOpen = false }: FestivalInfo
               festivalId={festival.id}
               festivalSlug={festival.slug}
             />
+            <FestivalInfoSummary festivalId={festival.id} />
           </div>
         </div>
       </div>
