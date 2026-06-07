@@ -44,7 +44,31 @@ type Source = "email" | "manual" | "contract" | "intelligence" | "ingestion";
 const STATUSES: Status[] = ["open", "in_progress", "done", "blocked"];
 const PRIORITIES: Priority[] = ["critical", "high", "medium", "low"];
 const SOURCES: Source[] = ["manual", "email", "contract", "intelligence", "ingestion"];
-const OWNERS = ["Alexandra Artimon", "Marius", "Costel", "Marko", "Anca"];
+const FALLBACK_OWNERS = ["Alexandra Artimon", "Marius", "Costel", "Marko", "Anca"];
+const FIXED_TEAMS = ["Fidibus team"];
+
+function useOwnerOptions() {
+  const { data } = useQuery({
+    queryKey: ["owner-options-staff"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff")
+        .select("display_name, full_name")
+        .eq("is_active", true)
+        .order("display_name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((s: any) => s.display_name || s.full_name).filter(Boolean) as string[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  return useMemo(() => {
+    const merged = new Set<string>();
+    FALLBACK_OWNERS.forEach((o) => merged.add(o));
+    (data ?? []).forEach((o) => merged.add(o));
+    const list = Array.from(merged).sort((a, b) => a.localeCompare(b));
+    return [...FIXED_TEAMS, ...list];
+  }, [data]);
+}
 
 const PRIORITY_DOT: Record<Priority, string> = {
   critical: "bg-red-500",
