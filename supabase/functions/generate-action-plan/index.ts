@@ -98,13 +98,13 @@ FESTIVAL INFO (AI summary):
 ${summaryText || "(none)"}
 
 FESTIVAL INFO (raw, truncated):
-${(info?.raw_text ?? "").slice(0, 40000)}`;
+${(info?.raw_text ?? "").slice(0, 12000)}`;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: system },
           { role: "user", content: userContext },
