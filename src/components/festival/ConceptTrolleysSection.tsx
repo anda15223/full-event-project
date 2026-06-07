@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Plus, Trash2, ChevronDown, Upload, Loader2 } from "lucide-react";
+import { ShoppingCart, Plus, Trash2, ChevronDown, Upload, Loader2, Copy } from "lucide-react";
 
 const sb: any = supabase;
 
@@ -81,6 +81,29 @@ export function ConceptTrolleysSection({ conceptId }: { conceptId: string }) {
     if (!confirm(`Delete trolley "${t.name}" and all its items?`)) return;
     const { error } = await sb.from("concept_trolleys").delete().eq("id", t.id);
     if (error) return toast.error(error.message);
+    load();
+  };
+  const duplicateTrolley = async (t: Trolley) => {
+    const copyName = `${t.name} (Copy)`;
+    const sortOrder = trolleys.length;
+    const { data: newTrolley, error: tErr } = await sb.from("concept_trolleys")
+      .insert({ concept_id: t.concept_id, name: copyName, sort_order: sortOrder })
+      .select("id").single();
+    if (tErr || !newTrolley) return toast.error(tErr?.message || "Failed to duplicate trolley");
+    const sourceItems = items[t.id] ?? [];
+    if (sourceItems.length) {
+      const rows = sourceItems.map((it, idx) => ({
+        concept_id: t.concept_id,
+        trolley_id: newTrolley.id,
+        item_name: it.name,
+        quantity: it.quantity,
+        notes: it.notes,
+        position: idx,
+      }));
+      const { error: iErr } = await sb.from("concept_trolley_items").insert(rows);
+      if (iErr) return toast.error(iErr.message);
+    }
+    toast.success(`Duplicated "${t.name}"`);
     load();
   };
   const addItem = async (t: Trolley) => {
@@ -167,6 +190,10 @@ export function ConceptTrolleysSection({ conceptId }: { conceptId: string }) {
               />
               <span className="text-[11px] text-muted-foreground">({list.length} items)</span>
               <div className="ml-auto flex gap-1">
+                <Button size="sm" variant="ghost" className="h-7 px-2"
+                  onClick={() => duplicateTrolley(t)} title="Duplicate trolley">
+                  <Copy className="h-3 w-3" />
+                </Button>
                 <Button size="sm" variant="ghost" className="h-7 px-2"
                   onClick={() => { setBulkFor(t); setBulkText(""); }} title="Bulk upload">
                   <Upload className="h-3 w-3" />
