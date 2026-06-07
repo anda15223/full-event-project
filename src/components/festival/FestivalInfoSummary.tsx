@@ -35,6 +35,8 @@ export function FestivalInfoSummary({ festivalId }: Props) {
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -53,22 +55,40 @@ export function FestivalInfoSummary({ festivalId }: Props) {
 
   useEffect(() => { void load(); }, [festivalId]);
 
+  const fileToBase64 = (f: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result as string;
+        const idx = res.indexOf(",");
+        resolve(idx >= 0 ? res.slice(idx + 1) : res);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(f);
+    });
+
   const parse = async () => {
-    if (!rawText.trim()) {
-      toast.error("Paste the festival info first");
+    if (!file && !rawText.trim()) {
+      toast.error("Upload a PDF or paste the festival info");
       return;
     }
     setParsing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("parse-festival-info", {
-        body: { rawText, festivalId },
-      });
+      const body: Record<string, unknown> = { festivalId };
+      if (file) {
+        body.fileBase64 = await fileToBase64(file);
+        body.fileName = file.name;
+      } else {
+        body.rawText = rawText;
+      }
+      const { data, error } = await supabase.functions.invoke("parse-festival-info", { body });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setSummary(data.summary as Summary);
       setParsedAt(new Date().toISOString());
       toast.success("Info parsed");
       setOpen(false);
+      setFile(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to parse");
     } finally {
