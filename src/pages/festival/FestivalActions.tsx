@@ -34,6 +34,7 @@ import {
   Inbox, AlarmClock, Search, Calendar as CalendarIcon, FileDown, AlertTriangle,
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
+import { AIActionPlanButton } from "@/components/festival/AIActionPlanButton";
 import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
@@ -373,6 +374,7 @@ export default function FestivalActions() {
           <Button variant="outline" size="sm" asChild>
             <Link to={`/festivals/${slug}/actions/export`}><FileDown className="h-4 w-4 mr-1" />Export PDF</Link>
           </Button>
+          <AIActionPlanButton festivalId={festival.id} onCreated={() => refetch()} />
           <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Add action item</Button>
         </div>
       </header>
