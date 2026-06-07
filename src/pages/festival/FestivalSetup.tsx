@@ -849,6 +849,11 @@ export default function FestivalSetup() {
         </Button>
       </div>
 
+      {/* Fidibus brief — contractor-facing block */}
+      {run && (
+        <FidibusBriefBlock runId={run.id} festivalId={festivalId} run={run as any} />
+      )}
+
       {/* Block 3 — Fidibus attachments */}
       <div className="rounded-2xl border bg-card p-6 space-y-4">
         <div className="flex items-center justify-between gap-3">
