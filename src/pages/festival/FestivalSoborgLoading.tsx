@@ -18,6 +18,7 @@ import {
   getSoborgLoadingManifest, sortedCategories, categoryLabel, regroupForSoborgPDF,
   type SoborgLoadingManifest, type LoadingItem,
 } from "@/lib/soborgLoading";
+import { TrolleyLibraryCard } from "@/components/festival/TrolleyLibraryCard";
 
 const sb: any = supabase;
 
