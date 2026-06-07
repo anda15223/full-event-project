@@ -613,7 +613,7 @@ function ActionRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Assign to</DropdownMenuLabel>
-            {OWNERS.map((o) => (
+            {owners.map((o) => (
               <DropdownMenuItem key={o} onClick={() => onReassign(o)} className="capitalize">{o}</DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
