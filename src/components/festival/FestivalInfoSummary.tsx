@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Sparkles, Loader2, RefreshCw, Plane, LogOut, ShieldAlert, Clock, KeyRound, Car, Tent, UtensilsCrossed, Siren, Phone, MoreHorizontal } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Sparkles, Loader2, RefreshCw, Plane, LogOut, ShieldAlert, Clock, KeyRound, Car, Tent, UtensilsCrossed, Siren, Phone, MoreHorizontal, Upload, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +35,8 @@ export function FestivalInfoSummary({ festivalId }: Props) {
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -53,22 +55,40 @@ export function FestivalInfoSummary({ festivalId }: Props) {
 
   useEffect(() => { void load(); }, [festivalId]);
 
+  const fileToBase64 = (f: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result as string;
+        const idx = res.indexOf(",");
+        resolve(idx >= 0 ? res.slice(idx + 1) : res);
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(f);
+    });
+
   const parse = async () => {
-    if (!rawText.trim()) {
-      toast.error("Paste the festival info first");
+    if (!file && !rawText.trim()) {
+      toast.error("Upload a PDF or paste the festival info");
       return;
     }
     setParsing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("parse-festival-info", {
-        body: { rawText, festivalId },
-      });
+      const body: Record<string, unknown> = { festivalId };
+      if (file) {
+        body.fileBase64 = await fileToBase64(file);
+        body.fileName = file.name;
+      } else {
+        body.rawText = rawText;
+      }
+      const { data, error } = await supabase.functions.invoke("parse-festival-info", { body });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       setSummary(data.summary as Summary);
       setParsedAt(new Date().toISOString());
       toast.success("Info parsed");
       setOpen(false);
+      setFile(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to parse");
     } finally {
@@ -101,15 +121,45 @@ export function FestivalInfoSummary({ festivalId }: Props) {
             <DialogHeader>
               <DialogTitle>Parse festival info</DialogTitle>
               <DialogDescription>
-                Paste the info text the festival sent (email, doc, PDF text). The AI groups it into bullet points by category.
+                Upload the PDF/Word doc the festival sent, or paste the text below. The AI groups it into bullet points by category.
               </DialogDescription>
             </DialogHeader>
-            <Textarea
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder="Paste festival info here…"
-              className="min-h-[300px] text-sm"
-            />
+
+            <div className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,application/pdf"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Choose file
+                </Button>
+                {file && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="truncate max-w-[260px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      className="text-destructive hover:underline ml-1"
+                    >remove</button>
+                  </div>
+                )}
+                <span className="text-[11px] text-muted-foreground ml-auto">PDF, DOCX or TXT</span>
+              </div>
+
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">or paste text</div>
+              <Textarea
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                placeholder="Paste festival info here…"
+                className="min-h-[220px] text-sm"
+                disabled={!!file}
+              />
+            </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={parsing}>Cancel</Button>
               <Button onClick={parse} disabled={parsing}>

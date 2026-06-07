@@ -1,4 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { extractText, getDocumentProxy } from "npm:unpdf@0.12.1";
+import mammoth from "npm:mammoth@1.8.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,13 +55,39 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { rawText, festivalId } = await req.json().catch(() => ({}));
+    const { rawText: rawTextIn, festivalId, fileBase64, fileName } = await req.json().catch(() => ({}));
 
-    if (typeof rawText !== "string" || rawText.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "rawText is required" }), {
+    let rawText: string = typeof rawTextIn === "string" ? rawTextIn : "";
+
+    // If a file was sent, extract text from it server-side
+    if (typeof fileBase64 === "string" && fileBase64.length > 0) {
+      try {
+        const bin = Uint8Array.from(atob(fileBase64), (c) => c.charCodeAt(0));
+        const lowerName = (typeof fileName === "string" ? fileName : "").toLowerCase();
+        if (lowerName.endsWith(".pdf") || !lowerName) {
+          const pdf = await getDocumentProxy(bin);
+          const { text } = await extractText(pdf, { mergePages: true });
+          rawText = (Array.isArray(text) ? text.join("\n") : text).trim();
+        } else if (lowerName.endsWith(".docx")) {
+          const { value } = await mammoth.extractRawText({ buffer: bin });
+          rawText = (value ?? "").trim();
+        } else {
+          rawText = new TextDecoder().decode(bin).trim();
+        }
+      } catch (e) {
+        return new Response(JSON.stringify({ error: `Failed to read file: ${(e as Error).message}` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (rawText.length === 0) {
+      return new Response(JSON.stringify({ error: "rawText or file is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    if (rawText.length > 120_000) rawText = rawText.slice(0, 120_000);
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
