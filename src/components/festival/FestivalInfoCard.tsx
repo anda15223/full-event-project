@@ -142,30 +142,55 @@ export function FestivalInfoCard({ festival, defaultOpen = false }: FestivalInfo
         )}
       >
         <div className="overflow-hidden">
-          <div className="p-6 border-t space-y-6">
-            <FestivalHeader
-              festival={festival}
-              compact
-              rightSlot={
-                <LocationDocsBox
+          <div className="p-6 border-t space-y-4">
+            <CollapsibleSection storageKey={`fi-location:${festival.slug}`} title="Location & map" icon={MapPin}>
+              <div className="p-4">
+                <FestivalHeader
+                  festival={festival}
+                  compact
+                  rightSlot={
+                    <LocationDocsBox
+                      festivalId={festival.id}
+                      festivalSlug={festival.slug}
+                    />
+                  }
+                />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection storageKey={`fi-hours:${festival.slug}`} title="Hours" icon={Clock}>
+              <div className="p-2">
+                <FestivalHoursBlock
+                  festivalId={festival.id}
+                  festivalSlug={festival.slug}
+                  startDate={festival.date_start}
+                  endDate={festival.date_end}
+                />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection storageKey={`fi-contacts:${festival.slug}`} title="Contacts" icon={Users}>
+              <div className="p-2">
+                <FestivalContactsBlock
                   festivalId={festival.id}
                   festivalSlug={festival.slug}
                 />
-              }
-            />
-            <FestivalHoursBlock
-              festivalId={festival.id}
-              festivalSlug={festival.slug}
-              startDate={festival.date_start}
-              endDate={festival.date_end}
-            />
-            <FestivalContactsBlock
-              festivalId={festival.id}
-              festivalSlug={festival.slug}
-            />
-            <FestivalInfoSummary festivalId={festival.id} />
-            <FestivalInfoChat festivalId={festival.id} />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection storageKey={`fi-summary:${festival.slug}`} title="AI summary" icon={Sparkles}>
+              <div className="p-2">
+                <FestivalInfoSummary festivalId={festival.id} />
+              </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection storageKey={`fi-chat:${festival.slug}`} title="Ask the festival info" icon={MessageCircleQuestion} defaultOpen={false}>
+              <div className="p-2">
+                <FestivalInfoChat festivalId={festival.id} />
+              </div>
+            </CollapsibleSection>
           </div>
+
         </div>
       </div>
     </section>
