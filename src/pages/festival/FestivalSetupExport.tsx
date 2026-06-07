@@ -302,13 +302,55 @@ export default function FestivalSetupExport() {
 
   const doc = (
     <ReportTemplate
-      festivalName={f.name}
+      festivalName={repFix(f.name)}
       festivalDates={formatDateRange(f.start_date, f.end_date)}
       reportTitle="Setup"
-      reportSubtitle="Søborg → Jelling sequence with vehicle allocations and layout plans"
+      reportSubtitle="Soborg to site sequence, Fidibus brief, layout plans"
       accentColor="emerald"
       summary={header}
     >
+      {/* ---------- Fidibus brief: Scope & contacts ---------- */}
+      <View break>
+        <Text style={r.h2}>Scope & contacts</Text>
+        <View style={r.card}>
+          {run.scope_summary && <Text style={r.body}>{repFix(run.scope_summary)}</Text>}
+          <View style={[r.row, { marginTop: 6 }]}>
+            <Text style={r.label}>Check-in</Text>
+            <Text style={r.value}>{repFix(run.checkin_contact) || "—"}</Text>
+          </View>
+          <View style={r.row}>
+            <Text style={r.label}>Phone</Text>
+            <Text style={r.value}>{repFix(run.checkin_phone) || "—"}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ---------- Access & driving ---------- */}
+      <View break>
+        <Text style={r.h2}>Access & driving</Text>
+        <View style={r.card}>
+          <View style={r.row}><Text style={r.label}>Address</Text><Text style={r.value}>{repFix(run.access_address) || "—"}</Text></View>
+          <View style={r.row}><Text style={r.label}>Gate</Text><Text style={r.value}>{repFix(run.access_gate) || "—"}</Text></View>
+          <View style={r.row}><Text style={r.label}>Windows</Text><Text style={r.value}>{repFix(run.driving_windows) || "—"}</Text></View>
+          <View style={r.row}><Text style={r.label}>Rules</Text><Text style={r.value}>{repFix(run.driving_rules) || "—"}</Text></View>
+          <View style={r.row}><Text style={r.label}>Escort</Text><Text style={r.value}>{run.escort_required ? "Required" : "Not required"}</Text></View>
+        </View>
+      </View>
+
+      {/* ---------- Setup timeline (combined) ---------- */}
+      <View break>
+        <Text style={r.h2}>Setup timeline</Text>
+        <View style={r.card}>
+          <View style={r.row}><Text style={r.label}>Setup date</Text><Text style={r.value}>{fmtDate(run.setup_date)}</Text></View>
+          <View style={r.row}><Text style={r.label}>Soborg meet</Text><Text style={r.value}>{fmtTime(run.soborg_meet_time) || "—"}</Text></View>
+          <View style={r.row}><Text style={r.label}>Arrival</Text><Text style={r.value}>{fmtTime(run.arrival_time) || "—"}</Text></View>
+          <View style={r.row}><Text style={r.label}>Gas check</Text><Text style={r.value}>{fmtDT(run.gas_check_at)}</Text></View>
+          <View style={r.row}><Text style={r.label}>Fire insp.</Text><Text style={r.value}>{fmtDT(run.fire_inspection_at)}</Text></View>
+          <View style={r.row}><Text style={r.label}>Teardown</Text><Text style={r.value}>{fmtDT(run.teardown_start_at)}</Text></View>
+          <View style={r.row}><Text style={r.label}>Teardown win.</Text><Text style={r.value}>{repFix(run.teardown_window) || "—"}</Text></View>
+        </View>
+      </View>
+
       {/* Site overview (all-tagged) */}
       {allTagged.length > 0 && (
         <View>
@@ -319,27 +361,47 @@ export default function FestivalSetupExport() {
 
       {/* Full setup sequence — every phase in order */}
       {phases.length > 0 && (
-        <View>
+        <View break>
           <Text style={r.h2}>Setup sequence</Text>
           {phases.map(renderPhase)}
         </View>
       )}
 
-      {/* Concept-grouped layout attachments only */}
-      {CONCEPT_ORDER.map((c) => {
-        const atts = attByConcept(c);
-        if (atts.length === 0) return null;
-        return (
-          <View key={c}>
-            <Text style={[r.h2, { textTransform: "capitalize" }]}>{c} — layout</Text>
-            {atts.map(renderAttachment)}
-          </View>
-        );
-      })}
+      {/* ---------- Build-out ---------- */}
+      {buildout.length > 0 && (
+        <View break>
+          <Text style={r.h2}>Build-out (Fidibus places)</Text>
+          {CATEGORIES.map((cat) => {
+            const rows = buildoutByCat[cat] ?? [];
+            if (rows.length === 0) return null;
+            return (
+              <View key={cat} style={r.card}>
+                <Text style={[r.h3, { textTransform: "uppercase" }]}>{cat}</Text>
+                <View style={r.th}>
+                  <Text style={{ width: "30%" }}>Label</Text>
+                  <Text style={{ width: "22%" }}>Spec</Text>
+                  <Text style={{ width: "10%" }}>Qty</Text>
+                  <Text style={{ width: "14%" }}>Area</Text>
+                  <Text style={{ width: "24%" }}>Position / notes</Text>
+                </View>
+                {rows.map((b: any) => (
+                  <View key={b.id} style={r.tr}>
+                    <Text style={{ width: "30%" }}>{repFix(b.label) || "—"}</Text>
+                    <Text style={{ width: "22%" }}>{repFix(b.spec) || "—"}</Text>
+                    <Text style={{ width: "10%" }}>{b.qty ?? "—"}</Text>
+                    <Text style={{ width: "14%" }}>{repFix(b.area) || "—"}</Text>
+                    <Text style={{ width: "24%" }}>{repFix(b.dimensions ? `${b.dimensions} · ` : "") + repFix(b.position_notes ?? "")}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      )}
 
-      {/* Allocation summary */}
-      <View>
-        <Text style={r.h2}>Allocation summary</Text>
+      {/* ---------- Vehicles arriving (allocation summary) ---------- */}
+      <View break>
+        <Text style={r.h2}>Vehicles arriving</Text>
         {usedAllocIds.length === 0 ? (
           <Text style={r.small}>No vehicles allocated.</Text>
         ) : (
@@ -349,12 +411,36 @@ export default function FestivalSetupExport() {
             const missing = !a.driver_name;
             return (
               <Text key={id} style={[r.small, missing && { color: "#b91c1c", fontWeight: 700 }]}>
-                • {a.vehicle_name} — {a.driver_name ?? "UNALLOCATED"}
+                • {repFix(a.vehicle_name)} — {a.driver_name ? repFix(a.driver_name) : "UNALLOCATED"}
               </Text>
             );
           })
         )}
       </View>
+
+      {/* Concept-grouped layout attachments — each map full-page */}
+      {CONCEPT_ORDER.map((c) => {
+        const atts = attByConcept(c);
+        if (atts.length === 0) return null;
+        return (
+          <View key={c} break>
+            <Text style={[r.h2, { textTransform: "capitalize" }]}>Layout plan — {c}</Text>
+            {atts.map((a) => (
+              <View key={a.id} break>{renderAttachment(a)}</View>
+            ))}
+          </View>
+        );
+      })}
+
+      {/* ---------- Fidibus notes ---------- */}
+      {run.fidibus_notes && (
+        <View break>
+          <Text style={r.h2}>Fidibus notes</Text>
+          <View style={r.card}>
+            <Text style={r.body}>{repFix(run.fidibus_notes)}</Text>
+          </View>
+        </View>
+      )}
     </ReportTemplate>
   );
 
