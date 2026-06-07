@@ -541,6 +541,7 @@ function ActionRow({
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const owners = useOwnerOptions();
   const due = dueChip(item.due_date);
   const isOverdue = item.due_date && item.status !== "done" && dayDiff(item.due_date) < 0;
   const SourceIcon = SOURCE_ICON[item.source ?? "manual"] || User;
