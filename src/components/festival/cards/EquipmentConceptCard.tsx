@@ -30,6 +30,7 @@ const STATUS_PILL: Record<string, string> = {
 export interface EquipmentConceptCardProps {
   festivalId: string;
   festivalSlug: string;
+  conceptId: string;
   conceptSlug: ConceptSlug;
   conceptName: string;
   contractId: string;
@@ -210,7 +211,7 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
           </div>
         )}
       </CardContent>
-      <ConceptTrolleysSection conceptId={props.contractId ? (rows[0] as any)?.concept_id ?? "" : ""} />
+      <ConceptTrolleysSection conceptId={props.conceptId} />
     </Card>
   );
 }

@@ -177,6 +177,7 @@ export default function FestivalEquipment() {
               key={it.contractId}
               festivalId={festivalId}
               festivalSlug={slug}
+              conceptId={it.concept.id}
               conceptSlug={it.concept.slug}
               conceptName={it.concept.name}
               contractId={it.contractId}
