@@ -86,6 +86,11 @@ export default function FestivalSetupExport() {
       const { data: phases } = await sb.from("setup_phases")
         .select("*").eq("setup_run_id", run.id).order("sort_order");
 
+      const { data: buildout } = await sb.from("fep_fidibus_buildout")
+        .select("*, concept:concepts!concept_id(name, display_order)")
+        .eq("festival_id", f.id)
+        .order("category").order("display_order");
+
       // Build allocation lookup from BOTH staff vehicles and the Transport card
       const allocMap = new Map<string, { vehicle_name: string; driver_name: string | null }>();
 
