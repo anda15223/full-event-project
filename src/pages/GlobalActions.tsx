@@ -38,7 +38,7 @@ const STATUS_PILL: Record<Status, string> = {
   blocked: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
 };
 const SOURCE_ICON: Record<string, any> = { email: Mail, manual: User, contract: FileText, intelligence: Brain, ingestion: Inbox };
-const OWNERS = ["fif", "marius", "costel", "marko", "anca"];
+const OWNERS = ["Alexandra Artimon", "Marius", "Costel", "Marko", "Anca"];
 
 interface Item {
   id: string; festival_id: string; concept_id: string | null; contract_id: string | null;

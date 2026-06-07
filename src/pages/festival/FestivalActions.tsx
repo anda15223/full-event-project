@@ -44,7 +44,7 @@ type Source = "email" | "manual" | "contract" | "intelligence" | "ingestion";
 const STATUSES: Status[] = ["open", "in_progress", "done", "blocked"];
 const PRIORITIES: Priority[] = ["critical", "high", "medium", "low"];
 const SOURCES: Source[] = ["manual", "email", "contract", "intelligence", "ingestion"];
-const OWNERS = ["fif", "marius", "costel", "marko", "anca"];
+const OWNERS = ["Alexandra Artimon", "Marius", "Costel", "Marko", "Anca"];
 
 const PRIORITY_DOT: Record<Priority, string> = {
   critical: "bg-red-500",
@@ -191,7 +191,7 @@ export default function FestivalActions() {
 
   // Filters
   const [tab, setTab] = useState<"all" | Status>(highlightId ? "all" : "open");
-  const [pill, setPill] = useState<null | "critical" | "week" | "overdue" | "fif" | "marius" | "costel">(null);
+  const [pill, setPill] = useState<null | "critical" | "week" | "overdue" | "alexandra" | "marius" | "costel">(null);
   const [groupBy, setGroupBy] = useState<"status" | "priority" | "due" | "concept" | "owner">("status");
   const [search, setSearch] = useState("");
 
@@ -222,9 +222,9 @@ export default function FestivalActions() {
         if (!i.due_date || i.status === "done") return false;
         if (dayDiff(i.due_date) >= 0) return false;
       }
-      if (pill === "fif" && i.owner !== "fif") return false;
-      if (pill === "marius" && i.owner !== "marius") return false;
-      if (pill === "costel" && i.owner !== "costel") return false;
+      if (pill === "alexandra" && i.owner !== "Alexandra Artimon") return false;
+      if (pill === "marius" && i.owner !== "Marius") return false;
+      if (pill === "costel" && i.owner !== "Costel") return false;
       if (search) {
         const s = search.toLowerCase();
         const t = `${i.title} ${i.description ?? ""}`.toLowerCase();
@@ -401,7 +401,7 @@ export default function FestivalActions() {
             { v: "critical", label: "🔴 Critical" },
             { v: "week", label: "📅 This week" },
             { v: "overdue", label: "🚨 Overdue" },
-            { v: "fif", label: "Mine (Fif)" },
+            { v: "alexandra", label: "Alexandra Artimon" },
             { v: "marius", label: "Marius" },
             { v: "costel", label: "Costel" },
           ].map((p) => (
