@@ -191,6 +191,10 @@ export function ConceptTrolleysSection({ conceptId }: { conceptId: string }) {
               <span className="text-[11px] text-muted-foreground">({list.length} items)</span>
               <div className="ml-auto flex gap-1">
                 <Button size="sm" variant="ghost" className="h-7 px-2"
+                  onClick={() => duplicateTrolley(t)} title="Duplicate trolley">
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 px-2"
                   onClick={() => { setBulkFor(t); setBulkText(""); }} title="Bulk upload">
                   <Upload className="h-3 w-3" />
                 </Button>
