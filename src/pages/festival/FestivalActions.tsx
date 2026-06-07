@@ -374,6 +374,7 @@ export default function FestivalActions() {
           <Button variant="outline" size="sm" asChild>
             <Link to={`/festivals/${slug}/actions/export`}><FileDown className="h-4 w-4 mr-1" />Export PDF</Link>
           </Button>
+          <AIActionPlanButton festivalId={festival.id} onCreated={() => refetch()} />
           <Button size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" />Add action item</Button>
         </div>
       </header>
