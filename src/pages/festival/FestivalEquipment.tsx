@@ -137,7 +137,7 @@ export default function FestivalEquipment() {
         <div className="flex items-center justify-between gap-3 mt-2">
           <div className="flex items-center gap-3">
             <Wrench className="h-7 w-7 text-slate-500" />
-            <h1 className="text-3xl font-bold tracking-tight">Equipment</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Equipment & Trolleys</h1>
           </div>
           <a href={`/festivals/${slug}/equipment/export`} target="_blank" rel="noopener noreferrer"
              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
@@ -177,6 +177,7 @@ export default function FestivalEquipment() {
               key={it.contractId}
               festivalId={festivalId}
               festivalSlug={slug}
+              conceptId={it.concept.id}
               conceptSlug={it.concept.slug}
               conceptName={it.concept.name}
               contractId={it.contractId}

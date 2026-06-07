@@ -17,6 +17,7 @@ import { POWER_TYPES, POWER_TYPE_LABEL, type PowerType } from "@/lib/powerGapAna
 import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { useFestivalVehicles } from "@/hooks/useFestivalVehicles";
 import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
+import { ConceptTrolleysSection } from "@/components/festival/ConceptTrolleysSection";
 
 type Vehicle = { id: string; vehicle_type: string };
 
@@ -29,6 +30,7 @@ const STATUS_PILL: Record<string, string> = {
 export interface EquipmentConceptCardProps {
   festivalId: string;
   festivalSlug: string;
+  conceptId: string;
   conceptSlug: ConceptSlug;
   conceptName: string;
   contractId: string;
@@ -209,6 +211,7 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
           </div>
         )}
       </CardContent>
+      <ConceptTrolleysSection conceptId={props.conceptId} />
     </Card>
   );
 }
