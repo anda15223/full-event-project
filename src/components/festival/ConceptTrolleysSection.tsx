@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, Plus, Trash2, ChevronDown, Upload, Loader2 } from "lucide-react";
+import { ShoppingCart, Plus, Trash2, ChevronDown, Upload, Loader2, Copy } from "lucide-react";
 
 const sb: any = supabase;
 
