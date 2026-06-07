@@ -83,6 +83,29 @@ export function ConceptTrolleysSection({ conceptId }: { conceptId: string }) {
     if (error) return toast.error(error.message);
     load();
   };
+  const duplicateTrolley = async (t: Trolley) => {
+    const copyName = `${t.name} (Copy)`;
+    const sortOrder = trolleys.length;
+    const { data: newTrolley, error: tErr } = await sb.from("concept_trolleys")
+      .insert({ concept_id: t.concept_id, name: copyName, sort_order: sortOrder })
+      .select("id").single();
+    if (tErr || !newTrolley) return toast.error(tErr?.message || "Failed to duplicate trolley");
+    const sourceItems = items[t.id] ?? [];
+    if (sourceItems.length) {
+      const rows = sourceItems.map((it, idx) => ({
+        concept_id: t.concept_id,
+        trolley_id: newTrolley.id,
+        item_name: it.name,
+        quantity: it.quantity,
+        notes: it.notes,
+        position: idx,
+      }));
+      const { error: iErr } = await sb.from("concept_trolley_items").insert(rows);
+      if (iErr) return toast.error(iErr.message);
+    }
+    toast.success(`Duplicated "${t.name}"`);
+    load();
+  };
   const addItem = async (t: Trolley) => {
     const { error } = await sb.from("concept_trolley_items").insert({
       concept_id: t.concept_id, trolley_id: t.id,
