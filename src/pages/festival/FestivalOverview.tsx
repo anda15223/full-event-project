@@ -586,6 +586,21 @@ export default function FestivalOverview() {
 
   const festivalId = festivalQ.data?.id ?? null;
 
+  const activeContractsQ = useQuery({
+    queryKey: ["overview-active-contracts", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_contracts")
+        .select("concept_id")
+        .eq("festival_id", festivalId!)
+        .eq("is_active", true);
+      if (error) throw error;
+      return new Set((data ?? []).map((r: any) => r.concept_id as string));
+    },
+  });
+
+
   const keyDatesQ = useKeyDates(festivalId);
   const statsQ = useConceptStats(festivalId);
 
@@ -735,9 +750,13 @@ export default function FestivalOverview() {
       </section>
 
       {/* BLOCK 4 — service hours */}
-      {festivalId && conceptsQ.data && (
-        <ServiceHoursBlock festivalId={festivalId} concepts={conceptsQ.data} />
+      {festivalId && conceptsQ.data && activeContractsQ.data && (
+        <ServiceHoursBlock
+          festivalId={festivalId}
+          concepts={conceptsQ.data.filter((c) => activeContractsQ.data!.has(c.id))}
+        />
       )}
+
 
       {/* BLOCK 5 — contacts (canonical surface) */}
 
