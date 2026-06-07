@@ -870,6 +870,118 @@ export type Database = {
           },
         ]
       }
+      fep_fidibus_buildout: {
+        Row: {
+          area: string | null
+          category: string
+          concept_id: string | null
+          created_at: string
+          dimensions: string | null
+          display_order: number
+          festival_id: string
+          id: string
+          label: string | null
+          position_notes: string | null
+          qty: number | null
+          spec: string | null
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          category: string
+          concept_id?: string | null
+          created_at?: string
+          dimensions?: string | null
+          display_order?: number
+          festival_id: string
+          id?: string
+          label?: string | null
+          position_notes?: string | null
+          qty?: number | null
+          spec?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          category?: string
+          concept_id?: string | null
+          created_at?: string
+          dimensions?: string | null
+          display_order?: number
+          festival_id?: string
+          id?: string
+          label?: string | null
+          position_notes?: string | null
+          qty?: number | null
+          spec?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fep_fidibus_buildout_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
       fep_user_roles: {
         Row: {
           created_at: string
@@ -9329,33 +9441,72 @@ export type Database = {
       }
       setup_runs: {
         Row: {
+          access_address: string | null
+          access_gate: string | null
           arrival_time: string | null
+          checkin_contact: string | null
+          checkin_phone: string | null
           created_at: string
           destination_address: string | null
+          driving_rules: string | null
+          driving_windows: string | null
+          escort_required: boolean | null
           festival_id: string
+          fidibus_notes: string | null
+          fire_inspection_at: string | null
+          gas_check_at: string | null
           id: string
+          scope_summary: string | null
           setup_date: string | null
           soborg_meet_time: string | null
+          teardown_start_at: string | null
+          teardown_window: string | null
           updated_at: string
         }
         Insert: {
+          access_address?: string | null
+          access_gate?: string | null
           arrival_time?: string | null
+          checkin_contact?: string | null
+          checkin_phone?: string | null
           created_at?: string
           destination_address?: string | null
+          driving_rules?: string | null
+          driving_windows?: string | null
+          escort_required?: boolean | null
           festival_id: string
+          fidibus_notes?: string | null
+          fire_inspection_at?: string | null
+          gas_check_at?: string | null
           id?: string
+          scope_summary?: string | null
           setup_date?: string | null
           soborg_meet_time?: string | null
+          teardown_start_at?: string | null
+          teardown_window?: string | null
           updated_at?: string
         }
         Update: {
+          access_address?: string | null
+          access_gate?: string | null
           arrival_time?: string | null
+          checkin_contact?: string | null
+          checkin_phone?: string | null
           created_at?: string
           destination_address?: string | null
+          driving_rules?: string | null
+          driving_windows?: string | null
+          escort_required?: boolean | null
           festival_id?: string
+          fidibus_notes?: string | null
+          fire_inspection_at?: string | null
+          gas_check_at?: string | null
           id?: string
+          scope_summary?: string | null
           setup_date?: string | null
           soborg_meet_time?: string | null
+          teardown_start_at?: string | null
+          teardown_window?: string | null
           updated_at?: string
         }
         Relationships: []
