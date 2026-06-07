@@ -44,7 +44,7 @@ const QTYPES: QuestionType[] = [
   "verify_operating_entity", "concept_inclusion", "contract_terms",
   "logistics", "commercial", "general",
 ];
-const OWNERS = ["fif", "marius", "jonas_kring", "festival", "costel", "marko"];
+const OWNERS = ["Alexandra Artimon", "Marius", "jonas_kring", "festival", "Costel", "Marko"];
 
 const PRIORITY_DOT: Record<Priority, string> = {
   critical: "bg-red-500", high: "bg-orange-500", medium: "bg-yellow-500", low: "bg-muted-foreground/40",
@@ -201,7 +201,7 @@ export default function FestivalQuestions() {
       if (tab !== "all" && q.status !== tab) return false;
       if (pill === "critical" && q.priority !== "critical") return false;
       if (pill === "deadline" && !q.deadline) return false;
-      if (pill === "mine" && q.decision_owner !== "fif") return false;
+      if (pill === "mine" && q.decision_owner !== "Alexandra Artimon") return false;
       if (pill === "blocking" && !q.blocking_what) return false;
       if (search) {
         const s = search.toLowerCase();
@@ -734,7 +734,7 @@ function ResolveDrawer({
   const [actTitle, setActTitle] = useState("");
   const [actDesc, setActDesc] = useState("");
   const [actDue, setActDue] = useState("");
-  const [actOwner, setActOwner] = useState("fif");
+  const [actOwner, setActOwner] = useState("Alexandra Artimon");
   const [actPriority, setActPriority] = useState<Priority>("medium");
 
   // Rule fields
@@ -757,7 +757,7 @@ function ResolveDrawer({
     setResolution(""); setCreateAction(false); setCreateRule(false);
     setUpdateContract(false); setUpdateAssignment(false);
     setActTitle(question.question); setActDesc("");
-    setActDue(""); setActOwner("fif"); setActPriority("medium");
+    setActDue(""); setActOwner("Alexandra Artimon"); setActPriority("medium");
     setRuleTitle(question.question.slice(0, 80)); setRuleDesc(""); setRuleSeverity("important");
     if (question.contract_id) {
       const c = contracts.find((ct: any) => ct.id === question.contract_id);
