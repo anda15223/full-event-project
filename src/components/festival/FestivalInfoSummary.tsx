@@ -121,15 +121,45 @@ export function FestivalInfoSummary({ festivalId }: Props) {
             <DialogHeader>
               <DialogTitle>Parse festival info</DialogTitle>
               <DialogDescription>
-                Paste the info text the festival sent (email, doc, PDF text). The AI groups it into bullet points by category.
+                Upload the PDF/Word doc the festival sent, or paste the text below. The AI groups it into bullet points by category.
               </DialogDescription>
             </DialogHeader>
-            <Textarea
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder="Paste festival info here…"
-              className="min-h-[300px] text-sm"
-            />
+
+            <div className="space-y-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.txt,application/pdf"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Choose file
+                </Button>
+                {file && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5" />
+                    <span className="truncate max-w-[260px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      className="text-destructive hover:underline ml-1"
+                    >remove</button>
+                  </div>
+                )}
+                <span className="text-[11px] text-muted-foreground ml-auto">PDF, DOCX or TXT</span>
+              </div>
+
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">or paste text</div>
+              <Textarea
+                value={rawText}
+                onChange={(e) => setRawText(e.target.value)}
+                placeholder="Paste festival info here…"
+                className="min-h-[220px] text-sm"
+                disabled={!!file}
+              />
+            </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)} disabled={parsing}>Cancel</Button>
               <Button onClick={parse} disabled={parsing}>
