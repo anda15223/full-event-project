@@ -7,6 +7,7 @@ import { FestivalHoursBlock } from "@/components/festival/FestivalHoursBlock";
 import { FestivalContactsBlock } from "@/components/festival/FestivalContactsBlock";
 import { LocationDocsBox } from "@/components/festival/LocationDocsBox";
 import { FestivalInfoSummary } from "@/components/festival/FestivalInfoSummary";
+import { FestivalInfoChat } from "@/components/festival/FestivalInfoChat";
 
 export interface FestivalInfoCardProps {
   festival: {
