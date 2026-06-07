@@ -750,9 +750,13 @@ export default function FestivalOverview() {
       </section>
 
       {/* BLOCK 4 — service hours */}
-      {festivalId && conceptsQ.data && (
-        <ServiceHoursBlock festivalId={festivalId} concepts={conceptsQ.data} />
+      {festivalId && conceptsQ.data && activeContractsQ.data && (
+        <ServiceHoursBlock
+          festivalId={festivalId}
+          concepts={conceptsQ.data.filter((c) => activeContractsQ.data!.has(c.id))}
+        />
       )}
+
 
       {/* BLOCK 5 — contacts (canonical surface) */}
 
