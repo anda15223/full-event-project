@@ -417,6 +417,8 @@ export default function FestivalSoborgLoading() {
         </Card>
       )}
 
+      <TrolleyLibraryCard />
+
       {data.vehicles.map((veh) => (
         <Card key={veh.vehicle_id}>
           <CardHeader className="pb-3">
