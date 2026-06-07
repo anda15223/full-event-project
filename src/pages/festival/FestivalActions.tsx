@@ -640,6 +640,7 @@ function ActionForm({
   saving: boolean;
 }) {
   const set = (patch: Partial<ActionItem>) => onChange({ ...item, ...patch });
+  const owners = useOwnerOptions();
   const filteredContracts = item.concept_id ? contracts.filter((c) => c.concept_id === item.concept_id) : [];
 
   return (
@@ -697,7 +698,7 @@ function ActionForm({
             <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">Unassigned</SelectItem>
-              {OWNERS.map((o) => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}
+              {owners.map((o) => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
