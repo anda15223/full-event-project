@@ -86,6 +86,7 @@ export type Database = {
           notes: string | null
           position: number
           quantity: string
+          trolley_id: string | null
           updated_at: string
         }
         Insert: {
@@ -96,6 +97,7 @@ export type Database = {
           notes?: string | null
           position?: number
           quantity: string
+          trolley_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -106,6 +108,7 @@ export type Database = {
           notes?: string | null
           position?: number
           quantity?: string
+          trolley_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -118,6 +121,55 @@ export type Database = {
           },
           {
             foreignKeyName: "concept_trolley_items_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "concept_trolley_items_trolley_id_fkey"
+            columns: ["trolley_id"]
+            isOneToOne: false
+            referencedRelation: "concept_trolleys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concept_trolleys: {
+        Row: {
+          concept_id: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_trolleys_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "concept_trolleys_concept_id_fkey"
             columns: ["concept_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
@@ -7885,6 +7937,97 @@ export type Database = {
             columns: ["season_rental_id"]
             isOneToOne: false
             referencedRelation: "season_rentals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      festival_trolley_assignments: {
+        Row: {
+          created_at: string
+          festival_id: string
+          id: string
+          transport_id: string | null
+          trolley_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          festival_id: string
+          id?: string
+          transport_id?: string | null
+          trolley_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          festival_id?: string
+          id?: string
+          transport_id?: string | null
+          trolley_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_transport_id_fkey"
+            columns: ["transport_id"]
+            isOneToOne: false
+            referencedRelation: "festival_transport"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_trolley_assignments_trolley_id_fkey"
+            columns: ["trolley_id"]
+            isOneToOne: false
+            referencedRelation: "concept_trolleys"
             referencedColumns: ["id"]
           },
         ]
