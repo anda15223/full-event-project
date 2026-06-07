@@ -158,16 +158,8 @@ export function FestivalInfoCard({ festival, defaultOpen = false }: FestivalInfo
               </div>
             </CollapsibleSection>
 
-            <CollapsibleSection storageKey={`fi-hours:${festival.slug}`} title="Hours" icon={Clock}>
-              <div className="p-2">
-                <FestivalHoursBlock
-                  festivalId={festival.id}
-                  festivalSlug={festival.slug}
-                  startDate={festival.date_start}
-                  endDate={festival.date_end}
-                />
-              </div>
-            </CollapsibleSection>
+
+
 
             <CollapsibleSection storageKey={`fi-contacts:${festival.slug}`} title="Contacts" icon={Users}>
               <div className="p-2">
