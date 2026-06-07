@@ -44,7 +44,31 @@ type Source = "email" | "manual" | "contract" | "intelligence" | "ingestion";
 const STATUSES: Status[] = ["open", "in_progress", "done", "blocked"];
 const PRIORITIES: Priority[] = ["critical", "high", "medium", "low"];
 const SOURCES: Source[] = ["manual", "email", "contract", "intelligence", "ingestion"];
-const OWNERS = ["Alexandra Artimon", "Marius", "Costel", "Marko", "Anca"];
+const FALLBACK_OWNERS = ["Alexandra Artimon", "Marius", "Costel", "Marko", "Anca"];
+const FIXED_TEAMS = ["Fidibus team"];
+
+function useOwnerOptions() {
+  const { data } = useQuery({
+    queryKey: ["owner-options-staff"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff")
+        .select("display_name, full_name")
+        .eq("is_active", true)
+        .order("display_name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((s: any) => s.display_name || s.full_name).filter(Boolean) as string[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  return useMemo(() => {
+    const merged = new Set<string>();
+    FALLBACK_OWNERS.forEach((o) => merged.add(o));
+    (data ?? []).forEach((o) => merged.add(o));
+    const list = Array.from(merged).sort((a, b) => a.localeCompare(b));
+    return [...FIXED_TEAMS, ...list];
+  }, [data]);
+}
 
 const PRIORITY_DOT: Record<Priority, string> = {
   critical: "bg-red-500",
@@ -517,6 +541,7 @@ function ActionRow({
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const owners = useOwnerOptions();
   const due = dueChip(item.due_date);
   const isOverdue = item.due_date && item.status !== "done" && dayDiff(item.due_date) < 0;
   const SourceIcon = SOURCE_ICON[item.source ?? "manual"] || User;
@@ -588,7 +613,7 @@ function ActionRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Assign to</DropdownMenuLabel>
-            {OWNERS.map((o) => (
+            {owners.map((o) => (
               <DropdownMenuItem key={o} onClick={() => onReassign(o)} className="capitalize">{o}</DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
@@ -615,6 +640,7 @@ function ActionForm({
   saving: boolean;
 }) {
   const set = (patch: Partial<ActionItem>) => onChange({ ...item, ...patch });
+  const owners = useOwnerOptions();
   const filteredContracts = item.concept_id ? contracts.filter((c) => c.concept_id === item.concept_id) : [];
 
   return (
@@ -672,7 +698,7 @@ function ActionForm({
             <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__none">Unassigned</SelectItem>
-              {OWNERS.map((o) => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}
+              {owners.map((o) => <SelectItem key={o} value={o} className="capitalize">{o}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
