@@ -636,12 +636,12 @@ export default function FestivalStaff() {
           const crewPool = allRows;
 
           const groups = [
-            { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
             ...concepts.map((c) => ({
               id: c.id,
               name: c.name,
               people: allRows.filter((s) => s.concept_id === c.id && s.role !== "management"),
             })),
+            { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
             { id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
           ];
 
