@@ -297,6 +297,7 @@ export default function FestivalQuestions() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="questions"
@@ -846,7 +847,6 @@ function ResolveDrawer({
 
   return (
     <Sheet open={!!question} onOpenChange={(o) => !o && onClose()}>
-      <FestivalBackBar />
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Resolve question</SheetTitle>

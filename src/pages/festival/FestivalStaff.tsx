@@ -1666,7 +1666,6 @@ function CrewRegisterCard({
 
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <FestivalBackBar />
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <KeyRound className="h-4 w-4 text-muted-foreground" />

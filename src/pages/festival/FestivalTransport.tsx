@@ -303,6 +303,7 @@ export default function FestivalTransport() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6 print:max-w-full print:space-y-4">
+      <FestivalBackBar />
 
       {festival?.id && <AccreditationCard festivalId={festival.id} />}
 
@@ -1625,7 +1626,6 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
 
   return (
     <>
-      <FestivalBackBar />
       <button
         onClick={() => setOpen(true)}
         disabled={!festivalId}

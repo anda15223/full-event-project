@@ -264,6 +264,7 @@ export default function FestivalContracts() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="contracts"
@@ -1008,7 +1009,6 @@ function ContractSummarySection({ contract: c, fileUrl }: { contract: Contract; 
 
   return (
     <div className="rounded-lg border p-2 space-y-2">
-      <FestivalBackBar />
       <div className="flex items-center justify-between gap-2">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Contract details</div>
         <div className="flex items-center gap-2">

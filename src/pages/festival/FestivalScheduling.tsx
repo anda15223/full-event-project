@@ -177,6 +177,7 @@ export default function FestivalScheduling() {
   if (festivalQ.isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
+      <FestivalBackBar />
         <Skeleton className="h-10 w-64 mb-4" />
         <Skeleton className="h-48 w-full" />
       </div>
@@ -196,7 +197,6 @@ export default function FestivalScheduling() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <FestivalBackBar />
       <div className="space-y-2">
         <Link
           to={`/festivals/${slug}`}

@@ -277,6 +277,7 @@ export default function FestivalTimeline() {
 
   if (festivalQ.isLoading || !festivalQ.data) return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6">
+      <FestivalBackBar />
       <Skeleton className="h-32 w-full" />
     </div>
   );
@@ -628,7 +629,6 @@ function PhaseLane({ label, range, icon: Icon, accent }: { label: string; range:
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block text-xs">
-      <FestivalBackBar />
       <span className="text-muted-foreground">{label}</span>
       <div className="mt-1">{children}</div>
     </label>

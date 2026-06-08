@@ -374,6 +374,7 @@ export default function FestivalActions() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="actions"
@@ -646,7 +647,6 @@ function ActionForm({
 
   return (
     <div className="space-y-4 py-4">
-      <FestivalBackBar />
       <div className="space-y-1.5">
         <Label>Title *</Label>
         <Input value={item.title} onChange={(e) => set({ title: e.target.value })} autoFocus />

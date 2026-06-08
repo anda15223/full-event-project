@@ -457,7 +457,6 @@ export default function FestivalSoborgLoading() {
                     const items = grouped[cat];
                     return (
                       <div key={cat}>
-      <FestivalBackBar />
                         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                           <Icon className="h-3.5 w-3.5" /> {categoryLabel(cat)}
                         </div>

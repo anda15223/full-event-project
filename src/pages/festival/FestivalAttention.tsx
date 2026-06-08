@@ -36,6 +36,7 @@ export default function FestivalAttention() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      <FestivalBackBar />
       <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← {festivalName}</Link>
       <div>
         <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">Attention — {festivalName}</h1>
@@ -61,7 +62,6 @@ export default function FestivalAttention() {
             const list = grouped[b];
             return (
               <section key={b} className={cn("rounded-xl border p-4", bucketSectionClasses(b))}>
-      <FestivalBackBar />
                 <header className="flex items-center justify-between mb-3">
                   <h2 className="text-sm font-heading font-semibold uppercase tracking-wide">
                     {BUCKET_EMOJI[b]} {BUCKET_LABEL[b]}

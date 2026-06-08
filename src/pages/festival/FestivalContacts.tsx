@@ -179,6 +179,7 @@ export default function FestivalContacts() {
 
   return (
     <div className="container max-w-7xl mx-auto p-6 space-y-6">
+      <FestivalBackBar />
       <ImportFromPreviousCard
         cardLabel="contacts"
         tables={CARD_TABLES.contacts}
@@ -630,7 +631,6 @@ function CrossFestivalDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <FestivalBackBar />
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{agg?.canonical_name ?? "Contact"}</SheetTitle>
