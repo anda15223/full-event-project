@@ -318,7 +318,8 @@ export default function FestivalAccommodation() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={pageQ.data!.bookings.length === 1 ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
+
             {pageQ.data!.bookings.map((b) => (
               <AccommodationBookingCard
                 key={b.id}
