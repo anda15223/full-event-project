@@ -1353,79 +1353,86 @@ function DayPickerCell({
   onChange: (next: string[]) => void;
 }) {
   const selectedSet = new Set(selected);
-  // Preserve order using dayWindow when possible, then append any
-  // stray dates (e.g. legacy) that aren't in the current window.
-  const orderedSelected = [
-    ...dayWindow.filter((d) => selectedSet.has(d.iso)),
+  const festivalDays = dayWindow.filter((d) => d.isFestivalDay);
+  const extraDays = dayWindow.filter((d) => !d.isFestivalDay);
+
+  // Visible rows: every festival day + any selected non-festival day
+  // (incl. legacy dates outside the current window).
+  const visibleRows = [
+    ...festivalDays,
+    ...extraDays.filter((d) => selectedSet.has(d.iso)),
     ...selected
       .filter((iso) => !dayWindow.some((d) => d.iso === iso))
       .map((iso) => ({ iso, label: iso.slice(5), isFestivalDay: false })),
   ];
 
-  const chipClass =
-    variant === "work"
-      ? "bg-emerald-600 text-white border-emerald-700"
-      : "bg-primary text-primary-foreground border-primary";
+  // Extra days not yet selected — available in the "+" picker.
+  const availableExtras = extraDays.filter((d) => !selectedSet.has(d.iso));
+
+  const accent =
+    variant === "work" ? "text-emerald-700" : "text-primary";
+
+  const toggle = (iso: string, checked: boolean) => {
+    const next = checked
+      ? [...selected, iso].sort()
+      : selected.filter((x) => x !== iso);
+    onChange(next);
+  };
 
   return (
-    <div className="flex items-center justify-center gap-1 flex-wrap">
-      {orderedSelected.length === 0 ? (
-        <span className="text-[10px] text-muted-foreground italic">—</span>
-      ) : (
-        orderedSelected.map((d) => (
-          <span
+    <div className="flex items-center justify-center gap-2 flex-wrap">
+      {visibleRows.map((d) => {
+        const checked = selectedSet.has(d.iso);
+        return (
+          <label
             key={d.iso}
-            className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums ${chipClass}`}
+            className="flex flex-col items-center gap-0.5 cursor-pointer select-none"
+            title={d.iso}
           >
-            {d.label}
-          </span>
-        ))
-      )}
+            <span
+              className={`text-[10px] tabular-nums ${
+                d.isFestivalDay ? "text-muted-foreground" : accent
+              }`}
+            >
+              {d.label}
+            </span>
+            <Checkbox
+              checked={checked}
+              onCheckedChange={(c) => toggle(d.iso, !!c)}
+            />
+          </label>
+        );
+      })}
+
       <Popover>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-border text-muted-foreground hover:bg-muted"
-            title={`Edit ${title.toLowerCase()}`}
+            className="inline-flex h-5 w-5 items-center justify-center rounded border border-dashed border-border text-muted-foreground hover:bg-muted"
+            title={`Add ${title.toLowerCase()}`}
           >
-            <Pencil className="h-3 w-3" />
+            <Plus className="h-3 w-3" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-60 p-3" align="end">
-          <div className="text-xs font-semibold mb-2">{title}</div>
-          {dayWindow.length === 0 ? (
+        <PopoverContent className="w-56 p-3" align="end">
+          <div className="text-xs font-semibold mb-2">Add {title.toLowerCase()}</div>
+          {availableExtras.length === 0 ? (
             <div className="text-[11px] text-muted-foreground italic">
-              Set the festival start &amp; end date first.
+              No extra days available.
             </div>
           ) : (
             <div className="space-y-1">
-              {dayWindow.map((d) => {
-                const checked = selectedSet.has(d.iso);
-                return (
-                  <label
-                    key={d.iso}
-                    className={`flex items-center justify-between gap-2 px-2 py-1 rounded cursor-pointer text-xs ${
-                      d.isFestivalDay ? "bg-muted/40" : ""
-                    } hover:bg-muted`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(c) => {
-                          const next = c
-                            ? [...selected, d.iso].sort()
-                            : selected.filter((x) => x !== d.iso);
-                          onChange(next);
-                        }}
-                      />
-                      <span className="tabular-nums">{d.label}</span>
-                    </span>
-                    {!d.isFestivalDay && (
-                      <span className="text-[9px] uppercase text-muted-foreground">extra</span>
-                    )}
-                  </label>
-                );
-              })}
+              {availableExtras.map((d) => (
+                <button
+                  key={d.iso}
+                  type="button"
+                  onClick={() => toggle(d.iso, true)}
+                  className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-muted"
+                >
+                  <span className="tabular-nums">{d.label}</span>
+                  <span className="text-[9px] uppercase text-muted-foreground">add</span>
+                </button>
+              ))}
             </div>
           )}
         </PopoverContent>
