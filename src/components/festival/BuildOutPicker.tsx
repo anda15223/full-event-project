@@ -62,18 +62,59 @@ export default function BuildOutPicker({
         const { data } = await sb.from("festival_contracts")
           .select("id, concept_id, concept_alias, tent_size, tent_floor, tent_provided_by, stall_count, concept:concepts!concept_id(name)")
           .eq("festival_id", festivalId).eq("is_active", true);
-        return (data ?? []).map((c: any) => ({
-          key: c.id,
-          title: `${c.concept?.name ?? c.concept_alias ?? "Concept"} — tent`,
-          subtitle: [c.tent_size, c.tent_floor, c.tent_provided_by && `by ${c.tent_provided_by}`].filter(Boolean).join(" · "),
-          item: {
-            label: `${c.concept?.name ?? c.concept_alias ?? "Concept"} tent`,
-            spec: c.tent_size ?? null, dimensions: c.tent_size ?? null,
-            qty: c.stall_count ?? 1, concept_id: c.concept_id,
-            position_notes: c.tent_floor ? `Floor: ${c.tent_floor}` : null,
-          } as PickedItem,
-        }));
+        const fromContracts = (data ?? [])
+          .filter((c: any) => c.tent_size || c.tent_floor || c.tent_provided_by || c.stall_count)
+          .map((c: any) => ({
+            key: `contract:${c.id}`,
+            title: `${c.concept?.name ?? c.concept_alias ?? "Concept"} — tent`,
+            subtitle: [c.tent_size, c.tent_floor, c.tent_provided_by && `by ${c.tent_provided_by}`].filter(Boolean).join(" · ") || "from contract",
+            item: {
+              label: `${c.concept?.name ?? c.concept_alias ?? "Concept"} tent`,
+              spec: c.tent_size ?? null, dimensions: c.tent_size ?? null,
+              qty: c.stall_count ?? 1, concept_id: c.concept_id,
+              position_notes: c.tent_floor ? `Floor: ${c.tent_floor}` : null,
+            } as PickedItem,
+          }));
+
+        // Also include tent-like items ordered through the festival's power-order list
+        // (e.g. "Frame tent including floor (9x12 m)" from the festival supplier).
+        const { data: pow } = await sb.from("festival_power")
+          .select("id, festival_contract_id, festival_contract:festival_contracts!festival_contract_id(festival_id, concept_id, concept_alias, concept:concepts!concept_id(name))")
+          .limit(2000);
+        const powByFestival = (pow ?? []).filter((p: any) => p.festival_contract?.festival_id === festivalId);
+        const powIds = powByFestival.map((p: any) => p.id);
+        let fromOrders: any[] = [];
+        if (powIds.length > 0) {
+          const { data: items } = await sb.from("festival_power_order_items")
+            .select("id, festival_power_id, category, item_name, quantity, unit, notes")
+            .in("festival_power_id", powIds);
+          fromOrders = (items ?? [])
+            .filter((it: any) =>
+              (it.category && /tent|telt/i.test(it.category)) ||
+              (it.item_name && /tent|telt/i.test(it.item_name))
+            )
+            .map((it: any) => {
+              const parent = powByFestival.find((p: any) => p.id === it.festival_power_id);
+              const conceptName = parent?.festival_contract?.concept?.name ?? parent?.festival_contract?.concept_alias ?? null;
+              const sizeMatch = (it.item_name ?? "").match(/(\d+\s*[x×]\s*\d+(?:\s*[x×]\s*\d+)?\s*m?)/i);
+              return {
+                key: `order:${it.id}`,
+                title: it.item_name ?? "Tent",
+                subtitle: [conceptName, `qty ${it.quantity ?? 1}`, "from power order list"].filter(Boolean).join(" · "),
+                item: {
+                  label: it.item_name ?? "Tent",
+                  spec: it.unit ?? null,
+                  dimensions: sizeMatch ? sizeMatch[1] : null,
+                  qty: it.quantity ?? 1,
+                  concept_id: parent?.festival_contract?.concept_id ?? null,
+                  position_notes: it.notes ?? null,
+                } as PickedItem,
+              };
+            });
+        }
+        return [...fromContracts, ...fromOrders];
       }
+
 
       if (category === "power") {
         const { data: contracts } = await sb.from("festival_contracts")
