@@ -1406,6 +1406,41 @@ function DayPickerCell({
         <PopoverTrigger asChild>
           <button
             type="button"
+            className="inline-flex h-5 w-5 items-center justify-center rounded border border-dashed border-border text-muted-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+            title={`Remove ${title.toLowerCase()}`}
+            disabled={selected.length === 0}
+          >
+            <Minus className="h-3 w-3" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-3" align="end">
+          <div className="text-xs font-semibold mb-2">Remove {title.toLowerCase()}</div>
+          {selected.length === 0 ? (
+            <div className="text-[11px] text-muted-foreground italic">
+              No days to remove.
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {visibleRows.map((d) => (
+                <button
+                  key={d.iso}
+                  type="button"
+                  onClick={() => toggle(d.iso, false)}
+                  className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-red-50 hover:text-red-600"
+                >
+                  <span className="tabular-nums">{d.label}</span>
+                  <span className="text-[9px] uppercase text-muted-foreground">remove</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
             className="inline-flex h-5 w-5 items-center justify-center rounded border border-dashed border-border text-muted-foreground hover:bg-muted"
             title={`Add ${title.toLowerCase()}`}
           >
