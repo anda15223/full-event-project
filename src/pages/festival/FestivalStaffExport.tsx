@@ -168,6 +168,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", borderBottom: "0.25pt solid #ddd", paddingVertical: 3 },
   rowHead: { flexDirection: "row", borderBottom: "0.5pt solid #555", paddingVertical: 3, fontWeight: 700, backgroundColor: "#f4f4f5" },
   cellHrs: { width: 32, textAlign: "right", paddingHorizontal: 3, fontWeight: 700 },
+  cellNum: { width: 20, textAlign: "center", paddingHorizontal: 3 },
   cellName: { flex: 2, paddingHorizontal: 3 },
   cellLoc: { flex: 1.6, paddingHorizontal: 3 },
   cellStn: { flex: 1.4, paddingHorizontal: 3 },
@@ -273,13 +274,15 @@ function StaffDoc({
           <View key={group.id} style={styles.section} wrap>
             <Text style={styles.sectionTitle}>{N(`${group.name} (${group.people.length})`)}</Text>
             <View style={styles.rowHead}>
+              <Text style={styles.cellNum}>#</Text>
               <Text style={styles.cellName}>Name</Text>
               <Text style={styles.cellLoc}>Transport Place</Text>
               <Text style={styles.cellStn}>Station</Text>
               <Text style={styles.cellNotes}>Notes</Text>
             </View>
-            {group.people.map((p) => (
+            {group.people.map((p, i) => (
               <View key={p.id} style={styles.row} wrap={false}>
+                <Text style={styles.cellNum}>{i + 1}</Text>
                 <Text style={styles.cellName}>{N(p.name || "—")}</Text>
                 <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
                 <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
