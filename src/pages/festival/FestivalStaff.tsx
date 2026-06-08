@@ -1121,8 +1121,11 @@ function StaffRow({
         <Select
           value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
           onValueChange={(v) => {
-            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null });
-            else if (v === "__none__") onPatch({ role: "crew", concept_id: null });
+            // Concept here is just a suggestion — clear any station lock so the
+            // person isn't shown as occupying a position slot.
+            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null, station: null });
+            else if (v === "__none__") onPatch({ role: "crew", concept_id: null, station: null });
+            else if (v !== staff.concept_id) onPatch({ role: "crew", concept_id: v, station: null });
             else onPatch({ role: "crew", concept_id: v });
           }}
         >
