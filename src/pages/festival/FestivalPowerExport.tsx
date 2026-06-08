@@ -488,12 +488,20 @@ export default function FestivalPowerExport() {
     equipmentByPower.set(e.festival_power_id, arr);
   });
 
+  const orderItemsByPower = new Map<string, OrderItem[]>();
+  orderItems.forEach((it) => {
+    const arr = orderItemsByPower.get(it.festival_power_id) ?? [];
+    arr.push(it);
+    orderItemsByPower.set(it.festival_power_id, arr);
+  });
+
   const doc = (
     <PowerDoc
       festival={festival}
       rows={sortedRows}
       contractsById={contractsById}
       equipmentByPower={equipmentByPower}
+      orderItemsByPower={orderItemsByPower}
       filterLabel={filterLabel}
       canSeeFinance={canSeeFinance}
     />
