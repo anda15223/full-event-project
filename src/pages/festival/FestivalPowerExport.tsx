@@ -26,6 +26,20 @@ type EquipmentRow = {
   position: number | null;
 };
 
+type OrderItem = {
+  id: string;
+  festival_power_id: string;
+  category: string | null;
+  item_name: string;
+  quantity: number | null;
+  unit: string | null;
+  unit_price: number | null;
+  total_price: number | null;
+  currency: string | null;
+  notes: string | null;
+  position: number;
+};
+
 // TODO Sprint 7: Open Sans v17 drops fi/fl ligatures ("confrmed" / "fxed").
 // Plan to swap to a font with full ligature support (Inter, IBM Plex Sans).
 // Defer to post-Jelling — font swap is global to all PDFs.
