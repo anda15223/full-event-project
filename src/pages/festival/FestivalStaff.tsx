@@ -616,9 +616,9 @@ export default function FestivalStaff() {
         {(() => {
           const assignmentMap = new Map<string, { conceptName: string; stationLabel: string }>();
           allRows.forEach((p) => {
-            if (p.role === "management") {
-              assignmentMap.set(p.id, { conceptName: "Management", stationLabel: "" });
-            } else if (p.concept_id && p.station) {
+            // Management is informative only — never lock them out of position slots.
+            if (p.role === "management") return;
+            if (p.concept_id && p.station) {
               // Only treat as "locked in a position" if their station actually
               // matches a real position slot in that concept's plan.
               const planSlots = planByConcept.get(p.concept_id);
