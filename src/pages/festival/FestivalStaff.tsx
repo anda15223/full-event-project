@@ -36,6 +36,8 @@ type Staff = {
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
   concept_id: string | null;
+  // Legacy day flags (still in DB for the PDF export). New code uses
+  // work_dates / accom_dates instead.
   works_thursday: boolean | null;
   works_friday: boolean | null;
   works_saturday: boolean | null;
@@ -44,18 +46,44 @@ type Staff = {
   accom_friday: boolean | null;
   accom_saturday: boolean | null;
   accom_sunday: boolean | null;
+  // New flexible day arrays — any calendar date (YYYY-MM-DD).
+  work_dates: string[] | null;
+  accom_dates: string[] | null;
   staff_source: string;
   role: string;
   station: string | null;
   notes: string | null;
 };
 
-const ACCOM_DAYS = [
-  { key: "accom_thursday", label: "Thu" },
-  { key: "accom_friday", label: "Fri" },
-  { key: "accom_saturday", label: "Sat" },
-  { key: "accom_sunday", label: "Sun" },
-] as const;
+// Day window helpers — derive the list of dates shown as chips from the
+// festival's start/end date, with a buffer for early arrivals / pack-down.
+const BUFFER_BEFORE_DAYS = 3;
+const BUFFER_AFTER_DAYS = 1;
+
+function addDaysISO(iso: string, n: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function buildDayWindow(startDate?: string | null, endDate?: string | null) {
+  if (!startDate || !endDate) return [] as { iso: string; label: string; isFestivalDay: boolean }[];
+  const out: { iso: string; label: string; isFestivalDay: boolean }[] = [];
+  const start = addDaysISO(startDate, -BUFFER_BEFORE_DAYS);
+  const end = addDaysISO(endDate, BUFFER_AFTER_DAYS);
+  let cursor = start;
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  while (cursor <= end) {
+    const d = new Date(cursor + "T00:00:00Z");
+    out.push({
+      iso: cursor,
+      label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()}`,
+      isFestivalDay: cursor >= startDate && cursor <= endDate,
+    });
+    cursor = addDaysISO(cursor, 1);
+  }
+  return out;
+}
+
 
 type Concept = { id: string; name: string };
 
@@ -129,7 +157,7 @@ export default function FestivalStaff() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, slug, crew_register_url, crew_register_username, crew_register_password")
+        .select("id, name, slug, start_date, end_date, crew_register_url, crew_register_username, crew_register_password")
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
@@ -138,6 +166,10 @@ export default function FestivalStaff() {
   });
 
   const festivalId = festivalQ.data?.id;
+  const dayWindow = useMemo(
+    () => buildDayWindow(festivalQ.data?.start_date as any, festivalQ.data?.end_date as any),
+    [festivalQ.data?.start_date, festivalQ.data?.end_date]
+  );
 
   const staffQ = useQuery({
     queryKey: ["festival-staff-page", festivalId, draftMode],
@@ -359,6 +391,7 @@ export default function FestivalStaff() {
 
   const addStaff = useMutation({
     mutationFn: async () => {
+      const festivalDayIsos = dayWindow.filter((d) => d.isFestivalDay).map((d) => d.iso);
       const { error } = await supabase.from("festival_staff").insert({
         festival_id: festivalId!,
         name: "",
@@ -366,10 +399,8 @@ export default function FestivalStaff() {
         confirmed: false,
         role: "crew",
         staff_source: "unknown",
-        works_thursday: true,
-        works_friday: true,
-        works_saturday: true,
-        works_sunday: true,
+        work_dates: festivalDayIsos,
+        accom_dates: [],
       });
       if (error) throw error;
     },
@@ -587,12 +618,9 @@ export default function FestivalStaff() {
               <TableHead className="w-7 text-[10px]">#</TableHead>
               <TableHead className="min-w-[220px] text-sm">Name</TableHead>
               <TableHead className="w-[80px] text-[10px]">Source</TableHead>
-              <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
+              <TableHead className="text-center text-[10px]">Accom.</TableHead>
               <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
-              <TableHead className="text-center w-8">T</TableHead>
-              <TableHead className="text-center w-8">F</TableHead>
-              <TableHead className="text-center w-8">S</TableHead>
-              <TableHead className="text-center w-8">S</TableHead>
+              <TableHead className="text-center text-[10px]">Work days</TableHead>
               <TableHead className="text-center w-10">✓</TableHead>
               <TableHead className="w-[140px]">Notes</TableHead>
               <TableHead className="w-8" />
@@ -605,6 +633,7 @@ export default function FestivalStaff() {
                 staff={s}
                 index={i + 1}
                 concepts={concepts}
+                dayWindow={dayWindow}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
                   if (confirm(`Delete ${s.name || "this person"}?`)) deleteStaff.mutate(s.id);
@@ -613,7 +642,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
@@ -1096,18 +1125,37 @@ function StaffRow({
   staff,
   index,
   concepts,
+  dayWindow,
   onPatch,
   onDelete,
 }: {
   staff: Staff;
   index: number;
   concepts: Concept[];
+  dayWindow: { iso: string; label: string; isFestivalDay: boolean }[];
   onPatch: (patch: Partial<Staff>) => void;
   onDelete: () => void;
 }) {
   const [name, setName] = useState(staff.name ?? "");
   const [location, setLocation] = useState(staff.home_location ?? "");
   const [notes, setNotes] = useState(staff.notes ?? "");
+
+  const workDatesSet = new Set(staff.work_dates ?? []);
+  const accomDatesSet = new Set(staff.accom_dates ?? []);
+
+  const toggleDate = (
+    field: "work_dates" | "accom_dates",
+    iso: string,
+  ) => {
+    const current = (field === "work_dates" ? staff.work_dates : staff.accom_dates) ?? [];
+    const has = current.includes(iso);
+    const next = has ? current.filter((d) => d !== iso) : [...current, iso].sort();
+    const patch: Partial<Staff> = { [field]: next } as Partial<Staff>;
+    if (field === "accom_dates") {
+      patch.needs_accommodation = next.length > 0;
+    }
+    onPatch(patch);
+  };
 
   return (
     <TableRow>
@@ -1139,28 +1187,25 @@ function StaffRow({
         </Select>
       </TableCell>
       <TableCell>
-        <div className="flex items-center justify-center gap-1.5">
-          {ACCOM_DAYS.map((d) => {
-            const checked = !!staff[d.key];
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          {dayWindow.length === 0 && (
+            <span className="text-[10px] text-muted-foreground italic">Set festival dates</span>
+          )}
+          {dayWindow.map((d) => {
+            const checked = accomDatesSet.has(d.iso);
             return (
               <button
-                key={d.key}
+                key={d.iso}
                 type="button"
-                onClick={() => {
-                  const next = { [d.key]: !checked } as Partial<Staff>;
-                  // keep summary boolean in sync
-                  const anyOther = ACCOM_DAYS.some(
-                    (x) => x.key !== d.key && !!staff[x.key]
-                  );
-                  next.needs_accommodation = !checked || anyOther;
-                  onPatch(next);
-                }}
+                onClick={() => toggleDate("accom_dates", d.iso)}
                 className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
                   checked
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    : d.isFestivalDay
+                    ? "bg-background text-foreground border-border hover:bg-muted"
+                    : "bg-muted/40 text-muted-foreground border-dashed border-border hover:bg-muted"
                 }`}
-                title={`Needs accommodation on ${d.label}`}
+                title={`Needs accommodation on ${d.label}${d.isFestivalDay ? "" : " (extra day)"}`}
               >
                 {d.label}
               </button>
@@ -1192,14 +1237,34 @@ function StaffRow({
           </SelectContent>
         </Select>
       </TableCell>
-      {(["works_thursday", "works_friday", "works_saturday", "works_sunday"] as const).map((k) => (
-        <TableCell key={k} className="text-center">
-          <Checkbox
-            checked={!!staff[k]}
-            onCheckedChange={(c) => onPatch({ [k]: !!c } as Partial<Staff>)}
-          />
-        </TableCell>
-      ))}
+      <TableCell>
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          {dayWindow.length === 0 && (
+            <span className="text-[10px] text-muted-foreground italic">Set festival dates</span>
+          )}
+          {dayWindow.map((d) => {
+            const checked = workDatesSet.has(d.iso);
+            return (
+              <button
+                key={d.iso}
+                type="button"
+                onClick={() => toggleDate("work_dates", d.iso)}
+                className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
+                  checked
+                    ? "bg-emerald-600 text-white border-emerald-700"
+                    : d.isFestivalDay
+                    ? "bg-background text-foreground border-border hover:bg-muted"
+                    : "bg-muted/40 text-muted-foreground border-dashed border-border hover:bg-muted"
+                }`}
+                title={`Works on ${d.label}${d.isFestivalDay ? "" : " (extra day)"}`}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
+      </TableCell>
+
       <TableCell className="text-center">
         <button
           onClick={() => onPatch({ confirmed: !staff.confirmed })}
