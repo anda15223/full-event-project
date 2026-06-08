@@ -22,6 +22,9 @@ interface Props {
   currentFestivalId: string;
   /** Called after a successful commit (promotes drafts → live). */
   onCommitted?: () => void;
+  /** Optional extra import step run AFTER the standard clone-card-data import.
+   *  Returns a short summary string to append to the toast (e.g. "+12 build-out rows"). */
+  extraImport?: (sourceFestivalId: string, currentFestivalId: string) => Promise<string | void>;
 }
 
 export function ImportFromPreviousCard({
@@ -29,7 +32,9 @@ export function ImportFromPreviousCard({
   tables,
   currentFestivalId,
   onCommitted,
+  extraImport,
 }: Props) {
+
   const { toast } = useToast();
   const { draftMode, setDraftMode } = useDraftMode();
   const [festivals, setFestivals] = useState<Festival[]>([]);
