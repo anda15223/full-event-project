@@ -166,6 +166,10 @@ export default function FestivalStaff() {
   });
 
   const festivalId = festivalQ.data?.id;
+  const dayWindow = useMemo(
+    () => buildDayWindow(festivalQ.data?.start_date as any, festivalQ.data?.end_date as any),
+    [festivalQ.data?.start_date, festivalQ.data?.end_date]
+  );
 
   const staffQ = useQuery({
     queryKey: ["festival-staff-page", festivalId, draftMode],
