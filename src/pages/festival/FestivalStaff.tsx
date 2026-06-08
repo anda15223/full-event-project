@@ -615,12 +615,9 @@ export default function FestivalStaff() {
               <TableHead className="w-7 text-[10px]">#</TableHead>
               <TableHead className="min-w-[220px] text-sm">Name</TableHead>
               <TableHead className="w-[80px] text-[10px]">Source</TableHead>
-              <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
+              <TableHead className="text-center text-[10px]">Accom.</TableHead>
               <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
-              <TableHead className="text-center w-8">T</TableHead>
-              <TableHead className="text-center w-8">F</TableHead>
-              <TableHead className="text-center w-8">S</TableHead>
-              <TableHead className="text-center w-8">S</TableHead>
+              <TableHead className="text-center text-[10px]">Work days</TableHead>
               <TableHead className="text-center w-10">✓</TableHead>
               <TableHead className="w-[140px]">Notes</TableHead>
               <TableHead className="w-8" />
@@ -633,6 +630,7 @@ export default function FestivalStaff() {
                 staff={s}
                 index={i + 1}
                 concepts={concepts}
+                dayWindow={dayWindow}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
                   if (confirm(`Delete ${s.name || "this person"}?`)) deleteStaff.mutate(s.id);
@@ -641,7 +639,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
