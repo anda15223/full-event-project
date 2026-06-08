@@ -408,6 +408,7 @@ export default function FestivalPowerExport() {
   const [rows, setRows] = useState<PowerRow[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [equipment, setEquipment] = useState<EquipmentRow[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -430,8 +431,12 @@ export default function FestivalPowerExport() {
         : { data: [] as any[] };
 
       const powerRows = (pRes.data ?? []) as PowerRow[];
-      const eqRes = powerRows.length > 0
-        ? await supabase.from("festival_power_equipment").select("*").in("festival_power_id", powerRows.map((p) => p.id))
+      const powerIds = powerRows.map((p) => p.id);
+      const eqRes = powerIds.length > 0
+        ? await supabase.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
+        : { data: [] as any[] };
+      const oRes = powerIds.length > 0
+        ? await supabase.from("festival_power_order_items").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
 
       if (!alive) return;
@@ -439,6 +444,7 @@ export default function FestivalPowerExport() {
       setContracts(cs);
       setRows(powerRows);
       setEquipment((eqRes.data ?? []) as EquipmentRow[]);
+      setOrderItems((oRes.data ?? []) as OrderItem[]);
       setLoading(false);
     })();
     return () => { alive = false; };
