@@ -24,6 +24,7 @@ import {
 import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import FidibusBriefBlock from "@/components/festival/FidibusBriefBlock";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type PhaseSource = {
   id: string;
@@ -1037,6 +1038,7 @@ export default function FestivalSetup() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
+      <FestivalBackBar />
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
       {children}
     </div>

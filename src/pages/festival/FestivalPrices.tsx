@@ -10,6 +10,7 @@ import {
 import type { ConceptSlug } from "@/components/concept/types";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 const SLUG_ORDER: ConceptSlug[] = ["fish-chips", "gyros", "creperie", "chicks"];
 const sb = supabase as any;
@@ -116,6 +117,7 @@ export default function FestivalPrices() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="prices"

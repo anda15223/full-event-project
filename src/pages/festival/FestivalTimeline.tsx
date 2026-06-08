@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Event = {
   id: string;
@@ -627,6 +628,7 @@ function PhaseLane({ label, range, icon: Icon, accent }: { label: string; range:
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block text-xs">
+      <FestivalBackBar />
       <span className="text-muted-foreground">{label}</span>
       <div className="mt-1">{children}</div>
     </label>

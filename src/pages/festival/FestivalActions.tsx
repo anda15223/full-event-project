@@ -36,6 +36,7 @@ import {
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { AIActionPlanButton } from "@/components/festival/AIActionPlanButton";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -645,6 +646,7 @@ function ActionForm({
 
   return (
     <div className="space-y-4 py-4">
+      <FestivalBackBar />
       <div className="space-y-1.5">
         <Label>Title *</Label>
         <Input value={item.title} onChange={(e) => set({ title: e.target.value })} autoFocus />

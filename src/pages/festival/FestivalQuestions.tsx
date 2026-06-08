@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Status = "open" | "resolved" | "deferred";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -845,6 +846,7 @@ function ResolveDrawer({
 
   return (
     <Sheet open={!!question} onOpenChange={(o) => !o && onClose()}>
+      <FestivalBackBar />
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Resolve question</SheetTitle>

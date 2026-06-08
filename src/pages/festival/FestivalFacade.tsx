@@ -9,6 +9,7 @@ import {
   FacadeConceptCard, type FacadeRow, type FacadePhotoRow,
 } from "@/components/festival/cards/FacadeConceptCard";
 import { computeFacadeStatus } from "@/lib/facadeStatus";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
@@ -111,6 +112,7 @@ export default function FestivalFacade() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
       {/* Header */}
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">

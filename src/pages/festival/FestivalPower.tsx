@@ -9,6 +9,7 @@ import {
 } from "@/components/festival/cards/PowerConceptCard";
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
 import type { SiblingConcept } from "@/components/festival/TentMergeControls";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
@@ -149,6 +150,7 @@ export default function FestivalPower() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
       {/* Header */}
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">

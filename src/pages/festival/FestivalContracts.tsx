@@ -35,6 +35,7 @@ import { useDraftMode } from "@/hooks/useDraftMode";
 import { ContractSummaryView } from "@/components/festival/ContractSummaryView";
 import { parseContractSummary } from "@/lib/parseContract";
 import { extractPdfText } from "@/lib/pdfText";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
@@ -1007,6 +1008,7 @@ function ContractSummarySection({ contract: c, fileUrl }: { contract: Contract; 
 
   return (
     <div className="rounded-lg border p-2 space-y-2">
+      <FestivalBackBar />
       <div className="flex items-center justify-between gap-2">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Contract details</div>
         <div className="flex items-center gap-2">

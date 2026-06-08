@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Staff = {
   id: string;
@@ -1665,6 +1666,7 @@ function CrewRegisterCard({
 
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
+      <FestivalBackBar />
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <KeyRound className="h-4 w-4 text-muted-foreground" />

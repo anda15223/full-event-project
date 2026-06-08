@@ -6,6 +6,7 @@ import { AttentionItem, BUCKET_EMOJI, BUCKET_LABEL, BUCKET_ORDER, Bucket, bucket
 import { AttentionSummaryWidget } from "@/components/attention/AttentionSummaryWidget";
 import { AttentionItemCard } from "@/components/attention/AttentionItemCard";
 import { cn } from "@/lib/utils";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 export default function FestivalAttention() {
   const { slug = "" } = useParams();
@@ -60,6 +61,7 @@ export default function FestivalAttention() {
             const list = grouped[b];
             return (
               <section key={b} className={cn("rounded-xl border p-4", bucketSectionClasses(b))}>
+      <FestivalBackBar />
                 <header className="flex items-center justify-between mb-3">
                   <h2 className="text-sm font-heading font-semibold uppercase tracking-wide">
                     {BUCKET_EMOJI[b]} {BUCKET_LABEL[b]}

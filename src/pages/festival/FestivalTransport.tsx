@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
 import { AccreditationCard } from "@/components/festival/AccreditationCard";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
@@ -1624,6 +1625,7 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
 
   return (
     <>
+      <FestivalBackBar />
       <button
         onClick={() => setOpen(true)}
         disabled={!festivalId}

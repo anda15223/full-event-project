@@ -7,6 +7,7 @@ import { ArrowLeft, Wrench } from "lucide-react";
 import { EquipmentConceptCard } from "@/components/festival/cards/EquipmentConceptCard";
 import { computeConceptEquipmentStatus, summarizeConceptEquipment, EquipmentRow } from "@/lib/equipmentStatus";
 import type { ConceptSlug } from "@/components/concept/types";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 const SLUG_ORDER: ConceptSlug[] = ["fish-chips", "gyros", "creperie", "chicks"];
 
@@ -130,6 +131,7 @@ export default function FestivalEquipment() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
           <ArrowLeft className="h-3.5 w-3.5" /> {festival.name}

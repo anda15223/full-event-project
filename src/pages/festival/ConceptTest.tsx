@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ConceptCardGrid } from "@/components/concept/ConceptCardGrid";
 import { ConceptExportMenu } from "@/components/concept/ConceptExportMenu";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 export default function ConceptTest() {
   const { slug } = useParams<{ slug: string }>();
@@ -18,6 +19,7 @@ export default function ConceptTest() {
 
   return (
     <div className="p-6 space-y-4 max-w-5xl mx-auto">
+      <FestivalBackBar />
       <div className="flex items-center justify-between">
         <div>
           <Link to={`/festivals/${slug}`} className="text-sm text-muted-foreground hover:underline">

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type ContactType = "festival_organizer" | "operator" | "internal" | "supplier";
 
@@ -629,6 +630,7 @@ function CrossFestivalDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
+      <FestivalBackBar />
       <SheetContent className="sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{agg?.canonical_name ?? "Contact"}</SheetTitle>
