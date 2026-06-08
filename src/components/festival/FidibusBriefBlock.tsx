@@ -420,27 +420,30 @@ export default function FidibusBriefBlock({
                           </div>
                         )}
                         <div className="grid grid-cols-12 gap-2">
-
                           <Input
-                            className="col-span-5 h-8 text-xs"
+                            className="col-span-7 h-8 text-xs"
                             defaultValue={row.label ?? ""}
-                            placeholder="Label (e.g. Main tent)"
+                            placeholder="Label (e.g. Frame tent incl. floor)"
                             onBlur={(e) => { const v = e.target.value || null; if (v !== row.label) patchRow.mutate({ id: row.id, patch: { label: v } }); }}
                           />
                           <Input
-                            className="col-span-4 h-8 text-xs"
-                            defaultValue={row.spec ?? ""}
-                            placeholder="Spec (e.g. 400V/32A)"
-                            onBlur={(e) => { const v = e.target.value || null; if (v !== row.spec) patchRow.mutate({ id: row.id, patch: { spec: v } }); }}
-                          />
-                          <Input
-                            type="number"
-                            className="col-span-1 h-8 text-xs"
+                            inputMode="numeric"
+                            className="col-span-2 h-8 text-xs text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             defaultValue={row.qty ?? ""}
                             placeholder="Qty"
-                            onBlur={(e) => { const v = e.target.value ? Number(e.target.value) : null; if (v !== row.qty) patchRow.mutate({ id: row.id, patch: { qty: v } }); }}
+                            onBlur={(e) => {
+                              const raw = e.target.value.trim();
+                              const v = raw ? Number(raw) : null;
+                              if (v !== row.qty) patchRow.mutate({ id: row.id, patch: { qty: Number.isFinite(v as number) ? v : null } });
+                            }}
                           />
-                          <div className="col-span-2 flex items-center justify-end gap-0.5">
+                          <Input
+                            className="col-span-2 h-8 text-xs"
+                            defaultValue={row.dimensions ?? ""}
+                            placeholder="Size"
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== row.dimensions) patchRow.mutate({ id: row.id, patch: { dimensions: v } }); }}
+                          />
+                          <div className="col-span-1 flex items-center justify-end gap-0.5">
                             <button className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30"
                               disabled={idx === 0} onClick={() => moveRow.mutate({ row, dir: -1 })}>
                               <ArrowUp className="h-3 w-3" />
@@ -456,12 +459,6 @@ export default function FidibusBriefBlock({
                           </div>
                         </div>
                         <div className="grid grid-cols-12 gap-2">
-                          <Input
-                            className="col-span-3 h-8 text-xs"
-                            defaultValue={row.area ?? ""}
-                            placeholder="Area (e.g. INSIDE)"
-                            onBlur={(e) => { const v = e.target.value || null; if (v !== row.area) patchRow.mutate({ id: row.id, patch: { area: v } }); }}
-                          />
                           <Select
                             value={row.concept_id ?? "__none__"}
                             onValueChange={(v) => patchRow.mutate({ id: row.id, patch: { concept_id: v === "__none__" ? null : v } })}
@@ -473,18 +470,25 @@ export default function FidibusBriefBlock({
                             </SelectContent>
                           </Select>
                           <Input
-                            className="col-span-2 h-8 text-xs"
-                            defaultValue={row.dimensions ?? ""}
-                            placeholder="Dimensions"
-                            onBlur={(e) => { const v = e.target.value || null; if (v !== row.dimensions) patchRow.mutate({ id: row.id, patch: { dimensions: v } }); }}
+                            className="col-span-3 h-8 text-xs"
+                            defaultValue={row.area ?? ""}
+                            placeholder="Area (e.g. INSIDE)"
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== row.area) patchRow.mutate({ id: row.id, patch: { area: v } }); }}
                           />
                           <Input
-                            className="col-span-4 h-8 text-xs"
+                            className="col-span-3 h-8 text-xs"
+                            defaultValue={row.spec ?? ""}
+                            placeholder="Spec / unit (pcs, 400V/32A…)"
+                            onBlur={(e) => { const v = e.target.value || null; if (v !== row.spec) patchRow.mutate({ id: row.id, patch: { spec: v } }); }}
+                          />
+                          <Input
+                            className="col-span-3 h-8 text-xs"
                             defaultValue={row.position_notes ?? ""}
                             placeholder="Position notes"
                             onBlur={(e) => { const v = e.target.value || null; if (v !== row.position_notes) patchRow.mutate({ id: row.id, patch: { position_notes: v } }); }}
                           />
                         </div>
+
                       </div>
                     ))
                   )}
