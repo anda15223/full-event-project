@@ -644,7 +644,7 @@ export default function FestivalSetup() {
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Arrival at Jelling">
+        <Field label={`Arrival at ${festival.name}`}>
           <Select
             value={(run?.arrival_time ?? "").slice(0, 5) || undefined}
             onValueChange={(v) => updateRun.mutate({ arrival_time: v || null })}
