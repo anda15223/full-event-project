@@ -1126,18 +1126,37 @@ function StaffRow({
   staff,
   index,
   concepts,
+  dayWindow,
   onPatch,
   onDelete,
 }: {
   staff: Staff;
   index: number;
   concepts: Concept[];
+  dayWindow: { iso: string; label: string; isFestivalDay: boolean }[];
   onPatch: (patch: Partial<Staff>) => void;
   onDelete: () => void;
 }) {
   const [name, setName] = useState(staff.name ?? "");
   const [location, setLocation] = useState(staff.home_location ?? "");
   const [notes, setNotes] = useState(staff.notes ?? "");
+
+  const workDatesSet = new Set(staff.work_dates ?? []);
+  const accomDatesSet = new Set(staff.accom_dates ?? []);
+
+  const toggleDate = (
+    field: "work_dates" | "accom_dates",
+    iso: string,
+  ) => {
+    const current = (field === "work_dates" ? staff.work_dates : staff.accom_dates) ?? [];
+    const has = current.includes(iso);
+    const next = has ? current.filter((d) => d !== iso) : [...current, iso].sort();
+    const patch: Partial<Staff> = { [field]: next } as Partial<Staff>;
+    if (field === "accom_dates") {
+      patch.needs_accommodation = next.length > 0;
+    }
+    onPatch(patch);
+  };
 
   return (
     <TableRow>
@@ -1169,28 +1188,25 @@ function StaffRow({
         </Select>
       </TableCell>
       <TableCell>
-        <div className="flex items-center justify-center gap-1.5">
-          {ACCOM_DAYS.map((d) => {
-            const checked = !!staff[d.key];
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          {dayWindow.length === 0 && (
+            <span className="text-[10px] text-muted-foreground italic">Set festival dates</span>
+          )}
+          {dayWindow.map((d) => {
+            const checked = accomDatesSet.has(d.iso);
             return (
               <button
-                key={d.key}
+                key={d.iso}
                 type="button"
-                onClick={() => {
-                  const next = { [d.key]: !checked } as Partial<Staff>;
-                  // keep summary boolean in sync
-                  const anyOther = ACCOM_DAYS.some(
-                    (x) => x.key !== d.key && !!staff[x.key]
-                  );
-                  next.needs_accommodation = !checked || anyOther;
-                  onPatch(next);
-                }}
+                onClick={() => toggleDate("accom_dates", d.iso)}
                 className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
                   checked
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-muted-foreground border-border hover:bg-muted"
+                    : d.isFestivalDay
+                    ? "bg-background text-foreground border-border hover:bg-muted"
+                    : "bg-muted/40 text-muted-foreground border-dashed border-border hover:bg-muted"
                 }`}
-                title={`Needs accommodation on ${d.label}`}
+                title={`Needs accommodation on ${d.label}${d.isFestivalDay ? "" : " (extra day)"}`}
               >
                 {d.label}
               </button>
@@ -1222,14 +1238,34 @@ function StaffRow({
           </SelectContent>
         </Select>
       </TableCell>
-      {(["works_thursday", "works_friday", "works_saturday", "works_sunday"] as const).map((k) => (
-        <TableCell key={k} className="text-center">
-          <Checkbox
-            checked={!!staff[k]}
-            onCheckedChange={(c) => onPatch({ [k]: !!c } as Partial<Staff>)}
-          />
-        </TableCell>
-      ))}
+      <TableCell>
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          {dayWindow.length === 0 && (
+            <span className="text-[10px] text-muted-foreground italic">Set festival dates</span>
+          )}
+          {dayWindow.map((d) => {
+            const checked = workDatesSet.has(d.iso);
+            return (
+              <button
+                key={d.iso}
+                type="button"
+                onClick={() => toggleDate("work_dates", d.iso)}
+                className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
+                  checked
+                    ? "bg-emerald-600 text-white border-emerald-700"
+                    : d.isFestivalDay
+                    ? "bg-background text-foreground border-border hover:bg-muted"
+                    : "bg-muted/40 text-muted-foreground border-dashed border-border hover:bg-muted"
+                }`}
+                title={`Works on ${d.label}${d.isFestivalDay ? "" : " (extra day)"}`}
+              >
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
+      </TableCell>
+
       <TableCell className="text-center">
         <button
           onClick={() => onPatch({ confirmed: !staff.confirmed })}
