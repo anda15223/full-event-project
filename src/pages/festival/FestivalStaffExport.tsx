@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
-  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink,
+  Document, Page, Text, View, StyleSheet, PDFDownloadLink, BlobProvider,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -426,10 +426,15 @@ export default function FestivalStaffExport() {
           )}
         </PDFDownloadLink>
       </div>
-      <div className="flex-1 min-h-0">
-        <PDFViewer style={{ width: "100%", height: "100%", border: 0 }} showToolbar>
-          <StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />
-        </PDFViewer>
+      <div className="flex-1 min-h-0 bg-muted">
+        <BlobProvider document={<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />}>
+          {({ url, loading: bl, error }) => {
+            if (bl) return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rendering preview…</div>;
+            if (error) return <div className="p-6 text-destructive text-sm">Failed to render PDF: {String(error)}</div>;
+            if (!url) return null;
+            return <iframe title="Staff report" src={url} className="w-full h-full" style={{ border: 0 }} />;
+          }}
+        </BlobProvider>
       </div>
     </div>
   );
