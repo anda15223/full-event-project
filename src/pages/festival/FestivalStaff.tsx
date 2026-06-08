@@ -422,12 +422,22 @@ export default function FestivalStaff() {
   const [cityFilter, setCityFilter] = useState<string>("__all__");
   const [accomFilter, setAccomFilter] = useState<"any" | "yes" | "no">("any");
 
-  const cityOptions = Array.from(
-    new Set([
-      "Aarhus",
-      ...allRows.map((s) => (s.home_location ?? "").trim()).filter(Boolean),
-    ])
-  ).sort((a, b) => a.localeCompare(b));
+  // City list is built from free-text `home_location` entries. We normalize
+  // (case-insensitive, trimmed) so "copenhaga", "Copenhaga", "COPENHAGA" all
+  // collapse into one option displayed in Title Case.
+  const toTitleCase = (s: string) =>
+    s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+  const cityOptions = (() => {
+    const seen = new Map<string, string>(); // key: lowercase, value: display label
+    seen.set("aarhus", "Aarhus");
+    allRows.forEach((s) => {
+      const raw = (s.home_location ?? "").trim();
+      if (!raw) return;
+      const key = raw.toLowerCase();
+      if (!seen.has(key)) seen.set(key, toTitleCase(raw));
+    });
+    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
+  })();
 
   const rows = allRows
     .filter((s) =>
@@ -437,7 +447,11 @@ export default function FestivalStaff() {
         ? !s.concept_id && s.role !== "management"
         : true
     )
-    .filter((s) => (cityFilter === "__all__" ? true : (s.home_location ?? "") === cityFilter))
+    .filter((s) =>
+      cityFilter === "__all__"
+        ? true
+        : (s.home_location ?? "").trim().toLowerCase() === cityFilter.toLowerCase()
+    )
     .filter((s) =>
       accomFilter === "any"
         ? true
