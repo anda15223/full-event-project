@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
-import BuildOutReferencePanel from "@/components/festival/BuildOutReferencePanel";
+import BuildOutPicker, { PickedItem, PickerCategory } from "@/components/festival/BuildOutPicker";
 
 const sb = supabase as any;
 
@@ -147,7 +147,7 @@ export default function FidibusBriefBlock({
   });
 
   const addRow = useMutation({
-    mutationFn: async (category: Category) => {
+    mutationFn: async ({ category, item }: { category: Category; item?: PickedItem }) => {
       const maxOrder = buildout
         .filter((b) => b.category === category)
         .reduce((m, b) => Math.max(m, b.display_order), -1);
@@ -155,6 +155,13 @@ export default function FidibusBriefBlock({
         festival_id: festivalId,
         category,
         display_order: maxOrder + 1,
+        label: item?.label ?? null,
+        spec: item?.spec ?? null,
+        qty: item?.qty ?? null,
+        dimensions: item?.dimensions ?? null,
+        area: item?.area ?? null,
+        concept_id: item?.concept_id ?? null,
+        position_notes: item?.position_notes ?? null,
       });
       if (error) throw error;
     },
@@ -338,7 +345,6 @@ export default function FidibusBriefBlock({
 
       {/* 4. Build-out */}
       <SectionCard title="Build-out (Fidibus places)">
-        <BuildOutReferencePanel festivalId={festivalId} />
         <div className="flex flex-wrap items-center gap-2 -mt-1">
           <div className="inline-flex rounded-md border bg-muted/20 p-0.5 text-[11px]">
             {(["all","imported","manual"] as SourceFilter[]).map((f) => (
@@ -377,9 +383,18 @@ export default function FidibusBriefBlock({
                     <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
                       {cat}
                     </div>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => addRow.mutate(cat)}>
-                      <Plus className="h-3 w-3 mr-1" /> Add {cat}
-                    </Button>
+                    {(["tent","power","cooling"] as const).includes(cat as any) ? (
+                      <BuildOutPicker
+                        category={cat as PickerCategory}
+                        festivalId={festivalId}
+                        label={`Add ${cat}`}
+                        onPick={(item) => addRow.mutate({ category: cat, item })}
+                      />
+                    ) : (
+                      <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => addRow.mutate({ category: cat })}>
+                        <Plus className="h-3 w-3 mr-1" /> Add {cat}
+                      </Button>
+                    )}
                   </div>
                   {rows.length === 0 ? (
                     <div className="text-[11px] text-muted-foreground italic px-1">— none —</div>
