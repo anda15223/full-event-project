@@ -391,6 +391,7 @@ export default function FestivalStaff() {
 
   const addStaff = useMutation({
     mutationFn: async () => {
+      const festivalDayIsos = dayWindow.filter((d) => d.isFestivalDay).map((d) => d.iso);
       const { error } = await supabase.from("festival_staff").insert({
         festival_id: festivalId!,
         name: "",
@@ -398,10 +399,8 @@ export default function FestivalStaff() {
         confirmed: false,
         role: "crew",
         staff_source: "unknown",
-        works_thursday: true,
-        works_friday: true,
-        works_saturday: true,
-        works_sunday: true,
+        work_dates: festivalDayIsos,
+        accom_dates: [],
       });
       if (error) throw error;
     },
