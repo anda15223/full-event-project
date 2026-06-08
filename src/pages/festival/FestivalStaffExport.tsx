@@ -274,41 +274,18 @@ function StaffDoc({
             <Text style={styles.sectionTitle}>{N(`${group.name} (${group.people.length})`)}</Text>
             <View style={styles.rowHead}>
               <Text style={styles.cellName}>Name</Text>
-              <Text style={styles.cellHrs}>Hrs</Text>
               <Text style={styles.cellLoc}>Transport Place</Text>
               <Text style={styles.cellStn}>Station</Text>
-              {dayList.map((iso) => {
-                const { wd, dm } = dayLabel(iso);
-                return <Text key={`w-${iso}`} style={styles.dayHeader}>{wd}{"\n"}{dm}</Text>;
-              })}
-              {dayList.map((iso) => {
-                const { wd, dm } = dayLabel(iso);
-                return <Text key={`a-${iso}`} style={styles.dayHeader}>a{wd[0]}{"\n"}{dm}</Text>;
-              })}
-              <Text style={styles.cellConf}>OK</Text>
               <Text style={styles.cellNotes}>Notes</Text>
             </View>
-            {group.people.map((p) => {
-              const h = hoursByStaff.get(p.id) ?? 0;
-              const workSet = staffWorkDateSet(p, festivalDays);
-              const accomSet = staffAccomDateSet(p, festivalDays);
-              return (
-                <View key={p.id} style={styles.row} wrap={false}>
-                  <Text style={styles.cellName}>{N(p.name || "—")}</Text>
-                  <Text style={styles.cellHrs}>{h ? formatHoursMinutes(h) : "—"}</Text>
-                  <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
-                  <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
-                  {dayList.map((iso) => (
-                    <Text key={`w-${iso}`} style={styles.cellDay}>{workSet.has(iso) ? "✓" : "·"}</Text>
-                  ))}
-                  {dayList.map((iso) => (
-                    <Text key={`a-${iso}`} style={styles.cellAcc}>{accomSet.has(iso) ? "✓" : "·"}</Text>
-                  ))}
-                  <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
-                  <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
-                </View>
-              );
-            })}
+            {group.people.map((p) => (
+              <View key={p.id} style={styles.row} wrap={false}>
+                <Text style={styles.cellName}>{N(p.name || "—")}</Text>
+                <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
+                <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
+                <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
+              </View>
+            ))}
           </View>
         ))}
 
