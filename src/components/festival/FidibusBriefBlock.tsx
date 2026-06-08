@@ -337,6 +337,7 @@ export default function FidibusBriefBlock({
 
       {/* 4. Build-out */}
       <SectionCard title="Build-out (Fidibus places)">
+        <BuildOutReferencePanel festivalId={festivalId} />
         <div className="flex flex-wrap items-center gap-2 -mt-1">
           <div className="inline-flex rounded-md border bg-muted/20 p-0.5 text-[11px]">
             {(["all","imported","manual"] as SourceFilter[]).map((f) => (
