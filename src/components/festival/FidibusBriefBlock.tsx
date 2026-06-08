@@ -393,7 +393,7 @@ export default function FidibusBriefBlock({
                     <div className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
                       {cat}
                     </div>
-                    {(["tent","power","cooling"] as const).includes(cat as any) ? (
+                    {PICKER_CATS.has(cat) ? (
                       <BuildOutPicker
                         category={cat as PickerCategory}
                         festivalId={festivalId}
