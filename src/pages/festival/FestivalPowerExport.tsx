@@ -148,12 +148,13 @@ function trunc(s: string | null, n: number) {
 }
 
 function PowerDoc({
-  festival, rows, contractsById, equipmentByPower, filterLabel, canSeeFinance,
+  festival, rows, contractsById, equipmentByPower, orderItemsByPower, filterLabel, canSeeFinance,
 }: {
   festival: Festival;
   rows: PowerRow[];
   contractsById: Map<string, Contract>;
   equipmentByPower: Map<string, EquipmentRow[]>;
+  orderItemsByPower: Map<string, OrderItem[]>;
   filterLabel: string | null;
   canSeeFinance: boolean;
 }) {
