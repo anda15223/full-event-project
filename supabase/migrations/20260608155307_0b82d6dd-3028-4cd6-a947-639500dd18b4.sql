@@ -1,0 +1,2 @@
+ALTER TABLE public.festival_staff DROP CONSTRAINT festival_staff_staff_source_check;
+ALTER TABLE public.festival_staff ADD CONSTRAINT festival_staff_staff_source_check CHECK (staff_source = ANY (ARRAY['soborg'::text, 'aarhus'::text, 'local'::text, 'fidibus'::text, 'unknown'::text]));
