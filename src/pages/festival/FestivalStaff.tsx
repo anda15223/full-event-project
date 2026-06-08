@@ -1369,8 +1369,12 @@ function DayPickerCell({
   // Extra days not yet selected — available in the "+" picker.
   const availableExtras = extraDays.filter((d) => !selectedSet.has(d.iso));
 
-  const accent =
-    variant === "work" ? "text-emerald-700" : "text-primary";
+  const activeClasses =
+    variant === "work"
+      ? "bg-emerald-600 text-white border-emerald-600"
+      : "bg-primary text-primary-foreground border-primary";
+  const inactiveClasses =
+    "bg-background text-muted-foreground border-border hover:bg-muted";
 
   const toggle = (iso: string, checked: boolean) => {
     const next = checked
@@ -1380,27 +1384,21 @@ function DayPickerCell({
   };
 
   return (
-    <div className="flex items-center justify-center gap-2 flex-wrap">
+    <div className="flex items-center justify-center gap-1 flex-wrap">
       {visibleRows.map((d) => {
         const checked = selectedSet.has(d.iso);
         return (
-          <label
+          <button
             key={d.iso}
-            className="flex flex-row items-center gap-1.5 cursor-pointer select-none"
+            type="button"
+            onClick={() => toggle(d.iso, !checked)}
             title={d.iso}
+            className={`inline-flex items-center justify-center h-6 px-2 rounded-md border text-[11px] font-medium tabular-nums transition-colors ${
+              checked ? activeClasses : inactiveClasses
+            }`}
           >
-            <Checkbox
-              checked={checked}
-              onCheckedChange={(c) => toggle(d.iso, !!c)}
-            />
-            <span
-              className={`text-[10px] tabular-nums ${
-                d.isFestivalDay ? "text-muted-foreground" : accent
-              }`}
-            >
-              {d.label}
-            </span>
-          </label>
+            {d.label}
+          </button>
         );
       })}
 
