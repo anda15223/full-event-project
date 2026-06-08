@@ -7266,6 +7266,7 @@ export type Database = {
       }
       festival_staff: {
         Row: {
+          accom_dates: string[]
           accom_friday: boolean
           accom_saturday: boolean
           accom_sunday: boolean
@@ -7289,6 +7290,7 @@ export type Database = {
           station: string | null
           total_hours_planned: number | null
           updated_at: string | null
+          work_dates: string[]
           works_friday: boolean | null
           works_saturday: boolean | null
           works_sunday: boolean | null
@@ -7296,6 +7298,7 @@ export type Database = {
           wristband_type: string | null
         }
         Insert: {
+          accom_dates?: string[]
           accom_friday?: boolean
           accom_saturday?: boolean
           accom_sunday?: boolean
@@ -7319,6 +7322,7 @@ export type Database = {
           station?: string | null
           total_hours_planned?: number | null
           updated_at?: string | null
+          work_dates?: string[]
           works_friday?: boolean | null
           works_saturday?: boolean | null
           works_sunday?: boolean | null
@@ -7326,6 +7330,7 @@ export type Database = {
           wristband_type?: string | null
         }
         Update: {
+          accom_dates?: string[]
           accom_friday?: boolean
           accom_saturday?: boolean
           accom_sunday?: boolean
@@ -7349,6 +7354,7 @@ export type Database = {
           station?: string | null
           total_hours_planned?: number | null
           updated_at?: string | null
+          work_dates?: string[]
           works_friday?: boolean | null
           works_saturday?: boolean | null
           works_sunday?: boolean | null
