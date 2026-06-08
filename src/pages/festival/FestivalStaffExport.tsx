@@ -426,8 +426,8 @@ export default function FestivalStaffExport() {
           )}
         </PDFDownloadLink>
       </div>
-      <div className="flex-1">
-        <PDFViewer width="100%" height="100%" showToolbar>
+      <div className="flex-1 min-h-0">
+        <PDFViewer style={{ width: "100%", height: "100%", border: 0 }} showToolbar>
           <StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />
         </PDFViewer>
       </div>
