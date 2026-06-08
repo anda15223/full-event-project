@@ -594,7 +594,7 @@ export default function FestivalSetup() {
           </a>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Manually build the Søborg → Jelling setup sequence. Vehicle &amp; driver allocations come from the Transport master.
+          Manually build the Søborg → {festival.name} setup sequence. Vehicle &amp; driver allocations come from the Transport master.
         </p>
       </div>
 
@@ -644,7 +644,7 @@ export default function FestivalSetup() {
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Arrival at Jelling">
+        <Field label={`Arrival at ${festival.name}`}>
           <Select
             value={(run?.arrival_time ?? "").slice(0, 5) || undefined}
             onValueChange={(v) => updateRun.mutate({ arrival_time: v || null })}
