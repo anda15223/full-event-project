@@ -1364,7 +1364,7 @@ function DayPickerCell({
     ...selected
       .filter((iso) => !dayWindow.some((d) => d.iso === iso))
       .map((iso) => ({ iso, label: iso.slice(5), isFestivalDay: false })),
-  ];
+  ].sort((a, b) => a.iso.localeCompare(b.iso));
 
   // Extra days not yet selected — available in the "+" picker.
   const availableExtras = extraDays.filter((d) => !selectedSet.has(d.iso));
