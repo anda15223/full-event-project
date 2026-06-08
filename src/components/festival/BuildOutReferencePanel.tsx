@@ -244,6 +244,78 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
                 )}
               </div>
 
+              {/* Gas or no gas */}
+              <div>
+                <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  <Flame className="h-3 w-3" /> Gas appliances
+                  <span className={"ml-2 px-1.5 py-0.5 rounded text-[9px] font-semibold " + (hasAnyGas ? "bg-orange-500/15 text-orange-700 dark:text-orange-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300")}>
+                    {hasAnyGas ? "GAS ON SITE" : "NO GAS"}
+                  </span>
+                </div>
+                {!hasAnyGas ? (
+                  <div className="italic text-muted-foreground">No gas-fuelled equipment detected on the power equipment list.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {gasItems.map((e: any) => (
+                      <li key={e.id} className="rounded border bg-background/60 px-2 py-1 flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground min-w-[80px]">{conceptLabelForPowerId(e.festival_power_id)}</span>
+                        <span className="font-medium">{e.equipment_name}</span>
+                        {e.quantity ? <span className="text-muted-foreground">× {e.quantity}</span> : null}
+                        {e.notes ? <span className="text-muted-foreground italic truncate">— {e.notes}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Tables & scaffolding */}
+              <div>
+                <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  <Table2 className="h-3 w-3" /> Tables & scaffolding (from equipment list)
+                </div>
+                {tablesScaffolding.length === 0 ? (
+                  <div className="italic text-muted-foreground">No tables or scaffolding on the equipment list.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {tablesScaffolding.map((e: any) => (
+                      <li key={e.id} className="rounded border bg-background/60 px-2 py-1 flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground min-w-[80px]">{conceptLabelForPowerId(e.festival_power_id)}</span>
+                        <span className={"px-1.5 py-0.5 rounded text-[9px] font-medium " + (e.category === "table" ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "bg-violet-500/15 text-violet-700 dark:text-violet-300")}>
+                          {e.category}
+                        </span>
+                        <span className="font-medium">{e.equipment_name}</span>
+                        {e.quantity ? <span className="text-muted-foreground">× {e.quantity}</span> : null}
+                        {e.notes ? <span className="text-muted-foreground italic truncate">— {e.notes}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Cars / vehicles load manifest */}
+              <div>
+                <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  <Zap className="h-3 w-3" /> Cars list — load manifests
+                </div>
+                {vehicles.length === 0 ? (
+                  <div className="italic text-muted-foreground">No vehicles assigned for this festival.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {vehicles.map((v: any) => (
+                      <li key={v.id} className="rounded border bg-background/60 px-2 py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{v.vehicle_name ?? v.vehicle_type ?? "Vehicle"}</span>
+                          {v.vehicle_type ? <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{v.vehicle_type}</span> : null}
+                        </div>
+                        {v.load_manifest && <div className="whitespace-pre-wrap text-muted-foreground mt-0.5">{v.load_manifest}</div>}
+                        {v.notes && <div className="whitespace-pre-wrap text-muted-foreground italic mt-0.5">{v.notes}</div>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+
               {/* Water / production notes */}
               <div>
                 <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
