@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronRight, Tent, Zap, Snowflake, Droplet, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, Tent, Zap, Snowflake, Droplet, FileText, Flame, Table2 } from "lucide-react";
 
 /**
  * Read-only reference panel that aggregates per-festival source data for the
@@ -40,7 +40,7 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
       const { data, error } = await supabase
         .from("festival_power")
         .select(
-          "festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, total_amp_estimate, tableau_count, equipment_breakdown, supplier, notes, tent_location"
+          "id, festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, total_amp_estimate, tableau_count, equipment_breakdown, supplier, notes, tent_location"
         )
         .in("festival_contract_id", contractIds);
       if (error) throw error;
@@ -63,11 +63,62 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
     },
   });
 
+  const powerIds = useMemo(
+    () => (powerQ.data ?? []).map((p: any) => p.id).filter(Boolean),
+    [powerQ.data],
+  );
+
+  const equipmentQ = useQuery({
+    queryKey: ["buildout-ref-equipment", festivalId, powerIds.join(",")],
+    enabled: powerIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_power_equipment")
+        .select("id, festival_power_id, equipment_name, quantity, category, notes, power_type, is_powered")
+        .in("festival_power_id", powerIds);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const vehiclesQ = useQuery({
+    queryKey: ["buildout-ref-vehicles", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_staff_vehicles")
+        .select("id, vehicle_name, vehicle_type, load_manifest, notes")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   const loading = contractsQ.isLoading || powerQ.isLoading || coolingQ.isLoading;
   const contracts = contractsQ.data ?? [];
   const powerByContract = new Map<string, any>();
   (powerQ.data ?? []).forEach((p) => powerByContract.set(p.festival_contract_id, p));
+  const powerIdToContract = new Map<string, string>();
+  (powerQ.data ?? []).forEach((p: any) => powerIdToContract.set(p.id, p.festival_contract_id));
   const cooling = coolingQ.data ?? [];
+  const equipment = equipmentQ.data ?? [];
+  const vehicles = vehiclesQ.data ?? [];
+
+  const conceptLabelForPowerId = (powerId: string) => {
+    const cId = powerIdToContract.get(powerId);
+    const c = contracts.find((x) => x.id === cId);
+    return c?.concept?.name ?? c?.concept_alias ?? "—";
+  };
+
+  const tablesScaffolding = equipment.filter(
+    (e: any) => e.category === "table" || e.category === "scaffold",
+  );
+  const gasItems = equipment.filter(
+    (e: any) =>
+      /\bgas\b|gasblus|gasovn|gasflaske|propane|propan/i.test(e.equipment_name ?? "") ||
+      /\bgas\b/i.test(e.notes ?? ""),
+  );
+  const hasAnyGas = gasItems.length > 0;
 
   const conn = (p: any) => {
     if (!p) return null;
@@ -192,6 +243,78 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
                   </div>
                 )}
               </div>
+
+              {/* Gas or no gas */}
+              <div>
+                <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  <Flame className="h-3 w-3" /> Gas appliances
+                  <span className={"ml-2 px-1.5 py-0.5 rounded text-[9px] font-semibold " + (hasAnyGas ? "bg-orange-500/15 text-orange-700 dark:text-orange-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300")}>
+                    {hasAnyGas ? "GAS ON SITE" : "NO GAS"}
+                  </span>
+                </div>
+                {!hasAnyGas ? (
+                  <div className="italic text-muted-foreground">No gas-fuelled equipment detected on the power equipment list.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {gasItems.map((e: any) => (
+                      <li key={e.id} className="rounded border bg-background/60 px-2 py-1 flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground min-w-[80px]">{conceptLabelForPowerId(e.festival_power_id)}</span>
+                        <span className="font-medium">{e.equipment_name}</span>
+                        {e.quantity ? <span className="text-muted-foreground">× {e.quantity}</span> : null}
+                        {e.notes ? <span className="text-muted-foreground italic truncate">— {e.notes}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Tables & scaffolding */}
+              <div>
+                <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  <Table2 className="h-3 w-3" /> Tables & scaffolding (from equipment list)
+                </div>
+                {tablesScaffolding.length === 0 ? (
+                  <div className="italic text-muted-foreground">No tables or scaffolding on the equipment list.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {tablesScaffolding.map((e: any) => (
+                      <li key={e.id} className="rounded border bg-background/60 px-2 py-1 flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground min-w-[80px]">{conceptLabelForPowerId(e.festival_power_id)}</span>
+                        <span className={"px-1.5 py-0.5 rounded text-[9px] font-medium " + (e.category === "table" ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "bg-violet-500/15 text-violet-700 dark:text-violet-300")}>
+                          {e.category}
+                        </span>
+                        <span className="font-medium">{e.equipment_name}</span>
+                        {e.quantity ? <span className="text-muted-foreground">× {e.quantity}</span> : null}
+                        {e.notes ? <span className="text-muted-foreground italic truncate">— {e.notes}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Cars / vehicles load manifest */}
+              <div>
+                <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
+                  <Zap className="h-3 w-3" /> Cars list — load manifests
+                </div>
+                {vehicles.length === 0 ? (
+                  <div className="italic text-muted-foreground">No vehicles assigned for this festival.</div>
+                ) : (
+                  <ul className="space-y-1">
+                    {vehicles.map((v: any) => (
+                      <li key={v.id} className="rounded border bg-background/60 px-2 py-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{v.vehicle_name ?? v.vehicle_type ?? "Vehicle"}</span>
+                          {v.vehicle_type ? <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{v.vehicle_type}</span> : null}
+                        </div>
+                        {v.load_manifest && <div className="whitespace-pre-wrap text-muted-foreground mt-0.5">{v.load_manifest}</div>}
+                        {v.notes && <div className="whitespace-pre-wrap text-muted-foreground italic mt-0.5">{v.notes}</div>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
 
               {/* Water / production notes */}
               <div>
