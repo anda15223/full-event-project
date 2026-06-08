@@ -282,7 +282,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
           </header>
-          <main className="flex-1 p-6 md:p-8 overflow-auto min-h-[calc(100vh-3rem)]">
+          <main className="flex-1 min-w-0 p-6 md:p-8 overflow-x-hidden overflow-y-auto min-h-[calc(100vh-3rem)]">
             {children}
           </main>
         </SidebarInset>
