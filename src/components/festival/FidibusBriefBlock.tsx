@@ -191,12 +191,33 @@ export default function FidibusBriefBlock({
     onSuccess: invalidateBuildout,
   });
 
+  const importedCount = useMemo(() => buildout.filter((b) => !!b.source_festival_id).length, [buildout]);
+
+  const deleteImported = useMutation({
+    mutationFn: async () => {
+      const { error } = await sb.from("fep_fidibus_buildout")
+        .delete()
+        .eq("festival_id", festivalId)
+        .not("source_festival_id", "is", null);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateBuildout(); toast.success("Imported rows deleted"); },
+    onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
+  });
+
+  const filteredBuildout = useMemo(() => {
+    if (sourceFilter === "imported") return buildout.filter((b) => !!b.source_festival_id);
+    if (sourceFilter === "manual") return buildout.filter((b) => !b.source_festival_id);
+    return buildout;
+  }, [buildout, sourceFilter]);
+
   const grouped = useMemo(() => {
     const m = new Map<Category, Buildout[]>();
     for (const c of CATEGORIES) m.set(c, []);
-    buildout.forEach((b) => m.get(b.category)?.push(b));
+    filteredBuildout.forEach((b) => m.get(b.category)?.push(b));
     return m;
-  }, [buildout]);
+  }, [filteredBuildout]);
+
 
   return (
     <div className="space-y-4">
