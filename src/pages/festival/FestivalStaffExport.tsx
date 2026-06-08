@@ -89,9 +89,9 @@ const styles = StyleSheet.create({
   rowHead: { flexDirection: "row", borderBottom: "0.5pt solid #555", paddingVertical: 3, fontWeight: 700, backgroundColor: "#f4f4f5" },
   cellHrs: { width: 32, textAlign: "right", paddingHorizontal: 3, fontWeight: 700 },
   cellName: { flex: 2, paddingHorizontal: 3 },
-  cellLoc: { flex: 1.4, paddingHorizontal: 3 },
+  cellLoc: { flex: 1.6, paddingHorizontal: 3 },
   cellStn: { flex: 1.4, paddingHorizontal: 3 },
-  cellSrc: { flex: 1, paddingHorizontal: 3 },
+  cellNotes: { flex: 2, paddingHorizontal: 3 },
   cellDay: { width: 22, textAlign: "center" },
   cellAcc: { width: 22, textAlign: "center" },
   cellConf: { width: 28, textAlign: "center" },
@@ -183,9 +183,8 @@ function StaffDoc({
             <View style={styles.rowHead}>
               <Text style={styles.cellName}>Name</Text>
               <Text style={styles.cellHrs}>Hrs</Text>
-              <Text style={styles.cellLoc}>Location</Text>
+              <Text style={styles.cellLoc}>Transport Place</Text>
               <Text style={styles.cellStn}>Station</Text>
-              <Text style={styles.cellSrc}>Source</Text>
               <Text style={styles.cellDay}>Th</Text>
               <Text style={styles.cellDay}>Fr</Text>
               <Text style={styles.cellDay}>Sa</Text>
@@ -195,6 +194,7 @@ function StaffDoc({
               <Text style={styles.cellAcc}>aS</Text>
               <Text style={styles.cellAcc}>aU</Text>
               <Text style={styles.cellConf}>OK</Text>
+              <Text style={styles.cellNotes}>Notes</Text>
             </View>
             {group.people.map((p) => {
               const h = hoursByStaff.get(p.id) ?? 0;
@@ -204,7 +204,6 @@ function StaffDoc({
                   <Text style={styles.cellHrs}>{h ? formatHoursMinutes(h) : "—"}</Text>
                   <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
                   <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
-                  <Text style={styles.cellSrc}>{N(SOURCE_LABEL[p.staff_source] ?? p.staff_source)}</Text>
                   <Text style={styles.cellDay}>{p.works_thursday ? "✓" : "·"}</Text>
                   <Text style={styles.cellDay}>{p.works_friday ? "✓" : "·"}</Text>
                   <Text style={styles.cellDay}>{p.works_saturday ? "✓" : "·"}</Text>
@@ -214,6 +213,7 @@ function StaffDoc({
                   <Text style={styles.cellAcc}>{p.accom_saturday ? "✓" : "·"}</Text>
                   <Text style={styles.cellAcc}>{p.accom_sunday ? "✓" : "·"}</Text>
                   <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
+                  <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
                 </View>
               );
             })}
