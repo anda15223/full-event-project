@@ -26,6 +26,20 @@ type EquipmentRow = {
   position: number | null;
 };
 
+type OrderItem = {
+  id: string;
+  festival_power_id: string;
+  category: string | null;
+  item_name: string;
+  quantity: number | null;
+  unit: string | null;
+  unit_price: number | null;
+  total_price: number | null;
+  currency: string | null;
+  notes: string | null;
+  position: number;
+};
+
 // TODO Sprint 7: Open Sans v17 drops fi/fl ligatures ("confrmed" / "fxed").
 // Plan to swap to a font with full ligature support (Inter, IBM Plex Sans).
 // Defer to post-Jelling — font swap is global to all PDFs.
@@ -134,12 +148,13 @@ function trunc(s: string | null, n: number) {
 }
 
 function PowerDoc({
-  festival, rows, contractsById, equipmentByPower, filterLabel, canSeeFinance,
+  festival, rows, contractsById, equipmentByPower, orderItemsByPower, filterLabel, canSeeFinance,
 }: {
   festival: Festival;
   rows: PowerRow[];
   contractsById: Map<string, Contract>;
   equipmentByPower: Map<string, EquipmentRow[]>;
+  orderItemsByPower: Map<string, OrderItem[]>;
   filterLabel: string | null;
   canSeeFinance: boolean;
 }) {
@@ -199,9 +214,15 @@ function PowerDoc({
         if ((p.connections_125a ?? 0) > 0) lines.push(`125A: ${p.connections_125a}`);
         if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
 
-        const poweredEq = eq
-          .filter((e) => e.is_powered && (e.power_kw ?? 0) > 0)
-          .sort((a, b) => (b.power_kw ?? 0) * (b.quantity ?? 1) - (a.power_kw ?? 0) * (a.quantity ?? 1));
+        const poweredEq = eq.filter((e) => e.is_powered && (e.power_kw ?? 0) > 0);
+        const allEq = eq
+          .slice()
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.equipment_name.localeCompare(b.equipment_name));
+        const orderItems = (orderItemsByPower.get(p.id) ?? [])
+          .slice()
+          .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        const orderCurrency = orderItems.find((i) => i.currency)?.currency ?? "DKK";
+        const orderTotal = orderItems.reduce((s, it) => s + Number(it.total_price ?? 0), 0);
 
         return (
           <Page key={p.id} size="A4" style={styles.page}>
@@ -229,9 +250,9 @@ function PowerDoc({
               )}
 
               <Text style={[styles.row, { marginTop: 8, fontWeight: 700 }]}>
-                {N(`Powered equipment (${poweredEq.length})`)}
+                {N(`Equipment (${allEq.length})  ·  powered: ${poweredEq.length}`)}
               </Text>
-              {poweredEq.length === 0 ? (
+              {allEq.length === 0 ? (
                 <Text style={styles.row}>—</Text>
               ) : (
                 <View style={styles.tableWrap}>
@@ -242,12 +263,13 @@ function PowerDoc({
                     <Text style={styles.colKw}>kW each</Text>
                     <Text style={styles.colTot}>Total kW</Text>
                   </View>
-                  {poweredEq.map((e, idx) => {
+                  {allEq.map((e, idx) => {
                     const qty = Number(e.quantity ?? 1);
                     const kwEach = Number(e.power_kw ?? 0);
-                    const total = qty * kwEach;
-                    const isLast = idx === poweredEq.length - 1;
-                    const plug = e.power_type ? POWER_TYPE_LABEL[e.power_type] : "—";
+                    const powered = !!e.is_powered && kwEach > 0;
+                    const total = powered ? qty * kwEach : 0;
+                    const isLast = idx === allEq.length - 1;
+                    const plug = powered ? (e.power_type ? POWER_TYPE_LABEL[e.power_type] : "—") : "—";
                     return (
                       <View
                         key={e.id}
@@ -260,8 +282,8 @@ function PowerDoc({
                         <Text style={styles.colName}>{N(e.equipment_name)}</Text>
                         <Text style={styles.colPlug}>{N(plug)}</Text>
                         <Text style={styles.colQty}>{qty}</Text>
-                        <Text style={styles.colKw}>{kwEach.toFixed(2)}</Text>
-                        <Text style={styles.colTot}>{total.toFixed(2)}</Text>
+                        <Text style={styles.colKw}>{powered ? kwEach.toFixed(2) : "—"}</Text>
+                        <Text style={styles.colTot}>{powered ? total.toFixed(2) : "—"}</Text>
                       </View>
                     );
                   })}
@@ -269,11 +291,65 @@ function PowerDoc({
                     <Text style={styles.colName}>Total</Text>
                     <Text style={styles.colPlug}></Text>
                     <Text style={styles.colQty}>
-                      {poweredEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
+                      {allEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
                     </Text>
                     <Text style={styles.colKw}></Text>
                     <Text style={styles.colTot}>{demandKw.toFixed(2)}</Text>
                   </View>
+                </View>
+              )}
+
+              <Text style={[styles.row, { marginTop: 10, fontWeight: 700 }]}>
+                {N(`Festival order list (${orderItems.length})`)}
+              </Text>
+              {orderItems.length === 0 ? (
+                <Text style={styles.row}>—</Text>
+              ) : (
+                <View style={styles.tableWrap}>
+                  <View style={styles.tHead}>
+                    <Text style={[styles.colPlug, { width: 70 }]}>Category</Text>
+                    <Text style={styles.colName}>Item</Text>
+                    <Text style={styles.colQty}>Qty</Text>
+                    <Text style={[styles.colKw, { width: 40 }]}>Unit</Text>
+                    {canSeeFinance && <Text style={styles.colTot}>Total</Text>}
+                  </View>
+                  {orderItems.map((it, idx) => {
+                    const isLast = idx === orderItems.length - 1;
+                    return (
+                      <View
+                        key={it.id}
+                        style={[
+                          styles.tRow,
+                          idx % 2 === 1 ? styles.tRowAlt : {},
+                          isLast ? styles.tRowLast : {},
+                        ]}
+                      >
+                        <Text style={[styles.colPlug, { width: 70 }]}>{N(it.category ?? "—")}</Text>
+                        <Text style={styles.colName}>
+                          {N(it.item_name)}
+                          {it.notes ? N(`  — ${trunc(it.notes, 80)}`) : ""}
+                        </Text>
+                        <Text style={styles.colQty}>{Number(it.quantity ?? 0)}</Text>
+                        <Text style={[styles.colKw, { width: 40 }]}>{N(it.unit ?? "")}</Text>
+                        {canSeeFinance && (
+                          <Text style={styles.colTot}>
+                            {it.total_price != null ? Number(it.total_price).toLocaleString("da-DK") : "—"}
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                  {canSeeFinance && orderTotal > 0 && (
+                    <View style={styles.tFoot}>
+                      <Text style={[styles.colPlug, { width: 70 }]}></Text>
+                      <Text style={styles.colName}>Order total</Text>
+                      <Text style={styles.colQty}></Text>
+                      <Text style={[styles.colKw, { width: 40 }]}></Text>
+                      <Text style={styles.colTot}>
+                        {orderTotal.toLocaleString("da-DK")} {orderCurrency}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -332,6 +408,7 @@ export default function FestivalPowerExport() {
   const [rows, setRows] = useState<PowerRow[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [equipment, setEquipment] = useState<EquipmentRow[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -354,8 +431,12 @@ export default function FestivalPowerExport() {
         : { data: [] as any[] };
 
       const powerRows = (pRes.data ?? []) as PowerRow[];
-      const eqRes = powerRows.length > 0
-        ? await supabase.from("festival_power_equipment").select("*").in("festival_power_id", powerRows.map((p) => p.id))
+      const powerIds = powerRows.map((p) => p.id);
+      const eqRes = powerIds.length > 0
+        ? await supabase.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
+        : { data: [] as any[] };
+      const oRes = powerIds.length > 0
+        ? await supabase.from("festival_power_order_items").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
 
       if (!alive) return;
@@ -363,6 +444,7 @@ export default function FestivalPowerExport() {
       setContracts(cs);
       setRows(powerRows);
       setEquipment((eqRes.data ?? []) as EquipmentRow[]);
+      setOrderItems((oRes.data ?? []) as OrderItem[]);
       setLoading(false);
     })();
     return () => { alive = false; };
@@ -406,12 +488,20 @@ export default function FestivalPowerExport() {
     equipmentByPower.set(e.festival_power_id, arr);
   });
 
+  const orderItemsByPower = new Map<string, OrderItem[]>();
+  orderItems.forEach((it) => {
+    const arr = orderItemsByPower.get(it.festival_power_id) ?? [];
+    arr.push(it);
+    orderItemsByPower.set(it.festival_power_id, arr);
+  });
+
   const doc = (
     <PowerDoc
       festival={festival}
       rows={sortedRows}
       contractsById={contractsById}
       equipmentByPower={equipmentByPower}
+      orderItemsByPower={orderItemsByPower}
       filterLabel={filterLabel}
       canSeeFinance={canSeeFinance}
     />
