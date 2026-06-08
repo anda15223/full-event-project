@@ -10424,6 +10424,10 @@ export type Database = {
         Returns: string
       }
       recalculate_invoice_statuses: { Args: never; Returns: undefined }
+      renumber_festival_staff: {
+        Args: { p_festival_id: string; p_is_draft: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       accommodation_payment_status:
