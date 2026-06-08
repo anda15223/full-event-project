@@ -590,7 +590,7 @@ export default function FestivalStaff() {
               <StaffRow
                 key={s.id}
                 staff={s}
-                index={s.staff_number ?? i + 1}
+                index={i + 1}
                 concepts={concepts}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
