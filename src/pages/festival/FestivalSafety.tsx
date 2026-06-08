@@ -181,7 +181,8 @@ export default function FestivalSafety() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={zonesQ.data!.length === 1 ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
+
             {zonesQ.data!.map((z) => (
               <SafetyZoneCard key={z.id} festivalId={festivalId} festivalSlug={slug} zone={z} />
             ))}
