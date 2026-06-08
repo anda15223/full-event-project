@@ -632,7 +632,8 @@ export default function FestivalStaff() {
             }
           });
 
-          const crewPool = allRows.filter((s) => s.role !== "management");
+          // Include management folks too — they can also fill a position slot if needed.
+          const crewPool = allRows;
 
           const groups = [
             { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
