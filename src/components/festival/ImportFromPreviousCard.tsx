@@ -277,7 +277,7 @@ export const CARD_TABLES: Record<string, string[]> = {
   hours: ["festival_hours", "festival_concept_hours", "festival_service_hours"],
   prices: ["festival_concept_prices"],
   safety: ["festival_safety", "festival_safety_zone"],
-  setup: ["festival_setup"],
+  setup: [],
   staff: ["festival_staff", "festival_staff_vehicles", "festival_schedule_position", "festival_shifts"],
   transport: ["festival_transport"],
   scheduling: ["festival_schedule_position", "festival_shifts"],
