@@ -147,7 +147,7 @@ export default function FidibusBriefBlock({
   });
 
   const addRow = useMutation({
-    mutationFn: async (category: Category) => {
+    mutationFn: async ({ category, item }: { category: Category; item?: PickedItem }) => {
       const maxOrder = buildout
         .filter((b) => b.category === category)
         .reduce((m, b) => Math.max(m, b.display_order), -1);
@@ -155,6 +155,13 @@ export default function FidibusBriefBlock({
         festival_id: festivalId,
         category,
         display_order: maxOrder + 1,
+        label: item?.label ?? null,
+        spec: item?.spec ?? null,
+        qty: item?.qty ?? null,
+        dimensions: item?.dimensions ?? null,
+        area: item?.area ?? null,
+        concept_id: item?.concept_id ?? null,
+        position_notes: item?.position_notes ?? null,
       });
       if (error) throw error;
     },
