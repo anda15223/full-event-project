@@ -815,14 +815,27 @@ export default function FestivalStaff() {
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
-            ...STATION_OPTIONS.map((s) => ({
-              id: s.value,
-              name: s.label,
-              people: allRows.filter((p) => p.station === s.value),
-            })),
-            { id: "__none__", name: "No station", people: allRows.filter((p) => !p.station) },
-          ].map((group) => (
+          {(() => {
+            // Only show stations that are actually configured for this festival's concepts
+            const festivalStationCodes = new Set<string>();
+            planByConcept.forEach((slots) => {
+              slots.forEach((s) => festivalStationCodes.add(s.stationCode));
+            });
+            // Also include any station that staff are already assigned to (avoid hiding existing data)
+            allRows.forEach((p) => {
+              if (p.station) festivalStationCodes.add(p.station);
+            });
+            return [
+              ...STATION_OPTIONS
+                .filter((s) => festivalStationCodes.has(s.value))
+                .map((s) => ({
+                  id: s.value,
+                  name: s.label,
+                  people: allRows.filter((p) => p.station === s.value),
+                })),
+              { id: "__none__", name: "No station", people: allRows.filter((p) => !p.station) },
+            ];
+          })().map((group) => (
             <div key={group.id} className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-medium text-sm">{group.name}</h3>
