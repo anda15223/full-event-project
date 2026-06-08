@@ -1384,7 +1384,7 @@ function DayPickerCell({
   };
 
   return (
-    <div className="flex items-center justify-center gap-1 flex-wrap">
+    <div className="flex flex-row items-center justify-center gap-1 flex-nowrap whitespace-nowrap">
       {visibleRows.map((d) => {
         const checked = selectedSet.has(d.iso);
         return (
