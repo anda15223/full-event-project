@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
-  Document, Page, Text, View, StyleSheet, PDFDownloadLink, BlobProvider,
+  Document, Page, Text, View, StyleSheet, PDFDownloadLink, pdf,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,35 @@ function staffAccomDateSet(p: Staff, festivalDays: string[]): Set<string> {
     }
   }
   return set;
+}
+
+async function renderPdfBlobToImages(blob: Blob): Promise<string[]> {
+  const pdfjs: any = await import("pdfjs-dist");
+  const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.js?url")).default;
+  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+
+  const buffer = await blob.arrayBuffer();
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
+  const pdfDoc = await loadingTask.promise;
+  const pages: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pdfDoc.numPages; pageNumber++) {
+    const page = await pdfDoc.getPage(pageNumber);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(1.6, 1500 / baseViewport.width);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const context = canvas.getContext("2d");
+    if (!context) continue;
+    await page.render({ canvasContext: context, viewport }).promise;
+    pages.push(canvas.toDataURL("image/jpeg", 0.9));
+    page.cleanup?.();
+  }
+
+  await loadingTask.destroy?.();
+  return pages;
 }
 
 const styles = StyleSheet.create({
@@ -358,6 +387,9 @@ export default function FestivalStaffExport() {
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
   const [positions, setPositions] = useState<SchedulePosition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewPages, setPreviewPages] = useState<string[]>([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -406,6 +438,31 @@ export default function FestivalStaffExport() {
     })();
   }, [slug]);
 
+  useEffect(() => {
+    if (!festival || loading) return;
+
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewPages([]);
+
+    (async () => {
+      try {
+        const blob = await pdf(<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />).toBlob();
+        const images = await renderPdfBlobToImages(blob);
+        if (cancelled) return;
+        if (images.length === 0) throw new Error("No preview pages generated");
+        setPreviewPages(images);
+      } catch (error) {
+        if (!cancelled) setPreviewError(error instanceof Error ? error.message : String(error));
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [festival, staff, concepts, shifts, positions, loading]);
+
   if (loading) {
     return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
   }
@@ -426,15 +483,25 @@ export default function FestivalStaffExport() {
           )}
         </PDFDownloadLink>
       </div>
-      <div className="flex-1 min-h-0 bg-muted">
-        <BlobProvider document={<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />}>
-          {({ url, loading: bl, error }) => {
-            if (bl) return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Rendering preview…</div>;
-            if (error) return <div className="p-6 text-destructive text-sm">Failed to render PDF: {String(error)}</div>;
-            if (!url) return null;
-            return <iframe title="Staff report" src={url} className="w-full h-full" style={{ border: 0 }} />;
-          }}
-        </BlobProvider>
+      <div className="flex-1 min-h-0 overflow-auto bg-muted p-6">
+        {previewLoading && (
+          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Rendering preview…
+          </div>
+        )}
+        {previewError && <div className="text-sm text-destructive">Failed to render preview: {previewError}</div>}
+        {!previewLoading && !previewError && previewPages.length > 0 && (
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-6">
+            {previewPages.map((src, index) => (
+              <img
+                key={src}
+                src={src}
+                alt={`Staff report page ${index + 1}`}
+                className="w-full max-w-6xl rounded-sm bg-background shadow-lg"
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
