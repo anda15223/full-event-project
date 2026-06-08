@@ -15,8 +15,18 @@ import BuildOutPicker, { PickedItem, PickerCategory } from "@/components/festiva
 
 const sb = supabase as any;
 
-const CATEGORIES = ["tent","power","water","gas","cooling","daka","tables","facade","other"] as const;
+const CATEGORIES = [
+  "tent","power","water","gas","cooling","daka","tables","facade","other",
+  "contacts","hours","equipment","trolleys","power_order","order_list","soborg","info_doc",
+] as const;
 type Category = typeof CATEGORIES[number];
+
+// Categories whose "Add" button opens the database picker.
+const PICKER_CATS = new Set<Category>([
+  "tent","power","cooling",
+  "contacts","hours","equipment","trolleys",
+  "power_order","order_list","facade","soborg","info_doc",
+]);
 
 type Run = {
   id: string;
