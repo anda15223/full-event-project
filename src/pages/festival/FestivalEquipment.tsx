@@ -173,7 +173,8 @@ export default function FestivalEquipment() {
           No active concepts at this festival.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={items.length === 1 ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
+
           {items.map((it: any) => (
             <EquipmentConceptCard
               key={it.contractId}
