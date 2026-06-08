@@ -48,6 +48,31 @@ const BUCKET = "festival-setup-docs";
 const CONCEPTS = ["fish", "gyros", "creperie", "chicks", "all"] as const;
 type Concept = typeof CONCEPTS[number];
 
+const RUN_COPY_FIELDS = [
+  "setup_date", "soborg_meet_time", "destination_address", "arrival_time",
+  "scope_summary", "access_address", "access_gate", "checkin_contact", "checkin_phone",
+  "driving_windows", "driving_rules", "escort_required", "gas_check_at", "fire_inspection_at",
+  "teardown_start_at", "teardown_window", "fidibus_notes",
+] as const;
+
+const PHASE_COPY_FIELDS = [
+  "sort_order", "phase_name", "concept", "transport_allocation_id", "planned_time", "planned_date",
+  "from_location", "to_location", "driver_name", "notes",
+] as const;
+
+const emptyValue = (value: unknown) => value === null || value === undefined || value === "";
+
+async function getPrimarySetupRun(festivalId: string) {
+  const { data, error } = await sb.from("setup_runs")
+    .select("*")
+    .eq("festival_id", festivalId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as (SetupRun & Record<string, any>) | null;
+}
+
 const SEQUENCE_PRESETS = [
   "Drive to festival",
   "Setup at festival",
