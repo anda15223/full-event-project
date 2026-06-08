@@ -1332,6 +1332,108 @@ function SlotPicker({
   );
 }
 
+// ============ Day picker cell (work / accom dates) ============
+//
+// Compact cell that shows ONLY the currently-selected dates as chips.
+// A pencil button opens a popover listing every day in the festival window
+// (with festival days highlighted vs. buffer days), where the user toggles
+// which days apply. Unselected days are not visible until you open the editor.
+
+function DayPickerCell({
+  selected,
+  dayWindow,
+  variant,
+  title,
+  onChange,
+}: {
+  selected: string[];
+  dayWindow: { iso: string; label: string; isFestivalDay: boolean }[];
+  variant: "work" | "accom";
+  title: string;
+  onChange: (next: string[]) => void;
+}) {
+  const selectedSet = new Set(selected);
+  // Preserve order using dayWindow when possible, then append any
+  // stray dates (e.g. legacy) that aren't in the current window.
+  const orderedSelected = [
+    ...dayWindow.filter((d) => selectedSet.has(d.iso)),
+    ...selected
+      .filter((iso) => !dayWindow.some((d) => d.iso === iso))
+      .map((iso) => ({ iso, label: iso.slice(5), isFestivalDay: false })),
+  ];
+
+  const chipClass =
+    variant === "work"
+      ? "bg-emerald-600 text-white border-emerald-700"
+      : "bg-primary text-primary-foreground border-primary";
+
+  return (
+    <div className="flex items-center justify-center gap-1 flex-wrap">
+      {orderedSelected.length === 0 ? (
+        <span className="text-[10px] text-muted-foreground italic">—</span>
+      ) : (
+        orderedSelected.map((d) => (
+          <span
+            key={d.iso}
+            className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums ${chipClass}`}
+          >
+            {d.label}
+          </span>
+        ))
+      )}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-border text-muted-foreground hover:bg-muted"
+            title={`Edit ${title.toLowerCase()}`}
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-60 p-3" align="end">
+          <div className="text-xs font-semibold mb-2">{title}</div>
+          {dayWindow.length === 0 ? (
+            <div className="text-[11px] text-muted-foreground italic">
+              Set the festival start &amp; end date first.
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {dayWindow.map((d) => {
+                const checked = selectedSet.has(d.iso);
+                return (
+                  <label
+                    key={d.iso}
+                    className={`flex items-center justify-between gap-2 px-2 py-1 rounded cursor-pointer text-xs ${
+                      d.isFestivalDay ? "bg-muted/40" : ""
+                    } hover:bg-muted`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(c) => {
+                          const next = c
+                            ? [...selected, d.iso].sort()
+                            : selected.filter((x) => x !== d.iso);
+                          onChange(next);
+                        }}
+                      />
+                      <span className="tabular-nums">{d.label}</span>
+                    </span>
+                    {!d.isFestivalDay && (
+                      <span className="text-[9px] uppercase text-muted-foreground">extra</span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 // ============ Shift groups editor (Fish & Gyros) ============
 
 type ShiftRow = {
