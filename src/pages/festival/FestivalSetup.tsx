@@ -49,7 +49,6 @@ const CONCEPTS = ["fish", "gyros", "creperie", "chicks", "all"] as const;
 type Concept = typeof CONCEPTS[number];
 
 const RUN_COPY_FIELDS = [
-  "setup_date", "soborg_meet_time", "destination_address", "arrival_time",
   "scope_summary", "access_address", "access_gate", "checkin_contact", "checkin_phone",
   "driving_windows", "driving_rules", "escort_required", "gas_check_at", "fire_inspection_at",
   "teardown_start_at", "teardown_window", "fidibus_notes",
@@ -542,19 +541,6 @@ export default function FestivalSetup() {
             phaseCopied = count ?? phaseRows.length;
           }
 
-          const { data: srcAttachments, error: attReadErr } = await sb.from("setup_attachments")
-            .select("concept,file_path,file_name,mime_type,ai_summary,extracted_text,parsed_at")
-            .eq("setup_run_id", srcRun.id)
-            .is("setup_phase_id", null);
-          if (attReadErr) throw attReadErr;
-          let attachmentsCopied = 0;
-          if (srcAttachments?.length) {
-            const rows = (srcAttachments as any[]).map((a) => ({ ...a, setup_run_id: tgtRun.id }));
-            const { count, error } = await sb.from("setup_attachments").insert(rows, { count: "exact" });
-            if (error) throw error;
-            attachmentsCopied = count ?? rows.length;
-          }
-
           const { data: srcRows } = await sb.from("fep_fidibus_buildout")
             .select("category,area,concept_id,label,spec,qty,dimensions,position_notes,display_order")
             .eq("festival_id", sourceFestivalId);
@@ -573,11 +559,9 @@ export default function FestivalSetup() {
           qc.invalidateQueries({ queryKey: ["fidibus-buildout", targetFestivalId] });
           qc.invalidateQueries({ queryKey: ["setup-run", targetFestivalId] });
           qc.invalidateQueries({ queryKey: ["setup-phases", tgtRun.id] });
-          qc.invalidateQueries({ queryKey: ["setup-attachments", tgtRun.id] });
           const parts = [
             phaseCopied ? `${phaseCopied} phase${phaseCopied === 1 ? "" : "s"}` : "",
             runFields ? `${runFields} setup field${runFields === 1 ? "" : "s"}` : "",
-            attachmentsCopied ? `${attachmentsCopied} map${attachmentsCopied === 1 ? "" : "s"}` : "",
             copied ? `${copied} Fidibus build-out row${copied === 1 ? "" : "s"}` : "",
           ].filter(Boolean);
           return parts.length ? parts.join(" · ") : "No new Setup data found";
