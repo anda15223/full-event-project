@@ -219,9 +219,20 @@ function StaffDoc({
 
   const scheduleConceptIds = Array.from(conceptSchedules.keys()).filter((id) => conceptById.has(id));
 
+  // Build the dynamic day window: festival start..end ∪ all custom dates
+  // that appear in any staff member's work_dates / accom_dates.
+  const festivalDays = isoDatesBetween(festival.start_date, festival.end_date);
+  const extraSet = new Set<string>();
+  for (const p of staff) {
+    for (const d of p.work_dates ?? []) extraSet.add(d);
+    for (const d of p.accom_dates ?? []) extraSet.add(d);
+  }
+  for (const d of festivalDays) extraSet.delete(d);
+  const dayList = [...festivalDays, ...Array.from(extraSet)].sort((a, b) => a.localeCompare(b));
+
   return (
     <Document>
-      <Page size="A4" style={styles.page} wrap>
+      <Page size="A4" orientation="landscape" style={styles.page} wrap>
         <View>
           <Text style={styles.h1}>{N(`Staff — ${festival.name}`)}</Text>
           <Text style={styles.meta}>
@@ -237,33 +248,33 @@ function StaffDoc({
               <Text style={styles.cellHrs}>Hrs</Text>
               <Text style={styles.cellLoc}>Transport Place</Text>
               <Text style={styles.cellStn}>Station</Text>
-              <Text style={styles.cellDay}>Th</Text>
-              <Text style={styles.cellDay}>Fr</Text>
-              <Text style={styles.cellDay}>Sa</Text>
-              <Text style={styles.cellDay}>Su</Text>
-              <Text style={styles.cellAcc}>aT</Text>
-              <Text style={styles.cellAcc}>aF</Text>
-              <Text style={styles.cellAcc}>aS</Text>
-              <Text style={styles.cellAcc}>aU</Text>
+              {dayList.map((iso) => {
+                const { wd, dm } = dayLabel(iso);
+                return <Text key={`w-${iso}`} style={styles.dayHeader}>{wd}{"\n"}{dm}</Text>;
+              })}
+              {dayList.map((iso) => {
+                const { wd, dm } = dayLabel(iso);
+                return <Text key={`a-${iso}`} style={styles.dayHeader}>a{wd[0]}{"\n"}{dm}</Text>;
+              })}
               <Text style={styles.cellConf}>OK</Text>
               <Text style={styles.cellNotes}>Notes</Text>
             </View>
             {group.people.map((p) => {
               const h = hoursByStaff.get(p.id) ?? 0;
+              const workSet = staffWorkDateSet(p, festivalDays);
+              const accomSet = staffAccomDateSet(p, festivalDays);
               return (
                 <View key={p.id} style={styles.row} wrap={false}>
                   <Text style={styles.cellName}>{N(p.name || "—")}</Text>
                   <Text style={styles.cellHrs}>{h ? formatHoursMinutes(h) : "—"}</Text>
                   <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
                   <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
-                  <Text style={styles.cellDay}>{p.works_thursday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellDay}>{p.works_friday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellDay}>{p.works_saturday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellDay}>{p.works_sunday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_thursday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_friday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_saturday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_sunday ? "✓" : "·"}</Text>
+                  {dayList.map((iso) => (
+                    <Text key={`w-${iso}`} style={styles.cellDay}>{workSet.has(iso) ? "✓" : "·"}</Text>
+                  ))}
+                  {dayList.map((iso) => (
+                    <Text key={`a-${iso}`} style={styles.cellAcc}>{accomSet.has(iso) ? "✓" : "·"}</Text>
+                  ))}
                   <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
                   <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
                 </View>
