@@ -213,6 +213,7 @@ function StaffDoc({
                   <Text style={styles.cellAcc}>{p.accom_saturday ? "✓" : "·"}</Text>
                   <Text style={styles.cellAcc}>{p.accom_sunday ? "✓" : "·"}</Text>
                   <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
+                  <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
                 </View>
               );
             })}
