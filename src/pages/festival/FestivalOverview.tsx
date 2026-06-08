@@ -773,7 +773,7 @@ export default function FestivalOverview() {
             festivalId={festivalId}
             festivalSlug={slug}
             conceptData={statsQ.data?.byConcept ?? {}}
-            layout="grid"
+            layout="list"
             hideEmoji
             renderConceptBody={(concept, data) => {
               const s = data ?? {};
