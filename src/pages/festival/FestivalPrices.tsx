@@ -164,7 +164,7 @@ export default function FestivalPrices() {
           No active concepts at this festival.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={orderedConcepts.length === 1 ? "grid grid-cols-1 gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
           {orderedConcepts.map((c) => {
             const p = pricesByConcept.get(c.id) ?? null;
             const its = p ? (itemsByPriceId.get(p.id) ?? []) : [];
