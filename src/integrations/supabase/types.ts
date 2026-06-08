@@ -883,6 +883,7 @@ export type Database = {
           label: string | null
           position_notes: string | null
           qty: number | null
+          source_festival_id: string | null
           spec: string | null
           updated_at: string
         }
@@ -898,6 +899,7 @@ export type Database = {
           label?: string | null
           position_notes?: string | null
           qty?: number | null
+          source_festival_id?: string | null
           spec?: string | null
           updated_at?: string
         }
@@ -913,6 +915,7 @@ export type Database = {
           label?: string | null
           position_notes?: string | null
           qty?: number | null
+          source_festival_id?: string | null
           spec?: string | null
           updated_at?: string
         }
@@ -976,6 +979,55 @@ export type Database = {
           {
             foreignKeyName: "fep_fidibus_buildout_festival_id_fkey"
             columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "fep_fidibus_buildout_source_festival_id_fkey"
+            columns: ["source_festival_id"]
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]

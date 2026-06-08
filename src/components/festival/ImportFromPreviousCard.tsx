@@ -22,6 +22,9 @@ interface Props {
   currentFestivalId: string;
   /** Called after a successful commit (promotes drafts → live). */
   onCommitted?: () => void;
+  /** Optional extra import step run AFTER the standard clone-card-data import.
+   *  Returns a short summary string to append to the toast (e.g. "+12 build-out rows"). */
+  extraImport?: (sourceFestivalId: string, currentFestivalId: string) => Promise<string | void>;
 }
 
 export function ImportFromPreviousCard({
@@ -29,7 +32,9 @@ export function ImportFromPreviousCard({
   tables,
   currentFestivalId,
   onCommitted,
+  extraImport,
 }: Props) {
+
   const { toast } = useToast();
   const { draftMode, setDraftMode } = useDraftMode();
   const [festivals, setFestivals] = useState<Festival[]>([]);
@@ -84,9 +89,17 @@ export function ImportFromPreviousCard({
       const total = Object.values(res.imported ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(total);
       setDraftMode(true);
+      let extraMsg: string | void;
+      if (extraImport) {
+        try {
+          extraMsg = await extraImport(sourceId, currentFestivalId);
+        } catch (ee) {
+          toast({ title: "Extra import failed", description: (ee as Error).message, variant: "destructive" });
+        }
+      }
       toast({
         title: "Draft imported",
-        description: `${total} rows staged. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
+        description: `${total} rows staged${extraMsg ? ` · ${extraMsg}` : ""}. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
       });
       onCommitted?.();
     } catch (e) {
@@ -95,6 +108,7 @@ export function ImportFromPreviousCard({
       setBusy(null);
     }
   }
+
 
   async function handleCommit() {
     setBusy("commit");

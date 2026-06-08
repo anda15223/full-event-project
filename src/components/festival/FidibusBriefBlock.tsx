@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
 
 const sb = supabase as any;
 
@@ -46,9 +46,14 @@ type Buildout = {
   dimensions: string | null;
   position_notes: string | null;
   display_order: number;
+  source_festival_id: string | null;
 };
 
 type Concept = { id: string; name: string; display_order: number | null };
+type FestivalLite = { id: string; name: string };
+
+type SourceFilter = "all" | "imported" | "manual";
+
 
 const toLocalInput = (iso: string | null) => {
   if (!iso) return "";
@@ -105,6 +110,28 @@ export default function FidibusBriefBlock({
     },
   });
   const buildout = buildoutQ.data ?? [];
+
+  // Lookup names for source-festival badges.
+  const sourceIds = useMemo(
+    () => Array.from(new Set(buildout.map((b) => b.source_festival_id).filter(Boolean))) as string[],
+    [buildout],
+  );
+  const sourceFestivalsQ = useQuery({
+    queryKey: ["fidibus-source-festivals", sourceIds.sort().join(",")],
+    enabled: sourceIds.length > 0,
+    queryFn: async () => {
+      const { data } = await sb.from("festivals").select("id, name").in("id", sourceIds);
+      return (data ?? []) as FestivalLite[];
+    },
+  });
+  const sourceFestivalName = useMemo(() => {
+    const m = new Map<string, string>();
+    (sourceFestivalsQ.data ?? []).forEach((f) => m.set(f.id, f.name));
+    return m;
+  }, [sourceFestivalsQ.data]);
+
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+
 
   const invalidateBuildout = () => qc.invalidateQueries({ queryKey: ["fidibus-buildout", festivalId] });
   const invalidateRun = () => qc.invalidateQueries({ queryKey: ["setup-run", festivalId] });
@@ -164,12 +191,33 @@ export default function FidibusBriefBlock({
     onSuccess: invalidateBuildout,
   });
 
+  const importedCount = useMemo(() => buildout.filter((b) => !!b.source_festival_id).length, [buildout]);
+
+  const deleteImported = useMutation({
+    mutationFn: async () => {
+      const { error } = await sb.from("fep_fidibus_buildout")
+        .delete()
+        .eq("festival_id", festivalId)
+        .not("source_festival_id", "is", null);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateBuildout(); toast.success("Imported rows deleted"); },
+    onError: (e: any) => toast.error(e?.message ?? "Delete failed"),
+  });
+
+  const filteredBuildout = useMemo(() => {
+    if (sourceFilter === "imported") return buildout.filter((b) => !!b.source_festival_id);
+    if (sourceFilter === "manual") return buildout.filter((b) => !b.source_festival_id);
+    return buildout;
+  }, [buildout, sourceFilter]);
+
   const grouped = useMemo(() => {
     const m = new Map<Category, Buildout[]>();
     for (const c of CATEGORIES) m.set(c, []);
-    buildout.forEach((b) => m.get(b.category)?.push(b));
+    filteredBuildout.forEach((b) => m.get(b.category)?.push(b));
     return m;
-  }, [buildout]);
+  }, [filteredBuildout]);
+
 
   return (
     <div className="space-y-4">
@@ -289,6 +337,32 @@ export default function FidibusBriefBlock({
 
       {/* 4. Build-out */}
       <SectionCard title="Build-out (Fidibus places)">
+        <div className="flex flex-wrap items-center gap-2 -mt-1">
+          <div className="inline-flex rounded-md border bg-muted/20 p-0.5 text-[11px]">
+            {(["all","imported","manual"] as SourceFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setSourceFilter(f)}
+                className={
+                  "px-2 py-0.5 rounded transition-colors capitalize " +
+                  (sourceFilter === f ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {f}{f === "imported" && importedCount > 0 ? ` (${importedCount})` : ""}
+              </button>
+            ))}
+          </div>
+          {importedCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-[11px] text-destructive hover:text-destructive"
+              onClick={() => { if (confirm(`Delete all ${importedCount} imported build-out row(s)?`)) deleteImported.mutate(); }}
+            >
+              <Trash2 className="h-3 w-3 mr-1" /> Delete imported rows
+            </Button>
+          )}
+        </div>
         {buildoutQ.isLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : (
@@ -309,8 +383,17 @@ export default function FidibusBriefBlock({
                     <div className="text-[11px] text-muted-foreground italic px-1">— none —</div>
                   ) : (
                     rows.map((row, idx) => (
-                      <div key={row.id} className="rounded-lg border bg-muted/20 p-2 space-y-2">
+                      <div key={row.id} className={"rounded-lg border p-2 space-y-2 " + (row.source_festival_id ? "bg-amber-50/40 border-amber-200/60 dark:bg-amber-500/5" : "bg-muted/20")}>
+                        {row.source_festival_id && (
+                          <div className="flex items-center gap-1 text-[10px] text-amber-700 dark:text-amber-300">
+                            <Sparkles className="h-2.5 w-2.5" />
+                            <span className="uppercase tracking-wide font-medium">
+                              imported · {sourceFestivalName.get(row.source_festival_id) ?? "another festival"}
+                            </span>
+                          </div>
+                        )}
                         <div className="grid grid-cols-12 gap-2">
+
                           <Input
                             className="col-span-5 h-8 text-xs"
                             defaultValue={row.label ?? ""}

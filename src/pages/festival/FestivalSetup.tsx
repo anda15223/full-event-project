@@ -478,8 +478,65 @@ export default function FestivalSetup() {
         cardLabel="setup"
         tables={CARD_TABLES.setup}
         currentFestivalId={festivalId ?? ""}
+        extraImport={async (sourceFestivalId, targetFestivalId) => {
+          // Fetch existing build-out count + current run on the target.
+          const { count: existingCount } = await sb
+            .from("fep_fidibus_buildout")
+            .select("id", { count: "exact", head: true })
+            .eq("festival_id", targetFestivalId);
+          if ((existingCount ?? 0) > 0) {
+            if (!window.confirm("This will append imported Fidibus build-out rows as a draft — continue?")) {
+              return "Fidibus brief skipped";
+            }
+          }
+
+          // 1) Copy reusable text fields — only fill empties on the target run.
+          const REUSABLE = [
+            "scope_summary", "access_address", "access_gate", "checkin_contact", "checkin_phone",
+            "driving_windows", "driving_rules", "escort_required", "teardown_window", "fidibus_notes",
+          ] as const;
+          const { data: srcRun } = await sb.from("setup_runs")
+            .select(REUSABLE.join(","))
+            .eq("festival_id", sourceFestivalId).maybeSingle();
+          const { data: tgtRun } = await sb.from("setup_runs")
+            .select("id," + REUSABLE.join(","))
+            .eq("festival_id", targetFestivalId).maybeSingle();
+          if (srcRun && tgtRun) {
+            const patch: Record<string, any> = {};
+            for (const k of REUSABLE) {
+              const cur = (tgtRun as any)[k];
+              const src = (srcRun as any)[k];
+              const empty = cur === null || cur === undefined || cur === "" || (k === "escort_required" && cur === false);
+              if (empty && src !== null && src !== undefined && src !== "") patch[k] = src;
+            }
+            if (Object.keys(patch).length) {
+              await sb.from("setup_runs").update(patch).eq("id", (tgtRun as any).id);
+            }
+          }
+
+          // 2) Copy build-out rows — append with source_festival_id tag.
+          const { data: srcRows } = await sb.from("fep_fidibus_buildout")
+            .select("category,area,concept_id,label,spec,qty,dimensions,position_notes,display_order")
+            .eq("festival_id", sourceFestivalId);
+          let copied = 0;
+          if (srcRows && srcRows.length) {
+            const insertRows = (srcRows as any[]).map((r) => ({
+              ...r,
+              festival_id: targetFestivalId,
+              source_festival_id: sourceFestivalId,
+            }));
+            const { error: insErr, count } = await sb.from("fep_fidibus_buildout")
+              .insert(insertRows, { count: "exact" });
+            if (insErr) throw insErr;
+            copied = count ?? insertRows.length;
+          }
+          qc.invalidateQueries({ queryKey: ["fidibus-buildout", targetFestivalId] });
+          qc.invalidateQueries({ queryKey: ["setup-run", targetFestivalId] });
+          return `+${copied} Fidibus build-out row${copied === 1 ? "" : "s"}`;
+        }}
         onCommitted={() => window.location.reload()}
       />
+
       {/* Header */}
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
