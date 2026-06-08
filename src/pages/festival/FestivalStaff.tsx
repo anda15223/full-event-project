@@ -1222,31 +1222,13 @@ function StaffRow({
         </Select>
       </TableCell>
       <TableCell>
-        <div className="flex items-center justify-center gap-1 flex-wrap">
-          {dayWindow.length === 0 && (
-            <span className="text-[10px] text-muted-foreground italic">Set festival dates</span>
-          )}
-          {dayWindow.map((d) => {
-            const checked = workDatesSet.has(d.iso);
-            return (
-              <button
-                key={d.iso}
-                type="button"
-                onClick={() => toggleDate("work_dates", d.iso)}
-                className={`text-[10px] px-1.5 py-0.5 rounded border tabular-nums transition ${
-                  checked
-                    ? "bg-emerald-600 text-white border-emerald-700"
-                    : d.isFestivalDay
-                    ? "bg-background text-foreground border-border hover:bg-muted"
-                    : "bg-muted/40 text-muted-foreground border-dashed border-border hover:bg-muted"
-                }`}
-                title={`Works on ${d.label}${d.isFestivalDay ? "" : " (extra day)"}`}
-              >
-                {d.label}
-              </button>
-            );
-          })}
-        </div>
+        <DayPickerCell
+          selected={staff.work_dates ?? []}
+          dayWindow={dayWindow}
+          variant="work"
+          title="Work days"
+          onChange={(next) => onPatch({ work_dates: next } as Partial<Staff>)}
+        />
       </TableCell>
 
       <TableCell className="text-center">
