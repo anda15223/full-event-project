@@ -812,14 +812,6 @@ export default function FestivalStaff() {
         })()}
       </div>
 
-      {festivalId && (
-        <ShiftGroupsEditor
-          festivalId={festivalId}
-          concepts={concepts.filter((c) =>
-            /fish|gyros/i.test(c.name)
-          )}
-        />
-      )}
 
       {festivalId && (
         <ShiftScheduleCard
