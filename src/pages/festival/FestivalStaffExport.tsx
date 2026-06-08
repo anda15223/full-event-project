@@ -373,7 +373,7 @@ export default function FestivalStaffExport() {
       const [staffRes, contractsRes, posRes] = await Promise.all([
         supabase
           .from("festival_staff")
-          .select("id, name, home_location, confirmed, needs_accommodation, concept_id, works_thursday, works_friday, works_saturday, works_sunday, accom_thursday, accom_friday, accom_saturday, accom_sunday, staff_source, role, station, notes")
+          .select("id, name, home_location, confirmed, needs_accommodation, concept_id, works_thursday, works_friday, works_saturday, works_sunday, accom_thursday, accom_friday, accom_saturday, accom_sunday, work_dates, accom_dates, staff_source, role, station, notes")
           .eq("festival_id", (f as any).id)
           .order("name", { ascending: true }),
         supabase
