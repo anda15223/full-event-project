@@ -171,8 +171,8 @@ export function ConceptCardGrid({
     const rows = (contractsQ.data ?? []).slice().filter((r: any) => {
       // Hide draft contracts unless user is in draft preview mode.
       if (r.is_draft && !draftMode) return false;
-      // Hide unassigned (toggled-off) concepts entirely.
-      if (r.is_active === false) return false;
+      // Keep disabled (is_active=false) concepts visible — the card greys them
+      // out and exposes the toggle so they can be re-enabled in place.
       return true;
     });
     rows.sort((a, b) => {
