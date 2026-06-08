@@ -1,0 +1,2 @@
+ALTER TABLE public.festival_cooling_unit DROP CONSTRAINT festival_cooling_unit_cooling_model_check;
+ALTER TABLE public.festival_cooling_unit ADD CONSTRAINT festival_cooling_unit_cooling_model_check CHECK (cooling_model = ANY (ARRAY['container'::text, 'trailer'::text, 'pallet_rental'::text, 'festival_provided'::text]));
