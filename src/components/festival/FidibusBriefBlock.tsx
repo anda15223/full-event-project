@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
-import BuildOutReferencePanel from "@/components/festival/BuildOutReferencePanel";
+import BuildOutPicker, { PickedItem, PickerCategory } from "@/components/festival/BuildOutPicker";
 
 const sb = supabase as any;
 
