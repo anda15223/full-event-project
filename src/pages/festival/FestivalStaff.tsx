@@ -36,6 +36,8 @@ type Staff = {
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
   concept_id: string | null;
+  // Legacy day flags (still in DB for the PDF export). New code uses
+  // work_dates / accom_dates instead.
   works_thursday: boolean | null;
   works_friday: boolean | null;
   works_saturday: boolean | null;
@@ -44,18 +46,44 @@ type Staff = {
   accom_friday: boolean | null;
   accom_saturday: boolean | null;
   accom_sunday: boolean | null;
+  // New flexible day arrays — any calendar date (YYYY-MM-DD).
+  work_dates: string[] | null;
+  accom_dates: string[] | null;
   staff_source: string;
   role: string;
   station: string | null;
   notes: string | null;
 };
 
-const ACCOM_DAYS = [
-  { key: "accom_thursday", label: "Thu" },
-  { key: "accom_friday", label: "Fri" },
-  { key: "accom_saturday", label: "Sat" },
-  { key: "accom_sunday", label: "Sun" },
-] as const;
+// Day window helpers — derive the list of dates shown as chips from the
+// festival's start/end date, with a buffer for early arrivals / pack-down.
+const BUFFER_BEFORE_DAYS = 3;
+const BUFFER_AFTER_DAYS = 1;
+
+function addDaysISO(iso: string, n: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function buildDayWindow(startDate?: string | null, endDate?: string | null) {
+  if (!startDate || !endDate) return [] as { iso: string; label: string; isFestivalDay: boolean }[];
+  const out: { iso: string; label: string; isFestivalDay: boolean }[] = [];
+  const start = addDaysISO(startDate, -BUFFER_BEFORE_DAYS);
+  const end = addDaysISO(endDate, BUFFER_AFTER_DAYS);
+  let cursor = start;
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  while (cursor <= end) {
+    const d = new Date(cursor + "T00:00:00Z");
+    out.push({
+      iso: cursor,
+      label: `${weekdays[d.getUTCDay()]} ${d.getUTCDate()}`,
+      isFestivalDay: cursor >= startDate && cursor <= endDate,
+    });
+    cursor = addDaysISO(cursor, 1);
+  }
+  return out;
+}
+
 
 type Concept = { id: string; name: string };
 
