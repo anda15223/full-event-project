@@ -28,6 +28,8 @@ type Staff = {
   accom_friday: boolean | null;
   accom_saturday: boolean | null;
   accom_sunday: boolean | null;
+  work_dates: string[] | null;
+  accom_dates: string[] | null;
   staff_source: string;
   role: string;
   station: string | null;
@@ -78,6 +80,55 @@ const SCHEDULE_DAYS = [
 const fmt = (t?: string | null) => (t ? t.slice(0, 5) : "—");
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const LEGACY_WORK: Record<string, keyof Staff> = {
+  thursday: "works_thursday", friday: "works_friday", saturday: "works_saturday", sunday: "works_sunday",
+};
+const LEGACY_ACCOM: Record<string, keyof Staff> = {
+  thursday: "accom_thursday", friday: "accom_friday", saturday: "accom_saturday", sunday: "accom_sunday",
+};
+
+function isoDatesBetween(start: string, end: string): string[] {
+  const out: string[] = [];
+  const s = new Date(start + "T00:00:00Z");
+  const e = new Date(end + "T00:00:00Z");
+  for (let d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+function dayLabel(iso: string): { wd: string; dm: string } {
+  const d = new Date(iso + "T00:00:00Z");
+  const wd = WEEKDAY_SHORT[d.getUTCDay()];
+  const dm = `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
+  return { wd, dm };
+}
+function staffWorkDateSet(p: Staff, festivalDays: string[]): Set<string> {
+  const set = new Set<string>(p.work_dates ?? []);
+  // Map legacy weekday booleans onto festival dates that fall on those weekdays.
+  if (!p.work_dates || p.work_dates.length === 0) {
+    for (const iso of festivalDays) {
+      const wd = new Date(iso + "T00:00:00Z").getUTCDay();
+      const key = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][wd];
+      const flag = LEGACY_WORK[key];
+      if (flag && (p as any)[flag]) set.add(iso);
+    }
+  }
+  return set;
+}
+function staffAccomDateSet(p: Staff, festivalDays: string[]): Set<string> {
+  const set = new Set<string>(p.accom_dates ?? []);
+  if (!p.accom_dates || p.accom_dates.length === 0) {
+    for (const iso of festivalDays) {
+      const wd = new Date(iso + "T00:00:00Z").getUTCDay();
+      const key = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][wd];
+      const flag = LEGACY_ACCOM[key];
+      if (flag && (p as any)[flag]) set.add(iso);
+    }
+  }
+  return set;
+}
+
 const styles = StyleSheet.create({
   page: { padding: 28, fontFamily: "Inter", fontSize: 9, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
@@ -92,9 +143,10 @@ const styles = StyleSheet.create({
   cellLoc: { flex: 1.6, paddingHorizontal: 3 },
   cellStn: { flex: 1.4, paddingHorizontal: 3 },
   cellNotes: { flex: 2, paddingHorizontal: 3 },
-  cellDay: { width: 22, textAlign: "center" },
-  cellAcc: { width: 22, textAlign: "center" },
+  cellDay: { width: 26, textAlign: "center" },
+  cellAcc: { width: 26, textAlign: "center" },
   cellConf: { width: 28, textAlign: "center" },
+  dayHeader: { width: 26, textAlign: "center", fontSize: 7.5, lineHeight: 1.1 },
   shiftRow: { flexDirection: "row", borderBottom: "0.25pt solid #ddd", paddingVertical: 3 },
   shiftHead: { flexDirection: "row", borderBottom: "0.5pt solid #555", paddingVertical: 3, fontWeight: 700, backgroundColor: "#f4f4f5" },
   shiftName: { flex: 2, paddingHorizontal: 3 },
@@ -167,9 +219,20 @@ function StaffDoc({
 
   const scheduleConceptIds = Array.from(conceptSchedules.keys()).filter((id) => conceptById.has(id));
 
+  // Build the dynamic day window: festival start..end ∪ all custom dates
+  // that appear in any staff member's work_dates / accom_dates.
+  const festivalDays = isoDatesBetween(festival.start_date, festival.end_date);
+  const extraSet = new Set<string>();
+  for (const p of staff) {
+    for (const d of p.work_dates ?? []) extraSet.add(d);
+    for (const d of p.accom_dates ?? []) extraSet.add(d);
+  }
+  for (const d of festivalDays) extraSet.delete(d);
+  const dayList = [...festivalDays, ...Array.from(extraSet)].sort((a, b) => a.localeCompare(b));
+
   return (
     <Document>
-      <Page size="A4" style={styles.page} wrap>
+      <Page size="A4" orientation="landscape" style={styles.page} wrap>
         <View>
           <Text style={styles.h1}>{N(`Staff — ${festival.name}`)}</Text>
           <Text style={styles.meta}>
@@ -185,33 +248,33 @@ function StaffDoc({
               <Text style={styles.cellHrs}>Hrs</Text>
               <Text style={styles.cellLoc}>Transport Place</Text>
               <Text style={styles.cellStn}>Station</Text>
-              <Text style={styles.cellDay}>Th</Text>
-              <Text style={styles.cellDay}>Fr</Text>
-              <Text style={styles.cellDay}>Sa</Text>
-              <Text style={styles.cellDay}>Su</Text>
-              <Text style={styles.cellAcc}>aT</Text>
-              <Text style={styles.cellAcc}>aF</Text>
-              <Text style={styles.cellAcc}>aS</Text>
-              <Text style={styles.cellAcc}>aU</Text>
+              {dayList.map((iso) => {
+                const { wd, dm } = dayLabel(iso);
+                return <Text key={`w-${iso}`} style={styles.dayHeader}>{wd}{"\n"}{dm}</Text>;
+              })}
+              {dayList.map((iso) => {
+                const { wd, dm } = dayLabel(iso);
+                return <Text key={`a-${iso}`} style={styles.dayHeader}>a{wd[0]}{"\n"}{dm}</Text>;
+              })}
               <Text style={styles.cellConf}>OK</Text>
               <Text style={styles.cellNotes}>Notes</Text>
             </View>
             {group.people.map((p) => {
               const h = hoursByStaff.get(p.id) ?? 0;
+              const workSet = staffWorkDateSet(p, festivalDays);
+              const accomSet = staffAccomDateSet(p, festivalDays);
               return (
                 <View key={p.id} style={styles.row} wrap={false}>
                   <Text style={styles.cellName}>{N(p.name || "—")}</Text>
                   <Text style={styles.cellHrs}>{h ? formatHoursMinutes(h) : "—"}</Text>
                   <Text style={styles.cellLoc}>{N(p.home_location || "—")}</Text>
                   <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
-                  <Text style={styles.cellDay}>{p.works_thursday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellDay}>{p.works_friday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellDay}>{p.works_saturday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellDay}>{p.works_sunday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_thursday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_friday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_saturday ? "✓" : "·"}</Text>
-                  <Text style={styles.cellAcc}>{p.accom_sunday ? "✓" : "·"}</Text>
+                  {dayList.map((iso) => (
+                    <Text key={`w-${iso}`} style={styles.cellDay}>{workSet.has(iso) ? "✓" : "·"}</Text>
+                  ))}
+                  {dayList.map((iso) => (
+                    <Text key={`a-${iso}`} style={styles.cellAcc}>{accomSet.has(iso) ? "✓" : "·"}</Text>
+                  ))}
                   <Text style={styles.cellConf}>{p.confirmed ? "✓" : "·"}</Text>
                   <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
                 </View>
@@ -310,7 +373,7 @@ export default function FestivalStaffExport() {
       const [staffRes, contractsRes, posRes] = await Promise.all([
         supabase
           .from("festival_staff")
-          .select("id, name, home_location, confirmed, needs_accommodation, concept_id, works_thursday, works_friday, works_saturday, works_sunday, accom_thursday, accom_friday, accom_saturday, accom_sunday, staff_source, role, station, notes")
+          .select("id, name, home_location, confirmed, needs_accommodation, concept_id, works_thursday, works_friday, works_saturday, works_sunday, accom_thursday, accom_friday, accom_saturday, accom_sunday, work_dates, accom_dates, staff_source, role, station, notes")
           .eq("festival_id", (f as any).id)
           .order("name", { ascending: true }),
         supabase
