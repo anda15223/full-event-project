@@ -89,9 +89,17 @@ export function ImportFromPreviousCard({
       const total = Object.values(res.imported ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(total);
       setDraftMode(true);
+      let extraMsg: string | void;
+      if (extraImport) {
+        try {
+          extraMsg = await extraImport(sourceId, currentFestivalId);
+        } catch (ee) {
+          toast({ title: "Extra import failed", description: (ee as Error).message, variant: "destructive" });
+        }
+      }
       toast({
         title: "Draft imported",
-        description: `${total} rows staged. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
+        description: `${total} rows staged${extraMsg ? ` · ${extraMsg}` : ""}. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
       });
       onCommitted?.();
     } catch (e) {
@@ -100,6 +108,7 @@ export function ImportFromPreviousCard({
       setBusy(null);
     }
   }
+
 
   async function handleCommit() {
     setBusy("commit");
