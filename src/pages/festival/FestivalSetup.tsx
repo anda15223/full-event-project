@@ -24,6 +24,7 @@ import {
 import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import FidibusBriefBlock from "@/components/festival/FidibusBriefBlock";
+import BuildOutReferencePanel from "@/components/festival/BuildOutReferencePanel";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type PhaseSource = {
@@ -946,7 +947,10 @@ export default function FestivalSetup() {
 
       {/* Fidibus brief — contractor-facing block */}
       {run && (
-        <FidibusBriefBlock runId={run.id} festivalId={festivalId} run={run as any} />
+        <>
+          <BuildOutReferencePanel festivalId={festivalId} />
+          <FidibusBriefBlock runId={run.id} festivalId={festivalId} run={run as any} />
+        </>
       )}
 
       {/* Block 3 — Fidibus attachments */}
