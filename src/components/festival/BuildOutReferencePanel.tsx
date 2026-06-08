@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronDown, ChevronRight, Tent, Zap, Snowflake, Droplet, FileText } from "lucide-react";
+import { ChevronDown, ChevronRight, Tent, Zap, Snowflake, Droplet, FileText, Flame, Table2 } from "lucide-react";
 
 /**
  * Read-only reference panel that aggregates per-festival source data for the
