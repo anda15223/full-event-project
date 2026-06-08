@@ -619,6 +619,11 @@ export default function FestivalStaff() {
             if (p.role === "management") {
               assignmentMap.set(p.id, { conceptName: "Management", stationLabel: "" });
             } else if (p.concept_id && p.station) {
+              // Only treat as "locked in a position" if their station actually
+              // matches a real position slot in that concept's plan.
+              const planSlots = planByConcept.get(p.concept_id);
+              const inRealSlot = !!planSlots?.some((s) => s.stationCode === p.station);
+              if (!inRealSlot) return;
               const cName = concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
               assignmentMap.set(p.id, {
                 conceptName: cName,
