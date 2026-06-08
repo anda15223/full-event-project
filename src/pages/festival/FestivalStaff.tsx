@@ -60,7 +60,7 @@ const ACCOM_DAYS = [
 type Concept = { id: string; name: string };
 
 const SOURCE_OPTIONS = [
-  { value: "soborg", label: "Søborg" },
+  { value: "soborg", label: "Copenhagen" },
   { value: "aarhus", label: "Aarhus" },
   { value: "local", label: "Local" },
   { value: "fidibus", label: "Fidibus" },
