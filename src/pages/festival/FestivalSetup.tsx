@@ -534,7 +534,11 @@ export default function FestivalSetup() {
           qc.invalidateQueries({ queryKey: ["setup-run", targetFestivalId] });
           return `+${copied} Fidibus build-out row${copied === 1 ? "" : "s"}`;
         }}
-        onCommitted={() => window.location.reload()}
+        onCommitted={() => {
+          qc.invalidateQueries({ queryKey: ["setup-run", festivalId] });
+          qc.invalidateQueries({ queryKey: ["setup-phases", run?.id] });
+          qc.invalidateQueries({ queryKey: ["fidibus-buildout", festivalId] });
+        }}
       />
 
       {/* Header */}
