@@ -80,6 +80,55 @@ const SCHEDULE_DAYS = [
 const fmt = (t?: string | null) => (t ? t.slice(0, 5) : "—");
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const LEGACY_WORK: Record<string, keyof Staff> = {
+  thursday: "works_thursday", friday: "works_friday", saturday: "works_saturday", sunday: "works_sunday",
+};
+const LEGACY_ACCOM: Record<string, keyof Staff> = {
+  thursday: "accom_thursday", friday: "accom_friday", saturday: "accom_saturday", sunday: "accom_sunday",
+};
+
+function isoDatesBetween(start: string, end: string): string[] {
+  const out: string[] = [];
+  const s = new Date(start + "T00:00:00Z");
+  const e = new Date(end + "T00:00:00Z");
+  for (let d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) {
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+function dayLabel(iso: string): { wd: string; dm: string } {
+  const d = new Date(iso + "T00:00:00Z");
+  const wd = WEEKDAY_SHORT[d.getUTCDay()];
+  const dm = `${d.getUTCDate()}/${d.getUTCMonth() + 1}`;
+  return { wd, dm };
+}
+function staffWorkDateSet(p: Staff, festivalDays: string[]): Set<string> {
+  const set = new Set<string>(p.work_dates ?? []);
+  // Map legacy weekday booleans onto festival dates that fall on those weekdays.
+  if (!p.work_dates || p.work_dates.length === 0) {
+    for (const iso of festivalDays) {
+      const wd = new Date(iso + "T00:00:00Z").getUTCDay();
+      const key = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][wd];
+      const flag = LEGACY_WORK[key];
+      if (flag && (p as any)[flag]) set.add(iso);
+    }
+  }
+  return set;
+}
+function staffAccomDateSet(p: Staff, festivalDays: string[]): Set<string> {
+  const set = new Set<string>(p.accom_dates ?? []);
+  if (!p.accom_dates || p.accom_dates.length === 0) {
+    for (const iso of festivalDays) {
+      const wd = new Date(iso + "T00:00:00Z").getUTCDay();
+      const key = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"][wd];
+      const flag = LEGACY_ACCOM[key];
+      if (flag && (p as any)[flag]) set.add(iso);
+    }
+  }
+  return set;
+}
+
 const styles = StyleSheet.create({
   page: { padding: 28, fontFamily: "Inter", fontSize: 9, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
