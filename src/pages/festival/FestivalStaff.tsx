@@ -572,7 +572,7 @@ export default function FestivalStaff() {
             <TableRow>
               <TableHead className="w-7 text-[10px]">#</TableHead>
               <TableHead className="min-w-[220px] text-sm">Name</TableHead>
-              <TableHead className="w-[90px] text-[10px]">From</TableHead>
+              
               <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
               
               <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
@@ -601,7 +601,7 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
@@ -1096,17 +1096,6 @@ function StaffRow({
           }}
           placeholder="Name"
           className="h-8 text-sm font-medium px-2"
-        />
-      </TableCell>
-      <TableCell>
-        <Input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          onBlur={() => {
-            if (location !== (staff.home_location ?? "")) onPatch({ home_location: location });
-          }}
-          placeholder="e.g. Copenhaga"
-          className="h-7 text-xs px-2"
         />
       </TableCell>
       <TableCell>
