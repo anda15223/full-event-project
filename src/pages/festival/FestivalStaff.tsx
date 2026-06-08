@@ -572,11 +572,9 @@ export default function FestivalStaff() {
             <TableRow>
               <TableHead className="w-7 text-[10px]">#</TableHead>
               <TableHead className="min-w-[220px] text-sm">Name</TableHead>
-              
-              <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
-              
-              <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
               <TableHead className="w-[80px] text-[10px]">Source</TableHead>
+              <TableHead className="text-center w-[110px] text-[10px]">Accom.</TableHead>
+              <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
               <TableHead className="text-center w-8">T</TableHead>
               <TableHead className="text-center w-8">F</TableHead>
               <TableHead className="text-center w-8">S</TableHead>
