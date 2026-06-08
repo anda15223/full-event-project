@@ -158,9 +158,7 @@ export default function FestivalSetup() {
     queryKey: ["setup-run", festivalId],
     enabled: !!festivalId,
     queryFn: async () => {
-      const { data, error } = await sb.from("setup_runs")
-        .select("*").eq("festival_id", festivalId).maybeSingle();
-      if (error) throw error;
+      const data = await getPrimarySetupRun(festivalId);
       if (data) return data as SetupRun;
       const defaultAddr = [festival?.address, festival?.city].filter(Boolean).join(", ") || null;
       const { data: inserted, error: insErr } = await sb.from("setup_runs")
