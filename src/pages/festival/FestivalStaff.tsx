@@ -61,6 +61,7 @@ type Concept = { id: string; name: string };
 
 const SOURCE_OPTIONS = [
   { value: "soborg", label: "Søborg" },
+  { value: "aarhus", label: "Aarhus" },
   { value: "local", label: "Local" },
   { value: "fidibus", label: "Fidibus" },
   { value: "unknown", label: "Unknown" },
