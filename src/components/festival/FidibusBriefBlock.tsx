@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Sparkles } from "lucide-react";
 
 const sb = supabase as any;
 
@@ -46,9 +46,14 @@ type Buildout = {
   dimensions: string | null;
   position_notes: string | null;
   display_order: number;
+  source_festival_id: string | null;
 };
 
 type Concept = { id: string; name: string; display_order: number | null };
+type FestivalLite = { id: string; name: string };
+
+type SourceFilter = "all" | "imported" | "manual";
+
 
 const toLocalInput = (iso: string | null) => {
   if (!iso) return "";
