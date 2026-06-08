@@ -46,35 +46,28 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
     queryKey: ["buildout-ref-orderlist", festivalId],
     enabled: !!festivalId,
     queryFn: async () => {
-      const { data: powers } = await supabase
-        .from("festival_power").select("id, festival_contract_id, festival_contract:festival_contracts!festival_contract_id(concept_alias, concept:concepts!concept_id(name))")
-        .eq("festival_contract.festival_id" as any, festivalId);
-      // RLS may not let us filter by joined column — fall back: fetch by contract ids
-      let powerIds: string[] = (powers ?? []).map((p: any) => p.id);
-      if (powerIds.length === 0) {
-        const { data: contracts } = await supabase
-          .from("festival_contracts").select("id, concept_alias, concept:concepts!concept_id(name)")
-          .eq("festival_id", festivalId).eq("is_active", true);
-        const cids = (contracts ?? []).map((c: any) => c.id);
-        if (cids.length === 0) return [];
-        const { data: ps } = await supabase
-          .from("festival_power").select("id, festival_contract_id").in("festival_contract_id", cids);
-        powerIds = (ps ?? []).map((p: any) => p.id);
-        const contractById = new Map((contracts ?? []).map((c: any) => [c.id, c]));
-        const powerToContract = new Map((ps ?? []).map((p: any) => [p.id, p.festival_contract_id]));
-        if (powerIds.length === 0) return [];
-        const { data: items } = await supabase
-          .from("festival_power_order_items")
-          .select("id, festival_power_id, category, item_name, quantity, unit, notes")
-          .in("festival_power_id", powerIds)
-          .order("category").order("position");
-        return (items ?? []).map((it: any) => {
-          const cid = powerToContract.get(it.festival_power_id);
-          const c = contractById.get(cid);
-          return { ...it, concept_name: c?.concept?.name ?? c?.concept_alias ?? "—" };
-        });
-      }
-      return [];
+      const { data: contracts } = await supabase
+        .from("festival_contracts")
+        .select("id, concept_alias, concept:concepts!concept_id(name)")
+        .eq("festival_id", festivalId).eq("is_active", true);
+      const cids = (contracts ?? []).map((c: any) => c.id);
+      if (cids.length === 0) return [] as any[];
+      const { data: ps } = await supabase
+        .from("festival_power").select("id, festival_contract_id").in("festival_contract_id", cids);
+      const powerIds = (ps ?? []).map((p: any) => p.id);
+      if (powerIds.length === 0) return [] as any[];
+      const contractById = new Map((contracts ?? []).map((c: any) => [c.id, c]));
+      const powerToContract = new Map((ps ?? []).map((p: any) => [p.id, p.festival_contract_id]));
+      const { data: items } = await supabase
+        .from("festival_power_order_items")
+        .select("id, festival_power_id, category, item_name, quantity, unit, notes, position")
+        .in("festival_power_id", powerIds)
+        .order("category").order("position");
+      return (items ?? []).map((it: any) => {
+        const cid = powerToContract.get(it.festival_power_id);
+        const c: any = contractById.get(cid);
+        return { ...it, concept_name: c?.concept?.name ?? c?.concept_alias ?? "—" };
+      });
     },
   });
 
