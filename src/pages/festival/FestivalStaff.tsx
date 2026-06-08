@@ -1386,9 +1386,13 @@ function DayPickerCell({
         return (
           <label
             key={d.iso}
-            className="flex flex-col items-center gap-0.5 cursor-pointer select-none"
+            className="flex flex-row items-center gap-1.5 cursor-pointer select-none"
             title={d.iso}
           >
+            <Checkbox
+              checked={checked}
+              onCheckedChange={(c) => toggle(d.iso, !!c)}
+            />
             <span
               className={`text-[10px] tabular-nums ${
                 d.isFestivalDay ? "text-muted-foreground" : accent
@@ -1396,10 +1400,6 @@ function DayPickerCell({
             >
               {d.label}
             </span>
-            <Checkbox
-              checked={checked}
-              onCheckedChange={(c) => toggle(d.iso, !!c)}
-            />
           </label>
         );
       })}
