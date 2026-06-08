@@ -40,7 +40,7 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
       const { data, error } = await supabase
         .from("festival_power")
         .select(
-          "festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, total_amp_estimate, tableau_count, equipment_breakdown, supplier, notes, tent_location"
+          "id, festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, total_amp_estimate, tableau_count, equipment_breakdown, supplier, notes, tent_location"
         )
         .in("festival_contract_id", contractIds);
       if (error) throw error;
