@@ -15,6 +15,7 @@ import { copyTextToClipboard } from "@/lib/clipboard";
 import { festivalDays, positionLabel, formatTimeHHMM, formatHoursMinutes } from "@/lib/scheduling";
 import PositionManager from "@/components/scheduling/PositionManager";
 import SchedulingGrid from "@/components/scheduling/SchedulingGrid";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 async function exportScheduleByDayByConcept(festival: { id: string; name: string; start_date: string; end_date: string }) {
   const [posRes, shiftsRes, conceptsRes] = await Promise.all([
@@ -176,6 +177,7 @@ export default function FestivalScheduling() {
   if (festivalQ.isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
+      <FestivalBackBar />
         <Skeleton className="h-10 w-64 mb-4" />
         <Skeleton className="h-48 w-full" />
       </div>

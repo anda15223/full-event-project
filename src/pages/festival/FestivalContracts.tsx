@@ -35,6 +35,7 @@ import { useDraftMode } from "@/hooks/useDraftMode";
 import { ContractSummaryView } from "@/components/festival/ContractSummaryView";
 import { parseContractSummary } from "@/lib/parseContract";
 import { extractPdfText } from "@/lib/pdfText";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 interface Concept { id: string; name: string; slug: string; color_hex: string | null; }
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
@@ -263,6 +264,7 @@ export default function FestivalContracts() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="contracts"

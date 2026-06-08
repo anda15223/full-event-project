@@ -24,6 +24,7 @@ import {
 import SetupSourcePicker, { PhasePatch, SourceSnapshot } from "./SetupSourcePicker";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import FidibusBriefBlock from "@/components/festival/FidibusBriefBlock";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type PhaseSource = {
   id: string;
@@ -495,6 +496,7 @@ export default function FestivalSetup() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="setup"

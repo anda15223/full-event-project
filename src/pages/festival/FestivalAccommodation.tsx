@@ -13,6 +13,7 @@ import {
 } from "@/components/festival/cards/AccommodationBookingCard";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 const sb = supabase as any;
 
@@ -201,6 +202,7 @@ export default function FestivalAccommodation() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <FestivalBackBar />
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>

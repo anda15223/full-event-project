@@ -6,6 +6,7 @@ import { AttentionItem, BUCKET_EMOJI, BUCKET_LABEL, BUCKET_ORDER, Bucket, bucket
 import { AttentionSummaryWidget } from "@/components/attention/AttentionSummaryWidget";
 import { AttentionItemCard } from "@/components/attention/AttentionItemCard";
 import { cn } from "@/lib/utils";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 export default function FestivalAttention() {
   const { slug = "" } = useParams();
@@ -35,6 +36,7 @@ export default function FestivalAttention() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
+      <FestivalBackBar />
       <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← {festivalName}</Link>
       <div>
         <h1 className="text-3xl font-heading font-bold tracking-tight text-foreground">Attention — {festivalName}</h1>

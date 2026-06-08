@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type ContactType = "festival_organizer" | "operator" | "internal" | "supplier";
 
@@ -178,6 +179,7 @@ export default function FestivalContacts() {
 
   return (
     <div className="container max-w-7xl mx-auto p-6 space-y-6">
+      <FestivalBackBar />
       <ImportFromPreviousCard
         cardLabel="contacts"
         tables={CARD_TABLES.contacts}

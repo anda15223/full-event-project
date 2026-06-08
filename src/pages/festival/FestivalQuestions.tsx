@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Status = "open" | "resolved" | "deferred";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -296,6 +297,7 @@ export default function FestivalQuestions() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="questions"

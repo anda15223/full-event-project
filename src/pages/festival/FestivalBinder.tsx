@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { PDFDownloadLink, PDFViewer, pdf } from "@react-pdf/renderer";
 import { loadBinderData, BINDER_SECTIONS, type BinderData, type SectionKey } from "@/lib/binder";
 import { BinderDocument, type BinderOptions } from "./BinderDocument";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type QualityResult = { level: "ok" | "warn" | "fail"; label: string; detail?: string };
 
@@ -78,6 +79,7 @@ export default function FestivalBinder() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-5">
+      <FestivalBackBar />
       <div className="flex items-start justify-between">
         <div>
           <Link to={`/festivals/${slug}`} className="text-xs text-muted-foreground hover:underline">← Back to festival</Link>

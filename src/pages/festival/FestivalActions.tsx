@@ -36,6 +36,7 @@ import {
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { AIActionPlanButton } from "@/components/festival/AIActionPlanButton";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Status = "open" | "in_progress" | "done" | "blocked";
 type Priority = "critical" | "high" | "medium" | "low";
@@ -373,6 +374,7 @@ export default function FestivalActions() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
+      <FestivalBackBar />
 
       <ImportFromPreviousCard
         cardLabel="actions"

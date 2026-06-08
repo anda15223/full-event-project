@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
+import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
 type Event = {
   id: string;
@@ -276,6 +277,7 @@ export default function FestivalTimeline() {
 
   if (festivalQ.isLoading || !festivalQ.data) return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6">
+      <FestivalBackBar />
       <Skeleton className="h-32 w-full" />
     </div>
   );
