@@ -380,6 +380,33 @@ export default function FestivalStaff() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("festival_staff").delete().eq("id", id);
       if (error) throw error;
+
+      const { data: remaining, error: fetchErr } = await supabase
+        .from("festival_staff")
+        .select("id, staff_number, created_at")
+        .eq("festival_id", festivalId!)
+        .eq("is_draft", draftMode);
+      if (fetchErr) throw fetchErr;
+
+      const rows = (remaining ?? []).sort((a: any, b: any) => {
+        if (a.staff_number !== null && b.staff_number !== null) {
+          return a.staff_number - b.staff_number;
+        }
+        if (a.staff_number !== null) return -1;
+        if (b.staff_number !== null) return 1;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
+      for (let i = 0; i < rows.length; i++) {
+        const newNum = i + 1;
+        if (rows[i].staff_number !== newNum) {
+          const { error: updErr } = await supabase
+            .from("festival_staff")
+            .update({ staff_number: newNum })
+            .eq("id", rows[i].id);
+          if (updErr) throw updErr;
+        }
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] }),
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
