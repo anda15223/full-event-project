@@ -28,6 +28,8 @@ type Staff = {
   accom_friday: boolean | null;
   accom_saturday: boolean | null;
   accom_sunday: boolean | null;
+  work_dates: string[] | null;
+  accom_dates: string[] | null;
   staff_source: string;
   role: string;
   station: string | null;
