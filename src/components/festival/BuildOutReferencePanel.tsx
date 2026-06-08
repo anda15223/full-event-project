@@ -63,11 +63,62 @@ export default function BuildOutReferencePanel({ festivalId }: { festivalId: str
     },
   });
 
+  const powerIds = useMemo(
+    () => (powerQ.data ?? []).map((p: any) => p.id).filter(Boolean),
+    [powerQ.data],
+  );
+
+  const equipmentQ = useQuery({
+    queryKey: ["buildout-ref-equipment", festivalId, powerIds.join(",")],
+    enabled: powerIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_power_equipment")
+        .select("id, festival_power_id, equipment_name, quantity, category, notes, power_type, is_powered")
+        .in("festival_power_id", powerIds);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
+  const vehiclesQ = useQuery({
+    queryKey: ["buildout-ref-vehicles", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_staff_vehicles")
+        .select("id, vehicle_name, vehicle_type, load_manifest, notes")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   const loading = contractsQ.isLoading || powerQ.isLoading || coolingQ.isLoading;
   const contracts = contractsQ.data ?? [];
   const powerByContract = new Map<string, any>();
   (powerQ.data ?? []).forEach((p) => powerByContract.set(p.festival_contract_id, p));
+  const powerIdToContract = new Map<string, string>();
+  (powerQ.data ?? []).forEach((p: any) => powerIdToContract.set(p.id, p.festival_contract_id));
   const cooling = coolingQ.data ?? [];
+  const equipment = equipmentQ.data ?? [];
+  const vehicles = vehiclesQ.data ?? [];
+
+  const conceptLabelForPowerId = (powerId: string) => {
+    const cId = powerIdToContract.get(powerId);
+    const c = contracts.find((x) => x.id === cId);
+    return c?.concept?.name ?? c?.concept_alias ?? "—";
+  };
+
+  const tablesScaffolding = equipment.filter(
+    (e: any) => e.category === "table" || e.category === "scaffold",
+  );
+  const gasItems = equipment.filter(
+    (e: any) =>
+      /\bgas\b|gasblus|gasovn|gasflaske|propane|propan/i.test(e.equipment_name ?? "") ||
+      /\bgas\b/i.test(e.notes ?? ""),
+  );
+  const hasAnyGas = gasItems.length > 0;
 
   const conn = (p: any) => {
     if (!p) return null;
