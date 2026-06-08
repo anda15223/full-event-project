@@ -1098,24 +1098,15 @@ function StaffRow({
       </TableCell>
       <TableCell>
         <Select
-          value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
-          onValueChange={(v) => {
-            // Concept here is just a suggestion — clear any station lock so the
-            // person isn't shown as occupying a position slot.
-            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null, station: null });
-            else if (v === "__none__") onPatch({ role: "crew", concept_id: null, station: null });
-            else if (v !== staff.concept_id) onPatch({ role: "crew", concept_id: v, station: null });
-            else onPatch({ role: "crew", concept_id: v });
-          }}
+          value={staff.staff_source}
+          onValueChange={(v) => onPatch({ staff_source: v })}
         >
           <SelectTrigger className="h-7 text-xs px-2">
-            <SelectValue placeholder="—" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">— None —</SelectItem>
-            <SelectItem value="__mgmt__">Management</SelectItem>
-            {concepts.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            {SOURCE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -1152,15 +1143,24 @@ function StaffRow({
       </TableCell>
       <TableCell>
         <Select
-          value={staff.staff_source}
-          onValueChange={(v) => onPatch({ staff_source: v })}
+          value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
+          onValueChange={(v) => {
+            // Concept here is just a suggestion — clear any station lock so the
+            // person isn't shown as occupying a position slot.
+            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null, station: null });
+            else if (v === "__none__") onPatch({ role: "crew", concept_id: null, station: null });
+            else if (v !== staff.concept_id) onPatch({ role: "crew", concept_id: v, station: null });
+            else onPatch({ role: "crew", concept_id: v });
+          }}
         >
           <SelectTrigger className="h-7 text-xs px-2">
-            <SelectValue />
+            <SelectValue placeholder="—" />
           </SelectTrigger>
           <SelectContent>
-            {SOURCE_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            <SelectItem value="__none__">— None —</SelectItem>
+            <SelectItem value="__mgmt__">Management</SelectItem>
+            {concepts.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
