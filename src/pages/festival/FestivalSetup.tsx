@@ -48,6 +48,30 @@ const BUCKET = "festival-setup-docs";
 const CONCEPTS = ["fish", "gyros", "creperie", "chicks", "all"] as const;
 type Concept = typeof CONCEPTS[number];
 
+const RUN_COPY_FIELDS = [
+  "scope_summary", "access_address", "access_gate", "checkin_contact", "checkin_phone",
+  "driving_windows", "driving_rules", "escort_required", "gas_check_at", "fire_inspection_at",
+  "teardown_start_at", "teardown_window", "fidibus_notes",
+] as const;
+
+const PHASE_COPY_FIELDS = [
+  "sort_order", "phase_name", "concept", "transport_allocation_id", "planned_time", "planned_date",
+  "from_location", "to_location", "driver_name", "notes",
+] as const;
+
+const emptyValue = (value: unknown) => value === null || value === undefined || value === "";
+
+async function getPrimarySetupRun(festivalId: string) {
+  const { data, error } = await sb.from("setup_runs")
+    .select("*")
+    .eq("festival_id", festivalId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as (SetupRun & Record<string, any>) | null;
+}
+
 const SEQUENCE_PRESETS = [
   "Drive to festival",
   "Setup at festival",
@@ -133,9 +157,7 @@ export default function FestivalSetup() {
     queryKey: ["setup-run", festivalId],
     enabled: !!festivalId,
     queryFn: async () => {
-      const { data, error } = await sb.from("setup_runs")
-        .select("*").eq("festival_id", festivalId).maybeSingle();
-      if (error) throw error;
+      const data = await getPrimarySetupRun(festivalId);
       if (data) return data as SetupRun;
       const defaultAddr = [festival?.address, festival?.city].filter(Boolean).join(", ") || null;
       const { data: inserted, error: insErr } = await sb.from("setup_runs")
@@ -479,42 +501,46 @@ export default function FestivalSetup() {
         tables={CARD_TABLES.setup}
         currentFestivalId={festivalId ?? ""}
         extraImport={async (sourceFestivalId, targetFestivalId) => {
-          // Fetch existing build-out count + current run on the target.
-          const { count: existingCount } = await sb
-            .from("fep_fidibus_buildout")
-            .select("id", { count: "exact", head: true })
-            .eq("festival_id", targetFestivalId);
-          if ((existingCount ?? 0) > 0) {
-            if (!window.confirm("This will append imported Fidibus build-out rows as a draft — continue?")) {
-              return "Fidibus brief skipped";
+          const srcRun = await getPrimarySetupRun(sourceFestivalId);
+          const tgtRun = await getPrimarySetupRun(targetFestivalId);
+          if (!srcRun || !tgtRun) return "No setup run found";
+
+          let runFields = 0;
+          const runPatch: Record<string, any> = {};
+          for (const k of RUN_COPY_FIELDS) {
+            const src = (srcRun as any)[k];
+            if (!emptyValue(src) && (emptyValue((tgtRun as any)[k]) || (k === "escort_required" && (tgtRun as any)[k] === false))) {
+              runPatch[k] = src;
             }
           }
-
-          // 1) Copy reusable text fields — only fill empties on the target run.
-          const REUSABLE = [
-            "scope_summary", "access_address", "access_gate", "checkin_contact", "checkin_phone",
-            "driving_windows", "driving_rules", "escort_required", "teardown_window", "fidibus_notes",
-          ] as const;
-          const { data: srcRun } = await sb.from("setup_runs")
-            .select(REUSABLE.join(","))
-            .eq("festival_id", sourceFestivalId).maybeSingle();
-          const { data: tgtRun } = await sb.from("setup_runs")
-            .select("id," + REUSABLE.join(","))
-            .eq("festival_id", targetFestivalId).maybeSingle();
-          if (srcRun && tgtRun) {
-            const patch: Record<string, any> = {};
-            for (const k of REUSABLE) {
-              const cur = (tgtRun as any)[k];
-              const src = (srcRun as any)[k];
-              const empty = cur === null || cur === undefined || cur === "" || (k === "escort_required" && cur === false);
-              if (empty && src !== null && src !== undefined && src !== "") patch[k] = src;
-            }
-            if (Object.keys(patch).length) {
-              await sb.from("setup_runs").update(patch).eq("id", (tgtRun as any).id);
-            }
+          if (Object.keys(runPatch).length) {
+            const { error } = await sb.from("setup_runs").update(runPatch).eq("id", tgtRun.id);
+            if (error) throw error;
+            runFields = Object.keys(runPatch).length;
           }
 
-          // 2) Copy build-out rows — append with source_festival_id tag.
+          const { data: srcPhases, error: phaseReadErr } = await sb.from("setup_phases")
+            .select("*")
+            .eq("setup_run_id", srcRun.id)
+            .order("sort_order");
+          if (phaseReadErr) throw phaseReadErr;
+          let phaseCopied = 0;
+          if (srcPhases?.length) {
+            const { count: targetPhaseCount } = await sb.from("setup_phases")
+              .select("id", { count: "exact", head: true })
+              .eq("setup_run_id", tgtRun.id);
+            const offset = targetPhaseCount ?? 0;
+            const phaseRows = (srcPhases as any[]).map((p, idx) => {
+              const row: Record<string, any> = { setup_run_id: tgtRun.id, sort_order: offset + idx };
+              for (const k of PHASE_COPY_FIELDS) row[k] = k === "transport_allocation_id" ? null : p[k];
+              row.sort_order = offset + idx;
+              return row;
+            });
+            const { count, error } = await sb.from("setup_phases").insert(phaseRows, { count: "exact" });
+            if (error) throw error;
+            phaseCopied = count ?? phaseRows.length;
+          }
+
           const { data: srcRows } = await sb.from("fep_fidibus_buildout")
             .select("category,area,concept_id,label,spec,qty,dimensions,position_notes,display_order")
             .eq("festival_id", sourceFestivalId);
@@ -532,7 +558,13 @@ export default function FestivalSetup() {
           }
           qc.invalidateQueries({ queryKey: ["fidibus-buildout", targetFestivalId] });
           qc.invalidateQueries({ queryKey: ["setup-run", targetFestivalId] });
-          return `+${copied} Fidibus build-out row${copied === 1 ? "" : "s"}`;
+          qc.invalidateQueries({ queryKey: ["setup-phases", tgtRun.id] });
+          const parts = [
+            phaseCopied ? `${phaseCopied} phase${phaseCopied === 1 ? "" : "s"}` : "",
+            runFields ? `${runFields} setup field${runFields === 1 ? "" : "s"}` : "",
+            copied ? `${copied} Fidibus build-out row${copied === 1 ? "" : "s"}` : "",
+          ].filter(Boolean);
+          return parts.length ? parts.join(" · ") : "No new Setup data found";
         }}
         onCommitted={() => {
           qc.invalidateQueries({ queryKey: ["setup-run", festivalId] });

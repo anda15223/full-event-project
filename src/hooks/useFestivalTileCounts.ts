@@ -51,7 +51,7 @@ export function useFestivalTileCounts(festivalId: string | null) {
         inContracts
           ? sb.from("festival_topskilt").select("id", { count: "exact", head: true }).in("festival_contract_id", contractIds)
           : Promise.resolve({ count: 0 }),
-        sb.from("festival_setup").select("id", { count: "exact", head: true }).eq("festival_id", fid),
+        sb.from("setup_phases").select("id, setup_runs!inner(festival_id)", { count: "exact", head: true }).eq("setup_runs.festival_id", fid),
         inContracts
           ? sb.from("festival_power_equipment").select("quantity, festival_power!inner(festival_contract_id)").in("festival_power.festival_contract_id", contractIds)
           : Promise.resolve({ data: [] }),

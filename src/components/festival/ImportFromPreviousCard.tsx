@@ -55,8 +55,14 @@ export function ImportFromPreviousCard({
   }, [currentFestivalId]);
 
   async function call(action: "import" | "commit" | "discard" | "count") {
-    if (!currentFestivalId || !tables || tables.length === 0) {
+    if (!currentFestivalId) {
       return {} as Record<string, Record<string, number>>;
+    }
+    if (!tables || tables.length === 0) {
+      if (action === "count") return { counts: {} } as Record<string, Record<string, number>>;
+      if (action === "import") return { imported: {} } as Record<string, Record<string, number>>;
+      if (action === "commit") return { promoted: {} } as Record<string, Record<string, number>>;
+      return { removed: {} } as Record<string, Record<string, number>>;
     }
     const { data, error } = await supabase.functions.invoke("clone-card-data", {
       body: {
@@ -88,7 +94,7 @@ export function ImportFromPreviousCard({
       const res = await call("import");
       const total = Object.values(res.imported ?? {}).reduce((a, b) => a + b, 0);
       setDraftCount(total);
-      setDraftMode(true);
+      if (total > 0) setDraftMode(true);
       let extraMsg: string | void;
       if (extraImport) {
         try {
@@ -97,9 +103,17 @@ export function ImportFromPreviousCard({
           toast({ title: "Extra import failed", description: (ee as Error).message, variant: "destructive" });
         }
       }
+      const pieces = [
+        total > 0 ? `${total} draft row${total === 1 ? "" : "s"} staged` : "",
+        extraMsg ?? "",
+      ].filter(Boolean);
       toast({
-        title: "Draft imported",
-        description: `${total} rows staged${extraMsg ? ` · ${extraMsg}` : ""}. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`,
+        title: total > 0 ? "Draft imported" : extraMsg ? "Import complete" : "Nothing to import",
+        description: total > 0
+          ? `${pieces.join(" · ")}. You're now in Preview mode — edit or delete rows, then click "Set up for this event".`
+          : pieces.length
+            ? `${pieces.join(" · ")}.`
+            : "No reusable rows were found for this card.",
       });
       onCommitted?.();
     } catch (e) {
@@ -263,7 +277,7 @@ export const CARD_TABLES: Record<string, string[]> = {
   hours: ["festival_hours", "festival_concept_hours", "festival_service_hours"],
   prices: ["festival_concept_prices"],
   safety: ["festival_safety", "festival_safety_zone"],
-  setup: ["festival_setup"],
+  setup: [],
   staff: ["festival_staff", "festival_staff_vehicles", "festival_schedule_position", "festival_shifts"],
   transport: ["festival_transport"],
   scheduling: ["festival_schedule_position", "festival_shifts"],
