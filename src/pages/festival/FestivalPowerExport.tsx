@@ -214,6 +214,7 @@ function PowerDoc({
         if ((p.connections_125a ?? 0) > 0) lines.push(`125A: ${p.connections_125a}`);
         if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
 
+        const poweredEq = eq.filter((e) => e.is_powered && (e.power_kw ?? 0) > 0);
         const allEq = eq
           .slice()
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.equipment_name.localeCompare(b.equipment_name));
