@@ -594,7 +594,7 @@ export default function FestivalSetup() {
           </a>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Manually build the Søborg → Jelling setup sequence. Vehicle &amp; driver allocations come from the Transport master.
+          Manually build the Søborg → {festival.name} setup sequence. Vehicle &amp; driver allocations come from the Transport master.
         </p>
       </div>
 
