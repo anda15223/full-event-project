@@ -116,16 +116,53 @@ export default function BuildOutPicker({
       }
 
 
+      // Helper: load all festival_power_order_items for this festival once,
+      // so power/cooling/equipment can also surface things bought via the
+      // festival's supplier order list (where many items actually live).
+      const loadOrderItems = async () => {
+        const { data: pow } = await sb.from("festival_power")
+          .select("id, festival_contract_id, festival_contract:festival_contracts!festival_contract_id(festival_id, concept_id, concept_alias, concept:concepts!concept_id(name))")
+          .limit(2000);
+        const mine = (pow ?? []).filter((p: any) => p.festival_contract?.festival_id === festivalId);
+        const ids = mine.map((p: any) => p.id);
+        if (ids.length === 0) return [];
+        const { data: items } = await sb.from("festival_power_order_items")
+          .select("id, festival_power_id, category, item_name, quantity, unit, notes")
+          .in("festival_power_id", ids);
+        return (items ?? []).map((it: any) => {
+          const parent = mine.find((p: any) => p.id === it.festival_power_id);
+          return {
+            ...it,
+            concept_id: parent?.festival_contract?.concept_id ?? null,
+            concept_name: parent?.festival_contract?.concept?.name ?? parent?.festival_contract?.concept_alias ?? null,
+          };
+        });
+      };
+      const matchOrderItems = (orderItems: any[], re: RegExp) =>
+        orderItems.filter((it: any) =>
+          (it.category && re.test(it.category)) || (it.item_name && re.test(it.item_name))
+        ).map((it: any) => ({
+          key: `order:${it.id}`,
+          title: it.item_name ?? "Item",
+          subtitle: [it.concept_name, it.category, `qty ${it.quantity ?? 1}`, "from order list"].filter(Boolean).join(" · "),
+          item: {
+            label: it.item_name ?? "Item",
+            spec: it.unit ?? it.category ?? null,
+            qty: it.quantity ?? 1,
+            concept_id: it.concept_id,
+            position_notes: it.notes ?? null,
+          } as PickedItem,
+        }));
+
       if (category === "power") {
         const { data: contracts } = await sb.from("festival_contracts")
           .select("id, concept_id, concept_alias, concept:concepts!concept_id(name)")
           .eq("festival_id", festivalId).eq("is_active", true);
         const ids = (contracts ?? []).map((c: any) => c.id);
-        if (ids.length === 0) return [];
-        const { data: power } = await sb.from("festival_power")
+        const { data: power } = ids.length ? await sb.from("festival_power")
           .select("festival_contract_id, connections_16a_240v, connections_16a_400v, connections_32a, connections_63a, connections_125a, total_kw_estimate, tent_location, notes")
-          .in("festival_contract_id", ids);
-        return (power ?? []).map((p: any) => {
+          .in("festival_contract_id", ids) : { data: [] as any[] };
+        const fromPower = (power ?? []).map((p: any) => {
           const c = (contracts ?? []).find((x: any) => x.id === p.festival_contract_id);
           const parts: string[] = [];
           if (p.connections_16a_240v) parts.push(`${p.connections_16a_240v}×16A/240V`);
@@ -136,20 +173,23 @@ export default function BuildOutPicker({
           const spec = parts.join(" · ") || (p.total_kw_estimate ? `${p.total_kw_estimate} kW` : "");
           const name = c?.concept?.name ?? c?.concept_alias ?? "Concept";
           return {
-            key: p.festival_contract_id,
+            key: `power:${p.festival_contract_id}`,
             title: `${name} — power`,
             subtitle: spec || "no connections set",
             item: { label: `${name} power`, spec, concept_id: c?.concept_id ?? null, area: p.tent_location ?? null, position_notes: p.notes ?? null } as PickedItem,
           };
-        });
+        }).filter((r: any) => r.subtitle !== "no connections set");
+        const orderItems = await loadOrderItems();
+        const fromOrders = matchOrderItems(orderItems, /power|strøm|stik|amp|kw|cable|kabel|stikdåse|el(?!\w)|electric|stikkontakt/i);
+        return [...fromPower, ...fromOrders];
       }
 
       if (category === "cooling") {
         const { data } = await sb.from("festival_cooling")
           .select("id, unit_type, power_connection, electrical_cable_length_m, supplier_ref, delivery_date")
           .eq("festival_id", festivalId);
-        return (data ?? []).map((u: any) => ({
-          key: u.id,
+        const fromCooling = (data ?? []).map((u: any) => ({
+          key: `cooling:${u.id}`,
           title: u.unit_type ?? "Cooling unit",
           subtitle: [u.power_connection, u.electrical_cable_length_m && `${u.electrical_cable_length_m}m cable`, u.supplier_ref].filter(Boolean).join(" · "),
           item: {
@@ -157,6 +197,9 @@ export default function BuildOutPicker({
             position_notes: u.electrical_cable_length_m ? `Cable: ${u.electrical_cable_length_m} m` : null,
           } as PickedItem,
         }));
+        const orderItems = await loadOrderItems();
+        const fromOrders = matchOrderItems(orderItems, /cool|køl|fridge|freezer|fryser|kølerum|chiller|ice/i);
+        return [...fromCooling, ...fromOrders];
       }
 
       if (category === "contacts") {
@@ -195,8 +238,8 @@ export default function BuildOutPicker({
         const { data } = await sb.from("festival_equipment")
           .select("id, name, category, brand, model, quantity, ownership, position_zone, position_notes, concept_id, concept:concepts!concept_id(name)")
           .eq("festival_id", festivalId).order("category").order("name");
-        return (data ?? []).map((e: any) => ({
-          key: e.id,
+        const fromEq = (data ?? []).map((e: any) => ({
+          key: `eq:${e.id}`,
           title: `${e.name ?? "Equipment"}${e.quantity > 1 ? ` ×${e.quantity}` : ""}`,
           subtitle: [e.category, [e.brand, e.model].filter(Boolean).join(" "), e.ownership, e.concept?.name].filter(Boolean).join(" · "),
           item: {
@@ -206,7 +249,15 @@ export default function BuildOutPicker({
             concept_id: e.concept_id, position_notes: e.position_notes ?? null,
           } as PickedItem,
         }));
+        // Anything ordered through the festival's supplier list that isn't
+        // power-connection / cooling / tent is considered loose equipment too.
+        const orderItems = await loadOrderItems();
+        const fromOrders = matchOrderItems(orderItems, /.*/).filter((r: any) =>
+          !/^(tent|telt|power|strøm|stik|amp|kw|cable|kabel|cool|køl|fridge|freezer|fryser|chiller|ice)/i.test(r.item.label ?? "")
+        );
+        return [...fromEq, ...fromOrders];
       }
+
 
       if (category === "trolleys") {
         const { data } = await sb.from("festival_trolley_items")
