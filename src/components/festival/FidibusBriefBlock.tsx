@@ -111,6 +111,28 @@ export default function FidibusBriefBlock({
   });
   const buildout = buildoutQ.data ?? [];
 
+  // Lookup names for source-festival badges.
+  const sourceIds = useMemo(
+    () => Array.from(new Set(buildout.map((b) => b.source_festival_id).filter(Boolean))) as string[],
+    [buildout],
+  );
+  const sourceFestivalsQ = useQuery({
+    queryKey: ["fidibus-source-festivals", sourceIds.sort().join(",")],
+    enabled: sourceIds.length > 0,
+    queryFn: async () => {
+      const { data } = await sb.from("festivals").select("id, name").in("id", sourceIds);
+      return (data ?? []) as FestivalLite[];
+    },
+  });
+  const sourceFestivalName = useMemo(() => {
+    const m = new Map<string, string>();
+    (sourceFestivalsQ.data ?? []).forEach((f) => m.set(f.id, f.name));
+    return m;
+  }, [sourceFestivalsQ.data]);
+
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+
+
   const invalidateBuildout = () => qc.invalidateQueries({ queryKey: ["fidibus-buildout", festivalId] });
   const invalidateRun = () => qc.invalidateQueries({ queryKey: ["setup-run", festivalId] });
 
