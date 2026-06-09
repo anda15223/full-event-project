@@ -97,22 +97,29 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
     },
   });
 
-  // Existing employee_ids already attached to the list currently being edited.
-  // Draft and live staff lists are separate, so a draft row must not block
-  // adding the same employee back to the live list after deletion (and vice versa).
+  // Existing employees already attached to the list currently being edited.
+  // Match by employee_id AND by normalized name, because imported rows may
+  // not be linked to a directory employee yet (employee_id null).
   const existingQ = useQuery({
     queryKey: ["festival-staff-employee-ids", festivalId, isDraft],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff")
-        .select("employee_id")
+        .select("employee_id, name")
         .eq("festival_id", festivalId)
         .eq("is_draft", isDraft);
       if (error) throw error;
-      return new Set((data ?? []).map((r: any) => r.employee_id).filter(Boolean));
+      const ids = new Set<string>();
+      const names = new Set<string>();
+      for (const r of (data ?? []) as any[]) {
+        if (r.employee_id) ids.add(r.employee_id);
+        if (r.name) names.add(String(r.name).trim().toLowerCase());
+      }
+      return { ids, names };
     },
   });
+
 
 
   const filtered = useMemo(() => {
