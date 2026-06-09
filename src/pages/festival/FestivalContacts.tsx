@@ -657,6 +657,7 @@ function ContactDrawer({
             </p>
           </div>
         ) : (
+          <div className="space-y-3 py-4">
           <div>
             <Label>Name *</Label>
             <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
