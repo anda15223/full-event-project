@@ -450,7 +450,7 @@ export default function FestivalTransport() {
       </div>
 
       <div className="print:hidden">
-        <AddVehicleButton festivalId={festival?.id ?? ""} slug={slug} />
+        <AddVehicleButton festival={festival} slug={slug} />
       </div>
 
       {/* Print styles */}
@@ -1577,8 +1577,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 // ============================================================
-function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: string }) {
+function AddVehicleButton({ festival, slug }: { festival: Festival | null | undefined; slug: string }) {
   const qc = useQueryClient();
+  const festivalId = festival?.id ?? "";
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"existing" | "new">("existing");
   const [search, setSearch] = useState("");
@@ -1656,6 +1657,9 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
           reservation_number: reservationNumber.trim() || null,
           status: "active",
           season_label: ownership === "company_owned" ? "Company Fleet" : "Festival Season 2026",
+          start_date: ownership === "company_owned" ? "2026-01-01" : festival?.start_date,
+          end_date: ownership === "company_owned" ? "2099-12-31" : festival?.end_date,
+          contracting_entity: "Full Event Project ApS",
         } as any)
         .select()
         .single();
