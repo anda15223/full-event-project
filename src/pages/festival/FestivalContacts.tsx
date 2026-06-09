@@ -685,12 +685,12 @@ function ContactDrawer({
             <Input value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} />
           </div>
           <div>
-            <Label>Contact type</Label>
-            <Select value={form.contact_type} onValueChange={(v) => setForm({ ...form, contact_type: v as ContactType })}>
+            <Label>Category</Label>
+            <Select value={form.role_category} onValueChange={(v) => setForm({ ...form, role_category: v as Category })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(Object.keys(TYPE_LABEL) as ContactType[]).map(t => (
-                  <SelectItem key={t} value={t}>{TYPE_LABEL[t]}</SelectItem>
+                {(["festival", "setup", "concept"] as Category[]).map(t => (
+                  <SelectItem key={t} value={t}>{CATEGORY_LABEL[t]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -704,7 +704,7 @@ function ContactDrawer({
             Primary contact
           </label>
           {duplicatePrimaryWarn && (
-            <p className="text-xs text-amber-600">⚠️ Another primary contact already exists for {TYPE_LABEL[form.contact_type]}.</p>
+            <p className="text-xs text-amber-600">⚠️ Another primary contact already exists for {CATEGORY_LABEL[form.role_category]}.</p>
           )}
           <div>
             <Label>Notes</Label>
