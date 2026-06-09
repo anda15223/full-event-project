@@ -517,10 +517,10 @@ function ContactDrawer({
   const duplicatePrimaryWarn = useMemo(() => {
     if (!form.is_primary) return false;
     const existingPrimary = existingPrimaryByType.primaries.find(
-      p => p.contact_type === form.contact_type && p.id !== contact?.id
+      p => (p.role_category ?? "festival") === form.role_category && p.id !== contact?.id
     );
     return !!existingPrimary;
-  }, [form.is_primary, form.contact_type, existingPrimaryByType, contact]);
+  }, [form.is_primary, form.role_category, existingPrimaryByType, contact]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -532,7 +532,7 @@ function ContactDrawer({
         email: form.email || null,
         phone: form.phone || null,
         organization: form.organization || null,
-        contact_type: form.contact_type,
+        role_category: form.role_category,
         is_primary: form.is_primary,
         notes: form.notes || null,
         last_contact_date: form.last_contact_date || null,
