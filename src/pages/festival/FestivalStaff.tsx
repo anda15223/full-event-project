@@ -441,7 +441,10 @@ export default function FestivalStaff() {
         }
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] });
+      qc.invalidateQueries({ queryKey: ["festival-staff-employee-ids", festivalId, draftMode] });
+    },
     onError: (e: any) => toast.error(e.message ?? "Delete failed"),
   });
 
