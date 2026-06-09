@@ -632,7 +632,7 @@ function ContactDrawer({
                   >
                     <div className={cn(
                       "shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold",
-                      TYPE_AVATAR[(a.contact_type as ContactType) || "festival_organizer"],
+                      CATEGORY_AVATAR[(a.role_category as Category) || "uncategorized"],
                     )}>
                       {initials(a.canonical_name || "?")}
                     </div>
