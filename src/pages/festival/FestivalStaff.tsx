@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
+import { AddStaffMenu } from "@/components/festival/AddStaffMenu";
 
 type Staff = {
   id: string;
