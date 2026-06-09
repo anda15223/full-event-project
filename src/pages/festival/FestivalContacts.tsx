@@ -421,17 +421,21 @@ function ContactCard({
 // ---------- Edit/create drawer ----------
 
 function ContactDrawer({
-  open, onOpenChange, contact, festivalId, aggMap, existingPrimaryByType, onSaved,
+  open, onOpenChange, contact, festivalId, aggMap, aggregated, existingDedupKeys, existingPrimaryByType, onSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   contact: Contact | null;
   festivalId: string | null;
   aggMap: Map<string, any>;
+  aggregated: any[];
+  existingDedupKeys: Set<string>;
   existingPrimaryByType: { primaries: Contact[]; byType: Record<ContactType, Contact[]> };
   onSaved: () => void;
 }) {
   const isEdit = !!contact;
+  const [mode, setMode] = useState<"new" | "pick">("new");
+  const [pickSearch, setPickSearch] = useState("");
   const [form, setForm] = useState({
     full_name: "", role: "", email: "", phone: "", organization: "",
     contact_type: "festival_organizer" as ContactType,
