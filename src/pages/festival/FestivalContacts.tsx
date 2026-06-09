@@ -712,7 +712,8 @@ function ContactDrawer({
               </span>
             </label>
           )}
-        </div>
+          </div>
+        )}
         <SheetFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button disabled={!form.full_name || save.isPending} onClick={() => save.mutate()}>
