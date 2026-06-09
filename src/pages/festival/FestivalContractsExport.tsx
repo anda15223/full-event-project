@@ -53,7 +53,7 @@ function Bullets({ text }: { text: string | null }) {
   if (!lines.length) return null;
   return (
     <View style={styles.bullets}>
-      {lines.map((l, i) => <Text key={i} style={{ fontSize: 8 }}>• {l}</Text>)}
+      {lines.map((l, i) => <Text key={i} style={styles.bulletLine}>• {l}</Text>)}
     </View>
   );
 }
