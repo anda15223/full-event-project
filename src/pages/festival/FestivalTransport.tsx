@@ -685,14 +685,7 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
-              assignedIds={
-                leg.leg_phase === "return_home"
-                  ? new Set<string>([
-                      ...(assignedIdsByDate.get(leg.leg_date) ?? new Set<string>()),
-                      ...returnHomeAssignedIds,
-                    ])
-                  : (assignedIdsByDate.get(leg.leg_date) ?? new Set<string>())
-              }
+              assignedIds={allAssignedIds}
             />
           ))}
         </tbody>
