@@ -245,7 +245,9 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
               </div>
             ) : (
               filtered.map((e) => {
-                const conflicts = conflictsQ.data?.get(e.id);
+                const byEmp = conflictsQ.data?.byEmp.get(e.id) ?? [];
+                const byName = conflictsQ.data?.byName.get(e.name.trim().toLowerCase()) ?? [];
+                const conflicts = Array.from(new Set([...byEmp, ...byName]));
                 return (
                 <button
                   key={e.id}
