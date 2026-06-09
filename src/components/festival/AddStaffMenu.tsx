@@ -47,6 +47,56 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
     },
   });
 
+  // Current festival date range — used to flag overlapping assignments at other festivals.
+  const festivalQ = useQuery({
+    queryKey: ["festival-date-range", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festivals")
+        .select("id, name, start_date, end_date")
+        .eq("id", festivalId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; name: string; start_date: string | null; end_date: string | null } | null;
+    },
+  });
+
+  // Other festivals overlapping current festival dates + their assigned staff (live only).
+  const conflictsQ = useQuery({
+    queryKey: ["festival-staff-conflicts", festivalId, festivalQ.data?.start_date, festivalQ.data?.end_date],
+    enabled: !!festivalQ.data?.start_date && !!festivalQ.data?.end_date,
+    queryFn: async () => {
+      const start = festivalQ.data!.start_date!;
+      const end = festivalQ.data!.end_date!;
+      const { data: fests, error: fErr } = await supabase
+        .from("festivals")
+        .select("id, name, start_date, end_date")
+        .neq("id", festivalId)
+        .lte("start_date", end)
+        .gte("end_date", start);
+      if (fErr) throw fErr;
+      const ids = (fests ?? []).map((f: any) => f.id);
+      if (!ids.length) return new Map<string, string[]>();
+      const { data: staff, error: sErr } = await supabase
+        .from("festival_staff")
+        .select("employee_id, festival_id")
+        .in("festival_id", ids)
+        .eq("is_draft", false);
+      if (sErr) throw sErr;
+      const nameById = new Map((fests ?? []).map((f: any) => [f.id, f.name]));
+      const map = new Map<string, string[]>();
+      for (const row of staff ?? []) {
+        if (!row.employee_id) continue;
+        const fname = nameById.get(row.festival_id) ?? "another festival";
+        const list = map.get(row.employee_id) ?? [];
+        if (!list.includes(fname)) list.push(fname);
+        map.set(row.employee_id, list);
+      }
+      return map;
+    },
+  });
+
   // Existing employee_ids already attached to the list currently being edited.
   // Draft and live staff lists are separate, so a draft row must not block
   // adding the same employee back to the live list after deletion (and vice versa).
@@ -63,6 +113,7 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
       return new Set((data ?? []).map((r: any) => r.employee_id).filter(Boolean));
     },
   });
+
 
   const filtered = useMemo(() => {
     const taken = existingQ.data ?? new Set();
