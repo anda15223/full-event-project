@@ -988,7 +988,7 @@ function PassengersCell({
             const s = p.staff_id ? staffById[p.staff_id] : null;
             return (
               <li key={p.id} className="flex items-center gap-1">
-                <span>{s?.name ?? "TBD"}</span>
+                <span className={cn(s && "text-destructive")}>{s?.name ?? "TBD"}</span>
                 {p.seat_position && <span className="text-muted-foreground">· {p.seat_position}</span>}
                 <button
                   onClick={() => removeAssignment.mutate(p.id)}
