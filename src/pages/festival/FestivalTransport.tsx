@@ -199,11 +199,13 @@ export default function FestivalTransport() {
         .from("festival_staff")
         .select("id,name,role,requires_transport,home_location")
         .eq("festival_id", festival!.id)
+        .eq("is_draft", draftMode)
         .order("name");
       if (error) throw error;
       return (data ?? []) as any as Staff[];
     },
   });
+
 
   const staffById = useMemo(() => Object.fromEntries(staff.map((s) => [s.id, s])), [staff]);
 
