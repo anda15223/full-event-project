@@ -169,6 +169,11 @@ export default function FestivalContactsExport() {
     a.remove();
   };
 
+  if (loading) {
+    return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  }
+  if (!festival) return <div className="p-6">Festival not found.</div>;
+
   return (
     <div className="h-screen flex flex-col bg-muted/30">
       <div className="border-b bg-background p-3 flex items-center justify-between gap-3 flex-wrap">
