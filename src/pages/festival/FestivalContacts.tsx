@@ -105,7 +105,7 @@ export default function FestivalContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contacts")
-        .select("id, festival_id, full_name, role, email, phone, organization, is_primary, contact_type, notes, last_contact_date")
+        .select("id, festival_id, full_name, role, email, phone, organization, is_primary, contact_type, role_category, notes, last_contact_date")
         .eq("festival_id", festivalId!)
         .eq("is_draft", draftMode)
         .order("is_primary", { ascending: false })
