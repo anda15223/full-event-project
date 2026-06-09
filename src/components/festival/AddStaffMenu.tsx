@@ -77,25 +77,30 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
         .gte("end_date", start);
       if (fErr) throw fErr;
       const ids = (fests ?? []).map((f: any) => f.id);
-      if (!ids.length) return new Map<string, string[]>();
+      if (!ids.length) return { byEmp: new Map<string, string[]>(), byName: new Map<string, string[]>() };
       const { data: staff, error: sErr } = await supabase
         .from("festival_staff")
-        .select("employee_id, festival_id")
+        .select("employee_id, name, festival_id")
         .in("festival_id", ids)
         .eq("is_draft", false);
       if (sErr) throw sErr;
       const nameById = new Map((fests ?? []).map((f: any) => [f.id, f.name]));
-      const map = new Map<string, string[]>();
-      for (const row of staff ?? []) {
-        if (!row.employee_id) continue;
-        const fname = nameById.get(row.festival_id) ?? "another festival";
-        const list = map.get(row.employee_id) ?? [];
+      const byEmp = new Map<string, string[]>();
+      const byName = new Map<string, string[]>();
+      const add = (m: Map<string, string[]>, key: string, fname: string) => {
+        const list = m.get(key) ?? [];
         if (!list.includes(fname)) list.push(fname);
-        map.set(row.employee_id, list);
+        m.set(key, list);
+      };
+      for (const row of staff ?? []) {
+        const fname = nameById.get(row.festival_id) ?? "another festival";
+        if (row.employee_id) add(byEmp, row.employee_id, fname);
+        if (row.name) add(byName, String(row.name).trim().toLowerCase(), fname);
       }
-      return map;
+      return { byEmp, byName };
     },
   });
+
 
   // Existing employees already attached to the list currently being edited.
   // Match by employee_id AND by normalized name, because imported rows may
@@ -240,7 +245,9 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
               </div>
             ) : (
               filtered.map((e) => {
-                const conflicts = conflictsQ.data?.get(e.id);
+                const byEmp = conflictsQ.data?.byEmp.get(e.id) ?? [];
+                const byName = conflictsQ.data?.byName.get(e.name.trim().toLowerCase()) ?? [];
+                const conflicts = Array.from(new Set([...byEmp, ...byName]));
                 return (
                 <button
                   key={e.id}
