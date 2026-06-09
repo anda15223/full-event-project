@@ -118,7 +118,7 @@ export default function FestivalContractsExport() {
             const fin = data.finance.get(c.id) ?? {};
             const summary = c.summary as any;
             return (
-              <View key={c.id} style={styles.conceptCard} wrap={false}>
+              <View key={c.id} style={styles.conceptCard} wrap>
                 <View style={styles.conceptHeader}>
                   <Text style={styles.conceptName}>
                     {con?.name ?? "?"}{c.concept_alias ? ` · ${c.concept_alias}` : ""}
