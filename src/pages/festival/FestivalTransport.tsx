@@ -920,7 +920,7 @@ function DriverCell({
       <div className="hidden print:block text-xs font-medium">DRIVER: {printName}</div>
       <div className="print:hidden">
         <Select value={driver.staff_id} onValueChange={handleSelect}>
-          <SelectTrigger className="h-8 text-xs">
+          <SelectTrigger className="h-8 text-xs text-destructive border-destructive/40 bg-destructive/5">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
