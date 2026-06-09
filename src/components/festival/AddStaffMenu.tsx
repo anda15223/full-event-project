@@ -77,7 +77,7 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
         .gte("end_date", start);
       if (fErr) throw fErr;
       const ids = (fests ?? []).map((f: any) => f.id);
-      if (!ids.length) return new Map<string, string[]>();
+      if (!ids.length) return { byEmp: new Map<string, string[]>(), byName: new Map<string, string[]>() };
       const { data: staff, error: sErr } = await supabase
         .from("festival_staff")
         .select("employee_id, name, festival_id")
