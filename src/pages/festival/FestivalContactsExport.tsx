@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
-  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font,
+  Document, Page, Text, View, StyleSheet, pdf, Font,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, ArrowLeft, RefreshCw } from "lucide-react";
 import { formatDateRange } from "@/lib/dateFormat";
 
 try {
@@ -129,25 +129,102 @@ export default function FestivalContactsExport() {
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
+  const doc = useMemo(
+    () => (festival ? <ContactsDoc festival={festival} contacts={contacts} /> : null),
+    [festival, contacts],
+  );
+
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [rendering, setRendering] = useState(true);
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!doc) return;
+    let cancelled = false;
+    let currentUrl: string | null = null;
+    setRendering(true);
+    setRenderError(null);
+    (async () => {
+      try {
+        const instance = pdf();
+        instance.updateContainer(doc);
+        const blob = await instance.toBlob();
+        if (cancelled) return;
+        currentUrl = URL.createObjectURL(blob);
+        setBlobUrl(currentUrl);
+      } catch (e: any) {
+        if (!cancelled) setRenderError(e?.message ?? "Failed to render PDF");
+      } finally {
+        if (!cancelled) setRendering(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+    };
+  }, [doc]);
+
+  const download = () => {
+    if (!blobUrl || !festival) return;
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = `${festival.slug}-contacts.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   return (
-    <div className="h-screen flex flex-col">
-      <div className="border-b p-3 flex items-center justify-between">
-        <Link to={`/festivals/${slug}/contacts`} className="text-sm text-primary hover:underline">← Back</Link>
-        <PDFDownloadLink
-          document={<ContactsDoc festival={festival} contacts={contacts} />}
-          fileName={`${festival.slug}-contacts.pdf`}
-        >
-          {({ loading }) => (
-            <Button size="sm" disabled={loading}>
-              <Download className="h-4 w-4 mr-1" /> {loading ? "Preparing…" : "Download PDF"}
-            </Button>
+    <div className="h-screen flex flex-col bg-muted/30">
+      <div className="border-b bg-background p-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            to={`/festivals/${slug}/contacts`}
+            className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </Link>
+          <div className="hidden sm:block h-4 w-px bg-border" />
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate">{festival.name} — Contacts preview</div>
+            <div className="text-[11px] text-muted-foreground">
+              {contacts.length} contacts · review before downloading
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {rendering && (
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Rendering preview…
+            </span>
           )}
-        </PDFDownloadLink>
+          <Button size="sm" onClick={download} disabled={!blobUrl || rendering}>
+            <Download className="h-4 w-4 mr-1" /> Download PDF
+          </Button>
+        </div>
       </div>
-      <div className="flex-1">
-        <PDFViewer width="100%" height="100%" showToolbar>
-          <ContactsDoc festival={festival} contacts={contacts} />
-        </PDFViewer>
+      <div className="flex-1 relative">
+        {renderError ? (
+          <div className="absolute inset-0 flex items-center justify-center text-center p-6">
+            <div className="space-y-2">
+              <p className="text-sm text-destructive">Could not render preview: {renderError}</p>
+              <Button size="sm" variant="outline" onClick={() => setBlobUrl(null)}>
+                <RefreshCw className="h-4 w-4 mr-1" /> Retry
+              </Button>
+            </div>
+          </div>
+        ) : !blobUrl ? (
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" /> Building preview…
+          </div>
+        ) : (
+          <iframe
+            key={blobUrl}
+            src={blobUrl}
+            title="Contacts PDF preview"
+            className="w-full h-full bg-white"
+          />
+        )}
       </div>
     </div>
   );
