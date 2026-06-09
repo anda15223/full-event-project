@@ -350,8 +350,9 @@ function ContactCard({
       <div className={cn(
         "shrink-0 rounded-full font-semibold flex items-center justify-center",
         large ? "h-12 w-12 text-base" : "h-10 w-10 text-sm",
-        TYPE_AVATAR[c.contact_type],
+        CATEGORY_AVATAR[(c.role_category as Category) || "uncategorized"],
       )}>
+
         {initials(c.full_name)}
       </div>
       <div className="flex-1 min-w-0">
