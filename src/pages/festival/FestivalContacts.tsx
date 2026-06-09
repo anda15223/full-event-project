@@ -498,7 +498,7 @@ function ContactDrawer({
       email: a.email || "",
       phone: a.phone || "",
       organization: a.organization || "",
-      contact_type: (a.contact_type as ContactType) || "festival_organizer",
+      role_category: (a.role_category as Category) || (a.contact_type ? "festival" : "festival"),
       is_primary: false,
       notes: "",
       last_contact_date: "",
