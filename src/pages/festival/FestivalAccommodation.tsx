@@ -319,6 +319,41 @@ export default function FestivalAccommodation() {
         </div>
       )}
 
+      {/* Beds needed by night — who needs a bed on which night */}
+      {demandByNight.length > 0 && (
+        <div className="rounded-xl border bg-background p-4">
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="text-sm font-semibold">Beds needed per night</div>
+            <div className="text-xs text-muted-foreground">
+              Peak {Math.max(...demandByNight.map((n) => n.names.length))} beds ·{" "}
+              {demandByNight.length} night{demandByNight.length === 1 ? "" : "s"}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {demandByNight.map((n) => (
+              <div key={n.date} className="rounded-lg border bg-muted/30 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium tabular-nums">{fmtNight(n.date)}</div>
+                  <div className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-semibold">
+                    {n.names.length} bed{n.names.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {n.names.map((name) => (
+                    <span
+                      key={name}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-background border text-foreground/80"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Body */}
       {pageQ.isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
