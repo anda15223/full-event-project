@@ -443,7 +443,7 @@ function ContactDrawer({
   const [pickSearch, setPickSearch] = useState("");
   const [form, setForm] = useState({
     full_name: "", role: "", email: "", phone: "", organization: "",
-    contact_type: "festival_organizer" as ContactType,
+    role_category: "festival" as Category,
     is_primary: false, notes: "", last_contact_date: "",
     update_across_all: false,
   });
@@ -457,7 +457,8 @@ function ContactDrawer({
         full_name: contact.full_name, role: contact.role || "",
         email: contact.email || "", phone: contact.phone || "",
         organization: contact.organization || "",
-        contact_type: contact.contact_type, is_primary: contact.is_primary,
+        role_category: (contact.role_category as Category) || "festival",
+        is_primary: contact.is_primary,
         notes: contact.notes || "",
         last_contact_date: contact.last_contact_date || "",
         update_across_all: false,
@@ -465,7 +466,7 @@ function ContactDrawer({
     } else {
       setForm({
         full_name: "", role: "", email: "", phone: "", organization: "",
-        contact_type: "festival_organizer", is_primary: false, notes: "",
+        role_category: "festival", is_primary: false, notes: "",
         last_contact_date: "", update_across_all: false,
       });
     }
