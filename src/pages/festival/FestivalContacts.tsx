@@ -269,6 +269,8 @@ export default function FestivalContacts() {
         contact={editing}
         festivalId={festivalId}
         aggMap={aggMap}
+        aggregated={aggregated}
+        existingDedupKeys={new Set(contacts.map(dedupKey))}
         existingPrimaryByType={grouped}
         onSaved={() => {
           qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] });
