@@ -267,6 +267,15 @@ export default function FestivalTransport() {
     return set;
   }, [legs, assignments]);
 
+  // Festival-wide: any staff assigned to ANY leg, ANY date. Used to mark
+  // people red in every dropdown so we never accidentally double-book a person
+  // who already has a transport role on another day.
+  const allAssignedIds = useMemo(() => {
+    const set = new Set<string>();
+    assignments.forEach((a) => { if (a.staff_id) set.add(a.staff_id); });
+    return set;
+  }, [assignments]);
+
   // Scroll to focused leg
   useEffect(() => {
     if (!focusLegId || legs.length === 0) return;
