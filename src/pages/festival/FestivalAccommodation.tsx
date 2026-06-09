@@ -183,6 +183,26 @@ export default function FestivalAccommodation() {
     };
   }, [pageQ.data]);
 
+  // Demand per night, derived from staff accom_dates. Tells the user
+  // "on 25 Jun we need N beds for these specific people".
+  const demandByNight = useMemo(() => {
+    const map = new Map<string, string[]>();
+    (staffQ.data ?? []).forEach((s) => {
+      (s.accom_dates ?? []).forEach((d) => {
+        if (!d) return;
+        const arr = map.get(d) ?? [];
+        arr.push(s.name);
+        map.set(d, arr);
+      });
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, names]) => ({ date, names: names.sort() }));
+  }, [staffQ.data]);
+
+  const fmtNight = (d: string) =>
+    new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
   const fmtRange = (start: string, end: string) => {
     const f = (d: string) => {
       const dt = new Date(d + "T00:00:00");
