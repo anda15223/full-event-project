@@ -150,6 +150,7 @@ type PlanSlot = {
 export default function FestivalStaff() {
   const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
+  const hideAccom = /copenhell|cirkus/i.test(slug);
   const qc = useQueryClient();
 
   const festivalQ = useQuery({
