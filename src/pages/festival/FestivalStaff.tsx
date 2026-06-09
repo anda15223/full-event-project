@@ -625,7 +625,7 @@ export default function FestivalStaff() {
               <TableHead className="w-7 text-[10px]">#</TableHead>
               <TableHead className="min-w-[220px] text-sm">Name</TableHead>
               <TableHead className="w-[80px] text-[10px]">Transport Place</TableHead>
-              <TableHead className="text-center text-[10px]">Accom.</TableHead>
+              {!hideAccom && <TableHead className="text-center text-[10px]">Accom.</TableHead>}
               <TableHead className="w-[100px] text-[10px]">Concept</TableHead>
               <TableHead className="text-center text-[10px]">Work days</TableHead>
               <TableHead className="text-center w-10">✓</TableHead>
@@ -641,6 +641,7 @@ export default function FestivalStaff() {
                 index={i + 1}
                 concepts={concepts}
                 dayWindow={dayWindow}
+                hideAccom={hideAccom}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
                 onDelete={() => {
                   if (confirm(`Delete ${s.name || "this person"}?`)) deleteStaff.mutate(s.id);
@@ -649,11 +650,12 @@ export default function FestivalStaff() {
             ))}
             {rows.length === 0 && !staffQ.isLoading && (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={hideAccom ? 8 : 9} className="text-center text-muted-foreground py-8">
                   No staff yet. Click "Add person" to start.
                 </TableCell>
               </TableRow>
             )}
+
           </TableBody>
         </Table>
       </div>
