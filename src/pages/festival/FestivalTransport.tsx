@@ -112,15 +112,16 @@ function StaffOptions({
         <SelectGroup key={g.key}>
           <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">{g.label}</SelectLabel>
           {g.items.map((s) => {
-            const taken = assignedIds.has(s.id) && s.id !== currentId;
+            const taken = assignedIds.has(s.id);
+            const isCurrent = s.id === currentId;
             return (
               <SelectItem
                 key={s.id}
                 value={s.id}
-                className={cn(taken && "text-destructive line-through opacity-70")}
+                className={cn(taken && "text-destructive", isCurrent && "font-semibold")}
               >
                 {s.name ?? "(unnamed)"} · {s.role}
-                {taken && " · assigned"}
+                {taken && (isCurrent ? " · assigned here" : " · assigned elsewhere")}
               </SelectItem>
             );
           })}
@@ -919,7 +920,7 @@ function DriverCell({
       <div className="hidden print:block text-xs font-medium">DRIVER: {printName}</div>
       <div className="print:hidden">
         <Select value={driver.staff_id} onValueChange={handleSelect}>
-          <SelectTrigger className="h-8 text-xs">
+          <SelectTrigger className="h-8 text-xs text-destructive border-destructive/40 bg-destructive/5">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -987,7 +988,7 @@ function PassengersCell({
             const s = p.staff_id ? staffById[p.staff_id] : null;
             return (
               <li key={p.id} className="flex items-center gap-1">
-                <span>{s?.name ?? "TBD"}</span>
+                <span className={cn(s && "text-destructive")}>{s?.name ?? "TBD"}</span>
                 {p.seat_position && <span className="text-muted-foreground">· {p.seat_position}</span>}
                 <button
                   onClick={() => removeAssignment.mutate(p.id)}
