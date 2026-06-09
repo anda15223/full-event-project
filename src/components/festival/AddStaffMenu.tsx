@@ -47,15 +47,18 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
     },
   });
 
-  // Existing employee_ids already attached to this festival (so we can hide them).
+  // Existing employee_ids already attached to the list currently being edited.
+  // Draft and live staff lists are separate, so a draft row must not block
+  // adding the same employee back to the live list after deletion (and vice versa).
   const existingQ = useQuery({
-    queryKey: ["festival-staff-employee-ids", festivalId],
+    queryKey: ["festival-staff-employee-ids", festivalId, isDraft],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff")
         .select("employee_id")
-        .eq("festival_id", festivalId);
+        .eq("festival_id", festivalId)
+        .eq("is_draft", isDraft);
       if (error) throw error;
       return new Set((data ?? []).map((r: any) => r.employee_id).filter(Boolean));
     },
@@ -96,7 +99,7 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
       setOpen(false);
       setSearch("");
       qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId] });
-      qc.invalidateQueries({ queryKey: ["festival-staff-employee-ids", festivalId] });
+      qc.invalidateQueries({ queryKey: ["festival-staff-employee-ids", festivalId, isDraft] });
       onAdded?.();
     },
     onError: (e: any) => toast.error(e?.message ?? "Add failed"),
@@ -139,7 +142,7 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
       setForm({ name: "", phone: "", email: "", home_location: "" });
       qc.invalidateQueries({ queryKey: ["employees-directory"] });
       qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId] });
-      qc.invalidateQueries({ queryKey: ["festival-staff-employee-ids", festivalId] });
+      qc.invalidateQueries({ queryKey: ["festival-staff-employee-ids", festivalId, isDraft] });
       onAdded?.();
     },
     onError: (e: any) => toast.error(e?.message ?? "Create failed"),
