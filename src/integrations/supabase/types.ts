@@ -414,6 +414,42 @@ export type Database = {
           },
         ]
       }
+      employees: {
+        Row: {
+          created_at: string
+          default_role: string | null
+          email: string | null
+          home_location: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_role?: string | null
+          email?: string | null
+          home_location?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_role?: string | null
+          email?: string | null
+          home_location?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       equipment_catalog: {
         Row: {
           category: string | null
@@ -7275,6 +7311,7 @@ export type Database = {
           confirmed: boolean | null
           created_at: string | null
           draft_source_festival_id: string | null
+          employee_id: string | null
           festival_id: string
           home_location: string | null
           id: string
@@ -7307,6 +7344,7 @@ export type Database = {
           confirmed?: boolean | null
           created_at?: string | null
           draft_source_festival_id?: string | null
+          employee_id?: string | null
           festival_id: string
           home_location?: string | null
           id?: string
@@ -7339,6 +7377,7 @@ export type Database = {
           confirmed?: boolean | null
           created_at?: string | null
           draft_source_festival_id?: string | null
+          employee_id?: string | null
           festival_id?: string
           home_location?: string | null
           id?: string
@@ -7424,6 +7463,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_staff_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "festival_staff_festival_id_fkey"
