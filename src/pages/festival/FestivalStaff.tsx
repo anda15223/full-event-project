@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
+import { AddStaffMenu } from "@/components/festival/AddStaffMenu";
 
 type Staff = {
   id: string;
@@ -544,9 +545,12 @@ export default function FestivalStaff() {
               <FileDown className="h-4 w-4 mr-1" /> Export
             </Link>
           </Button>
-          <Button size="sm" onClick={() => addStaff.mutate()} disabled={!festivalId}>
-            <Plus className="h-4 w-4 mr-1" /> Add person
-          </Button>
+          <AddStaffMenu
+            festivalId={festivalId!}
+            isDraft={draftMode}
+            workDates={dayWindow.filter((d) => d.isFestivalDay).map((d) => d.iso)}
+          />
+
         </div>
       </div>
 
