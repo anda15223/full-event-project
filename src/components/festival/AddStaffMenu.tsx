@@ -230,7 +230,9 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
                 {search ? "No matches." : "No employees in directory yet."}
               </div>
             ) : (
-              filtered.map((e) => (
+              filtered.map((e) => {
+                const conflicts = conflictsQ.data?.get(e.id);
+                return (
                 <button
                   key={e.id}
                   type="button"
@@ -238,12 +240,24 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
                   disabled={attachExisting.isPending}
                   className="w-full text-left px-3 py-2 hover:bg-accent text-sm border-b last:border-b-0"
                 >
-                  <div className="font-medium">{e.name}</div>
+                  <div className="font-medium flex items-center gap-2">
+                    <span>{e.name}</span>
+                    {conflicts && conflicts.length > 0 && (
+                      <span
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200"
+                        title={`Already assigned at: ${conflicts.join(", ")}`}
+                      >
+                        ⚠ {conflicts.length === 1 ? conflicts[0] : `${conflicts.length} festivals`}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {[e.home_location, e.phone, e.email].filter(Boolean).join(" · ") || "—"}
                   </div>
                 </button>
-              ))
+                );
+              })
+
             )}
           </div>
           <div className="p-2 border-t">
