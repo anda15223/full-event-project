@@ -183,6 +183,26 @@ export default function FestivalAccommodation() {
     };
   }, [pageQ.data]);
 
+  // Demand per night, derived from staff accom_dates. Tells the user
+  // "on 25 Jun we need N beds for these specific people".
+  const demandByNight = useMemo(() => {
+    const map = new Map<string, string[]>();
+    (staffQ.data ?? []).forEach((s) => {
+      (s.accom_dates ?? []).forEach((d) => {
+        if (!d) return;
+        const arr = map.get(d) ?? [];
+        arr.push(s.name);
+        map.set(d, arr);
+      });
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, names]) => ({ date, names: names.sort() }));
+  }, [staffQ.data]);
+
+  const fmtNight = (d: string) =>
+    new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
   const fmtRange = (start: string, end: string) => {
     const f = (d: string) => {
       const dt = new Date(d + "T00:00:00");
@@ -295,6 +315,41 @@ export default function FestivalAccommodation() {
             <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
               peak: {summary.peak_beds} bed{summary.peak_beds === 1 ? "" : "s"}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Beds needed by night — who needs a bed on which night */}
+      {demandByNight.length > 0 && (
+        <div className="rounded-xl border bg-background p-4">
+          <div className="flex items-baseline justify-between mb-3">
+            <div className="text-sm font-semibold">Beds needed per night</div>
+            <div className="text-xs text-muted-foreground">
+              Peak {Math.max(...demandByNight.map((n) => n.names.length))} beds ·{" "}
+              {demandByNight.length} night{demandByNight.length === 1 ? "" : "s"}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {demandByNight.map((n) => (
+              <div key={n.date} className="rounded-lg border bg-muted/30 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-medium tabular-nums">{fmtNight(n.date)}</div>
+                  <div className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-semibold">
+                    {n.names.length} bed{n.names.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {n.names.map((name) => (
+                    <span
+                      key={name}
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-background border text-foreground/80"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
