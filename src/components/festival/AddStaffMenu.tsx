@@ -123,10 +123,11 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
 
 
   const filtered = useMemo(() => {
-    const taken = existingQ.data ?? new Set();
+    const takenIds = existingQ.data?.ids ?? new Set<string>();
+    const takenNames = existingQ.data?.names ?? new Set<string>();
     const term = search.trim().toLowerCase();
     return (employeesQ.data ?? [])
-      .filter((e) => !taken.has(e.id))
+      .filter((e) => !takenIds.has(e.id) && !takenNames.has(e.name.trim().toLowerCase()))
       .filter((e) =>
         !term ||
         e.name.toLowerCase().includes(term) ||
@@ -135,6 +136,7 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
       )
       .slice(0, 50);
   }, [employeesQ.data, existingQ.data, search]);
+
 
   const attachExisting = useMutation({
     mutationFn: async (emp: Employee) => {
