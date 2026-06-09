@@ -183,21 +183,21 @@ export default function FestivalAccommodation() {
     };
   }, [pageQ.data]);
 
-  // Demand per night, derived from staff accom_dates. Tells the user
-  // "on 25 Jun we need N beds for these specific people".
-  const demandByNight = useMemo(() => {
-    const map = new Map<string, string[]>();
-    (staffQ.data ?? []).forEach((s) => {
-      (s.accom_dates ?? []).forEach((d) => {
-        if (!d) return;
-        const arr = map.get(d) ?? [];
-        arr.push(s.name);
-        map.set(d, arr);
-      });
-    });
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, names]) => ({ date, names: names.sort() }));
+  // Per-employee accommodation rows: name, check-in, check-out, nights.
+  // check-in = earliest accom_date; check-out = day AFTER the last accom_date
+  // (hotel convention — the last night is the night of (check-out − 1)).
+  const employeeStays = useMemo(() => {
+    return (staffQ.data ?? [])
+      .filter((s) => (s.accom_dates ?? []).length > 0)
+      .map((s) => {
+        const dates = [...(s.accom_dates ?? [])].sort();
+        const checkIn = dates[0];
+        const lastNight = new Date(dates[dates.length - 1] + "T00:00:00");
+        lastNight.setDate(lastNight.getDate() + 1);
+        const checkOut = lastNight.toISOString().slice(0, 10);
+        return { id: s.id, name: s.name, checkIn, checkOut, nights: dates.length };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [staffQ.data]);
 
   const fmtNight = (d: string) =>
