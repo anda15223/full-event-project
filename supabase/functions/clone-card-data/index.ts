@@ -46,6 +46,7 @@ const STRIP = new Set<string>([
   "updated_at",
   "computed_hours",
   "crosses_midnight",
+  "hours",
 ]);
 
 type Action = "import" | "commit" | "discard" | "count";
