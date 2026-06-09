@@ -112,15 +112,16 @@ function StaffOptions({
         <SelectGroup key={g.key}>
           <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">{g.label}</SelectLabel>
           {g.items.map((s) => {
-            const taken = assignedIds.has(s.id) && s.id !== currentId;
+            const taken = assignedIds.has(s.id);
+            const isCurrent = s.id === currentId;
             return (
               <SelectItem
                 key={s.id}
                 value={s.id}
-                className={cn(taken && "text-destructive line-through opacity-70")}
+                className={cn(taken && "text-destructive", isCurrent && "font-semibold")}
               >
                 {s.name ?? "(unnamed)"} · {s.role}
-                {taken && " · assigned"}
+                {taken && (isCurrent ? " · assigned here" : " · assigned elsewhere")}
               </SelectItem>
             );
           })}
