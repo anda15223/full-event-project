@@ -577,7 +577,86 @@ function ContactDrawer({
         <SheetHeader>
           <SheetTitle>{isEdit ? "Edit contact" : "Add contact"}</SheetTitle>
         </SheetHeader>
-        <div className="space-y-3 py-4">
+        {!isEdit && (
+          <div className="mt-3 inline-flex rounded-md border p-0.5 bg-muted/40">
+            <button
+              type="button"
+              onClick={() => setMode("new")}
+              className={cn(
+                "px-3 py-1 text-xs rounded-sm transition-colors",
+                mode === "new" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Create new
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("pick")}
+              className={cn(
+                "px-3 py-1 text-xs rounded-sm transition-colors",
+                mode === "pick" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              From contact book
+            </button>
+          </div>
+        )}
+        {!isEdit && mode === "pick" ? (
+          <div className="space-y-3 py-4">
+            <Input
+              autoFocus
+              value={pickSearch}
+              onChange={(e) => setPickSearch(e.target.value)}
+              placeholder="Search name, email, organization, role…"
+            />
+            {pickCandidates.length === 0 ? (
+              <div className="rounded-md border border-dashed p-6 text-center text-xs text-muted-foreground">
+                {aggregated.length === 0
+                  ? "No contacts in the contact book yet."
+                  : "No matching contacts (people already on this festival are hidden)."}
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[55vh] overflow-y-auto pr-1">
+                {pickCandidates.map((a: any) => (
+                  <button
+                    key={a.dedup_key}
+                    type="button"
+                    onClick={() => choosePick(a)}
+                    className="w-full text-left rounded-md border bg-background p-2.5 hover:bg-muted/50 transition-colors flex items-start gap-2.5"
+                  >
+                    <div className={cn(
+                      "shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold",
+                      TYPE_AVATAR[(a.contact_type as ContactType) || "festival_organizer"],
+                    )}>
+                      {initials(a.canonical_name || "?")}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-medium truncate">{a.canonical_name}</span>
+                        {a.festival_count > 1 && (
+                          <span className="text-[10px] uppercase tracking-wide rounded-full border px-1.5 py-0.5 text-muted-foreground">
+                            {a.festival_count} festivals
+                          </span>
+                        )}
+                      </div>
+                      {(a.role || a.organization) && (
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {[a.role, a.organization].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                      {a.email && (
+                        <div className="text-[11px] text-muted-foreground truncate">{a.email}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Pick a contact to copy their details into this festival — you can adjust before saving.
+            </p>
+          </div>
+        ) : (
           <div>
             <Label>Name *</Label>
             <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
