@@ -199,7 +199,7 @@ export default function FestivalContacts() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link to={`/festivals/${slug}/contacts/export`}>
+            <Link to={`/festivals/${slug}/contacts/export`} target="_blank">
               <FileDown className="h-4 w-4 mr-1" /> PDF
             </Link>
           </Button>
