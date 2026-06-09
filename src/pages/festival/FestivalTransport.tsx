@@ -1575,15 +1575,73 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [search, setSearch] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [capacity, setCapacity] = useState(3);
   const [status, setStatus] = useState("planned");
   const [ownership, setOwnership] = useState<"one_off_rental" | "season_rental" | "company_owned">("one_off_rental");
   const [reservationNumber, setReservationNumber] = useState("");
 
+  // Fleet directory (canonical season_rentals)
+  const fleetQ = useQuery({
+    queryKey: ["fleet-directory"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("season_rentals")
+        .select("id, vehicle_type, capacity, ownership, reservation_number, status")
+        .order("vehicle_type");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Vehicles already assigned to this festival (to hide from picker)
+  const assignedQ = useQuery({
+    queryKey: ["festival-transport-assigned", festivalId],
+    enabled: open && !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_transport")
+        .select("season_rental_id")
+        .eq("festival_id", festivalId);
+      if (error) throw error;
+      return new Set((data ?? []).map((r: any) => r.season_rental_id).filter(Boolean));
+    },
+  });
+
+  const filteredFleet = useMemo(() => {
+    const taken = assignedQ.data ?? new Set();
+    const term = search.trim().toLowerCase();
+    return (fleetQ.data ?? [])
+      .filter((v: any) => !taken.has(v.id))
+      .filter((v: any) => !term || (v.vehicle_type ?? "").toLowerCase().includes(term) || (v.reservation_number ?? "").toLowerCase().includes(term));
+  }, [fleetQ.data, assignedQ.data, search]);
+
+  const attachExisting = useMutation({
+    mutationFn: async (rental: any) => {
+      const { error } = await supabase.from("festival_transport").insert({
+        festival_id: festivalId,
+        season_rental_id: rental.id,
+        vehicle_type: rental.vehicle_type,
+        capacity: rental.capacity ?? 0,
+        status: "planned",
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+      qc.invalidateQueries({ queryKey: ["festival-transport-assigned", festivalId] });
+      toast.success("Vehicle added from fleet");
+      setOpen(false);
+      setSearch("");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed"),
+  });
+
   const create = useMutation({
     mutationFn: async () => {
-      // Step 1: create canonical vehicle row in season_rentals
       const { data: canonical, error: cErr } = await supabase
         .from("season_rentals")
         .insert({
@@ -1597,24 +1655,24 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
         .single();
       if (cErr) throw cErr;
 
-      // Step 2: create the per-festival assignment, FK to canonical
       const { error: aErr } = await supabase
         .from("festival_transport")
         .insert({
           festival_id: festivalId,
           season_rental_id: canonical.id,
-          vehicle_type: vehicleType, // legacy mirror, dropped in 2K-5
-          capacity,                  // legacy mirror
+          vehicle_type: vehicleType,
+          capacity,
           status,
         } as any);
       if (aErr) {
-        // roll back canonical insert if assignment fails
         await supabase.from("season_rentals").delete().eq("id", canonical.id);
         throw aErr;
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transport-vehicles", slug] });
+      qc.invalidateQueries({ queryKey: ["fleet-directory"] });
+      qc.invalidateQueries({ queryKey: ["festival-transport-assigned", festivalId] });
       toast.success("Vehicle added");
       setOpen(false);
       setVehicleType("");
@@ -1634,47 +1692,113 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
         <Plus className="h-4 w-4" /> Add vehicle
       </button>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent>
+        <SheetContent className="overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Add vehicle</SheetTitle>
           </SheetHeader>
-          <div className="space-y-3 py-4">
-            <Field label="Vehicle type / name">
-              <Input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} placeholder="e.g. Europcar lift vehicle #4" />
-            </Field>
-            <Field label="Ownership">
-              <Select value={ownership} onValueChange={(v) => setOwnership(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="one_off_rental">One-off rental</SelectItem>
-                  <SelectItem value="season_rental">Season rental</SelectItem>
-                  <SelectItem value="company_owned">Company-owned</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Reservation number (optional)">
-              <Input value={reservationNumber} onChange={(e) => setReservationNumber(e.target.value)} placeholder="e.g. 26581644" />
-            </Field>
-            <Field label="Capacity">
-              <Input type="number" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value) || 0)} />
-            </Field>
-            <Field label="Status">
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {VEHICLE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-            <p className="text-xs text-muted-foreground">
-              Creates a canonical vehicle in the fleet and assigns it to this festival. To add an existing fleet vehicle, use the picker (coming in 2K-4).
-            </p>
+
+          <div className="flex gap-1 mt-3 p-1 rounded-lg bg-muted">
+            <button
+              type="button"
+              onClick={() => setMode("existing")}
+              className={cn(
+                "flex-1 text-xs py-1.5 rounded-md transition",
+                mode === "existing" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              From fleet
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("new")}
+              className={cn(
+                "flex-1 text-xs py-1.5 rounded-md transition",
+                mode === "new" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Create new
+            </button>
           </div>
-          <SheetFooter>
-            <Button onClick={() => create.mutate()} disabled={!vehicleType || create.isPending}>Create</Button>
-          </SheetFooter>
+
+          {mode === "existing" ? (
+            <div className="space-y-2 py-4">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search fleet (BMW, Iveco, …)"
+                className="h-9 text-sm"
+                autoFocus
+              />
+              <div className="max-h-[60vh] overflow-y-auto rounded-md border divide-y">
+                {fleetQ.isLoading ? (
+                  <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+                ) : filteredFleet.length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground">
+                    {search ? "No matches." : "All fleet vehicles are already assigned."}
+                  </div>
+                ) : (
+                  filteredFleet.map((v: any) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => attachExisting.mutate(v)}
+                      disabled={attachExisting.isPending}
+                      className="w-full text-left px-3 py-2 hover:bg-accent text-sm"
+                    >
+                      <div className="font-medium">{v.vehicle_type || "—"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[v.ownership, v.capacity ? `cap ${v.capacity}` : null, v.reservation_number].filter(Boolean).join(" · ")}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                These are your canonical fleet vehicles. Removing a vehicle from a festival only unassigns it — it stays here for re-use.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3 py-4">
+                <Field label="Vehicle type / name">
+                  <Input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} placeholder="e.g. Europcar lift vehicle #4" />
+                </Field>
+                <Field label="Ownership">
+                  <Select value={ownership} onValueChange={(v) => setOwnership(v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="one_off_rental">One-off rental</SelectItem>
+                      <SelectItem value="season_rental">Season rental</SelectItem>
+                      <SelectItem value="company_owned">Company-owned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Reservation number (optional)">
+                  <Input value={reservationNumber} onChange={(e) => setReservationNumber(e.target.value)} placeholder="e.g. 26581644" />
+                </Field>
+                <Field label="Capacity">
+                  <Input type="number" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value) || 0)} />
+                </Field>
+                <Field label="Status">
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {VEHICLE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <p className="text-xs text-muted-foreground">
+                  Creates a new canonical vehicle in the fleet and assigns it to this festival.
+                </p>
+              </div>
+              <SheetFooter>
+                <Button onClick={() => create.mutate()} disabled={!vehicleType || create.isPending}>Create</Button>
+              </SheetFooter>
+            </>
+          )}
         </SheetContent>
       </Sheet>
     </>
   );
 }
+
