@@ -1136,6 +1136,7 @@ function StaffRow({
   index,
   concepts,
   dayWindow,
+  hideAccom,
   onPatch,
   onDelete,
 }: {
@@ -1143,6 +1144,7 @@ function StaffRow({
   index: number;
   concepts: Concept[];
   dayWindow: { iso: string; label: string; isFestivalDay: boolean }[];
+  hideAccom?: boolean;
   onPatch: (patch: Partial<Staff>) => void;
   onDelete: () => void;
 }) {
@@ -1196,17 +1198,20 @@ function StaffRow({
           </SelectContent>
         </Select>
       </TableCell>
-      <TableCell>
-        <DayPickerCell
-          selected={staff.accom_dates ?? []}
-          dayWindow={dayWindow}
-          variant="accom"
-          title="Accommodation nights"
-          onChange={(next) =>
-            onPatch({ accom_dates: next, needs_accommodation: next.length > 0 } as Partial<Staff>)
-          }
-        />
-      </TableCell>
+      {!hideAccom && (
+        <TableCell>
+          <DayPickerCell
+            selected={staff.accom_dates ?? []}
+            dayWindow={dayWindow}
+            variant="accom"
+            title="Accommodation nights"
+            onChange={(next) =>
+              onPatch({ accom_dates: next, needs_accommodation: next.length > 0 } as Partial<Staff>)
+            }
+          />
+        </TableCell>
+      )}
+
       <TableCell>
         <Select
           value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
