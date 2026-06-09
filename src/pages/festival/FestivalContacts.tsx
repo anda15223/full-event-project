@@ -445,6 +445,8 @@ function ContactDrawer({
 
   useEffect(() => {
     if (!open) return;
+    setMode(contact ? "new" : "new");
+    setPickSearch("");
     if (contact) {
       setForm({
         full_name: contact.full_name, role: contact.role || "",
@@ -463,6 +465,41 @@ function ContactDrawer({
       });
     }
   }, [open, contact]);
+
+  // Filter aggregated contacts that aren't already on this festival
+  const pickCandidates = useMemo(() => {
+    if (isEdit) return [];
+    const q = pickSearch.trim().toLowerCase();
+    return (aggregated ?? [])
+      .filter((a: any) => !existingDedupKeys.has(a.dedup_key))
+      .filter((a: any) => {
+        if (!q) return true;
+        return (
+          (a.canonical_name || "").toLowerCase().includes(q) ||
+          (a.email || "").toLowerCase().includes(q) ||
+          (a.organization || "").toLowerCase().includes(q) ||
+          (a.role || "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a: any, b: any) => (b.festival_count ?? 0) - (a.festival_count ?? 0))
+      .slice(0, 50);
+  }, [aggregated, pickSearch, existingDedupKeys, isEdit]);
+
+  const choosePick = (a: any) => {
+    setForm({
+      full_name: a.canonical_name || "",
+      role: a.role || "",
+      email: a.email || "",
+      phone: a.phone || "",
+      organization: a.organization || "",
+      contact_type: (a.contact_type as ContactType) || "festival_organizer",
+      is_primary: false,
+      notes: "",
+      last_contact_date: "",
+      update_across_all: false,
+    });
+    setMode("new");
+  };
 
   const agg = useMemo(() => {
     const k = dedupKey({ email: form.email || null, full_name: form.full_name, organization: form.organization || null });
