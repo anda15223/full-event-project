@@ -49,14 +49,13 @@ export function AddStaffMenu({ festivalId, isDraft, workDates, onAdded }: Props)
 
   // Existing employee_ids already attached to this festival (so we can hide them).
   const existingQ = useQuery({
-    queryKey: ["festival-staff-employee-ids", festivalId, isDraft],
+    queryKey: ["festival-staff-employee-ids", festivalId],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff")
         .select("employee_id")
-        .eq("festival_id", festivalId)
-        .eq("is_draft", isDraft);
+        .eq("festival_id", festivalId);
       if (error) throw error;
       return new Set((data ?? []).map((r: any) => r.employee_id).filter(Boolean));
     },
