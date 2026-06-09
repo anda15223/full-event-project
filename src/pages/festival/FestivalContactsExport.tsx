@@ -124,11 +124,6 @@ export default function FestivalContactsExport() {
     })();
   }, [slug]);
 
-  if (loading) {
-    return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
-  }
-  if (!festival) return <div className="p-6">Festival not found.</div>;
-
   const doc = useMemo(
     () => (festival ? <ContactsDoc festival={festival} contacts={contacts} /> : null),
     [festival, contacts],
@@ -173,6 +168,11 @@ export default function FestivalContactsExport() {
     a.click();
     a.remove();
   };
+
+  if (loading) {
+    return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
+  }
+  if (!festival) return <div className="p-6">Festival not found.</div>;
 
   return (
     <div className="h-screen flex flex-col bg-muted/30">
