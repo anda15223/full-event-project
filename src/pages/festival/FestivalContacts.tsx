@@ -32,7 +32,7 @@ import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/Impor
 import { useDraftMode } from "@/hooks/useDraftMode";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
-type ContactType = "festival_organizer" | "operator" | "internal" | "supplier";
+type Category = "festival" | "setup" | "concept" | "uncategorized";
 
 interface Contact {
   id: string;
@@ -43,31 +43,33 @@ interface Contact {
   phone: string | null;
   organization: string | null;
   is_primary: boolean;
-  contact_type: ContactType;
+  contact_type: string | null;
+  role_category: Category | null;
   notes: string | null;
   last_contact_date: string | null;
 }
 
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
 
-const TYPE_LABEL: Record<ContactType, string> = {
-  festival_organizer: "Festival organizers",
-  operator: "Operators / production",
-  internal: "Internal team",
-  supplier: "Suppliers",
+const CATEGORY_LABEL: Record<Category, string> = {
+  festival: "Festival",
+  setup: "Setup team",
+  concept: "Concept team",
+  uncategorized: "Uncategorized",
 };
-const TYPE_DOT: Record<ContactType, string> = {
-  festival_organizer: "bg-emerald-500",
-  operator: "bg-amber-500",
-  internal: "bg-sky-500",
-  supplier: "bg-violet-500",
+const CATEGORY_DOT: Record<Category, string> = {
+  festival: "bg-blue-500",
+  setup: "bg-orange-500",
+  concept: "bg-green-500",
+  uncategorized: "bg-muted-foreground",
 };
-const TYPE_AVATAR: Record<ContactType, string> = {
-  festival_organizer: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  operator: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  internal: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  supplier: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+const CATEGORY_AVATAR: Record<Category, string> = {
+  festival: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  setup: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  concept: "bg-green-500/15 text-green-700 dark:text-green-300",
+  uncategorized: "bg-muted text-muted-foreground",
 };
+
 
 function initials(name: string) {
   return name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join("").toUpperCase();
