@@ -63,15 +63,18 @@ export default function FestivalAccommodation() {
     enabled: !!festivalId,
     queryFn: async () => {
       const { data, error } = await sb.from("festival_staff")
-        .select("id, name, home_location, confirmed")
+        .select("id, name, home_location, confirmed, needs_accommodation, accom_dates, is_draft")
         .eq("festival_id", festivalId)
+        .eq("is_draft", draftMode)
+        .eq("needs_accommodation", true)
         .order("name", { ascending: true });
       if (error) throw error;
       return (data ?? []).filter((s: any) => (s.name ?? "").trim()) as {
-        id: string; name: string; home_location: string | null; confirmed: boolean | null;
+        id: string; name: string; home_location: string | null; confirmed: boolean | null; accom_dates: string[] | null;
       }[];
     },
   });
+
 
   const create = useMutation({
     mutationFn: async () => {
