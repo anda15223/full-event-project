@@ -18,29 +18,30 @@ try {
 } catch {}
 
 const styles = StyleSheet.create({
-  page: { padding: 32, fontFamily: "Inter", fontSize: 9, color: "#111" },
-  h1: { fontSize: 16, fontWeight: 700 },
-  meta: { fontSize: 9, color: "#555", marginTop: 2, marginBottom: 10 },
+  page: { padding: 32, paddingBottom: 40, fontFamily: "Inter", fontSize: 9, color: "#111", lineHeight: 1.4 },
+  h1: { fontSize: 16, fontWeight: 700, lineHeight: 1.3 },
+  meta: { fontSize: 9, color: "#555", marginTop: 2, marginBottom: 10, lineHeight: 1.3 },
   summary: { flexDirection: "row", flexWrap: "wrap", marginBottom: 10, padding: 6, backgroundColor: "#f6f6f6", borderRadius: 3 },
   summaryItem: { width: "33%", padding: 3 },
   conceptCard: { border: "0.5pt solid #ddd", borderRadius: 3, padding: 8, marginBottom: 8 },
   conceptHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
-  conceptName: { fontSize: 11, fontWeight: 700 },
-  badge: { fontSize: 8, padding: "2 6", borderRadius: 8, backgroundColor: "#eee" },
-  badgePay: { fontSize: 8, padding: "2 6", borderRadius: 8, backgroundColor: "#eef6ff", marginLeft: 4 },
+  conceptName: { fontSize: 11, fontWeight: 700, lineHeight: 1.3 },
+  badge: { fontSize: 8, padding: "2 6", borderRadius: 8, backgroundColor: "#eee", lineHeight: 1.2 },
+  badgePay: { fontSize: 8, padding: "2 6", borderRadius: 8, backgroundColor: "#eef6ff", marginLeft: 4, lineHeight: 1.2 },
   metaGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 4 },
-  metaCell: { width: "50%", paddingVertical: 2 },
-  metaLabel: { fontSize: 7, color: "#666", textTransform: "uppercase", letterSpacing: 0.4 },
-  metaValue: { fontSize: 9 },
+  metaCell: { width: "50%", paddingVertical: 3, paddingRight: 6 },
+  metaLabel: { fontSize: 7, color: "#666", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 1, lineHeight: 1.2 },
+  metaValue: { fontSize: 9, lineHeight: 1.3 },
   bullets: { marginTop: 4, paddingLeft: 8 },
-  obligation: { marginTop: 4, padding: 4, backgroundColor: "#fffbe6", borderRadius: 2, fontSize: 8 },
+  bulletLine: { fontSize: 8, lineHeight: 1.4, marginBottom: 1 },
+  obligation: { marginTop: 4, padding: 4, backgroundColor: "#fffbe6", borderRadius: 2, fontSize: 8, lineHeight: 1.4 },
   section: { marginTop: 6, paddingTop: 4, borderTop: "0.5pt solid #eee" },
-  sectionTitle: { fontSize: 9, fontWeight: 700, marginBottom: 2, color: "#333" },
-  tableHeader: { flexDirection: "row", borderBottom: "0.5pt solid #999", paddingBottom: 2, marginTop: 2 },
-  tableRow: { flexDirection: "row", borderBottom: "0.25pt solid #eee", paddingVertical: 1.5 },
-  th: { fontSize: 7, fontWeight: 700, color: "#555" },
-  td: { fontSize: 8 },
-  italic: { fontStyle: "italic", color: "#555", fontSize: 8 },
+  sectionTitle: { fontSize: 9, fontWeight: 700, marginBottom: 3, color: "#333", lineHeight: 1.3 },
+  tableHeader: { flexDirection: "row", borderBottom: "0.5pt solid #999", paddingBottom: 3, marginTop: 2 },
+  tableRow: { flexDirection: "row", borderBottom: "0.25pt solid #eee", paddingVertical: 2.5 },
+  th: { fontSize: 7, fontWeight: 700, color: "#555", lineHeight: 1.3 },
+  td: { fontSize: 8, lineHeight: 1.4 },
+  italic: { fontStyle: "italic", color: "#555", fontSize: 8, lineHeight: 1.4 },
   footer: { position: "absolute", bottom: 16, left: 32, right: 32, fontSize: 7, color: "#888", flexDirection: "row", justifyContent: "space-between" },
 });
 
@@ -52,7 +53,7 @@ function Bullets({ text }: { text: string | null }) {
   if (!lines.length) return null;
   return (
     <View style={styles.bullets}>
-      {lines.map((l, i) => <Text key={i} style={{ fontSize: 8 }}>• {l}</Text>)}
+      {lines.map((l, i) => <Text key={i} style={styles.bulletLine}>• {l}</Text>)}
     </View>
   );
 }
@@ -117,7 +118,7 @@ export default function FestivalContractsExport() {
             const fin = data.finance.get(c.id) ?? {};
             const summary = c.summary as any;
             return (
-              <View key={c.id} style={styles.conceptCard} wrap={false}>
+              <View key={c.id} style={styles.conceptCard} wrap>
                 <View style={styles.conceptHeader}>
                   <Text style={styles.conceptName}>
                     {con?.name ?? "?"}{c.concept_alias ? ` · ${c.concept_alias}` : ""}
