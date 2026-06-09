@@ -435,7 +435,7 @@ function ContactDrawer({
   aggMap: Map<string, any>;
   aggregated: any[];
   existingDedupKeys: Set<string>;
-  existingPrimaryByType: { primaries: Contact[]; byType: Record<ContactType, Contact[]> };
+  existingPrimaryByType: { primaries: Contact[]; byCategory: Record<Category, Contact[]> };
   onSaved: () => void;
 }) {
   const isEdit = !!contact;
