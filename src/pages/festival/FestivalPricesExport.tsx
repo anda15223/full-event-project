@@ -95,8 +95,8 @@ export default function FestivalPricesExport() {
             <>
               <View style={r.th}>
                 <Text style={{ flex: 1 }}>Item</Text>
-                <Text style={{ width: 60, textAlign: "right" }}>Price</Text>
-                <Text style={{ width: 90 }}>Diet</Text>
+                <Text style={{ width: 70, textAlign: "right" }}>Price</Text>
+                <Text style={{ width: 140 }}>Diet</Text>
               </View>
               {items.map((it: any) => {
                 const flags: string[] = [];
@@ -105,9 +105,9 @@ export default function FestivalPricesExport() {
                 if (it.is_gluten_free) flags.push("GF");
                 return (
                   <View key={it.id} style={r.tr} wrap={false}>
-                    <Text style={{ flex: 1 }}>{it.product_name}</Text>
-                    <Text style={{ width: 60, textAlign: "right" }}>{Number(it.price ?? 0).toFixed(2)} {currency}</Text>
-                    <Text style={{ width: 90 }}>{flags.join(" · ") || "—"}</Text>
+                    <Text style={{ flex: 1, paddingRight: 6 }}>{it.product_name}</Text>
+                    <Text style={{ width: 70, textAlign: "right" }}>{Number(it.price ?? 0).toFixed(2)} {currency}</Text>
+                    <Text style={{ width: 140 }}>{flags.join(" · ") || "—"}</Text>
                   </View>
                 );
               })}
