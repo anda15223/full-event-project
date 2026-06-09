@@ -748,24 +748,37 @@ export function AccommodationBookingCard({
                 </span>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {unassigned.map((s) => (
-                  <span
-                    key={s.id}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-background border text-xs"
-                  >
+                {unassigned.map((s) => {
+                  const dates = (s.accom_dates ?? []).filter(Boolean);
+                  const fmt = (d: string) => {
+                    const dt = new Date(d + "T00:00:00");
+                    return dt.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+                  };
+                  return (
                     <span
-                      className={cn(
-                        "inline-block h-1.5 w-1.5 rounded-full",
-                        s.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                      key={s.id}
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-background border text-xs"
+                    >
+                      <span
+                        className={cn(
+                          "inline-block h-1.5 w-1.5 rounded-full",
+                          s.confirmed ? "bg-emerald-500" : "bg-amber-400"
+                        )}
+                      />
+                      {s.name}
+                      {s.home_location && (
+                        <span className="text-[10px] text-muted-foreground">· {s.home_location}</span>
                       )}
-                    />
-                    {s.name}
-                    {s.home_location && (
-                      <span className="text-[10px] text-muted-foreground">· {s.home_location}</span>
-                    )}
-                  </span>
-                ))}
+                      {dates.length > 0 && (
+                        <span className="text-[10px] text-blue-700 dark:text-blue-300">
+                          · {dates.map(fmt).join(", ")}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
+
             </div>
           );
         })()}
