@@ -269,6 +269,8 @@ export default function FestivalContacts() {
         contact={editing}
         festivalId={festivalId}
         aggMap={aggMap}
+        aggregated={aggregated}
+        existingDedupKeys={new Set(contacts.map(dedupKey))}
         existingPrimaryByType={grouped}
         onSaved={() => {
           qc.invalidateQueries({ queryKey: ["festival-contacts-all", festivalId, draftMode] });
@@ -419,17 +421,21 @@ function ContactCard({
 // ---------- Edit/create drawer ----------
 
 function ContactDrawer({
-  open, onOpenChange, contact, festivalId, aggMap, existingPrimaryByType, onSaved,
+  open, onOpenChange, contact, festivalId, aggMap, aggregated, existingDedupKeys, existingPrimaryByType, onSaved,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   contact: Contact | null;
   festivalId: string | null;
   aggMap: Map<string, any>;
+  aggregated: any[];
+  existingDedupKeys: Set<string>;
   existingPrimaryByType: { primaries: Contact[]; byType: Record<ContactType, Contact[]> };
   onSaved: () => void;
 }) {
   const isEdit = !!contact;
+  const [mode, setMode] = useState<"new" | "pick">("new");
+  const [pickSearch, setPickSearch] = useState("");
   const [form, setForm] = useState({
     full_name: "", role: "", email: "", phone: "", organization: "",
     contact_type: "festival_organizer" as ContactType,
@@ -439,6 +445,8 @@ function ContactDrawer({
 
   useEffect(() => {
     if (!open) return;
+    setMode(contact ? "new" : "new");
+    setPickSearch("");
     if (contact) {
       setForm({
         full_name: contact.full_name, role: contact.role || "",
@@ -457,6 +465,41 @@ function ContactDrawer({
       });
     }
   }, [open, contact]);
+
+  // Filter aggregated contacts that aren't already on this festival
+  const pickCandidates = useMemo(() => {
+    if (isEdit) return [];
+    const q = pickSearch.trim().toLowerCase();
+    return (aggregated ?? [])
+      .filter((a: any) => !existingDedupKeys.has(a.dedup_key))
+      .filter((a: any) => {
+        if (!q) return true;
+        return (
+          (a.canonical_name || "").toLowerCase().includes(q) ||
+          (a.email || "").toLowerCase().includes(q) ||
+          (a.organization || "").toLowerCase().includes(q) ||
+          (a.role || "").toLowerCase().includes(q)
+        );
+      })
+      .sort((a: any, b: any) => (b.festival_count ?? 0) - (a.festival_count ?? 0))
+      .slice(0, 50);
+  }, [aggregated, pickSearch, existingDedupKeys, isEdit]);
+
+  const choosePick = (a: any) => {
+    setForm({
+      full_name: a.canonical_name || "",
+      role: a.role || "",
+      email: a.email || "",
+      phone: a.phone || "",
+      organization: a.organization || "",
+      contact_type: (a.contact_type as ContactType) || "festival_organizer",
+      is_primary: false,
+      notes: "",
+      last_contact_date: "",
+      update_across_all: false,
+    });
+    setMode("new");
+  };
 
   const agg = useMemo(() => {
     const k = dedupKey({ email: form.email || null, full_name: form.full_name, organization: form.organization || null });
@@ -534,7 +577,87 @@ function ContactDrawer({
         <SheetHeader>
           <SheetTitle>{isEdit ? "Edit contact" : "Add contact"}</SheetTitle>
         </SheetHeader>
-        <div className="space-y-3 py-4">
+        {!isEdit && (
+          <div className="mt-3 inline-flex rounded-md border p-0.5 bg-muted/40">
+            <button
+              type="button"
+              onClick={() => setMode("new")}
+              className={cn(
+                "px-3 py-1 text-xs rounded-sm transition-colors",
+                mode === "new" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Create new
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("pick")}
+              className={cn(
+                "px-3 py-1 text-xs rounded-sm transition-colors",
+                mode === "pick" ? "bg-background shadow-sm font-medium" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              From contact book
+            </button>
+          </div>
+        )}
+        {!isEdit && mode === "pick" ? (
+          <div className="space-y-3 py-4">
+            <Input
+              autoFocus
+              value={pickSearch}
+              onChange={(e) => setPickSearch(e.target.value)}
+              placeholder="Search name, email, organization, role…"
+            />
+            {pickCandidates.length === 0 ? (
+              <div className="rounded-md border border-dashed p-6 text-center text-xs text-muted-foreground">
+                {aggregated.length === 0
+                  ? "No contacts in the contact book yet."
+                  : "No matching contacts (people already on this festival are hidden)."}
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-[55vh] overflow-y-auto pr-1">
+                {pickCandidates.map((a: any) => (
+                  <button
+                    key={a.dedup_key}
+                    type="button"
+                    onClick={() => choosePick(a)}
+                    className="w-full text-left rounded-md border bg-background p-2.5 hover:bg-muted/50 transition-colors flex items-start gap-2.5"
+                  >
+                    <div className={cn(
+                      "shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold",
+                      TYPE_AVATAR[(a.contact_type as ContactType) || "festival_organizer"],
+                    )}>
+                      {initials(a.canonical_name || "?")}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-medium truncate">{a.canonical_name}</span>
+                        {a.festival_count > 1 && (
+                          <span className="text-[10px] uppercase tracking-wide rounded-full border px-1.5 py-0.5 text-muted-foreground">
+                            {a.festival_count} festivals
+                          </span>
+                        )}
+                      </div>
+                      {(a.role || a.organization) && (
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {[a.role, a.organization].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                      {a.email && (
+                        <div className="text-[11px] text-muted-foreground truncate">{a.email}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Pick a contact to copy their details into this festival — you can adjust before saving.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 py-4">
           <div>
             <Label>Name *</Label>
             <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
@@ -589,7 +712,8 @@ function ContactDrawer({
               </span>
             </label>
           )}
-        </div>
+          </div>
+        )}
         <SheetFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button disabled={!form.full_name || save.isPending} onClick={() => save.mutate()}>
