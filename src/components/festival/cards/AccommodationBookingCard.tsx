@@ -73,6 +73,7 @@ export interface StaffPickOption {
   name: string;
   home_location: string | null;
   confirmed: boolean | null;
+  accom_dates?: string[] | null;
 }
 
 interface Props {
