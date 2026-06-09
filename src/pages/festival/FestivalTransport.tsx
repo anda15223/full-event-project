@@ -1655,6 +1655,7 @@ function AddVehicleButton({ festivalId, slug }: { festivalId: string; slug: stri
           ownership,
           reservation_number: reservationNumber.trim() || null,
           status: "active",
+          season_label: ownership === "company_owned" ? "Company Fleet" : "Festival Season 2026",
         } as any)
         .select()
         .single();
