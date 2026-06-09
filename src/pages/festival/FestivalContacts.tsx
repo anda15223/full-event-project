@@ -32,7 +32,7 @@ import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/Impor
 import { useDraftMode } from "@/hooks/useDraftMode";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 
-type ContactType = "festival_organizer" | "operator" | "internal" | "supplier";
+type Category = "festival" | "setup" | "concept" | "uncategorized";
 
 interface Contact {
   id: string;
@@ -43,31 +43,33 @@ interface Contact {
   phone: string | null;
   organization: string | null;
   is_primary: boolean;
-  contact_type: ContactType;
+  contact_type: string | null;
+  role_category: Category | null;
   notes: string | null;
   last_contact_date: string | null;
 }
 
 interface Festival { id: string; name: string; slug: string; start_date: string; end_date: string; }
 
-const TYPE_LABEL: Record<ContactType, string> = {
-  festival_organizer: "Festival organizers",
-  operator: "Operators / production",
-  internal: "Internal team",
-  supplier: "Suppliers",
+const CATEGORY_LABEL: Record<Category, string> = {
+  festival: "Festival",
+  setup: "Setup team",
+  concept: "Concept team",
+  uncategorized: "Uncategorized",
 };
-const TYPE_DOT: Record<ContactType, string> = {
-  festival_organizer: "bg-emerald-500",
-  operator: "bg-amber-500",
-  internal: "bg-sky-500",
-  supplier: "bg-violet-500",
+const CATEGORY_DOT: Record<Category, string> = {
+  festival: "bg-blue-500",
+  setup: "bg-orange-500",
+  concept: "bg-green-500",
+  uncategorized: "bg-muted-foreground",
 };
-const TYPE_AVATAR: Record<ContactType, string> = {
-  festival_organizer: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  operator: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  internal: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  supplier: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+const CATEGORY_AVATAR: Record<Category, string> = {
+  festival: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  setup: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+  concept: "bg-green-500/15 text-green-700 dark:text-green-300",
+  uncategorized: "bg-muted text-muted-foreground",
 };
+
 
 function initials(name: string) {
   return name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join("").toUpperCase();
@@ -142,15 +144,17 @@ export default function FestivalContacts() {
 
   const grouped = useMemo(() => {
     const primaries = contacts.filter(c => c.is_primary);
-    const byType: Record<ContactType, Contact[]> = {
-      festival_organizer: [], operator: [], internal: [], supplier: [],
+    const byCategory: Record<Category, Contact[]> = {
+      festival: [], setup: [], concept: [], uncategorized: [],
     };
     for (const c of contacts) {
       if (c.is_primary) continue;
-      byType[c.contact_type].push(c);
+      const cat: Category = (c.role_category as Category) || "uncategorized";
+      byCategory[cat in byCategory ? cat : "uncategorized"].push(c);
     }
-    return { primaries, byType };
+    return { primaries, byCategory };
   }, [contacts]);
+
 
   const [editing, setEditing] = useState<Contact | null>(null);
   const [creating, setCreating] = useState(false);
@@ -220,7 +224,7 @@ export default function FestivalContacts() {
           </Button>
         </div>
       ) : (
-        <Accordion type="multiple" defaultValue={["primary", "festival_organizer", "operator", "internal", "supplier"]} className="space-y-3">
+        <Accordion type="multiple" defaultValue={["primary", "festival", "setup", "concept", "uncategorized"]} className="space-y-3">
           {grouped.primaries.length > 0 && (
             <Section
               value="primary"
@@ -241,11 +245,11 @@ export default function FestivalContacts() {
               ))}
             </Section>
           )}
-          {(["festival_organizer", "operator", "internal", "supplier"] as ContactType[]).map(t => {
-            const items = grouped.byType[t];
+          {(["festival", "setup", "concept", "uncategorized"] as Category[]).map(t => {
+            const items = grouped.byCategory[t];
             if (items.length === 0) return null;
             return (
-              <Section key={t} value={t} title={TYPE_LABEL[t]} dot={TYPE_DOT[t]} count={items.length}>
+              <Section key={t} value={t} title={CATEGORY_LABEL[t]} dot={CATEGORY_DOT[t]} count={items.length}>
                 {items.map(c => (
                   <ContactCard
                     key={c.id} c={c}
@@ -346,8 +350,9 @@ function ContactCard({
       <div className={cn(
         "shrink-0 rounded-full font-semibold flex items-center justify-center",
         large ? "h-12 w-12 text-base" : "h-10 w-10 text-sm",
-        TYPE_AVATAR[c.contact_type],
+        CATEGORY_AVATAR[(c.role_category as Category) || "uncategorized"],
       )}>
+
         {initials(c.full_name)}
       </div>
       <div className="flex-1 min-w-0">
@@ -430,7 +435,7 @@ function ContactDrawer({
   aggMap: Map<string, any>;
   aggregated: any[];
   existingDedupKeys: Set<string>;
-  existingPrimaryByType: { primaries: Contact[]; byType: Record<ContactType, Contact[]> };
+  existingPrimaryByType: { primaries: Contact[]; byCategory: Record<Category, Contact[]> };
   onSaved: () => void;
 }) {
   const isEdit = !!contact;
@@ -438,7 +443,7 @@ function ContactDrawer({
   const [pickSearch, setPickSearch] = useState("");
   const [form, setForm] = useState({
     full_name: "", role: "", email: "", phone: "", organization: "",
-    contact_type: "festival_organizer" as ContactType,
+    role_category: "festival" as Category,
     is_primary: false, notes: "", last_contact_date: "",
     update_across_all: false,
   });
@@ -452,7 +457,8 @@ function ContactDrawer({
         full_name: contact.full_name, role: contact.role || "",
         email: contact.email || "", phone: contact.phone || "",
         organization: contact.organization || "",
-        contact_type: contact.contact_type, is_primary: contact.is_primary,
+        role_category: (contact.role_category as Category) || "festival",
+        is_primary: contact.is_primary,
         notes: contact.notes || "",
         last_contact_date: contact.last_contact_date || "",
         update_across_all: false,
@@ -460,7 +466,7 @@ function ContactDrawer({
     } else {
       setForm({
         full_name: "", role: "", email: "", phone: "", organization: "",
-        contact_type: "festival_organizer", is_primary: false, notes: "",
+        role_category: "festival", is_primary: false, notes: "",
         last_contact_date: "", update_across_all: false,
       });
     }
@@ -492,7 +498,7 @@ function ContactDrawer({
       email: a.email || "",
       phone: a.phone || "",
       organization: a.organization || "",
-      contact_type: (a.contact_type as ContactType) || "festival_organizer",
+      role_category: (a.role_category as Category) || (a.contact_type ? "festival" : "festival"),
       is_primary: false,
       notes: "",
       last_contact_date: "",
@@ -511,10 +517,10 @@ function ContactDrawer({
   const duplicatePrimaryWarn = useMemo(() => {
     if (!form.is_primary) return false;
     const existingPrimary = existingPrimaryByType.primaries.find(
-      p => p.contact_type === form.contact_type && p.id !== contact?.id
+      p => (p.role_category ?? "festival") === form.role_category && p.id !== contact?.id
     );
     return !!existingPrimary;
-  }, [form.is_primary, form.contact_type, existingPrimaryByType, contact]);
+  }, [form.is_primary, form.role_category, existingPrimaryByType, contact]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -526,7 +532,7 @@ function ContactDrawer({
         email: form.email || null,
         phone: form.phone || null,
         organization: form.organization || null,
-        contact_type: form.contact_type,
+        role_category: form.role_category,
         is_primary: form.is_primary,
         notes: form.notes || null,
         last_contact_date: form.last_contact_date || null,
@@ -626,7 +632,7 @@ function ContactDrawer({
                   >
                     <div className={cn(
                       "shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold",
-                      TYPE_AVATAR[(a.contact_type as ContactType) || "festival_organizer"],
+                      CATEGORY_AVATAR[(a.role_category as Category) || "uncategorized"],
                     )}>
                       {initials(a.canonical_name || "?")}
                     </div>
@@ -679,12 +685,12 @@ function ContactDrawer({
             <Input value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} />
           </div>
           <div>
-            <Label>Contact type</Label>
-            <Select value={form.contact_type} onValueChange={(v) => setForm({ ...form, contact_type: v as ContactType })}>
+            <Label>Category</Label>
+            <Select value={form.role_category} onValueChange={(v) => setForm({ ...form, role_category: v as Category })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(Object.keys(TYPE_LABEL) as ContactType[]).map(t => (
-                  <SelectItem key={t} value={t}>{TYPE_LABEL[t]}</SelectItem>
+                {(["festival", "setup", "concept"] as Category[]).map(t => (
+                  <SelectItem key={t} value={t}>{CATEGORY_LABEL[t]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -698,7 +704,7 @@ function ContactDrawer({
             Primary contact
           </label>
           {duplicatePrimaryWarn && (
-            <p className="text-xs text-amber-600">⚠️ Another primary contact already exists for {TYPE_LABEL[form.contact_type]}.</p>
+            <p className="text-xs text-amber-600">⚠️ Another primary contact already exists for {CATEGORY_LABEL[form.role_category]}.</p>
           )}
           <div>
             <Label>Notes</Label>
