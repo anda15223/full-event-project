@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 10, fontWeight: 700 },
   role: { fontSize: 8, color: "#555" },
   line: { fontSize: 8, marginTop: 1 },
-  notes: { fontSize: 7.5, color: "#444", marginTop: 3, fontStyle: "italic" },
+  notes: { fontSize: 7.5, color: "#444", marginTop: 3 },
   primary: { backgroundColor: "#fefce8", borderColor: "#eab308" },
   footer: { position: "absolute", bottom: 18, left: 32, right: 32, fontSize: 8, color: "#888", flexDirection: "row", justifyContent: "space-between" },
 });
