@@ -224,7 +224,7 @@ export default function FestivalContacts() {
           </Button>
         </div>
       ) : (
-        <Accordion type="multiple" defaultValue={["primary", "festival_organizer", "operator", "internal", "supplier"]} className="space-y-3">
+        <Accordion type="multiple" defaultValue={["primary", "festival", "setup", "concept", "uncategorized"]} className="space-y-3">
           {grouped.primaries.length > 0 && (
             <Section
               value="primary"
@@ -245,11 +245,11 @@ export default function FestivalContacts() {
               ))}
             </Section>
           )}
-          {(["festival_organizer", "operator", "internal", "supplier"] as ContactType[]).map(t => {
-            const items = grouped.byType[t];
+          {(["festival", "setup", "concept", "uncategorized"] as Category[]).map(t => {
+            const items = grouped.byCategory[t];
             if (items.length === 0) return null;
             return (
-              <Section key={t} value={t} title={TYPE_LABEL[t]} dot={TYPE_DOT[t]} count={items.length}>
+              <Section key={t} value={t} title={CATEGORY_LABEL[t]} dot={CATEGORY_DOT[t]} count={items.length}>
                 {items.map(c => (
                   <ContactCard
                     key={c.id} c={c}
