@@ -685,7 +685,7 @@ function LegsTable({
               festivalId={festivalId}
               highlighted={focusLegId === leg.id}
               conflictStaffIds={conflictByLeg.get(leg.id) ?? new Set()}
-              assignedIds={allAssignedIds}
+              assignedIds={new Set(assignments.filter((a) => a.staff_id).map((a) => a.staff_id!))}
             />
           ))}
         </tbody>
