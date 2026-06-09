@@ -144,15 +144,17 @@ export default function FestivalContacts() {
 
   const grouped = useMemo(() => {
     const primaries = contacts.filter(c => c.is_primary);
-    const byType: Record<ContactType, Contact[]> = {
-      festival_organizer: [], operator: [], internal: [], supplier: [],
+    const byCategory: Record<Category, Contact[]> = {
+      festival: [], setup: [], concept: [], uncategorized: [],
     };
     for (const c of contacts) {
       if (c.is_primary) continue;
-      byType[c.contact_type].push(c);
+      const cat: Category = (c.role_category as Category) || "uncategorized";
+      byCategory[cat in byCategory ? cat : "uncategorized"].push(c);
     }
-    return { primaries, byType };
+    return { primaries, byCategory };
   }, [contacts]);
+
 
   const [editing, setEditing] = useState<Contact | null>(null);
   const [creating, setCreating] = useState(false);
