@@ -51,6 +51,14 @@ type SchedulePosition = {
   display_name: string | null;
 };
 
+const SOURCE_LABEL: Record<string, string> = {
+  soborg: "Copenhagen",
+  aarhus: "Aarhus",
+  local: "Local",
+  fidibus: "Fidibus",
+  unknown: "",
+};
+
 const STATION_LABEL: Record<string, string> = {
   cash_register: "Cash register",
   assembly: "Assembly",
