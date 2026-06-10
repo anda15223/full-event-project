@@ -65,10 +65,11 @@ const STATION_LABEL: Record<string, string> = {
 };
 
 const SOURCE_LABEL: Record<string, string> = {
-  soborg: "Søborg",
+  soborg: "Copenhagen",
+  aarhus: "Aarhus",
   local: "Local",
   fidibus: "Fidibus",
-  unknown: "Unknown",
+  unknown: "",
 };
 
 const SCHEDULE_DAYS = [
