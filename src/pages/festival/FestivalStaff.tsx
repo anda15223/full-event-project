@@ -161,7 +161,7 @@ export default function FestivalStaff() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, slug, start_date, end_date, crew_register_url, crew_register_username, crew_register_password")
+        .select("id, name, slug, start_date, end_date, crew_register_url, crew_register_username, crew_register_password, crew_register_url_2, crew_register_username_2, crew_register_password_2")
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
