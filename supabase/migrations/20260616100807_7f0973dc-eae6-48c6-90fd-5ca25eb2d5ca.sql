@@ -1,0 +1,1 @@
+ALTER TABLE public.festivals ADD COLUMN IF NOT EXISTS crew_register_name_1 TEXT; ALTER TABLE public.festivals ADD COLUMN IF NOT EXISTS crew_register_name_2 TEXT;
