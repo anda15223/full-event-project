@@ -149,6 +149,21 @@ export default function FestivalCrewHire() {
 
     setSubmitting(true);
     try {
+      // Duplicate check against the employee directory
+      const { data: dupes } = await supabase
+        .from("employees")
+        .select("id,name,email,employee_code")
+        .or(`email.ilike.${trimmedEmail},name.ilike.${name.trim()}`);
+      const emailDup = (dupes ?? []).find((d: any) => (d.email ?? "").toLowerCase() === trimmedEmail.toLowerCase());
+      const nameDup  = (dupes ?? []).find((d: any) => (d.name ?? "").toLowerCase() === name.trim().toLowerCase());
+      if (emailDup) {
+        const ok = confirm(`Email already used by ${emailDup.name} (${emailDup.employee_code}). Add anyway?`);
+        if (!ok) { setSubmitting(false); return; }
+      } else if (nameDup) {
+        const ok = confirm(`A person named "${nameDup.name}" already exists (${nameDup.employee_code}). Add as new person anyway?`);
+        if (!ok) { setSubmitting(false); return; }
+      }
+
       const { data: staffRow, error: sErr } = await supabase
         .from("festival_staff")
         .insert({
