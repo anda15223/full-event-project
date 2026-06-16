@@ -280,6 +280,7 @@ function StaffDoc({
             <View style={styles.rowHead}>
               <Text style={styles.cellNum}>#</Text>
               <Text style={styles.cellName}>Name</Text>
+              <Text style={styles.cellEmail}>Email</Text>
               <Text style={styles.cellLoc}>Transport Place</Text>
               <Text style={styles.cellStn}>Station</Text>
               <Text style={styles.cellNotes}>Notes</Text>
@@ -288,6 +289,7 @@ function StaffDoc({
               <View key={p.id} style={styles.row} wrap={false}>
                 <Text style={styles.cellNum}>{i + 1}</Text>
                 <Text style={styles.cellName}>{N(p.name || "—")}</Text>
+                <Text style={styles.cellEmail}>{N(p.email || "—")}</Text>
                 <Text style={styles.cellLoc}>{N(SOURCE_LABEL[p.staff_source] || p.home_location || "—")}</Text>
                 <Text style={styles.cellStn}>{N(p.station ? STATION_LABEL[p.station] ?? p.station : "—")}</Text>
                 <Text style={styles.cellNotes}>{N(p.notes || "—")}</Text>
