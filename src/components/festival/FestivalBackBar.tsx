@@ -26,7 +26,7 @@ export function FestivalBackBar({ label }: { label?: string }) {
   if (!slug) return null;
 
   return (
-    <div className="sticky top-0 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 bg-background/85 backdrop-blur border-b border-border/60 print:hidden">
+    <div className="sticky top-0 z-40 -mx-3 sm:-mx-6 md:-mx-8 px-3 sm:px-6 md:px-8 py-2 bg-background/85 backdrop-blur border-b border-border/60 print:hidden">
       <Link
         to={`/festivals/${slug}`}
         className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
