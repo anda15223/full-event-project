@@ -531,9 +531,11 @@ export default function FestivalStaff() {
       />
       <CrewRegisterCard
         festivalId={festivalId}
+        initialName={festivalQ.data?.crew_register_name_1 ?? ""}
         initialUrl={festivalQ.data?.crew_register_url ?? ""}
         initialUsername={festivalQ.data?.crew_register_username ?? ""}
         initialPassword={festivalQ.data?.crew_register_password ?? ""}
+        initialName2={festivalQ.data?.crew_register_name_2 ?? ""}
         initialUrl2={festivalQ.data?.crew_register_url_2 ?? ""}
         initialUsername2={festivalQ.data?.crew_register_username_2 ?? ""}
         initialPassword2={festivalQ.data?.crew_register_password_2 ?? ""}
