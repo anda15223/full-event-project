@@ -75,11 +75,11 @@ export default function FestivalCrewHire() {
     setLoading(true);
     const { data: staff } = await supabase
       .from("festival_staff")
-      .select("id,name,employee_id")
+      .select("id,name,email,employee_id")
       .eq("festival_id", festivalId)
       .order("name");
 
-    const staffList = (staff ?? []) as { id: string; name: string | null; employee_id: string | null }[];
+    const staffList = (staff ?? []) as { id: string; name: string | null; email: string | null; employee_id: string | null }[];
     const ids = staffList.map((s) => s.id);
     const empIds = staffList.map((s) => s.employee_id).filter((x): x is string => !!x);
 
@@ -113,7 +113,7 @@ export default function FestivalCrewHire() {
         name: s.name ?? "(unnamed)",
         employee_code: emp?.employee_code ?? null,
         profile_id: p?.id ?? null,
-        email: p?.email ?? emp?.email ?? null,
+        email: p?.email ?? s.email ?? emp?.email ?? null,
         phone: p?.phone ?? emp?.phone ?? null,
         magic_token: p?.magic_token ?? null,
         magic_token_expires_at: p?.magic_token_expires_at ?? null,
