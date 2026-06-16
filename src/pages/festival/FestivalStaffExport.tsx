@@ -16,6 +16,7 @@ type Concept = { id: string; name: string };
 type Staff = {
   id: string;
   name: string | null;
+  email: string | null;
   home_location: string | null;
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
