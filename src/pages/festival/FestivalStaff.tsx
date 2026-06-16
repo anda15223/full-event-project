@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Trash2, Check, X, FileDown, ExternalLink, Copy, Eye, E
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -161,7 +161,7 @@ export default function FestivalStaff() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, slug, start_date, end_date, crew_register_url, crew_register_username, crew_register_password, staff_emails")
+        .select("id, name, slug, start_date, end_date, crew_register_url, crew_register_username, crew_register_password")
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
@@ -522,11 +522,6 @@ export default function FestivalStaff() {
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
       <FestivalBackBar />
-      <StaffEmailsCard
-        festivalId={festivalId}
-        initialEmails={(festivalQ.data as any)?.staff_emails ?? ""}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
-      />
       <ImportFromPreviousCard
         cardLabel="staff"
         tables={CARD_TABLES.staff}
@@ -1987,62 +1982,3 @@ function CrewRegisterCard({
   );
 }
 
-function StaffEmailsCard({
-  festivalId,
-  initialEmails,
-  onSaved,
-}: {
-  festivalId: string | undefined;
-  initialEmails: string;
-  onSaved: () => void;
-}) {
-  const [emails, setEmails] = useState(initialEmails);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => { setEmails(initialEmails); }, [initialEmails]);
-
-  const dirty = emails !== initialEmails;
-
-  const save = async () => {
-    if (!festivalId) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from("festivals")
-      .update({ staff_emails: emails || null })
-      .eq("id", festivalId);
-    setSaving(false);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Staff emails saved");
-      onSaved();
-    }
-  };
-
-  const copy = async () => {
-    if (!emails) return;
-    await navigator.clipboard.writeText(emails);
-    toast.success("Emails copied");
-  };
-
-  return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-        <h2 className="font-heading font-semibold text-base">Staff email addresses</h2>
-        <Button type="button" size="sm" variant="ghost" onClick={copy} disabled={!emails}>
-          <Copy className="h-4 w-4 mr-1" /> Copy
-        </Button>
-      </div>
-      <Textarea
-        value={emails}
-        onChange={(e) => setEmails(e.target.value)}
-        placeholder="Paste or write all staff email addresses, separated by commas or new lines..."
-        rows={4}
-      />
-      <div className="flex justify-end mt-3">
-        <Button size="sm" onClick={save} disabled={!dirty || saving || !festivalId}>
-          {saving ? "Saving..." : "Save"}
-        </Button>
-      </div>
-    </div>
-  );
-}
