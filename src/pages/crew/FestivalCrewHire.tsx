@@ -218,23 +218,31 @@ export default function FestivalCrewHire() {
   };
 
   const handleGenerate = async (h: Hire) => {
-    if (!h.email) {
-      const emailInput = prompt(`Enter email for ${h.name}:`);
-      if (!emailInput) return;
-      const trimmed = emailInput.trim();
-      if (!isValidEmail(trimmed)) { toast.error("Valid email is required"); return; }
-      const { data: profileRow, error } = await supabase
-        .from("fep_employee_profile")
-        .insert({ festival_staff_id: h.staff_id, email: trimmed })
-        .select("id")
-        .single();
-      if (error || !profileRow) { toast.error(error?.message || "Failed"); return; }
-      const link = await generateForProfile(profileRow.id);
-      if (link) setLinkModal({ name: h.name, link });
-      if (festival) loadHires(festival.id);
+    // If a profile already exists, just (re)generate the link
+    if (h.profile_id) {
+      handleResend(h);
       return;
     }
-    handleResend(h);
+
+    // No profile yet — need an email to create one
+    let emailToUse = h.email?.trim() || "";
+    if (!isValidEmail(emailToUse)) {
+      const emailInput = prompt(`Enter email for ${h.name}:`, emailToUse);
+      if (!emailInput) return;
+      emailToUse = emailInput.trim();
+      if (!isValidEmail(emailToUse)) { toast.error("Valid email is required"); return; }
+    }
+
+    const { data: profileRow, error } = await supabase
+      .from("fep_employee_profile")
+      .insert({ festival_staff_id: h.staff_id, email: emailToUse })
+      .select("id")
+      .single();
+    if (error || !profileRow) { toast.error(error?.message || "Failed to create profile"); return; }
+
+    const link = await generateForProfile(profileRow.id);
+    if (link) setLinkModal({ name: h.name, link });
+    if (festival) loadHires(festival.id);
   };
 
   const confirmRemove = async () => {
