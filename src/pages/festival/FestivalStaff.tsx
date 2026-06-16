@@ -534,6 +534,12 @@ export default function FestivalStaff() {
         initialPassword={festivalQ.data?.crew_register_password ?? ""}
         onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
       />
+      <StaffEmailsCard
+        festivalId={festivalId}
+        initialEmails={(festivalQ.data as any)?.staff_emails ?? ""}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
+      />
+
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
