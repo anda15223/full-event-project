@@ -34,6 +34,7 @@ type Staff = {
   festival_id: string;
   staff_number: number | null;
   name: string | null;
+  email: string | null;
   home_location: string | null;
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
