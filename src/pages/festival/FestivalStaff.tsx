@@ -1860,28 +1860,44 @@ function CrewRegisterCard({
   initialUrl,
   initialUsername,
   initialPassword,
+  initialUrl2,
+  initialUsername2,
+  initialPassword2,
   onSaved,
 }: {
   festivalId: string | undefined;
   initialUrl: string;
   initialUsername: string;
   initialPassword: string;
+  initialUrl2: string;
+  initialUsername2: string;
+  initialPassword2: string;
   onSaved: () => void;
 }) {
   const [url, setUrl] = useState(initialUrl);
   const [username, setUsername] = useState(initialUsername);
   const [password, setPassword] = useState(initialPassword);
+  const [url2, setUrl2] = useState(initialUrl2);
+  const [username2, setUsername2] = useState(initialUsername2);
+  const [password2, setPassword2] = useState(initialPassword2);
   const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { setUrl(initialUrl); }, [initialUrl]);
   useEffect(() => { setUsername(initialUsername); }, [initialUsername]);
   useEffect(() => { setPassword(initialPassword); }, [initialPassword]);
+  useEffect(() => { setUrl2(initialUrl2); }, [initialUrl2]);
+  useEffect(() => { setUsername2(initialUsername2); }, [initialUsername2]);
+  useEffect(() => { setPassword2(initialPassword2); }, [initialPassword2]);
 
   const dirty =
     url !== initialUrl ||
     username !== initialUsername ||
-    password !== initialPassword;
+    password !== initialPassword ||
+    url2 !== initialUrl2 ||
+    username2 !== initialUsername2 ||
+    password2 !== initialPassword2;
 
   const save = async () => {
     if (!festivalId) return;
@@ -1892,6 +1908,9 @@ function CrewRegisterCard({
         crew_register_url: url || null,
         crew_register_username: username || null,
         crew_register_password: password || null,
+        crew_register_url_2: url2 || null,
+        crew_register_username_2: username2 || null,
+        crew_register_password_2: password2 || null,
       })
       .eq("id", festivalId);
     setSaving(false);
@@ -1908,72 +1927,80 @@ function CrewRegisterCard({
     toast.success(`${label} copied`);
   };
 
-  const normalizedUrl = url && !/^https?:\/\//i.test(url) ? `https://${url}` : url;
+  const normalize = (u: string) => (u && !/^https?:\/\//i.test(u) ? `https://${u}` : u);
+
+  const renderSlot = (
+    label: string,
+    u: string, setU: (v: string) => void,
+    user: string, setUser: (v: string) => void,
+    pw: string, setPw: (v: string) => void,
+    show: boolean, setShow: (v: boolean) => void,
+  ) => {
+    const nUrl = normalize(u);
+    return (
+      <div className="rounded-lg border bg-background/50 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">{label}</h3>
+          {nUrl && (
+            <Button size="sm" variant="outline" asChild>
+              <a href={nUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
+              </a>
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="md:col-span-3">
+            <label className="text-xs font-medium text-muted-foreground">Link</label>
+            <div className="flex gap-1 mt-1">
+              <Input value={u} onChange={(e) => setU(e.target.value)} placeholder="https://crew-register.example.com/..." />
+              <Button type="button" size="icon" variant="ghost" onClick={() => copy(u, "Link")} disabled={!u}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Username</label>
+            <div className="flex gap-1 mt-1">
+              <Input value={user} onChange={(e) => setUser(e.target.value)} placeholder="user@example.com" autoComplete="off" />
+              <Button type="button" size="icon" variant="ghost" onClick={() => copy(user, "Username")} disabled={!user}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs font-medium text-muted-foreground">Password</label>
+            <div className="flex gap-1 mt-1">
+              <Input
+                type={show ? "text" : "password"}
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="off"
+              />
+              <Button type="button" size="icon" variant="ghost" onClick={() => setShow(!show)}>
+                {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button type="button" size="icon" variant="ghost" onClick={() => copy(pw, "Password")} disabled={!pw}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <KeyRound className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-heading font-semibold text-base">Crew register access</h2>
-        </div>
-        {normalizedUrl && (
-          <Button size="sm" variant="outline" asChild>
-            <a href={normalizedUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open
-            </a>
-          </Button>
-        )}
+      <div className="flex items-center gap-2 mb-3">
+        <KeyRound className="h-4 w-4 text-muted-foreground" />
+        <h2 className="font-heading font-semibold text-base">Crew register access</h2>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="md:col-span-3">
-          <label className="text-xs font-medium text-muted-foreground">Link</label>
-          <div className="flex gap-1 mt-1">
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://crew-register.example.com/..."
-            />
-            <Button type="button" size="icon" variant="ghost" onClick={() => copy(url, "Link")} disabled={!url}>
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Username</label>
-          <div className="flex gap-1 mt-1">
-            <Input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="user@example.com"
-              autoComplete="off"
-            />
-            <Button type="button" size="icon" variant="ghost" onClick={() => copy(username, "Username")} disabled={!username}>
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="text-xs font-medium text-muted-foreground">Password</label>
-          <div className="flex gap-1 mt-1">
-            <Input
-              type={showPw ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete="off"
-            />
-            <Button type="button" size="icon" variant="ghost" onClick={() => setShowPw((v) => !v)}>
-              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-            <Button type="button" size="icon" variant="ghost" onClick={() => copy(password, "Password")} disabled={!password}>
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {renderSlot("Access 1", url, setUrl, username, setUsername, password, setPassword, showPw, setShowPw)}
+        {renderSlot("Access 2", url2, setUrl2, username2, setUsername2, password2, setPassword2, showPw2, setShowPw2)}
       </div>
 
       <div className="flex justify-end mt-3">
@@ -1984,4 +2011,5 @@ function CrewRegisterCard({
     </div>
   );
 }
+
 
