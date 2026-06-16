@@ -1860,26 +1860,32 @@ function ShiftScheduleCard({
 
 function CrewRegisterCard({
   festivalId,
+  initialName,
   initialUrl,
   initialUsername,
   initialPassword,
+  initialName2,
   initialUrl2,
   initialUsername2,
   initialPassword2,
   onSaved,
 }: {
   festivalId: string | undefined;
+  initialName: string;
   initialUrl: string;
   initialUsername: string;
   initialPassword: string;
+  initialName2: string;
   initialUrl2: string;
   initialUsername2: string;
   initialPassword2: string;
   onSaved: () => void;
 }) {
+  const [name, setName] = useState(initialName);
   const [url, setUrl] = useState(initialUrl);
   const [username, setUsername] = useState(initialUsername);
   const [password, setPassword] = useState(initialPassword);
+  const [name2, setName2] = useState(initialName2);
   const [url2, setUrl2] = useState(initialUrl2);
   const [username2, setUsername2] = useState(initialUsername2);
   const [password2, setPassword2] = useState(initialPassword2);
@@ -1887,17 +1893,21 @@ function CrewRegisterCard({
   const [showPw2, setShowPw2] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => { setName(initialName); }, [initialName]);
   useEffect(() => { setUrl(initialUrl); }, [initialUrl]);
   useEffect(() => { setUsername(initialUsername); }, [initialUsername]);
   useEffect(() => { setPassword(initialPassword); }, [initialPassword]);
+  useEffect(() => { setName2(initialName2); }, [initialName2]);
   useEffect(() => { setUrl2(initialUrl2); }, [initialUrl2]);
   useEffect(() => { setUsername2(initialUsername2); }, [initialUsername2]);
   useEffect(() => { setPassword2(initialPassword2); }, [initialPassword2]);
 
   const dirty =
+    name !== initialName ||
     url !== initialUrl ||
     username !== initialUsername ||
     password !== initialPassword ||
+    name2 !== initialName2 ||
     url2 !== initialUrl2 ||
     username2 !== initialUsername2 ||
     password2 !== initialPassword2;
@@ -1908,9 +1918,11 @@ function CrewRegisterCard({
     const { error } = await supabase
       .from("festivals")
       .update({
+        crew_register_name_1: name || null,
         crew_register_url: url || null,
         crew_register_username: username || null,
         crew_register_password: password || null,
+        crew_register_name_2: name2 || null,
         crew_register_url_2: url2 || null,
         crew_register_username_2: username2 || null,
         crew_register_password_2: password2 || null,
@@ -1934,7 +1946,7 @@ function CrewRegisterCard({
   const normalize = (u: string) => (u && !/^https?:\/\//i.test(u) ? `https://${u}` : u);
 
   const renderSlot = (
-    label: string,
+    slotName: string, setSlotName: (v: string) => void,
     u: string, setU: (v: string) => void,
     user: string, setUser: (v: string) => void,
     pw: string, setPw: (v: string) => void,
@@ -1944,7 +1956,7 @@ function CrewRegisterCard({
     return (
       <div className="rounded-lg border bg-background/50 p-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">{label}</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">{slotName || "Untitled"}</h3>
           {nUrl && (
             <Button size="sm" variant="outline" asChild>
               <a href={nUrl} target="_blank" rel="noopener noreferrer">
@@ -1954,6 +1966,10 @@ function CrewRegisterCard({
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="md:col-span-3">
+            <label className="text-xs font-medium text-muted-foreground">Name</label>
+            <Input value={slotName} onChange={(e) => setSlotName(e.target.value)} placeholder="e.g. Main Crew Register" className="mt-1" />
+          </div>
           <div className="md:col-span-3">
             <label className="text-xs font-medium text-muted-foreground">Link</label>
             <div className="flex gap-1 mt-1">
@@ -2003,8 +2019,8 @@ function CrewRegisterCard({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {renderSlot("Access 1", url, setUrl, username, setUsername, password, setPassword, showPw, setShowPw)}
-        {renderSlot("Access 2", url2, setUrl2, username2, setUsername2, password2, setPassword2, showPw2, setShowPw2)}
+        {renderSlot(name, setName, url, setUrl, username, setUsername, password, setPassword, showPw, setShowPw)}
+        {renderSlot(name2, setName2, url2, setUrl2, username2, setUsername2, password2, setPassword2, showPw2, setShowPw2)}
       </div>
 
       <div className="flex justify-end mt-3">
