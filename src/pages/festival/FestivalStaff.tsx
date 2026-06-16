@@ -1923,8 +1923,9 @@ function CrewRegisterCard({
 
   const copy = async (val: string, label: string) => {
     if (!val) return;
-    await navigator.clipboard.writeText(val);
-    toast.success(`${label} copied`);
+    const ok = await copyTextToClipboard(val);
+    if (ok) toast.success(`${label} copied`);
+    else toast.error(`Failed to copy ${label.toLowerCase()}`);
   };
 
   const normalize = (u: string) => (u && !/^https?:\/\//i.test(u) ? `https://${u}` : u);
