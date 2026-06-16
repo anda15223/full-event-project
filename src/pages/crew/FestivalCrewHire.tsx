@@ -271,6 +271,7 @@ export default function FestivalCrewHire() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                   <tr>
+                    <th className="text-left px-3 py-2">ID</th>
                     <th className="text-left px-3 py-2">Name</th>
                     <th className="text-left px-3 py-2">Email</th>
                     <th className="text-left px-3 py-2">Status</th>
@@ -285,6 +286,7 @@ export default function FestivalCrewHire() {
                     const hasLink = !!h.magic_token;
                     return (
                       <tr key={h.staff_id} className="border-t">
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{h.employee_code ?? "—"}</td>
                         <td className="px-3 py-2 font-medium">{h.name}</td>
                         <td className="px-3 py-2 text-muted-foreground">{h.email ?? "—"}</td>
                         <td className="px-3 py-2">
