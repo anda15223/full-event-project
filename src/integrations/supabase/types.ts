@@ -7311,6 +7311,7 @@ export type Database = {
           confirmed: boolean | null
           created_at: string | null
           draft_source_festival_id: string | null
+          email: string | null
           employee_id: string | null
           festival_id: string
           home_location: string | null
@@ -7344,6 +7345,7 @@ export type Database = {
           confirmed?: boolean | null
           created_at?: string | null
           draft_source_festival_id?: string | null
+          email?: string | null
           employee_id?: string | null
           festival_id: string
           home_location?: string | null
@@ -7377,6 +7379,7 @@ export type Database = {
           confirmed?: boolean | null
           created_at?: string | null
           draft_source_festival_id?: string | null
+          email?: string | null
           employee_id?: string | null
           festival_id?: string
           home_location?: string | null

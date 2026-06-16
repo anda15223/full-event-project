@@ -34,6 +34,7 @@ type Staff = {
   festival_id: string;
   staff_number: number | null;
   name: string | null;
+  email: string | null;
   home_location: string | null;
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
@@ -1156,6 +1157,7 @@ function StaffRow({
   onDelete: () => void;
 }) {
   const [name, setName] = useState(staff.name ?? "");
+  const [email, setEmail] = useState(staff.email ?? "");
   const [location, setLocation] = useState(staff.home_location ?? "");
   const [notes, setNotes] = useState(staff.notes ?? "");
 
@@ -1180,15 +1182,28 @@ function StaffRow({
     <TableRow>
       <TableCell className="text-muted-foreground text-xs">{index}</TableCell>
       <TableCell>
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={() => {
-            if (name !== (staff.name ?? "")) onPatch({ name });
-          }}
-          placeholder="Name"
-          className="h-8 text-sm font-medium px-2"
-        />
+        <div className="flex flex-col gap-1">
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => {
+              if (name !== (staff.name ?? "")) onPatch({ name });
+            }}
+            placeholder="Name"
+            className="h-8 text-sm font-medium px-2"
+          />
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => {
+              const next = email.trim();
+              if (next !== (staff.email ?? "")) onPatch({ email: next || null });
+            }}
+            placeholder="email@example.com"
+            className="h-7 text-xs px-2 text-muted-foreground"
+          />
+        </div>
       </TableCell>
       <TableCell>
         <Select
