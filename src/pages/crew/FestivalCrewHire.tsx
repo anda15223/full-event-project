@@ -91,7 +91,7 @@ export default function FestivalCrewHire() {
         ? supabase.from("fep_contract").select("festival_staff_id,status").in("festival_staff_id", ids)
         : Promise.resolve({ data: [] as any[] }),
       empIds.length
-        ? supabase.from("employees").select("id,email,phone").in("id", empIds)
+        ? supabase.from("employees").select("id,email,phone,employee_code").in("id", empIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
