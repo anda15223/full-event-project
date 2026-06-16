@@ -119,20 +119,20 @@ function CoordinatesDialog({
 export function FestivalHeader({ festival, rightSlot, compact = false }: FestivalHeaderProps) {
   const hasCoords = festival.lat != null && festival.lng != null;
   return (
-    <header className={cn(!compact && "mb-8", "space-y-4")}>
+    <header className={cn(!compact && "mb-6 sm:mb-8", "space-y-3 sm:space-y-4")}>
       {!compact && (
         <>
-          <h1 className="text-5xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground break-words">
             {festival.name}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-4 text-lg text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm sm:text-lg text-muted-foreground">
             <span className="text-foreground">
               {formatRange(festival.date_start, festival.date_end)}
             </span>
-            <span aria-hidden>·</span>
+            <span aria-hidden className="hidden sm:inline">·</span>
             <span>{festival.location ?? "Location not set"}</span>
-            <span className="ml-auto"><CountdownPill startDate={festival.date_start} /></span>
+            <span className="sm:ml-auto"><CountdownPill startDate={festival.date_start} /></span>
           </div>
         </>
       )}
@@ -141,8 +141,8 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
         <div className="text-sm text-muted-foreground">{festival.location}</div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="h-64 rounded-2xl overflow-hidden shadow-md border border-border">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <div className="h-48 sm:h-64 rounded-2xl overflow-hidden shadow-md border border-border">
           {hasCoords ? (
             <iframe
               title={`Map of ${festival.name}`}
@@ -165,7 +165,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
             </div>
           )}
         </div>
-        <div>{rightSlot ?? null}</div>
+        <div className="min-w-0">{rightSlot ?? null}</div>
       </div>
     </header>
   );
