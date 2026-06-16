@@ -1,0 +1,1 @@
+ALTER TABLE public.festivals ADD COLUMN IF NOT EXISTS staff_emails text;

@@ -8473,6 +8473,7 @@ export type Database = {
           setup_plan_uploaded_at: string | null
           setup_responsibility: string | null
           slug: string
+          staff_emails: string | null
           start_date: string
           tent_size_overall: string | null
           updated_at: string | null
@@ -8527,6 +8528,7 @@ export type Database = {
           setup_plan_uploaded_at?: string | null
           setup_responsibility?: string | null
           slug: string
+          staff_emails?: string | null
           start_date: string
           tent_size_overall?: string | null
           updated_at?: string | null
@@ -8581,6 +8583,7 @@ export type Database = {
           setup_plan_uploaded_at?: string | null
           setup_responsibility?: string | null
           slug?: string
+          staff_emails?: string | null
           start_date?: string
           tent_size_overall?: string | null
           updated_at?: string | null
