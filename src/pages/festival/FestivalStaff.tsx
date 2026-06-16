@@ -521,6 +521,11 @@ export default function FestivalStaff() {
   return (
     <div className="container mx-auto max-w-7xl p-4 md:p-6 space-y-4">
       <FestivalBackBar />
+      <StaffEmailsCard
+        festivalId={festivalId}
+        initialEmails={(festivalQ.data as any)?.staff_emails ?? ""}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
+      />
       <ImportFromPreviousCard
         cardLabel="staff"
         tables={CARD_TABLES.staff}
@@ -532,11 +537,6 @@ export default function FestivalStaff() {
         initialUrl={festivalQ.data?.crew_register_url ?? ""}
         initialUsername={festivalQ.data?.crew_register_username ?? ""}
         initialPassword={festivalQ.data?.crew_register_password ?? ""}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
-      />
-      <StaffEmailsCard
-        festivalId={festivalId}
-        initialEmails={(festivalQ.data as any)?.staff_emails ?? ""}
         onSaved={() => qc.invalidateQueries({ queryKey: ["festival-by-slug", slug] })}
       />
 
