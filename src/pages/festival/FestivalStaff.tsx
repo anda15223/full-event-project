@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { ImportFromPreviousCard, CARD_TABLES } from "@/components/festival/ImportFromPreviousCard";
 import { useDraftMode } from "@/hooks/useDraftMode";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
@@ -1923,8 +1924,9 @@ function CrewRegisterCard({
 
   const copy = async (val: string, label: string) => {
     if (!val) return;
-    await navigator.clipboard.writeText(val);
-    toast.success(`${label} copied`);
+    const ok = await copyTextToClipboard(val);
+    if (ok) toast.success(`${label} copied`);
+    else toast.error(`Failed to copy ${label.toLowerCase()}`);
   };
 
   const normalize = (u: string) => (u && !/^https?:\/\//i.test(u) ? `https://${u}` : u);
