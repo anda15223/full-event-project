@@ -15,6 +15,7 @@ import { isValidEmail } from "@/lib/validation";
 type Hire = {
   staff_id: string;
   name: string;
+  employee_code: string | null;
   profile_id: string | null;
   email: string | null;
   phone: string | null;
@@ -90,7 +91,7 @@ export default function FestivalCrewHire() {
         ? supabase.from("fep_contract").select("festival_staff_id,status").in("festival_staff_id", ids)
         : Promise.resolve({ data: [] as any[] }),
       empIds.length
-        ? supabase.from("employees").select("id,email,phone").in("id", empIds)
+        ? supabase.from("employees").select("id,email,phone,employee_code").in("id", empIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
@@ -110,6 +111,7 @@ export default function FestivalCrewHire() {
       return {
         staff_id: s.id,
         name: s.name ?? "(unnamed)",
+        employee_code: emp?.employee_code ?? null,
         profile_id: p?.id ?? null,
         email: p?.email ?? emp?.email ?? null,
         phone: p?.phone ?? emp?.phone ?? null,
@@ -147,6 +149,21 @@ export default function FestivalCrewHire() {
 
     setSubmitting(true);
     try {
+      // Duplicate check against the employee directory
+      const { data: dupes } = await supabase
+        .from("employees")
+        .select("id,name,email,employee_code")
+        .or(`email.ilike.${trimmedEmail},name.ilike.${name.trim()}`);
+      const emailDup = (dupes ?? []).find((d: any) => (d.email ?? "").toLowerCase() === trimmedEmail.toLowerCase());
+      const nameDup  = (dupes ?? []).find((d: any) => (d.name ?? "").toLowerCase() === name.trim().toLowerCase());
+      if (emailDup) {
+        const ok = confirm(`Email already used by ${emailDup.name} (${emailDup.employee_code}). Add anyway?`);
+        if (!ok) { setSubmitting(false); return; }
+      } else if (nameDup) {
+        const ok = confirm(`A person named "${nameDup.name}" already exists (${nameDup.employee_code}). Add as new person anyway?`);
+        if (!ok) { setSubmitting(false); return; }
+      }
+
       const { data: staffRow, error: sErr } = await supabase
         .from("festival_staff")
         .insert({
@@ -269,6 +286,7 @@ export default function FestivalCrewHire() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                   <tr>
+                    <th className="text-left px-3 py-2">ID</th>
                     <th className="text-left px-3 py-2">Name</th>
                     <th className="text-left px-3 py-2">Email</th>
                     <th className="text-left px-3 py-2">Status</th>
@@ -283,6 +301,7 @@ export default function FestivalCrewHire() {
                     const hasLink = !!h.magic_token;
                     return (
                       <tr key={h.staff_id} className="border-t">
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{h.employee_code ?? "—"}</td>
                         <td className="px-3 py-2 font-medium">{h.name}</td>
                         <td className="px-3 py-2 text-muted-foreground">{h.email ?? "—"}</td>
                         <td className="px-3 py-2">

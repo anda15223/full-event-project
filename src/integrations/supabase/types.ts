@@ -419,6 +419,7 @@ export type Database = {
           created_at: string
           default_role: string | null
           email: string | null
+          employee_code: string | null
           home_location: string | null
           id: string
           name: string
@@ -430,6 +431,7 @@ export type Database = {
           created_at?: string
           default_role?: string | null
           email?: string | null
+          employee_code?: string | null
           home_location?: string | null
           id?: string
           name: string
@@ -441,6 +443,7 @@ export type Database = {
           created_at?: string
           default_role?: string | null
           email?: string | null
+          employee_code?: string | null
           home_location?: string | null
           id?: string
           name?: string
