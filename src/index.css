@@ -57,12 +57,34 @@
     @apply border-border;
   }
 
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Mobile: keep tables scrollable horizontally instead of breaking layout */
+  @media (max-width: 767px) {
+    table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    /* Tame oversized display headings on small screens */
+    h1 { font-size: clamp(1.75rem, 8vw, 3rem) !important; line-height: 1.1 !important; }
+    h2 { font-size: clamp(1.25rem, 6vw, 2rem) !important; }
+  }
+
+  /* Prevent any direct child of <main> from exploding width */
+  main > * { min-width: 0; }
+  main img, main iframe, main video { max-width: 100%; height: auto; }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Outfit', sans-serif;
