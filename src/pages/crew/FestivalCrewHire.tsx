@@ -74,19 +74,23 @@ export default function FestivalCrewHire() {
     setLoading(true);
     const { data: staff } = await supabase
       .from("festival_staff")
-      .select("id,name")
+      .select("id,name,employee_id")
       .eq("festival_id", festivalId)
       .order("name");
 
-    const staffList = (staff ?? []) as { id: string; name: string | null }[];
+    const staffList = (staff ?? []) as { id: string; name: string | null; employee_id: string | null }[];
     const ids = staffList.map((s) => s.id);
+    const empIds = staffList.map((s) => s.employee_id).filter((x): x is string => !!x);
 
-    const [{ data: profiles }, { data: contracts }] = await Promise.all([
+    const [{ data: profiles }, { data: contracts }, { data: employees }] = await Promise.all([
       ids.length
         ? supabase.from("fep_employee_profile").select("*").in("festival_staff_id", ids)
         : Promise.resolve({ data: [] as any[] }),
       ids.length
         ? supabase.from("fep_contract").select("festival_staff_id,status").in("festival_staff_id", ids)
+        : Promise.resolve({ data: [] as any[] }),
+      empIds.length
+        ? supabase.from("employees").select("id,email,phone").in("id", empIds)
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
@@ -97,15 +101,18 @@ export default function FestivalCrewHire() {
       const prev = contractMap.get(c.festival_staff_id);
       if (c.status === "signed" || !prev) contractMap.set(c.festival_staff_id, c.status);
     });
+    const empMap = new Map<string, any>();
+    (employees ?? []).forEach((e: any) => empMap.set(e.id, e));
 
     const rows: Hire[] = staffList.map((s) => {
       const p = profMap.get(s.id);
+      const emp = s.employee_id ? empMap.get(s.employee_id) : null;
       return {
         staff_id: s.id,
         name: s.name ?? "(unnamed)",
         profile_id: p?.id ?? null,
-        email: p?.email ?? null,
-        phone: p?.phone ?? null,
+        email: p?.email ?? emp?.email ?? null,
+        phone: p?.phone ?? emp?.phone ?? null,
         magic_token: p?.magic_token ?? null,
         magic_token_expires_at: p?.magic_token_expires_at ?? null,
         onboarding_status: p?.onboarding_status ?? null,
