@@ -1157,6 +1157,7 @@ function StaffRow({
   onDelete: () => void;
 }) {
   const [name, setName] = useState(staff.name ?? "");
+  const [email, setEmail] = useState(staff.email ?? "");
   const [location, setLocation] = useState(staff.home_location ?? "");
   const [notes, setNotes] = useState(staff.notes ?? "");
 
