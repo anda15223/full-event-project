@@ -8446,8 +8446,11 @@ export type Database = {
           country: string | null
           created_at: string | null
           crew_register_password: string | null
+          crew_register_password_2: string | null
           crew_register_url: string | null
+          crew_register_url_2: string | null
           crew_register_username: string | null
+          crew_register_username_2: string | null
           end_date: string
           festival_duration_days: number | null
           id: string
@@ -8501,8 +8504,11 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           crew_register_password?: string | null
+          crew_register_password_2?: string | null
           crew_register_url?: string | null
+          crew_register_url_2?: string | null
           crew_register_username?: string | null
+          crew_register_username_2?: string | null
           end_date: string
           festival_duration_days?: number | null
           id?: string
@@ -8556,8 +8562,11 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           crew_register_password?: string | null
+          crew_register_password_2?: string | null
           crew_register_url?: string | null
+          crew_register_url_2?: string | null
           crew_register_username?: string | null
+          crew_register_username_2?: string | null
           end_date?: string
           festival_duration_days?: number | null
           id?: string
