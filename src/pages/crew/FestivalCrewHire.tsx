@@ -111,6 +111,7 @@ export default function FestivalCrewHire() {
       return {
         staff_id: s.id,
         name: s.name ?? "(unnamed)",
+        employee_code: emp?.employee_code ?? null,
         profile_id: p?.id ?? null,
         email: p?.email ?? emp?.email ?? null,
         phone: p?.phone ?? emp?.phone ?? null,
