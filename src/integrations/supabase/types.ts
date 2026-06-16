@@ -8445,6 +8445,8 @@ export type Database = {
           contact_operations_phone: string | null
           country: string | null
           created_at: string | null
+          crew_register_name_1: string | null
+          crew_register_name_2: string | null
           crew_register_password: string | null
           crew_register_password_2: string | null
           crew_register_url: string | null
@@ -8503,6 +8505,8 @@ export type Database = {
           contact_operations_phone?: string | null
           country?: string | null
           created_at?: string | null
+          crew_register_name_1?: string | null
+          crew_register_name_2?: string | null
           crew_register_password?: string | null
           crew_register_password_2?: string | null
           crew_register_url?: string | null
@@ -8561,6 +8565,8 @@ export type Database = {
           contact_operations_phone?: string | null
           country?: string | null
           created_at?: string | null
+          crew_register_name_1?: string | null
+          crew_register_name_2?: string | null
           crew_register_password?: string | null
           crew_register_password_2?: string | null
           crew_register_url?: string | null
