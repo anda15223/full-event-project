@@ -15,6 +15,7 @@ import { isValidEmail } from "@/lib/validation";
 type Hire = {
   staff_id: string;
   name: string;
+  employee_code: string | null;
   profile_id: string | null;
   email: string | null;
   phone: string | null;
