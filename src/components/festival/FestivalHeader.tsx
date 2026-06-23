@@ -164,18 +164,19 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <div className="h-48 sm:h-64 rounded-2xl overflow-hidden shadow-md border border-border">
-          {hasCoords ? (
-            <iframe
-              title={`Map of ${festival.name}`}
-              src={`https://maps.google.com/maps?q=${festival.lat},${festival.lng}&z=14&output=embed`}
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          ) : (
+        <div className="space-y-2">
+          <div className="h-48 sm:h-64 rounded-2xl overflow-hidden shadow-md border border-border">
+            {hasCoords ? (
+              <iframe
+                title={`Map of ${festival.name}`}
+                src={`https://maps.google.com/maps?q=${festival.lat},${festival.lng}&z=14&output=embed`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            ) : (
             <div className="h-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
               <p className="text-sm">Location coordinates not set</p>
               <CoordinatesDialog
