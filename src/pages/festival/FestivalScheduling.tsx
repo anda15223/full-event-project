@@ -80,27 +80,37 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
   const esc = (s: string) =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  let html = `<div style="padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111;width:794px;box-sizing:border-box;background:#fff;">
-    <h1 style="margin:0 0 4px 0;font-size:20px;">${esc(festival.name)} — Schedule</h1>
-    <div style="font-size:11px;color:#555;margin-bottom:16px;">${esc(formatDateRange(festival.start_date, festival.end_date))}</div>`;
+  // Each logical block is wrapped in [data-pdf-section] so the exporter can
+  // page-break between sections (instead of slicing a single tall canvas and
+  // cutting tables in half).
+  const SECTION = `data-pdf-section`;
+  let html = `<div id="pdf-root" style="padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111;width:794px;box-sizing:border-box;background:#fff;">
+    <div ${SECTION}>
+      <h1 style="margin:0 0 4px 0;font-size:20px;">${esc(festival.name)} — Schedule</h1>
+      <div style="font-size:11px;color:#555;margin-bottom:8px;">${esc(formatDateRange(festival.start_date, festival.end_date))}</div>
+    </div>`;
 
   for (const d of days) {
     const dayMap = byDate.get(d.date);
     if (!dayMap || dayMap.size === 0) continue;
-    html += `<h2 style="font-size:15px;margin:18px 0 6px;border-bottom:1px solid #333;padding-bottom:4px;">${esc(d.label)} · ${esc(d.date)}</h2>`;
     const conceptIds = Array.from(dayMap.keys()).sort(
       (a, b) => (conceptOrder.get(a)! - conceptOrder.get(b)!) || (conceptName.get(a) ?? "").localeCompare(conceptName.get(b) ?? "")
     );
+    // Day header is its own small section so it can sit at the top of a page.
+    html += `<div ${SECTION}><h2 style="font-size:15px;margin:14px 0 4px;border-bottom:1px solid #333;padding-bottom:4px;">${esc(d.label)} · ${esc(d.date)}</h2></div>`;
     for (const cid of conceptIds) {
       const cMap = dayMap.get(cid)!;
-      html += `<h3 style="font-size:13px;margin:10px 0 4px;color:#222;">${esc(conceptName.get(cid) ?? "—")}</h3>`;
-      html += `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;">
-        <thead><tr style="background:#f3f4f6;">
-          <th style="text-align:left;padding:4px 6px;border:1px solid #d1d5db;width:30%;">Position</th>
-          <th style="text-align:left;padding:4px 6px;border:1px solid #d1d5db;width:25%;">Name</th>
-          <th style="text-align:left;padding:4px 6px;border:1px solid #d1d5db;width:25%;">Time</th>
-          <th style="text-align:right;padding:4px 6px;border:1px solid #d1d5db;width:20%;">Hours</th>
-        </tr></thead><tbody>`;
+      // Each concept table is one section -> never cut mid-table unless it's
+      // taller than a single A4 page (then we fall back to slice rendering).
+      html += `<div ${SECTION} style="margin-bottom:6px;">
+        <h3 style="font-size:13px;margin:8px 0 4px;color:#222;">${esc(conceptName.get(cid) ?? "—")}</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <thead><tr style="background:#f3f4f6;">
+            <th style="text-align:left;padding:4px 6px;border:1px solid #d1d5db;width:30%;">Position</th>
+            <th style="text-align:left;padding:4px 6px;border:1px solid #d1d5db;width:25%;">Name</th>
+            <th style="text-align:left;padding:4px 6px;border:1px solid #d1d5db;width:25%;">Time</th>
+            <th style="text-align:right;padding:4px 6px;border:1px solid #d1d5db;width:20%;">Hours</th>
+          </tr></thead><tbody>`;
       const posIdsSorted = Array.from(cMap.keys()).sort((a, b) => {
         const ia = posInfo.get(a)!; const ib = posInfo.get(b)!;
         return (ia.order - ib.order) || ia.label.localeCompare(ib.label);
@@ -120,7 +130,7 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
           </tr>`;
         });
       }
-      html += `</tbody></table>`;
+      html += `</tbody></table></div>`;
     }
   }
   html += `</div>`;
@@ -132,23 +142,50 @@ async function exportScheduleByDayByConcept(festival: { id: string; name: string
   wrapper.innerHTML = html;
   document.body.appendChild(wrapper);
   try {
-    const canvas = await html2canvas(wrapper.firstElementChild as HTMLElement, { scale: 2, backgroundColor: "#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-    const imgW = pageW;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    let heightLeft = imgH;
-    let position = 0;
-    pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-    heightLeft -= pageH;
-    while (heightLeft > 0) {
-      position = heightLeft - imgH;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pageH;
+    const pageW = pdf.internal.pageSize.getWidth();   // 210mm
+    const pageH = pdf.internal.pageSize.getHeight();  // 297mm
+    const MARGIN = 10;
+    const contentW = pageW - MARGIN * 2;
+    const contentH = pageH - MARGIN * 2;
+    const SECTION_GAP = 3;
+
+    const sections = Array.from(
+      (wrapper.firstElementChild as HTMLElement).querySelectorAll<HTMLElement>(`[${SECTION}]`)
+    );
+
+    let cursorY = MARGIN;
+    for (const section of sections) {
+      const canvas = await html2canvas(section, { scale: 2, backgroundColor: "#ffffff" });
+      const sectionH = (canvas.height * contentW) / canvas.width;
+      const imgData = canvas.toDataURL("image/png");
+
+      if (sectionH <= contentH) {
+        // Fits on one page — break before if not enough room.
+        if (cursorY + sectionH > pageH - MARGIN && cursorY > MARGIN) {
+          pdf.addPage();
+          cursorY = MARGIN;
+        }
+        pdf.addImage(imgData, "PNG", MARGIN, cursorY, contentW, sectionH);
+        cursorY += sectionH + SECTION_GAP;
+      } else {
+        // Section bigger than a page — slice this one section across pages,
+        // but never bleed into another section.
+        if (cursorY > MARGIN) { pdf.addPage(); cursorY = MARGIN; }
+        let remaining = sectionH;
+        let position = cursorY;
+        pdf.addImage(imgData, "PNG", MARGIN, position, contentW, sectionH);
+        remaining -= (pageH - MARGIN) - position;
+        while (remaining > 0) {
+          pdf.addPage();
+          position = MARGIN - (sectionH - remaining);
+          pdf.addImage(imgData, "PNG", MARGIN, position, contentW, sectionH);
+          remaining -= contentH;
+        }
+        cursorY = pageH; // force new page for next section
+      }
     }
+
     const safe = festival.name.replace(/[^a-z0-9-_]+/gi, "_");
     pdf.save(`${safe}_schedule.pdf`);
   } finally {
