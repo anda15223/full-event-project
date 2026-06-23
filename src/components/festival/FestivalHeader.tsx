@@ -177,8 +177,34 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                 referrerPolicy="no-referrer-when-downgrade"
               />
             ) : (
-            <div className="h-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
-              <p className="text-sm">Location coordinates not set</p>
+              <div className="h-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
+                <p className="text-sm">Location coordinates not set</p>
+                <CoordinatesDialog
+                  festivalId={festival.id}
+                  slug={festival.slug}
+                  currentLat={festival.lat}
+                  currentLng={festival.lng}
+                />
+              </div>
+            )}
+          </div>
+          {hasCoords && (
+            <div className="flex flex-wrap items-center gap-2">
+              {festival.address && (
+                <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate" title={festival.address}>
+                  {festival.address}
+                </span>
+              )}
+              <Button asChild size="sm" variant="default">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${festival.lat},${festival.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open navigation in Google Maps"
+                >
+                  Navigate
+                </a>
+              </Button>
               <CoordinatesDialog
                 festivalId={festival.id}
                 slug={festival.slug}
