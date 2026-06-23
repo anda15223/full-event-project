@@ -12,7 +12,7 @@ const ALLOWED_TYPES = new Set([
 ]);
 
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-5";
 const MAX_TEXT_CHARS = 100_000;
 
 type Format = "pdf" | "excel" | "image" | "email" | "docx" | "text" | "unknown";
