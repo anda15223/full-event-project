@@ -79,12 +79,32 @@ function CoordinatesDialog({
     mutationFn: async () => {
       const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
       if (Number.isNaN(latNum) || Number.isNaN(lngNum)) throw new Error("Invalid coordinates");
-      const { error } = await supabase.from("festivals")
-        .update({ lat: latNum, lng: lngNum }).eq("id", festivalId);
+
+      // Reverse-geocode via edge function (Google Maps)
+      let address: string | null = null;
+      let city: string | null = null;
+      try {
+        const { data, error } = await supabase.functions.invoke("reverse-geocode", {
+          body: { lat: latNum, lng: lngNum },
+        });
+        if (!error && data?.address) {
+          address = data.address;
+          city = data.city ?? null;
+        }
+      } catch {
+        // Non-fatal — still save coordinates
+      }
+
+      const updates: Record<string, unknown> = { lat: latNum, lng: lngNum };
+      if (address) updates.address = address;
+      if (city) updates.city = city;
+
+      const { error } = await supabase.from("festivals").update(updates).eq("id", festivalId);
       if (error) throw error;
+      return { address };
     },
-    onSuccess: () => {
-      toast.success("Coordinates saved");
+    onSuccess: (res) => {
+      toast.success(res?.address ? `Saved · ${res.address}` : "Coordinates saved");
       qc.invalidateQueries({ queryKey: ["festival", slug] });
       qc.invalidateQueries({ queryKey: ["festival-overview", slug] });
       setOpen(false);
