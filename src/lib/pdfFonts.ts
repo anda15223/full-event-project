@@ -22,6 +22,7 @@ export function registerPdfFonts() {
       family: "Inter",
       fonts: [
         { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-400-normal.woff", fontWeight: 400 },
+        { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-ext-400-italic.woff", fontWeight: 400, fontStyle: "italic" },
         { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-500-normal.woff", fontWeight: 500 },
         { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-600-normal.woff", fontWeight: 600 },
         { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-700-normal.woff", fontWeight: 700 },
