@@ -279,8 +279,12 @@ export default function FestivalContracts() {
             <ArrowLeft className="h-3.5 w-3.5" /> {festival?.name ?? slug}
           </Link>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/festivals/${slug}/contracts/export`} target="_blank"><FileDown className="h-4 w-4 mr-1" /> PDF</Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/festivals/${slug}/contracts/export`, "_blank", "noopener,noreferrer")}
+            >
+              <FileDown className="h-4 w-4 mr-1" /> PDF
             </Button>
             <Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" /> Add contract</Button>
           </div>
