@@ -95,7 +95,7 @@ function CoordinatesDialog({
         // Non-fatal — still save coordinates
       }
 
-      const updates: Record<string, unknown> = { lat: latNum, lng: lngNum };
+      const updates: { lat: number; lng: number; address?: string; city?: string } = { lat: latNum, lng: lngNum };
       if (address) updates.address = address;
       if (city) updates.city = city;
 
