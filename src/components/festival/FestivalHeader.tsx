@@ -20,6 +20,8 @@ export interface FestivalHeaderProps {
     date_end: string;
     lat: number | null;
     lng: number | null;
+    address?: string | null;
+    city?: string | null;
   };
   rightSlot?: React.ReactNode;
   compact?: boolean;
@@ -77,12 +79,32 @@ function CoordinatesDialog({
     mutationFn: async () => {
       const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
       if (Number.isNaN(latNum) || Number.isNaN(lngNum)) throw new Error("Invalid coordinates");
-      const { error } = await supabase.from("festivals")
-        .update({ lat: latNum, lng: lngNum }).eq("id", festivalId);
+
+      // Reverse-geocode via edge function (Google Maps)
+      let address: string | null = null;
+      let city: string | null = null;
+      try {
+        const { data, error } = await supabase.functions.invoke("reverse-geocode", {
+          body: { lat: latNum, lng: lngNum },
+        });
+        if (!error && data?.address) {
+          address = data.address;
+          city = data.city ?? null;
+        }
+      } catch {
+        // Non-fatal — still save coordinates
+      }
+
+      const updates: { lat: number; lng: number; address?: string; city?: string } = { lat: latNum, lng: lngNum };
+      if (address) updates.address = address;
+      if (city) updates.city = city;
+
+      const { error } = await supabase.from("festivals").update(updates).eq("id", festivalId);
       if (error) throw error;
+      return { address };
     },
-    onSuccess: () => {
-      toast.success("Coordinates saved");
+    onSuccess: (res) => {
+      toast.success(res?.address ? `Saved · ${res.address}` : "Coordinates saved");
       qc.invalidateQueries({ queryKey: ["festival", slug] });
       qc.invalidateQueries({ queryKey: ["festival-overview", slug] });
       setOpen(false);
@@ -142,20 +164,47 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <div className="h-48 sm:h-64 rounded-2xl overflow-hidden shadow-md border border-border">
-          {hasCoords ? (
-            <iframe
-              title={`Map of ${festival.name}`}
-              src={`https://maps.google.com/maps?q=${festival.lat},${festival.lng}&z=14&output=embed`}
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          ) : (
-            <div className="h-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
-              <p className="text-sm">Location coordinates not set</p>
+        <div className="space-y-2">
+          <div className="h-48 sm:h-64 rounded-2xl overflow-hidden shadow-md border border-border">
+            {hasCoords ? (
+              <iframe
+                title={`Map of ${festival.name}`}
+                src={`https://maps.google.com/maps?q=${festival.lat},${festival.lng}&z=14&output=embed`}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            ) : (
+              <div className="h-full bg-muted flex flex-col items-center justify-center text-muted-foreground">
+                <p className="text-sm">Location coordinates not set</p>
+                <CoordinatesDialog
+                  festivalId={festival.id}
+                  slug={festival.slug}
+                  currentLat={festival.lat}
+                  currentLng={festival.lng}
+                />
+              </div>
+            )}
+          </div>
+          {hasCoords && (
+            <div className="flex flex-wrap items-center gap-2">
+              {festival.address && (
+                <span className="text-sm text-muted-foreground flex-1 min-w-0 truncate" title={festival.address}>
+                  {festival.address}
+                </span>
+              )}
+              <Button asChild size="sm" variant="default">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${festival.lat},${festival.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open navigation in Google Maps"
+                >
+                  Navigate
+                </a>
+              </Button>
               <CoordinatesDialog
                 festivalId={festival.id}
                 slug={festival.slug}
