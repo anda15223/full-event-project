@@ -20,6 +20,8 @@ export interface FestivalHeaderProps {
     date_end: string;
     lat: number | null;
     lng: number | null;
+    address?: string | null;
+    city?: string | null;
   };
   rightSlot?: React.ReactNode;
   compact?: boolean;
