@@ -8,9 +8,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { lat, lng } = await req.json();
-    if (typeof lat !== 'number' || typeof lng !== 'number') {
-      return new Response(JSON.stringify({ error: 'lat and lng (numbers) required' }), {
+    const { lat, lng, address } = await req.json();
+    const hasCoords = typeof lat === 'number' && typeof lng === 'number';
+    const hasAddress = typeof address === 'string' && address.trim().length > 0;
+    if (!hasCoords && !hasAddress) {
+      return new Response(JSON.stringify({ error: 'Provide lat+lng or address' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -25,7 +27,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const url = `${GATEWAY_URL}/maps/api/geocode/json?latlng=${lat},${lng}&language=en`;
+    const url = hasCoords
+      ? `${GATEWAY_URL}/maps/api/geocode/json?latlng=${lat},${lng}&language=en`
+      : `${GATEWAY_URL}/maps/api/geocode/json?address=${encodeURIComponent(address)}&language=en`;
     const resp = await fetch(url, {
       headers: {
         Authorization: `Bearer ${lovableKey}`,
