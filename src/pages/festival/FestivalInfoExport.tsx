@@ -127,12 +127,13 @@ function mapImageUrl(lat: number, lng: number): string {
 }
 
 function InfoDoc({
-  festival, contacts, hours, docs,
+  festival, contacts, hours, docs, summary,
 }: {
   festival: Festival;
   contacts: Contact[];
   hours: HoursRow[];
   docs: LocationDoc[];
+  summary: Summary | null;
 }) {
   const dates = formatDateRange(festival.start_date, festival.end_date);
   const hasCoords = festival.lat != null && festival.lng != null;
