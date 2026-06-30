@@ -51,11 +51,28 @@ Rules:
 - Never invent info. If a category has nothing, return an empty array.
 - Output ONLY by calling save_festival_info_summary.`;
 
+const BUCKET = "festival-location-docs";
+
+async function extractFromBytes(bin: Uint8Array, fileName: string): Promise<string> {
+  const lowerName = fileName.toLowerCase();
+  if (lowerName.endsWith(".pdf") || !lowerName) {
+    const pdf = await getDocumentProxy(bin);
+    const { text } = await extractText(pdf, { mergePages: true });
+    return (Array.isArray(text) ? text.join("\n") : text).trim();
+  } else if (lowerName.endsWith(".docx")) {
+    const { value } = await mammoth.extractRawText({ buffer: bin });
+    return (value ?? "").trim();
+  } else if (lowerName.endsWith(".txt") || lowerName.endsWith(".md")) {
+    return new TextDecoder().decode(bin).trim();
+  }
+  return "";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { rawText: rawTextIn, festivalId, fileBase64, fileName } = await req.json().catch(() => ({}));
+    const { rawText: rawTextIn, festivalId, fileBase64, fileName, useLocationDocs } = await req.json().catch(() => ({}));
 
     let rawText: string = typeof rawTextIn === "string" ? rawTextIn : "";
 
@@ -63,17 +80,7 @@ Deno.serve(async (req) => {
     if (typeof fileBase64 === "string" && fileBase64.length > 0) {
       try {
         const bin = Uint8Array.from(atob(fileBase64), (c) => c.charCodeAt(0));
-        const lowerName = (typeof fileName === "string" ? fileName : "").toLowerCase();
-        if (lowerName.endsWith(".pdf") || !lowerName) {
-          const pdf = await getDocumentProxy(bin);
-          const { text } = await extractText(pdf, { mergePages: true });
-          rawText = (Array.isArray(text) ? text.join("\n") : text).trim();
-        } else if (lowerName.endsWith(".docx")) {
-          const { value } = await mammoth.extractRawText({ buffer: bin });
-          rawText = (value ?? "").trim();
-        } else {
-          rawText = new TextDecoder().decode(bin).trim();
-        }
+        rawText = await extractFromBytes(bin, typeof fileName === "string" ? fileName : "");
       } catch (e) {
         return new Response(JSON.stringify({ error: `Failed to read file: ${(e as Error).message}` }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,8 +88,50 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Pull all uploaded location documents for this festival
+    if (useLocationDocs === true && typeof festivalId === "string" && festivalId.length > 0) {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data: docs, error: docsErr } = await supabaseAdmin
+        .from("festival_location_documents")
+        .select("file_name, file_path")
+        .eq("festival_id", festivalId);
+      if (docsErr) {
+        return new Response(JSON.stringify({ error: `Failed to list documents: ${docsErr.message}` }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!docs || docs.length === 0) {
+        return new Response(JSON.stringify({ error: "No location documents uploaded for this festival" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const parts: string[] = [];
+      const skipped: string[] = [];
+      for (const d of docs) {
+        try {
+          const { data: blob, error: dlErr } = await supabaseAdmin.storage.from(BUCKET).download(d.file_path);
+          if (dlErr || !blob) { skipped.push(d.file_name); continue; }
+          const buf = new Uint8Array(await blob.arrayBuffer());
+          const txt = await extractFromBytes(buf, d.file_name);
+          if (txt.length > 0) parts.push(`=== ${d.file_name} ===\n${txt}`);
+          else skipped.push(d.file_name);
+        } catch {
+          skipped.push(d.file_name);
+        }
+      }
+      rawText = parts.join("\n\n");
+      if (rawText.length === 0) {
+        return new Response(JSON.stringify({ error: `Could not extract text from any uploaded document. Skipped: ${skipped.join(", ")}` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (rawText.length === 0) {
-      return new Response(JSON.stringify({ error: "rawText or file is required" }), {
+      return new Response(JSON.stringify({ error: "rawText, file, or useLocationDocs is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
