@@ -170,6 +170,7 @@ export default function ShiftEditor(props: Props) {
     if (!validate()) return;
     setSaving(true);
     try {
+      let savedStaffId = staffId;
       if (mode === "edit" && existingShift) {
         const { error } = await supabase
           .from("festival_schedule_shift")
@@ -181,7 +182,6 @@ export default function ShiftEditor(props: Props) {
           })
           .eq("id", existingShift.id);
         if (error) throw error;
-        toast.success("Shift updated");
       } else {
         const { error } = await supabase
           .from("festival_schedule_shift")
@@ -194,7 +194,42 @@ export default function ShiftEditor(props: Props) {
             notes: notes.trim() || null,
           });
         if (error) throw error;
-        toast.success("Shift saved");
+      }
+
+      // Also duplicate to any days the user checked in the "Duplicate" panel.
+      const targetDays = Array.from(duplicateDays);
+      const dupFailures: string[] = [];
+      for (const day of targetDays) {
+        const { error } = await supabase
+          .from("festival_schedule_shift")
+          .insert({
+            schedule_position_id: schedulePositionId,
+            shift_date: day,
+            festival_staff_id: savedStaffId,
+            start_time: start,
+            end_time: end,
+            notes: notes.trim() || null,
+          });
+        if (error) {
+          const lbl = festivalDays.find((d) => d.date === day)?.label ?? day;
+          dupFailures.push(lbl);
+        }
+      }
+
+      if (targetDays.length > 0) {
+        const okCount = targetDays.length - dupFailures.length;
+        if (okCount > 0) {
+          toast.success(
+            `Shift saved · duplicated to ${okCount} day${okCount === 1 ? "" : "s"}`,
+          );
+        } else {
+          toast.success("Shift saved");
+        }
+        if (dupFailures.length > 0) {
+          toast.error(`Couldn't duplicate to ${dupFailures.join(", ")}`);
+        }
+      } else {
+        toast.success(mode === "edit" ? "Shift updated" : "Shift saved");
       }
       onOpenChange(false);
       onSaved();
@@ -204,6 +239,7 @@ export default function ShiftEditor(props: Props) {
       setSaving(false);
     }
   }
+
 
   async function handleDelete() {
     if (!existingShift) return;
