@@ -190,8 +190,9 @@ export function FestivalInfoSummary({ festivalId }: Props) {
                 Parse with AI
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="p-4">
