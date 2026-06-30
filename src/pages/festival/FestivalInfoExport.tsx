@@ -273,6 +273,30 @@ function InfoDoc({
           ))}
         </>
       )}
+
+      {/* AI festival info summary */}
+      {summary && SUMMARY_CATEGORIES.some(c => (summary[c.key] ?? []).length > 0) && (
+        <>
+          <Text style={reportStyles.h2}>Festival info</Text>
+          <View style={s.sumGrid}>
+            {SUMMARY_CATEGORIES.map(({ key, label }) => {
+              const items = summary[key] ?? [];
+              if (items.length === 0) return null;
+              return (
+                <View key={key} style={s.sumCard} wrap={false}>
+                  <Text style={s.sumTitle}>{label}</Text>
+                  {items.map((it, i) => (
+                    <View key={i} style={s.sumBullet}>
+                      <Text style={s.sumDot}>•</Text>
+                      <Text style={s.sumText}>{N(it)}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
+          </View>
+        </>
+      )}
     </ReportTemplate>
   );
 }
