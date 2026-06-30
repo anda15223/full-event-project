@@ -129,13 +129,17 @@ export function FestivalInfoSummary({ festivalId }: Props) {
             </span>
           )}
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant={hasAny ? "outline" : "default"}>
-              {hasAny ? (<><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Re-parse</>) :
-                (<><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Parse festival info</>)}
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="default" onClick={reparseFromDocs} disabled={parsing} title="Re-parse using all documents uploaded in Location documents">
+            {parsing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Re-parse from documents
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Upload className="h-3.5 w-3.5 mr-1.5" /> Parse from file / text
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Parse festival info</DialogTitle>
