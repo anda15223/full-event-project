@@ -51,8 +51,9 @@ Deno.serve(async (req) => {
     const get = (t: string) => comps.find((c) => c.types.includes(t))?.long_name ?? null;
     const city = get('locality') || get('postal_town') || get('administrative_area_level_2') || get('administrative_area_level_1');
 
+    const loc = best.geometry?.location ?? {};
     return new Response(
-      JSON.stringify({ address: formatted, city, raw: best }),
+      JSON.stringify({ address: formatted, city, lat: loc.lat ?? null, lng: loc.lng ?? null, raw: best }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (e) {
