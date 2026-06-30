@@ -44,6 +44,22 @@ const COL_LABEL: Record<string, string> = {
   concept: "Concept team",
 };
 
+type Summary = Record<string, string[]>;
+
+const SUMMARY_CATEGORIES: Array<{ key: string; label: string }> = [
+  { key: "arriving", label: "Arriving" },
+  { key: "leaving", label: "Leaving" },
+  { key: "rules", label: "Rules" },
+  { key: "schedule", label: "Schedule" },
+  { key: "access_credentials", label: "Access & credentials" },
+  { key: "parking_vehicles", label: "Parking & vehicles" },
+  { key: "accommodation_camping", label: "Accommodation & camping" },
+  { key: "food_drink", label: "Food & drink" },
+  { key: "safety_emergency", label: "Safety & emergency" },
+  { key: "contacts", label: "Contacts" },
+  { key: "other", label: "Other" },
+];
+
 const s = StyleSheet.create({
   twoCol: { flexDirection: "row", gap: 12, marginBottom: 12 },
   infoBox: { flex: 1, borderWidth: 0.5, borderColor: "#e5e7eb", borderRadius: 6, padding: 10 },
@@ -71,6 +87,12 @@ const s = StyleSheet.create({
   docRow: { flexDirection: "row", paddingVertical: 2.5, borderBottom: "0.25pt solid #e5e7eb", fontSize: 9.5 },
   docName: { flex: 1 },
   docDesc: { flex: 1, color: "#6b7280" },
+  sumGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  sumCard: { width: "48.5%", borderWidth: 0.5, borderColor: "#e5e7eb", borderRadius: 6, padding: 8, marginBottom: 8, backgroundColor: "#fafafa" },
+  sumTitle: { fontSize: 9, fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  sumBullet: { flexDirection: "row", marginBottom: 2 },
+  sumDot: { width: 8, fontSize: 9.5 },
+  sumText: { flex: 1, fontSize: 9.5, lineHeight: 1.35 },
 });
 
 function eachDay(start: string, end: string): string[] {
@@ -105,12 +127,13 @@ function mapImageUrl(lat: number, lng: number): string {
 }
 
 function InfoDoc({
-  festival, contacts, hours, docs,
+  festival, contacts, hours, docs, summary,
 }: {
   festival: Festival;
   contacts: Contact[];
   hours: HoursRow[];
   docs: LocationDoc[];
+  summary: Summary | null;
 }) {
   const dates = formatDateRange(festival.start_date, festival.end_date);
   const hasCoords = festival.lat != null && festival.lng != null;
@@ -250,6 +273,30 @@ function InfoDoc({
           ))}
         </>
       )}
+
+      {/* AI festival info summary */}
+      {summary && SUMMARY_CATEGORIES.some(c => (summary[c.key] ?? []).length > 0) && (
+        <>
+          <Text style={reportStyles.h2}>Festival info</Text>
+          <View style={s.sumGrid}>
+            {SUMMARY_CATEGORIES.map(({ key, label }) => {
+              const items = summary[key] ?? [];
+              if (items.length === 0) return null;
+              return (
+                <View key={key} style={s.sumCard} wrap={false}>
+                  <Text style={s.sumTitle}>{label}</Text>
+                  {items.map((it, i) => (
+                    <View key={i} style={s.sumBullet}>
+                      <Text style={s.sumDot}>•</Text>
+                      <Text style={s.sumText}>{N(it)}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
+          </View>
+        </>
+      )}
     </ReportTemplate>
   );
 }
@@ -260,6 +307,7 @@ export default function FestivalInfoExport() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [hours, setHours] = useState<HoursRow[]>([]);
   const [docs, setDocs] = useState<LocationDoc[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -274,7 +322,7 @@ export default function FestivalInfoExport() {
       setFestival(f as Festival);
       const fid = (f as any).id;
 
-      const [{ data: c }, { data: h }, { data: d }] = await Promise.all([
+      const [{ data: c }, { data: h }, { data: d }, { data: si }] = await Promise.all([
         supabase
           .from("festival_contacts")
           .select("id, full_name, role, email, phone, organization, role_category")
@@ -290,10 +338,16 @@ export default function FestivalInfoExport() {
           .select("id, file_name, description, file_size_bytes")
           .eq("festival_id", fid)
           .order("uploaded_at", { ascending: false }),
+        supabase
+          .from("festival_info_summaries" as any)
+          .select("summary")
+          .eq("festival_id", fid)
+          .maybeSingle(),
       ]);
       setContacts((c ?? []) as Contact[]);
       setHours((h ?? []) as unknown as HoursRow[]);
       setDocs((d ?? []) as unknown as LocationDoc[]);
+      setSummary(((si as any)?.summary ?? null) as Summary | null);
       setLoading(false);
     })();
   }, [slug]);
@@ -303,7 +357,7 @@ export default function FestivalInfoExport() {
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
-  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} />;
+  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} />;
 
   return (
     <div className="h-screen flex flex-col">
