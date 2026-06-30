@@ -464,13 +464,15 @@ export default function ShiftEditor(props: Props) {
                     const exists = hasExistingOnDay(d.date);
                     const checked = duplicateDays.has(d.date);
                     return (
-                      <label
+                      <div
                         key={d.date}
                         className="flex items-center gap-2 text-sm cursor-pointer"
+                        onClick={() => toggleDay(d.date)}
                       >
                         <Checkbox
                           checked={checked}
                           onCheckedChange={() => toggleDay(d.date)}
+                          onClick={(e) => e.stopPropagation()}
                         />
                         <span>{d.label}</span>
                         {exists && (
@@ -479,7 +481,8 @@ export default function ShiftEditor(props: Props) {
                             {existingShift.staff_name ?? "Staff"} already has a shift here
                           </span>
                         )}
-                      </label>
+                      </div>
+
                     );
                   })}
                 </div>
