@@ -96,6 +96,25 @@ export function FestivalInfoSummary({ festivalId }: Props) {
     }
   };
 
+  const reparseFromDocs = async () => {
+    setParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parse-festival-info", {
+        body: { festivalId, useLocationDocs: true },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setSummary(data.summary as Summary);
+      setParsedAt(new Date().toISOString());
+      toast.success("Info re-parsed from uploaded documents");
+      setOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to parse");
+    } finally {
+      setParsing(false);
+    }
+  };
+
   const hasAny = summary && CATEGORIES.some(c => (summary[c.key] ?? []).length > 0);
 
   return (
@@ -110,13 +129,17 @@ export function FestivalInfoSummary({ festivalId }: Props) {
             </span>
           )}
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant={hasAny ? "outline" : "default"}>
-              {hasAny ? (<><RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Re-parse</>) :
-                (<><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Parse festival info</>)}
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="default" onClick={reparseFromDocs} disabled={parsing} title="Re-parse using all documents uploaded in Location documents">
+            {parsing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Re-parse from documents
+          </Button>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Upload className="h-3.5 w-3.5 mr-1.5" /> Parse from file / text
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Parse festival info</DialogTitle>
@@ -167,8 +190,9 @@ export function FestivalInfoSummary({ festivalId }: Props) {
                 Parse with AI
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="p-4">
