@@ -307,6 +307,7 @@ export default function FestivalInfoExport() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [hours, setHours] = useState<HoursRow[]>([]);
   const [docs, setDocs] = useState<LocationDoc[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
