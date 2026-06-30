@@ -8,9 +8,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { lat, lng } = await req.json();
-    if (typeof lat !== 'number' || typeof lng !== 'number') {
-      return new Response(JSON.stringify({ error: 'lat and lng (numbers) required' }), {
+    const { lat, lng, address } = await req.json();
+    const hasCoords = typeof lat === 'number' && typeof lng === 'number';
+    const hasAddress = typeof address === 'string' && address.trim().length > 0;
+    if (!hasCoords && !hasAddress) {
+      return new Response(JSON.stringify({ error: 'Provide lat+lng or address' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -25,7 +27,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const url = `${GATEWAY_URL}/maps/api/geocode/json?latlng=${lat},${lng}&language=en`;
+    const url = hasCoords
+      ? `${GATEWAY_URL}/maps/api/geocode/json?latlng=${lat},${lng}&language=en`
+      : `${GATEWAY_URL}/maps/api/geocode/json?address=${encodeURIComponent(address)}&language=en`;
     const resp = await fetch(url, {
       headers: {
         Authorization: `Bearer ${lovableKey}`,
@@ -47,8 +51,9 @@ Deno.serve(async (req) => {
     const get = (t: string) => comps.find((c) => c.types.includes(t))?.long_name ?? null;
     const city = get('locality') || get('postal_town') || get('administrative_area_level_2') || get('administrative_area_level_1');
 
+    const loc = best.geometry?.location ?? {};
     return new Response(
-      JSON.stringify({ address: formatted, city, raw: best }),
+      JSON.stringify({ address: formatted, city, lat: loc.lat ?? null, lng: loc.lng ?? null, raw: best }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (e) {

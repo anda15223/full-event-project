@@ -68,40 +68,65 @@ function CountdownPill({ startDate }: { startDate: string }) {
 }
 
 function CoordinatesDialog({
-  festivalId, slug, currentLat, currentLng,
-}: { festivalId: string; slug: string; currentLat: number | null; currentLng: number | null }) {
+  festivalId, slug, currentLat, currentLng, currentAddress,
+}: { festivalId: string; slug: string; currentLat: number | null; currentLng: number | null; currentAddress?: string | null }) {
   const [open, setOpen] = useState(false);
   const [lat, setLat] = useState(currentLat?.toString() ?? "");
   const [lng, setLng] = useState(currentLng?.toString() ?? "");
+  const [address, setAddress] = useState(currentAddress ?? "");
+  const [geocoding, setGeocoding] = useState(false);
   const qc = useQueryClient();
+
+  const geocodeAddress = async () => {
+    if (!address.trim()) return toast.error("Enter an address first");
+    setGeocoding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("reverse-geocode", {
+        body: { address: address.trim() },
+      });
+      if (error) throw error;
+      if (data?.lat && data?.lng) {
+        setLat(String(data.lat));
+        setLng(String(data.lng));
+        if (data.address) setAddress(data.address);
+        toast.success("Coordinates found");
+      } else {
+        toast.error("No coordinates found for this address");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Geocoding failed");
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   const m = useMutation({
     mutationFn: async () => {
       const latNum = parseFloat(lat); const lngNum = parseFloat(lng);
       if (Number.isNaN(latNum) || Number.isNaN(lngNum)) throw new Error("Invalid coordinates");
 
-      // Reverse-geocode via edge function (Google Maps)
-      let address: string | null = null;
+      let finalAddress: string | null = address.trim() || null;
       let city: string | null = null;
-      try {
-        const { data, error } = await supabase.functions.invoke("reverse-geocode", {
-          body: { lat: latNum, lng: lngNum },
-        });
-        if (!error && data?.address) {
-          address = data.address;
-          city = data.city ?? null;
-        }
-      } catch {
-        // Non-fatal — still save coordinates
+
+      if (!finalAddress) {
+        try {
+          const { data, error } = await supabase.functions.invoke("reverse-geocode", {
+            body: { lat: latNum, lng: lngNum },
+          });
+          if (!error && data?.address) {
+            finalAddress = data.address;
+            city = data.city ?? null;
+          }
+        } catch {}
       }
 
       const updates: { lat: number; lng: number; address?: string; city?: string } = { lat: latNum, lng: lngNum };
-      if (address) updates.address = address;
+      if (finalAddress) updates.address = finalAddress;
       if (city) updates.city = city;
 
       const { error } = await supabase.from("festivals").update(updates).eq("id", festivalId);
       if (error) throw error;
-      return { address };
+      return { address: finalAddress };
     },
     onSuccess: (res) => {
       toast.success(res?.address ? `Saved · ${res.address}` : "Coordinates saved");
@@ -118,15 +143,27 @@ function CoordinatesDialog({
         <Button variant="outline" size="sm" className="mt-3">Set coordinates</Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Set map coordinates</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Set location</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="lat">Latitude</Label>
-            <Input id="lat" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="55.7553" />
+            <Label htmlFor="address">Address</Label>
+            <div className="flex gap-2">
+              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. Vig Festivalplads, 4560 Vig" />
+              <Button type="button" variant="outline" onClick={geocodeAddress} disabled={geocoding}>
+                {geocoding ? "..." : "Find"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Type an address and press Find to auto-fill coordinates.</p>
           </div>
-          <div>
-            <Label htmlFor="lng">Longitude</Label>
-            <Input id="lng" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="9.4239" />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label htmlFor="lat">Latitude</Label>
+              <Input id="lat" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="55.7553" />
+            </div>
+            <div>
+              <Label htmlFor="lng">Longitude</Label>
+              <Input id="lng" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="9.4239" />
+            </div>
           </div>
         </div>
         <DialogFooter>
@@ -184,6 +221,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                   slug={festival.slug}
                   currentLat={festival.lat}
                   currentLng={festival.lng}
+                  currentAddress={festival.address}
                 />
               </div>
             )}
@@ -210,6 +248,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                 slug={festival.slug}
                 currentLat={festival.lat}
                 currentLng={festival.lng}
+                currentAddress={festival.address}
               />
             </div>
           )}
