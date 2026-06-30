@@ -44,6 +44,22 @@ const COL_LABEL: Record<string, string> = {
   concept: "Concept team",
 };
 
+type Summary = Record<string, string[]>;
+
+const SUMMARY_CATEGORIES: Array<{ key: string; label: string }> = [
+  { key: "arriving", label: "Arriving" },
+  { key: "leaving", label: "Leaving" },
+  { key: "rules", label: "Rules" },
+  { key: "schedule", label: "Schedule" },
+  { key: "access_credentials", label: "Access & credentials" },
+  { key: "parking_vehicles", label: "Parking & vehicles" },
+  { key: "accommodation_camping", label: "Accommodation & camping" },
+  { key: "food_drink", label: "Food & drink" },
+  { key: "safety_emergency", label: "Safety & emergency" },
+  { key: "contacts", label: "Contacts" },
+  { key: "other", label: "Other" },
+];
+
 const s = StyleSheet.create({
   twoCol: { flexDirection: "row", gap: 12, marginBottom: 12 },
   infoBox: { flex: 1, borderWidth: 0.5, borderColor: "#e5e7eb", borderRadius: 6, padding: 10 },
