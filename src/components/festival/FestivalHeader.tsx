@@ -248,6 +248,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                 slug={festival.slug}
                 currentLat={festival.lat}
                 currentLng={festival.lng}
+                currentAddress={festival.address}
               />
             </div>
           )}
