@@ -96,6 +96,25 @@ export function FestivalInfoSummary({ festivalId }: Props) {
     }
   };
 
+  const reparseFromDocs = async () => {
+    setParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("parse-festival-info", {
+        body: { festivalId, useLocationDocs: true },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setSummary(data.summary as Summary);
+      setParsedAt(new Date().toISOString());
+      toast.success("Info re-parsed from uploaded documents");
+      setOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to parse");
+    } finally {
+      setParsing(false);
+    }
+  };
+
   const hasAny = summary && CATEGORIES.some(c => (summary[c.key] ?? []).length > 0);
 
   return (
