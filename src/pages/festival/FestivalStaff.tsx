@@ -353,13 +353,15 @@ export default function FestivalStaff() {
       if (srcErr) throw srcErr;
       if (!src || src.length === 0) throw new Error("No stations found in that festival for this concept.");
 
-      // Wipe current slots for this concept (current festival + draft mode)
+      // Wipe current slots for this concept. The unique constraint
+      // (festival_id, concept_id, station_id, position_number) does NOT include
+      // is_draft, so we must remove both draft + published rows to avoid a
+      // duplicate-key collision on insert.
       const { error: delErr } = await supabase
         .from("festival_schedule_position")
         .delete()
         .eq("festival_id", festivalId!)
-        .eq("concept_id", conceptId)
-        .eq("is_draft", draftMode);
+        .eq("concept_id", conceptId);
       if (delErr) throw delErr;
 
       // Insert copies
