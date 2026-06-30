@@ -278,7 +278,11 @@ export const CARD_TABLES: Record<string, string[]> = {
   prices: ["festival_concept_prices"],
   safety: ["festival_safety", "festival_safety_zone"],
   setup: [],
-  staff: ["festival_staff", "festival_staff_vehicles", "festival_schedule_position", "festival_shifts"],
+  // Staff import only copies people (and their vehicle assignments).
+  // Scheduling positions / shifts are festival-specific and must be imported
+  // separately from the Scheduling tab to avoid pulling in concepts that
+  // aren't active at the target festival.
+  staff: ["festival_staff", "festival_staff_vehicles"],
   transport: ["festival_transport"],
   scheduling: ["festival_schedule_position", "festival_shifts"],
   timeline: ["festival_timeline_event", "festival_deadlines"],
