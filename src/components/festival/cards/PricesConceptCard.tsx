@@ -124,6 +124,14 @@ export function PricesConceptCard({
 
   const ensurePricesRow = async (): Promise<string> => {
     if (prices?.id) return prices.id;
+    // Check if a row already exists (cache may be stale after a delete/clear)
+    const { data: existing } = await sb
+      .from("festival_concept_prices")
+      .select("id")
+      .eq("festival_id", festivalId)
+      .eq("concept_id", conceptId)
+      .maybeSingle();
+    if (existing?.id) return existing.id as string;
     const { data, error } = await sb.from("festival_concept_prices")
       .insert({ festival_id: festivalId, concept_id: conceptId, currency: "DKK" })
       .select("id").single();
