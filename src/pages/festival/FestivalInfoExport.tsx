@@ -357,7 +357,7 @@ export default function FestivalInfoExport() {
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
-  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} />;
+  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} />;
 
   return (
     <div className="h-screen flex flex-col">
