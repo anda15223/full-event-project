@@ -87,6 +87,12 @@ const s = StyleSheet.create({
   docRow: { flexDirection: "row", paddingVertical: 2.5, borderBottom: "0.25pt solid #e5e7eb", fontSize: 9.5 },
   docName: { flex: 1 },
   docDesc: { flex: 1, color: "#6b7280" },
+  sumGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  sumCard: { width: "48.5%", borderWidth: 0.5, borderColor: "#e5e7eb", borderRadius: 6, padding: 8, marginBottom: 8, backgroundColor: "#fafafa" },
+  sumTitle: { fontSize: 9, fontWeight: 700, color: "#111827", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  sumBullet: { flexDirection: "row", marginBottom: 2 },
+  sumDot: { width: 8, fontSize: 9.5 },
+  sumText: { flex: 1, fontSize: 9.5, lineHeight: 1.35 },
 });
 
 function eachDay(start: string, end: string): string[] {
