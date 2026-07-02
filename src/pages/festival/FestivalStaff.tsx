@@ -90,6 +90,7 @@ function buildDayWindow(startDate?: string | null, endDate?: string | null) {
 
 
 type Concept = { id: string; name: string };
+type ConceptGroup = { contractId: string; conceptId: string; name: string };
 
 const SOURCE_OPTIONS = [
   { value: "soborg", label: "Copenhagen" },
@@ -197,22 +198,31 @@ export default function FestivalStaff() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("concept_id, concepts:concept_id(id, name)")
+        .select("id, concept_id, concept_alias, concepts:concept_id(id, name)")
         .eq("festival_id", festivalId!)
         .eq("is_active", true);
       if (error) throw error;
+      const rows = (data ?? []) as any[];
+      const groups: ConceptGroup[] = rows
+        .filter((r) => r.concepts)
+        .map((r) => ({
+          contractId: r.id,
+          conceptId: r.concepts.id,
+          name: (r.concept_alias?.trim() || r.concepts.name) as string,
+        }));
       const seen = new Set<string>();
-      const out: Concept[] = [];
-      for (const r of (data ?? []) as any[]) {
+      const concepts: Concept[] = [];
+      for (const r of rows) {
         const c = r.concepts;
         if (!c || seen.has(c.id)) continue;
         seen.add(c.id);
-        out.push(c as Concept);
+        concepts.push(c as Concept);
       }
-      return out;
+      return { concepts, groups };
     },
   });
-  const concepts = conceptsQ.data ?? [];
+  const concepts = conceptsQ.data?.concepts ?? [];
+  const conceptGroups = conceptsQ.data?.groups ?? [];
 
   // Station catalog (live source: `station` table)
   const stationsQ = useQuery({
@@ -704,13 +714,14 @@ export default function FestivalStaff() {
           const crewPool = allRows;
 
           const groups = [
-            ...concepts.map((c) => ({
-              id: c.id,
-              name: c.name,
-              people: allRows.filter((s) => s.concept_id === c.id && s.role !== "management"),
+            ...conceptGroups.map((g) => ({
+              key: g.contractId,
+              id: g.conceptId,
+              name: g.name,
+              people: allRows.filter((s) => s.concept_id === g.conceptId && s.role !== "management"),
             })),
-            { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
-            { id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
+            { key: "__mgmt__", id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
+            { key: "__none__", id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
           ];
 
           return (
@@ -736,7 +747,7 @@ export default function FestivalStaff() {
                   : [];
 
                 return (
-                  <div key={group.id} className="rounded-xl border bg-card p-4 shadow-sm">
+                  <div key={group.key} className="rounded-xl border bg-card p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-3 pb-2 border-b">
                       <h3 className="font-heading font-semibold text-base">{group.name}</h3>
                       <div className="flex items-center gap-2">
