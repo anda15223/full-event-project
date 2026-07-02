@@ -816,7 +816,7 @@ export default function FestivalStaff() {
                                                 if (current) {
                                                   updateStaff.mutate({
                                                     id: current.id,
-                                                    patch: { station: null, concept_id: null },
+                                                    patch: { station: null, concept_id: null, contract_id: null },
                                                   });
                                                 }
                                                 return;
@@ -824,6 +824,7 @@ export default function FestivalStaff() {
                                               updateStaff.mutate({
                                                 id: personId,
                                                 patch: {
+                                                  contract_id: group.contractId,
                                                   concept_id: group.id,
                                                   station: slot.stationCode,
                                                   role: "crew",
