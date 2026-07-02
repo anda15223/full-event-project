@@ -519,18 +519,20 @@ export default function FestivalStaff() {
     )
     .sort((a, b) => (a.staff_number ?? 9999) - (b.staff_number ?? 9999));
 
-  // Empty-slot calculation across concept plans (from live positions)
+  // Empty-slot calculation across contract groups (Fish 1, Fish 2, …).
+  // Positions are defined per concept, but each contract owns its own crew,
+  // so we count fills against each contract group separately.
   const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
-  concepts.forEach((c) => {
-    const slots = planByConcept.get(c.id);
+  conceptGroups.forEach((g) => {
+    const slots = planByConcept.get(g.conceptId);
     if (!slots || slots.length === 0) return;
-    const conceptPeople = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
+    const groupPeople = allRows.filter((s) => s.contract_id === g.contractId && s.role !== "management");
     slots.forEach((slot) => {
-      const filled = conceptPeople.filter((p) => p.station === slot.stationCode).length;
+      const filled = groupPeople.filter((p) => p.station === slot.stationCode).length;
       const missing = slot.count - Math.min(filled, slot.count);
       if (missing > 0) {
         emptySlots.push({
-          conceptName: c.name,
+          conceptName: g.name,
           stationLabel: slot.label,
           missing,
         });
