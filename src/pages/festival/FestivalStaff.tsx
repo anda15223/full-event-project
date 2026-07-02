@@ -502,7 +502,7 @@ export default function FestivalStaff() {
       filter === "unconfirmed"
         ? !s.confirmed
         : filter === "unassigned"
-        ? !s.concept_id && s.role !== "management"
+        ? !s.contract_id && s.role !== "management"
         : true
     )
     .filter((s) =>
