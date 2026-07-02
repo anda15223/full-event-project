@@ -40,6 +40,7 @@ type Staff = {
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
   concept_id: string | null;
+  contract_id: string | null;
   // Legacy day flags (still in DB for the PDF export). New code uses
   // work_dates / accom_dates instead.
   works_thursday: boolean | null;
