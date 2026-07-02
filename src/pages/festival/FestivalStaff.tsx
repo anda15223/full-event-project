@@ -198,22 +198,31 @@ export default function FestivalStaff() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("concept_id, concepts:concept_id(id, name)")
+        .select("id, concept_id, concept_alias, concepts:concept_id(id, name)")
         .eq("festival_id", festivalId!)
         .eq("is_active", true);
       if (error) throw error;
+      const rows = (data ?? []) as any[];
+      const groups: ConceptGroup[] = rows
+        .filter((r) => r.concepts)
+        .map((r) => ({
+          contractId: r.id,
+          conceptId: r.concepts.id,
+          name: (r.concept_alias?.trim() || r.concepts.name) as string,
+        }));
       const seen = new Set<string>();
-      const out: Concept[] = [];
-      for (const r of (data ?? []) as any[]) {
+      const concepts: Concept[] = [];
+      for (const r of rows) {
         const c = r.concepts;
         if (!c || seen.has(c.id)) continue;
         seen.add(c.id);
-        out.push(c as Concept);
+        concepts.push(c as Concept);
       }
-      return out;
+      return { concepts, groups };
     },
   });
-  const concepts = conceptsQ.data ?? [];
+  const concepts = conceptsQ.data?.concepts ?? [];
+  const conceptGroups = conceptsQ.data?.groups ?? [];
 
   // Station catalog (live source: `station` table)
   const stationsQ = useQuery({
