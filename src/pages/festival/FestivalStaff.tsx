@@ -474,7 +474,7 @@ export default function FestivalStaff() {
   const allRows = staffQ.data ?? [];
   const confirmedCount = allRows.filter((s) => s.confirmed).length;
   const unconfirmedCount = allRows.length - confirmedCount;
-  const unassignedCount = allRows.filter((s) => !s.concept_id && s.role !== "management").length;
+  const unassignedCount = allRows.filter((s) => !s.contract_id && s.role !== "management").length;
 
   const [filter, setFilter] = useState<"all" | "unconfirmed" | "unassigned">("all");
   const [cityFilter, setCityFilter] = useState<string>("__all__");
