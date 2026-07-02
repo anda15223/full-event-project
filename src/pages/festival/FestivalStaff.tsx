@@ -671,6 +671,7 @@ export default function FestivalStaff() {
                 staff={s}
                 index={i + 1}
                 concepts={concepts}
+                conceptGroups={conceptGroups}
                 dayWindow={dayWindow}
                 hideAccom={hideAccom}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
