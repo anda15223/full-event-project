@@ -1265,14 +1265,17 @@ function StaffRow({
 
       <TableCell>
         <Select
-          value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
+          value={staff.role === "management" ? "__mgmt__" : (staff.contract_id ?? "__none__")}
           onValueChange={(v) => {
-            // Concept here is just a suggestion — clear any station lock so the
-            // person isn't shown as occupying a position slot.
-            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null, station: null });
-            else if (v === "__none__") onPatch({ role: "crew", concept_id: null, station: null });
-            else if (v !== staff.concept_id) onPatch({ role: "crew", concept_id: v, station: null });
-            else onPatch({ role: "crew", concept_id: v });
+            // Assigning to a contract group (Fish 1, Fish 2, …) — clear any station
+            // lock so the person isn't shown as occupying a position slot.
+            if (v === "__mgmt__") onPatch({ role: "management", contract_id: null, concept_id: null, station: null });
+            else if (v === "__none__") onPatch({ role: "crew", contract_id: null, concept_id: null, station: null });
+            else {
+              const g = conceptGroups.find((x) => x.contractId === v);
+              if (v !== staff.contract_id) onPatch({ role: "crew", contract_id: v, concept_id: g?.conceptId ?? null, station: null });
+              else onPatch({ role: "crew", contract_id: v, concept_id: g?.conceptId ?? null });
+            }
           }}
         >
           <SelectTrigger className="h-7 text-xs px-2">
@@ -1281,8 +1284,8 @@ function StaffRow({
           <SelectContent>
             <SelectItem value="__none__">— None —</SelectItem>
             <SelectItem value="__mgmt__">Management</SelectItem>
-            {concepts.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            {conceptGroups.map((g) => (
+              <SelectItem key={g.contractId} value={g.contractId}>{g.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
