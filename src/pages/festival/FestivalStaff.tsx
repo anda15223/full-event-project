@@ -201,9 +201,15 @@ export default function FestivalStaff() {
         .eq("festival_id", festivalId!)
         .eq("is_active", true);
       if (error) throw error;
-      return (data ?? [])
-        .map((r: any) => r.concepts)
-        .filter(Boolean) as Concept[];
+      const seen = new Set<string>();
+      const out: Concept[] = [];
+      for (const r of (data ?? []) as any[]) {
+        const c = r.concepts;
+        if (!c || seen.has(c.id)) continue;
+        seen.add(c.id);
+        out.push(c as Concept);
+      }
+      return out;
     },
   });
   const concepts = conceptsQ.data ?? [];
