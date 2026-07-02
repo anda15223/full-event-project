@@ -714,13 +714,14 @@ export default function FestivalStaff() {
           const crewPool = allRows;
 
           const groups = [
-            ...concepts.map((c) => ({
-              id: c.id,
-              name: c.name,
-              people: allRows.filter((s) => s.concept_id === c.id && s.role !== "management"),
+            ...conceptGroups.map((g) => ({
+              key: g.contractId,
+              id: g.conceptId,
+              name: g.name,
+              people: allRows.filter((s) => s.concept_id === g.conceptId && s.role !== "management"),
             })),
-            { id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
-            { id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
+            { key: "__mgmt__", id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
+            { key: "__none__", id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
           ];
 
           return (
