@@ -90,6 +90,7 @@ function buildDayWindow(startDate?: string | null, endDate?: string | null) {
 
 
 type Concept = { id: string; name: string };
+type ConceptGroup = { contractId: string; conceptId: string; name: string };
 
 const SOURCE_OPTIONS = [
   { value: "soborg", label: "Copenhagen" },
