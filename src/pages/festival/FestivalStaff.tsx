@@ -699,15 +699,16 @@ export default function FestivalStaff() {
           allRows.forEach((p) => {
             // Management is informative only — never lock them out of position slots.
             if (p.role === "management") return;
-            if (p.concept_id && p.station) {
+            if (p.contract_id && p.concept_id && p.station) {
               // Only treat as "locked in a position" if their station actually
               // matches a real position slot in that concept's plan.
               const planSlots = planByConcept.get(p.concept_id);
               const inRealSlot = !!planSlots?.some((s) => s.stationCode === p.station);
               if (!inRealSlot) return;
-              const cName = concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
+              const gName = conceptGroups.find((g) => g.contractId === p.contract_id)?.name
+                ?? concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
               assignmentMap.set(p.id, {
-                conceptName: cName,
+                conceptName: gName,
                 stationLabel: STATION_LABEL[p.station] ?? p.station,
               });
             }
@@ -720,11 +721,12 @@ export default function FestivalStaff() {
             ...conceptGroups.map((g) => ({
               key: g.contractId,
               id: g.conceptId,
+              contractId: g.contractId,
               name: g.name,
-              people: allRows.filter((s) => s.concept_id === g.conceptId && s.role !== "management"),
+              people: allRows.filter((s) => s.contract_id === g.contractId && s.role !== "management"),
             })),
-            { key: "__mgmt__", id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
-            { key: "__none__", id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
+            { key: "__mgmt__", id: "__mgmt__", contractId: null as string | null, name: "Management", people: allRows.filter((s) => s.role === "management") },
+            { key: "__none__", id: "__none__", contractId: null as string | null, name: "Not assigned", people: allRows.filter((s) => !s.contract_id && s.role !== "management") },
           ];
 
           return (
