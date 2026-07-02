@@ -1,42 +1,57 @@
 ## Goal
 
-Allow each staff row to track work days and accommodation nights across an arbitrary set of dates (e.g. arriving Monday before a Thursday festival), instead of the current fixed Thu/Fri/Sat/Sun columns.
+Turn the current single **Grøn Koncert uge 1 2026** festival into **8 separate one-day festivals**, one per Grøn stop, each with its own staff / concepts / schedule.
 
-## Approach
+## The 8 festivals
 
-Replace the 8 hardcoded boolean columns with 2 date-array columns and derive the on-screen day chips from the festival's date range (with a configurable buffer before/after).
+| Slug | Name | Date | City |
+|---|---|---|---|
+| `gron-tarnby-2026` | Grøn Tårnby 2026 | Jul 16, 2026 | Tårnby |
+| `gron-kolding-2026` | Grøn Kolding 2026 | Jul 17, 2026 | Kolding |
+| `gron-aarhus-2026` | Grøn Aarhus 2026 | Jul 18, 2026 | Aarhus |
+| `gron-aalborg-2026` | Grøn Aalborg 2026 | Jul 19, 2026 | Aalborg |
+| `gron-esbjerg-2026` | Grøn Esbjerg 2026 | Jul 23, 2026 | Esbjerg |
+| `gron-odense-2026` | Grøn Odense 2026 | Jul 24, 2026 | Odense |
+| `gron-naestved-2026` | Grøn Næstved 2026 | Jul 25, 2026 | Næstved |
+| `gron-valby-2026` | Grøn Valby 2026 | Jul 26, 2026 | Valby |
 
-### 1. Database migration
-On `festival_staff`:
-- Add `work_dates date[] NOT NULL DEFAULT '{}'`
-- Add `accom_dates date[] NOT NULL DEFAULT '{}'`
-- Backfill from existing booleans using the festival's start_date:
-  - For each row, map `works_thursday/friday/saturday/sunday` → the actual calendar dates of that festival's Thu–Sun, push into `work_dates`. Same for `accom_*`.
-- Keep the old boolean columns for now (don't drop) so the PDF export and any other readers keep working until they're migrated. Mark them deprecated in a comment.
+Each is a single day: `start_date = end_date = <that Jul day>`, `year = 2026`.
 
-### 2. Day range derivation (frontend)
-- Read `festivals.start_date` and `end_date` for the current festival.
-- Day window shown in the table = `start_date − 3 days` → `end_date + 1 day` (covers early arrivals and pack-down). The buffer is a constant for now, easy to tune later.
-- Render one chip per date in that window, labeled with weekday short name + day number (e.g. `Mon 18`, `Tue 19`, … `Sun 24`).
-- Highlight the actual festival days (start_date → end_date) with a stronger background so the buffer days read as "extra".
+## What gets copied into each of the 8
 
-### 3. Staff table UI (`FestivalStaff.tsx`)
-- Replace the two `(["works_thursday"…] as const).map(...)` blocks with a loop over the derived date list.
-- Toggling a chip writes `array_append` / `array_remove` on `work_dates` / `accom_dates` via Supabase (using `.update` with the new array we compute client-side — simpler than RPC).
-- "Add person" defaults: `work_dates = []`, `accom_dates = []` (or pre-fill with the festival's main days; will pick one in implementation).
+For every new festival, I clone the following rows from the current Grøn:
 
-### 4. PDF export (`FestivalStaffExport.tsx`)
-- Query `work_dates` and `accom_dates` instead of the 8 booleans.
-- Render the same dynamic day columns as the table.
+- **festivals** — one new row per city (all other columns copied: organiser, contacts, address defaults, notes, accreditation, crew register, etc.)
+- **festival_contracts** — the 4 concept contracts (Fish 1, Fish 2, Gyros 1, Gyros 2)
+- **festival_concepts** — 2 rows (Fish & Chips, Gyros)
+- **festival_concept_assignments** — managers per concept
+- **festival_staff** — full staff roster
+- **festival_staff_vehicles** — vehicle assignments
+- **festival_schedule_position** — station positions
+- **festival_schedule_shift** — shifts, with `schedule_position_id` remapped to the new position rows
+- **festival_shifts** — legacy shift groups
+- **festival_concept_hours** — opening hours per concept
+- **festival_hours** — service-day hours
+- **festival_service_hours** — extra service hours
+- **festival_contacts** — festival-side contacts
 
-### 5. Shift schedule card
-- The `WORK_DAYS = ["2026-05-21", …]` constant becomes derived from the festival's date range too, same buffer logic. (Schedule rows live in `festival_schedule_shift` keyed by date, so no schema change needed there.)
+Dates on any date-bearing rows (e.g. `festival_schedule_shift.shift_date`, `festival_shifts.shift_date`, `festival_concept_hours.date`, etc.) are shifted so the row falls on the new festival's single day. If the original spans multiple days, only the last day's rows are kept for the new one-day festival.
 
-### 6. Out of scope (this round)
-- Source / Concept / City "add new option inline" — separate request, will tackle after this lands.
-- Dropping the legacy boolean columns — defer until we're sure nothing external reads them.
+**Not copied (kept simple):** accommodation, cooling units, power, safety, transport legs, timeline events, action items, open questions, finance rows, forecasts, docs. These are festival-specific and usually not identical between cities — you can add them per city.
 
-## Open questions
+## Then delete the original
 
-1. **Buffer size** — I'm proposing 3 days before start, 1 day after end. OK, or do you want the full ISO week containing the festival (Mon–Sun)?
-2. **Per-row override** — if someone needs a date *outside* even the buffered window (e.g. arrives a full week early), do you want a "+ add date" button on their row, or is the buffered window always enough?
+After all 8 are created and verified, the current `gron-koncert-uge1-2026` festival and all its child rows are deleted (`ON DELETE CASCADE` where set; manual cleanup otherwise).
+
+## How it runs
+
+Everything happens in a single SQL migration inside one transaction, so either all 8 festivals appear cleanly or nothing changes. No code changes needed — the app already handles multiple festivals.
+
+## Technical notes
+
+- Uses `INSERT ... SELECT` per table with a generated `new_id = gen_random_uuid()` and a mapping CTE for FK remapping (positions → shifts).
+- Slugs and names are hardcoded per the table above; everything else is copied verbatim from the source row.
+- Date shift logic: for shift-bearing tables, `shift_date := <target festival day>` (single-day festival, so all shifts collapse onto that day).
+- Original festival row is deleted last; child rows without cascade are deleted first.
+
+Approve and I'll write and run the migration.
