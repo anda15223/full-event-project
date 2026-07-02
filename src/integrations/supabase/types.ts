@@ -7312,6 +7312,7 @@ export type Database = {
           accom_thursday: boolean
           concept_id: string | null
           confirmed: boolean | null
+          contract_id: string | null
           created_at: string | null
           draft_source_festival_id: string | null
           email: string | null
@@ -7346,6 +7347,7 @@ export type Database = {
           accom_thursday?: boolean
           concept_id?: string | null
           confirmed?: boolean | null
+          contract_id?: string | null
           created_at?: string | null
           draft_source_festival_id?: string | null
           email?: string | null
@@ -7380,6 +7382,7 @@ export type Database = {
           accom_thursday?: boolean
           concept_id?: string | null
           confirmed?: boolean | null
+          contract_id?: string | null
           created_at?: string | null
           draft_source_festival_id?: string | null
           email?: string | null
@@ -7420,6 +7423,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["concept_id"]
+          },
+          {
+            foreignKeyName: "festival_staff_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "festival_staff_draft_source_festival_id_fkey"

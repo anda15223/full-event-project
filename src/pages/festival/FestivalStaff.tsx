@@ -40,6 +40,7 @@ type Staff = {
   confirmed: boolean | null;
   needs_accommodation: boolean | null;
   concept_id: string | null;
+  contract_id: string | null;
   // Legacy day flags (still in DB for the PDF export). New code uses
   // work_dates / accom_dates instead.
   works_thursday: boolean | null;
@@ -473,7 +474,7 @@ export default function FestivalStaff() {
   const allRows = staffQ.data ?? [];
   const confirmedCount = allRows.filter((s) => s.confirmed).length;
   const unconfirmedCount = allRows.length - confirmedCount;
-  const unassignedCount = allRows.filter((s) => !s.concept_id && s.role !== "management").length;
+  const unassignedCount = allRows.filter((s) => !s.contract_id && s.role !== "management").length;
 
   const [filter, setFilter] = useState<"all" | "unconfirmed" | "unassigned">("all");
   const [cityFilter, setCityFilter] = useState<string>("__all__");
@@ -501,7 +502,7 @@ export default function FestivalStaff() {
       filter === "unconfirmed"
         ? !s.confirmed
         : filter === "unassigned"
-        ? !s.concept_id && s.role !== "management"
+        ? !s.contract_id && s.role !== "management"
         : true
     )
     .filter((s) =>
@@ -518,18 +519,20 @@ export default function FestivalStaff() {
     )
     .sort((a, b) => (a.staff_number ?? 9999) - (b.staff_number ?? 9999));
 
-  // Empty-slot calculation across concept plans (from live positions)
+  // Empty-slot calculation across contract groups (Fish 1, Fish 2, …).
+  // Positions are defined per concept, but each contract owns its own crew,
+  // so we count fills against each contract group separately.
   const emptySlots: { conceptName: string; stationLabel: string; missing: number }[] = [];
-  concepts.forEach((c) => {
-    const slots = planByConcept.get(c.id);
+  conceptGroups.forEach((g) => {
+    const slots = planByConcept.get(g.conceptId);
     if (!slots || slots.length === 0) return;
-    const conceptPeople = allRows.filter((s) => s.concept_id === c.id && s.role !== "management");
+    const groupPeople = allRows.filter((s) => s.contract_id === g.contractId && s.role !== "management");
     slots.forEach((slot) => {
-      const filled = conceptPeople.filter((p) => p.station === slot.stationCode).length;
+      const filled = groupPeople.filter((p) => p.station === slot.stationCode).length;
       const missing = slot.count - Math.min(filled, slot.count);
       if (missing > 0) {
         emptySlots.push({
-          conceptName: c.name,
+          conceptName: g.name,
           stationLabel: slot.label,
           missing,
         });
@@ -668,6 +671,7 @@ export default function FestivalStaff() {
                 staff={s}
                 index={i + 1}
                 concepts={concepts}
+                conceptGroups={conceptGroups}
                 dayWindow={dayWindow}
                 hideAccom={hideAccom}
                 onPatch={(patch) => updateStaff.mutate({ id: s.id, patch })}
@@ -696,15 +700,16 @@ export default function FestivalStaff() {
           allRows.forEach((p) => {
             // Management is informative only — never lock them out of position slots.
             if (p.role === "management") return;
-            if (p.concept_id && p.station) {
+            if (p.contract_id && p.concept_id && p.station) {
               // Only treat as "locked in a position" if their station actually
               // matches a real position slot in that concept's plan.
               const planSlots = planByConcept.get(p.concept_id);
               const inRealSlot = !!planSlots?.some((s) => s.stationCode === p.station);
               if (!inRealSlot) return;
-              const cName = concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
+              const gName = conceptGroups.find((g) => g.contractId === p.contract_id)?.name
+                ?? concepts.find((c) => c.id === p.concept_id)?.name ?? "—";
               assignmentMap.set(p.id, {
-                conceptName: cName,
+                conceptName: gName,
                 stationLabel: STATION_LABEL[p.station] ?? p.station,
               });
             }
@@ -717,11 +722,12 @@ export default function FestivalStaff() {
             ...conceptGroups.map((g) => ({
               key: g.contractId,
               id: g.conceptId,
+              contractId: g.contractId,
               name: g.name,
-              people: allRows.filter((s) => s.concept_id === g.conceptId && s.role !== "management"),
+              people: allRows.filter((s) => s.contract_id === g.contractId && s.role !== "management"),
             })),
-            { key: "__mgmt__", id: "__mgmt__", name: "Management", people: allRows.filter((s) => s.role === "management") },
-            { key: "__none__", id: "__none__", name: "Not assigned", people: allRows.filter((s) => !s.concept_id && s.role !== "management") },
+            { key: "__mgmt__", id: "__mgmt__", contractId: null as string | null, name: "Management", people: allRows.filter((s) => s.role === "management") },
+            { key: "__none__", id: "__none__", contractId: null as string | null, name: "Not assigned", people: allRows.filter((s) => !s.contract_id && s.role !== "management") },
           ];
 
           return (
@@ -811,7 +817,7 @@ export default function FestivalStaff() {
                                                 if (current) {
                                                   updateStaff.mutate({
                                                     id: current.id,
-                                                    patch: { station: null, concept_id: null },
+                                                    patch: { station: null, concept_id: null, contract_id: null },
                                                   });
                                                 }
                                                 return;
@@ -819,6 +825,7 @@ export default function FestivalStaff() {
                                               updateStaff.mutate({
                                                 id: personId,
                                                 patch: {
+                                                  contract_id: group.contractId,
                                                   concept_id: group.id,
                                                   station: slot.stationCode,
                                                   role: "crew",
@@ -1163,6 +1170,7 @@ function StaffRow({
   staff,
   index,
   concepts,
+  conceptGroups,
   dayWindow,
   hideAccom,
   onPatch,
@@ -1171,6 +1179,7 @@ function StaffRow({
   staff: Staff;
   index: number;
   concepts: Concept[];
+  conceptGroups: ConceptGroup[];
   dayWindow: { iso: string; label: string; isFestivalDay: boolean }[];
   hideAccom?: boolean;
   onPatch: (patch: Partial<Staff>) => void;
@@ -1256,14 +1265,17 @@ function StaffRow({
 
       <TableCell>
         <Select
-          value={staff.role === "management" ? "__mgmt__" : (staff.concept_id ?? "__none__")}
+          value={staff.role === "management" ? "__mgmt__" : (staff.contract_id ?? "__none__")}
           onValueChange={(v) => {
-            // Concept here is just a suggestion — clear any station lock so the
-            // person isn't shown as occupying a position slot.
-            if (v === "__mgmt__") onPatch({ role: "management", concept_id: null, station: null });
-            else if (v === "__none__") onPatch({ role: "crew", concept_id: null, station: null });
-            else if (v !== staff.concept_id) onPatch({ role: "crew", concept_id: v, station: null });
-            else onPatch({ role: "crew", concept_id: v });
+            // Assigning to a contract group (Fish 1, Fish 2, …) — clear any station
+            // lock so the person isn't shown as occupying a position slot.
+            if (v === "__mgmt__") onPatch({ role: "management", contract_id: null, concept_id: null, station: null });
+            else if (v === "__none__") onPatch({ role: "crew", contract_id: null, concept_id: null, station: null });
+            else {
+              const g = conceptGroups.find((x) => x.contractId === v);
+              if (v !== staff.contract_id) onPatch({ role: "crew", contract_id: v, concept_id: g?.conceptId ?? null, station: null });
+              else onPatch({ role: "crew", contract_id: v, concept_id: g?.conceptId ?? null });
+            }
           }}
         >
           <SelectTrigger className="h-7 text-xs px-2">
@@ -1272,8 +1284,8 @@ function StaffRow({
           <SelectContent>
             <SelectItem value="__none__">— None —</SelectItem>
             <SelectItem value="__mgmt__">Management</SelectItem>
-            {concepts.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            {conceptGroups.map((g) => (
+              <SelectItem key={g.contractId} value={g.contractId}>{g.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
