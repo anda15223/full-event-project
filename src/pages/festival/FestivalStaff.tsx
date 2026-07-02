@@ -747,7 +747,7 @@ export default function FestivalStaff() {
                   : [];
 
                 return (
-                  <div key={group.id} className="rounded-xl border bg-card p-4 shadow-sm">
+                  <div key={group.key} className="rounded-xl border bg-card p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-3 pb-2 border-b">
                       <h3 className="font-heading font-semibold text-base">{group.name}</h3>
                       <div className="flex items-center gap-2">
