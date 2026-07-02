@@ -1170,6 +1170,7 @@ function StaffRow({
   staff,
   index,
   concepts,
+  conceptGroups,
   dayWindow,
   hideAccom,
   onPatch,
@@ -1178,6 +1179,7 @@ function StaffRow({
   staff: Staff;
   index: number;
   concepts: Concept[];
+  conceptGroups: ConceptGroup[];
   dayWindow: { iso: string; label: string; isFestivalDay: boolean }[];
   hideAccom?: boolean;
   onPatch: (patch: Partial<Staff>) => void;
