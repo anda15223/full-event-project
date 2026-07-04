@@ -71,6 +71,7 @@ import CompanySettings from "./pages/crew/CompanySettings";
 import FestivalCrewHire from "./pages/crew/FestivalCrewHire";
 import OnboardWizard from "./pages/onboard/OnboardWizard";
 import AdminRoute from "./components/crew/AdminRoute";
+import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/onboard/:token" element={<OnboardWizard />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/" element={<Protected><DashboardHome /></Protected>} />
             <Route path="/home" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />

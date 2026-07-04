@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://llnmwiyvsmbnzqqhokjo.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "full-event-project-mcp",
+      "version": "0.1.0",
+      "title": "Full Event Project MCP"
+    },
+    "tools": [
+      {
+        "name": "list_festivals",
+        "title": "List festivals",
+        "description": "List festivals visible to the signed-in user, ordered by start date.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "year": {
+              "type": "integer",
+              "description": "Filter by year (e.g. 2026)"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max rows to return (default 25)"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_festival",
+        "title": "Get festival details",
+        "description": "Get a festival's details including contracts, concepts and staff counts. Look up by slug (preferred) or id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string",
+              "description": "Festival slug, e.g. 'gron-tarnby-16-2026'"
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Festival UUID"
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_festival_staff",
+        "title": "List festival staff",
+        "description": "List staff assigned to a festival, optionally filtered by contract alias (e.g. 'Fish 1').",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "festival_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Festival UUID"
+            },
+            "contract_alias": {
+              "type": "string",
+              "description": "Filter to one contract group by alias, e.g. 'Fish 1', 'Gyros 2'"
+            }
+          },
+          "required": [
+            "festival_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

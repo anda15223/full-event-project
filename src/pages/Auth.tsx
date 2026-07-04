@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,31 @@ import { toast } from "sonner";
 import { Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
+function safeNext(next: string | null): string | null {
+  if (!next) return null;
+  if (!next.startsWith("/")) return null;
+  if (next.startsWith("//")) return null;
+  return next;
+}
+
 export default function AuthPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const nextPath = safeNext(params.get("next"));
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const goNext = () => {
+    if (nextPath) window.location.href = nextPath;
+    else navigate("/dashboard", { replace: true });
+  };
+
   useEffect(() => {
-    if (!loading && user) navigate("/dashboard", { replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) goNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,15 +43,18 @@ export default function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setSubmitting(false);
     if (error) toast.error(error.message);
-    else { toast.success("Signed in"); navigate("/dashboard", { replace: true }); }
+    else { toast.success("Signed in"); goNext(); }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    const emailRedirectTo = nextPath
+      ? `${window.location.origin}${nextPath}`
+      : window.location.origin;
     const { error } = await supabase.auth.signUp({
       email, password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo },
     });
     setSubmitting(false);
     if (error) toast.error(error.message);
@@ -44,11 +62,13 @@ export default function AuthPage() {
   };
 
   const handleGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
+    const redirect_uri = nextPath
+      ? `${window.location.origin}${nextPath}`
+      : window.location.origin;
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri });
     if (result.error) toast.error("Google sign-in failed");
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
