@@ -128,10 +128,6 @@ const styles = StyleSheet.create({
   },
 });
 
-function fmtDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function contractText(c: Contract) {
   // Emoji intentionally omitted for PDF — Open Sans v17 cannot render them.
