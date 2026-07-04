@@ -185,11 +185,6 @@ function PowerDoc({
         const c = contractsById.get(p.festival_contract_id);
         const conceptTitle = c ? contractText(c) : "—";
         const eq = equipmentByPower.get(p.id) ?? [];
-        const demandKw = computeDemandKw(eq);
-        const allocatedKw = Number(p.allocated_kw ?? 0);
-        const liveStatus = computePowerStatus({
-          status: p.status, allocated_kw: p.allocated_kw, demand_kw: demandKw,
-        });
 
         const lines: string[] = [];
         if ((p.connections_16a_240v ?? 0) > 0) lines.push(`16A 240V: ${p.connections_16a_240v}`);
@@ -199,15 +194,12 @@ function PowerDoc({
         if ((p.connections_125a ?? 0) > 0) lines.push(`125A: ${p.connections_125a}`);
         if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
 
-        const poweredEq = eq.filter((e) => e.is_powered && (e.power_kw ?? 0) > 0);
         const allEq = eq
           .slice()
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.equipment_name.localeCompare(b.equipment_name));
         const orderItems = (orderItemsByPower.get(p.id) ?? [])
           .slice()
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-        const orderCurrency = orderItems.find((i) => i.currency)?.currency ?? "DKK";
-        const orderTotal = orderItems.reduce((s, it) => s + Number(it.total_price ?? 0), 0);
 
         return (
           <Page key={p.id} size="A4" style={styles.page}>
