@@ -427,7 +427,7 @@ export default function FestivalPowerExport() {
         </PDFDownloadLink>
       </div>
       <div className="flex-1 min-h-0">
-        <PDFViewer style={{ width: "100%", height: "100%", border: 0, display: "block" }}>
+        <PDFViewer style={{ width: "100%", height: "100%", border: 0 }}>
           {doc}
         </PDFViewer>
       </div>
