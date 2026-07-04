@@ -11,7 +11,6 @@ import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf as N } from "@/lib/textNormalize";
 import { useFinanceAccess } from "@/hooks/useFinanceAccess";
-import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
 import { POWER_TYPE_LABEL, type PowerType } from "@/lib/powerGapAnalysis";
 
 type EquipmentRow = {
