@@ -197,6 +197,17 @@ function PowerDoc({
           .slice()
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
+        const demandKw = allEq.reduce(
+          (s, e) => s + Number(e.quantity ?? 1) * Number(e.power_kw ?? 0), 0,
+        );
+        const orderedKw =
+          (p.connections_16a_240v ?? 0) * 3.7 +
+          (p.connections_16a_400v ?? 0) * 11.0 +
+          (p.connections_32a ?? 0) * 22.0 +
+          (p.connections_63a ?? 0) * 43.6 +
+          (p.connections_125a ?? 0) * 86.6;
+        const freeKw = orderedKw - demandKw;
+
         return (
           <Page key={p.id} size="A4" style={styles.page}>
             <Text style={styles.h1}>{N(`Power Plan — ${festival.name}`)}</Text>
@@ -211,6 +222,17 @@ function PowerDoc({
               {lines.length === 0
                 ? <Text style={styles.row}>—</Text>
                 : lines.map((l, i) => <Text key={i} style={styles.row}>{N(l)}</Text>)}
+
+              <View style={{ marginTop: 6, padding: 6, borderWidth: 0.5, borderColor: "#888", borderRadius: 2, backgroundColor: "#f5f5f5" }}>
+                <Text style={styles.row}>{N(`Equipment consumption: ${demandKw.toFixed(1)} kW`)}</Text>
+                <Text style={styles.row}>{N(`Electrical order total: ${orderedKw.toFixed(1)} kW`)}</Text>
+                <Text style={[styles.row, { fontWeight: 700, color: freeKw >= 0 ? "#065f46" : "#9f1239" }]}>
+                  {N(freeKw >= 0
+                    ? `Free capacity: ${freeKw.toFixed(1)} kW`
+                    : `Shortage: ${Math.abs(freeKw).toFixed(1)} kW`)}
+                </Text>
+              </View>
+
 
               <Text style={[styles.row, { marginTop: 10, fontWeight: 700 }]}>
                 {N(`Equipment (${allEq.length})`)}
