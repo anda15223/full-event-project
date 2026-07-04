@@ -71,6 +71,7 @@ import CompanySettings from "./pages/crew/CompanySettings";
 import FestivalCrewHire from "./pages/crew/FestivalCrewHire";
 import OnboardWizard from "./pages/onboard/OnboardWizard";
 import AdminRoute from "./components/crew/AdminRoute";
+import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
