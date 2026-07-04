@@ -161,21 +161,6 @@ function PowerDoc({
   const ts = new Date().toLocaleString("en-GB");
   const dateRange = formatDateRange(festival.start_date, festival.end_date);
 
-  const totals = rows.reduce(
-    (t, p) => {
-      t.c16_240 += p.connections_16a_240v ?? 0;
-      t.c16_400 += p.connections_16a_400v ?? 0;
-      t.c32 += p.connections_32a ?? 0;
-      t.c63 += p.connections_63a ?? 0;
-      t.c125 += p.connections_125a ?? 0;
-      t.allocated += Number(p.allocated_kw ?? 0);
-      t.demand += computeDemandKw(equipmentByPower.get(p.id) ?? []);
-      t.cost += Number(p.cost_dkk ?? 0);
-      return t;
-    },
-    { c16_240: 0, c16_400: 0, c32: 0, c63: 0, c125: 0, allocated: 0, demand: 0, cost: 0 },
-  );
-
   const Footer = () => (
     <View style={styles.footer} fixed>
       <Text>{N(festival.name)}</Text>
