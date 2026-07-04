@@ -190,6 +190,7 @@ function PowerDoc({
         if (p.tableau_required) lines.push(`Strømtavle: ${p.tableau_count ?? 0}`);
 
         const allEq = eq
+          .filter((e) => !!e.is_powered && Number(e.power_kw ?? 0) > 0)
           .slice()
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || a.equipment_name.localeCompare(b.equipment_name));
         const orderItems = (orderItemsByPower.get(p.id) ?? [])
