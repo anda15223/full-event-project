@@ -216,26 +216,16 @@ function PowerDoc({
 
             <View style={styles.unit}>
               <Text style={styles.unitTitle}>{N(conceptTitle)}</Text>
-              <View style={styles.pillRow}>
-                <Text style={styles.pill}>{N(`status: ${liveStatus.label}`)}</Text>
-                <Text style={styles.pill}>
-                  {N(`drawing: ${p.power_drawing_file_path ? "uploaded" : "missing"}`)}
-                </Text>
-              </View>
-
-              {lines.length === 0
-                ? <Text style={styles.row}>Connections: —</Text>
-                : lines.map((l, i) => <Text key={i} style={styles.row}>{N(l)}</Text>)}
-
-              <Text style={styles.row}>
-                {N(`Allocated: ${allocatedKw.toFixed(1)} kW   ·   Demand (live): ${demandKw.toFixed(1)} kW`)}
-              </Text>
-              {p.total_amp_estimate != null && (
-                <Text style={styles.row}>{N(`Total Amp: ${p.total_amp_estimate}`)}</Text>
-              )}
 
               <Text style={[styles.row, { marginTop: 8, fontWeight: 700 }]}>
-                {N(`Equipment (${allEq.length})  ·  powered: ${poweredEq.length}`)}
+                {N("Electrical order")}
+              </Text>
+              {lines.length === 0
+                ? <Text style={styles.row}>—</Text>
+                : lines.map((l, i) => <Text key={i} style={styles.row}>{N(l)}</Text>)}
+
+              <Text style={[styles.row, { marginTop: 10, fontWeight: 700 }]}>
+                {N(`Equipment (${allEq.length})`)}
               </Text>
               {allEq.length === 0 ? (
                 <Text style={styles.row}>—</Text>
@@ -272,20 +262,11 @@ function PowerDoc({
                       </View>
                     );
                   })}
-                  <View style={styles.tFoot}>
-                    <Text style={styles.colName}>Total</Text>
-                    <Text style={styles.colPlug}></Text>
-                    <Text style={styles.colQty}>
-                      {allEq.reduce((s, e) => s + Number(e.quantity ?? 1), 0)}
-                    </Text>
-                    <Text style={styles.colKw}></Text>
-                    <Text style={styles.colTot}>{demandKw.toFixed(2)}</Text>
-                  </View>
                 </View>
               )}
 
               <Text style={[styles.row, { marginTop: 10, fontWeight: 700 }]}>
-                {N(`Festival order list (${orderItems.length})`)}
+                {N(`Order list (${orderItems.length})`)}
               </Text>
               {orderItems.length === 0 ? (
                 <Text style={styles.row}>—</Text>
@@ -296,7 +277,6 @@ function PowerDoc({
                     <Text style={styles.colName}>Item</Text>
                     <Text style={styles.colQty}>Qty</Text>
                     <Text style={[styles.colKw, { width: 40 }]}>Unit</Text>
-                    {canSeeFinance && <Text style={styles.colTot}>Total</Text>}
                   </View>
                   {orderItems.map((it, idx) => {
                     const isLast = idx === orderItems.length - 1;
@@ -316,68 +296,17 @@ function PowerDoc({
                         </Text>
                         <Text style={styles.colQty}>{Number(it.quantity ?? 0)}</Text>
                         <Text style={[styles.colKw, { width: 40 }]}>{N(it.unit ?? "")}</Text>
-                        {canSeeFinance && (
-                          <Text style={styles.colTot}>
-                            {it.total_price != null ? Number(it.total_price).toLocaleString("da-DK") : "—"}
-                          </Text>
-                        )}
                       </View>
                     );
                   })}
-                  {canSeeFinance && orderTotal > 0 && (
-                    <View style={styles.tFoot}>
-                      <Text style={[styles.colPlug, { width: 70 }]}></Text>
-                      <Text style={styles.colName}>Order total</Text>
-                      <Text style={styles.colQty}></Text>
-                      <Text style={[styles.colKw, { width: 40 }]}></Text>
-                      <Text style={styles.colTot}>
-                        {orderTotal.toLocaleString("da-DK")} {orderCurrency}
-                      </Text>
-                    </View>
-                  )}
                 </View>
               )}
-
-              {canSeeFinance ? (
-                <Text style={[styles.row, { marginTop: 6 }]}>
-                  {N(
-                    `Ordered: ${fmtDate(p.ordered_date)}   ·   Cost: ${
-                      p.cost_dkk != null ? Number(p.cost_dkk).toLocaleString("da-DK") + " DKK" : "—"
-                    }`,
-                  )}
-                </Text>
-              ) : (
-                <Text style={[styles.row, { marginTop: 6 }]}>{N(`Ordered: ${fmtDate(p.ordered_date)}`)}</Text>
-              )}
-              {p.notes && <Text style={styles.notes}>{N(`Notes: ${trunc(p.notes, 600)}`)}</Text>}
             </View>
 
             <Footer />
           </Page>
         );
       })}
-
-      {rows.length > 0 && (
-        <Page size="A4" style={styles.page}>
-          <Text style={styles.h1}>{N(`Power Plan — ${festival.name}`)}</Text>
-          <Text style={styles.meta}>{N(`${dateRange}  ·  Generated ${ts}`)}</Text>
-          <Text style={styles.title}>Festival summary</Text>
-
-          <View style={styles.sumBox}>
-            <Text style={styles.sumTitle}>Festival summary</Text>
-            <Text style={styles.row}>{N(`16A 240V: ${totals.c16_240}   ·   16A 400V: ${totals.c16_400}`)}</Text>
-            <Text style={styles.row}>{N(`32A: ${totals.c32}   ·   63A: ${totals.c63}   ·   125A: ${totals.c125}`)}</Text>
-            <Text style={styles.row}>
-              {N(`Allocated: ${totals.allocated.toFixed(1)} kW   ·   Demand (live): ${totals.demand.toFixed(1)} kW`)}
-            </Text>
-            {canSeeFinance && (
-              <Text style={styles.row}>{N(`Total cost: ${totals.cost.toLocaleString("da-DK")} DKK`)}</Text>
-            )}
-          </View>
-
-          <Footer />
-        </Page>
-      )}
     </Document>
   );
 }
