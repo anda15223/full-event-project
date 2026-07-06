@@ -354,7 +354,7 @@ export default function FestivalInfoExport() {
           .order("day_date", { ascending: true }),
         supabase
           .from("festival_location_documents" as any)
-          .select("id, file_name, description, file_size_bytes")
+          .select("id, file_name, description, file_size_bytes, file_path, mime_type")
           .eq("festival_id", fid)
           .order("uploaded_at", { ascending: false }),
         supabase
@@ -365,7 +365,18 @@ export default function FestivalInfoExport() {
       ]);
       setContacts((c ?? []) as Contact[]);
       setHours((h ?? []) as unknown as HoursRow[]);
-      setDocs((d ?? []) as unknown as LocationDoc[]);
+      const rawDocs = ((d ?? []) as unknown as LocationDoc[]);
+      const withUrls = await Promise.all(rawDocs.map(async (doc) => {
+        try {
+          const { data: signed } = await supabase.storage
+            .from("festival-location-docs")
+            .createSignedUrl(doc.file_path, 60 * 60 * 24 * 7);
+          return { ...doc, signed_url: signed?.signedUrl ?? null };
+        } catch {
+          return { ...doc, signed_url: null };
+        }
+      }));
+      setDocs(withUrls);
       setSummary(((si as any)?.summary ?? null) as Summary | null);
       setLoading(false);
     })();
