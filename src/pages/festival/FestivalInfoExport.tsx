@@ -152,7 +152,7 @@ async function fetchAsDataUrl(url: string): Promise<string | null> {
 }
 
 function InfoDoc({
-  festival, contacts, hours, docs, summary, lineup,
+  festival, contacts, hours, docs, summary, lineup, mapDataUrl,
 }: {
   festival: Festival;
   contacts: Contact[];
@@ -160,6 +160,7 @@ function InfoDoc({
   docs: LocationDoc[];
   summary: Summary | null;
   lineup: LineupRow[];
+  mapDataUrl: string | null;
 }) {
   const dates = formatDateRange(festival.start_date, festival.end_date);
   const hasCoords = festival.lat != null && festival.lng != null;
