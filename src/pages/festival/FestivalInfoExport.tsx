@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
-  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Image, Link as PdfLink,
+  Document, Page, Text, View, StyleSheet, PDFDownloadLink, Image, Link as PdfLink,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -364,6 +364,144 @@ function InfoDoc({
   );
 }
 
+function InfoPreview({
+  festival, contacts, hours, docs, summary, lineup,
+}: {
+  festival: Festival;
+  contacts: Contact[];
+  hours: HoursRow[];
+  docs: LocationDoc[];
+  summary: Summary | null;
+  lineup: LineupRow[];
+}) {
+  const dates = formatDateRange(festival.start_date, festival.end_date);
+  const hasCoords = festival.lat != null && festival.lng != null;
+  const grouped: Record<string, Contact[]> = { festival: [], setup: [], concept: [] };
+  for (const c of contacts) {
+    const k = c.role_category ?? "festival";
+    if (grouped[k]) grouped[k].push(c);
+  }
+  const sortedHours = [...hours].sort((a, b) => (a.day_date + (a.concept_label ?? "")).localeCompare(b.day_date + (b.concept_label ?? "")));
+  const summaryHasItems = summary && SUMMARY_CATEGORIES.some(c => (summary[c.key] ?? []).length > 0);
+
+  return (
+    <main className="flex-1 overflow-auto bg-muted/30 p-4 md:p-8">
+      <article className="mx-auto max-w-5xl rounded-lg border bg-background p-5 shadow-sm md:p-8 print:shadow-none">
+        <header className="border-b pb-5">
+          <p className="text-sm text-muted-foreground">Info export preview</p>
+          <h1 className="mt-1 font-heading text-3xl font-semibold text-primary">{festival.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{dates}</p>
+        </header>
+
+        <section className="grid gap-4 border-b py-5 md:grid-cols-[1fr_280px]">
+          <div>
+            <h2 className="font-heading text-lg font-semibold">Location</h2>
+            <dl className="mt-3 grid gap-2 text-sm">
+              {festival.address ? <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-muted-foreground">Address</dt><dd>{festival.address}</dd></div> : null}
+              {festival.city ? <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-muted-foreground">City</dt><dd>{festival.city}</dd></div> : null}
+              <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-muted-foreground">Dates</dt><dd>{dates}</dd></div>
+              {hasCoords ? (
+                <>
+                  <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-muted-foreground">Coordinates</dt><dd>{festival.lat!.toFixed(5)}, {festival.lng!.toFixed(5)}</dd></div>
+                  <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-muted-foreground">Map link</dt><dd className="break-all">https://maps.google.com/?q={festival.lat},{festival.lng}</dd></div>
+                  {festival.driving_url ? <div className="grid grid-cols-[110px_1fr] gap-3"><dt className="text-muted-foreground">Driving</dt><dd className="break-all">{festival.driving_url}</dd></div> : null}
+                </>
+              ) : <p className="text-sm text-muted-foreground">Coordinates not set.</p>}
+            </dl>
+          </div>
+          <div className="flex min-h-36 items-center justify-center rounded-md border bg-muted text-sm text-muted-foreground">
+            {hasCoords ? "Map included as link in export" : "No map available"}
+          </div>
+        </section>
+
+        <section className="border-b py-5">
+          <h2 className="font-heading text-lg font-semibold">Service hours</h2>
+          {sortedHours.length === 0 ? (
+            <p className="mt-2 text-sm text-muted-foreground">No hours set.</p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <thead className="border-b text-xs uppercase text-muted-foreground">
+                  <tr><th className="py-2 pr-4 font-medium">Date</th><th className="py-2 pr-4 font-medium">Concept</th><th className="py-2 pr-4 font-medium">Open</th><th className="py-2 pr-4 font-medium">Close</th><th className="py-2 font-medium">Notes</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {sortedHours.map(h => (
+                    <tr key={h.id}><td className="py-2 pr-4">{formatDayLabel(h.day_date)}</td><td className="py-2 pr-4">{h.concept_label ?? "All concepts"}</td><td className="py-2 pr-4">{fmtTime(h.festival_open)}</td><td className="py-2 pr-4">{fmtTime(h.festival_close)}</td><td className="py-2">{h.notes ?? ""}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="border-b py-5">
+          <h2 className="font-heading text-lg font-semibold">Contacts</h2>
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            {(["festival", "setup", "concept"] as const).map(k => (
+              <div key={k}>
+                <h3 className="text-sm font-semibold">{COL_LABEL[k]} ({grouped[k].length})</h3>
+                <div className="mt-2 space-y-2">
+                  {grouped[k].length === 0 ? <p className="text-sm text-muted-foreground">—</p> : grouped[k].map(c => (
+                    <div key={c.id} className="rounded-md border p-3 text-sm">
+                      <p className="font-medium">{c.full_name}</p>
+                      {c.role ? <p className="text-muted-foreground">{c.role}</p> : null}
+                      {c.organization ? <p>{c.organization}</p> : null}
+                      {c.phone ? <p>{c.phone}</p> : null}
+                      {c.email ? <p className="break-all">{c.email}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {docs.length > 0 ? (
+          <section className="border-b py-5">
+            <h2 className="font-heading text-lg font-semibold">Location documents</h2>
+            <div className="mt-3 space-y-2 text-sm">
+              {docs.map(d => (
+                <div key={d.id} className="grid gap-2 rounded-md border p-3 md:grid-cols-[1fr_1fr_80px]">
+                  <span className="break-all font-medium">{d.file_name}</span>
+                  <span className="text-muted-foreground">{d.description ?? "—"}</span>
+                  <span className="text-muted-foreground md:text-right">{fmtBytes(d.file_size_bytes)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {lineup.length > 0 ? (
+          <section className="border-b py-5">
+            <h2 className="font-heading text-lg font-semibold">Concept lineup</h2>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[420px] text-left text-sm">
+                <thead className="border-b text-xs uppercase text-muted-foreground"><tr><th className="py-2 pr-4 font-medium">Concept</th><th className="py-2 font-medium">Assigned team leader</th></tr></thead>
+                <tbody className="divide-y">
+                  {lineup.map(row => <tr key={row.id}><td className="py-2 pr-4">{row.title}</td><td className="py-2">{row.manager_name ?? "—"}</td></tr>)}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        {summaryHasItems ? (
+          <section className="py-5">
+            <h2 className="font-heading text-lg font-semibold">Festival info summary</h2>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {SUMMARY_CATEGORIES.map(({ key, label }) => {
+                const items = summary?.[key] ?? [];
+                if (items.length === 0) return null;
+                return <div key={key} className="rounded-md border bg-muted/30 p-3"><h3 className="text-xs font-semibold uppercase text-muted-foreground">{label}</h3><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{items.map((it, i) => <li key={i}>{it}</li>)}</ul></div>;
+              })}
+            </div>
+          </section>
+        ) : null}
+      </article>
+    </main>
+  );
+}
+
 export default function FestivalInfoExport() {
   const { slug } = useParams<{ slug: string }>();
   const [festival, setFestival] = useState<Festival | null>(null);
@@ -513,9 +651,7 @@ export default function FestivalInfoExport() {
           )}
         </PDFDownloadLink>
       </div>
-      <div className="flex-1">
-        <PDFViewer width="100%" height="100%" showToolbar>{doc}</PDFViewer>
-      </div>
+      <InfoPreview festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} lineup={lineup} />
     </div>
   );
 }
