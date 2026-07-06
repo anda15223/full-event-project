@@ -52,9 +52,9 @@ export default function FestivalEquipment() {
       // so the Equipment page is usable even before the user visits Power.
       const missing = cIds.filter((id) => !powerByContract.has(id));
       if (missing.length > 0) {
-        const { data: created, error: cpErr } = await (supabase as any)
+        const { data: created, error: cpErr } = await supabase
           .from("festival_power")
-          .insert(missing.map((id) => ({ festival_id: festivalId, festival_contract_id: id })))
+          .insert(missing.map((id) => ({ festival_contract_id: id })))
           .select("id, festival_contract_id");
         if (cpErr) throw cpErr;
         (created ?? []).forEach((p: any) => powerByContract.set(p.festival_contract_id, p.id));
