@@ -251,7 +251,7 @@ export function Table<T>({
         return (
           <View
             key={ri}
-            style={tableStyles.tr}
+            style={[tableStyles.tr, striped ? tableStyles.trZebra : null] as any}
           >
             {columns.map((col, ci) => {
               const raw = col.cell(row as TableDataRow<T>, dataIdx);
