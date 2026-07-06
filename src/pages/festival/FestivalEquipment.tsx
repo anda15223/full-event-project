@@ -35,7 +35,7 @@ export default function FestivalEquipment() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, assigned_vehicle_id, tent_primary_contract_id, instance_label, concepts!concept_id(id, slug, name)")
+        .select("id, concept_id, assigned_vehicle_id, tent_primary_contract_id, instance_label, concept_alias, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId).eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
@@ -88,11 +88,17 @@ export default function FestivalEquipment() {
       const items = list
         .filter((c) => c.concepts && powerByContract.has(c.id))
         .map((c) => {
+          const alias = (c.concept_alias ?? "").trim();
+          const displayName = alias
+            ? alias
+            : c.instance_label
+              ? `${c.concepts.name} ${c.instance_label}`
+              : c.concepts.name;
           return {
             contractId: c.id as string,
             assignedVehicleId: (c.assigned_vehicle_id ?? null) as string | null,
             concept: c.concepts,
-            instanceLabel: (c.instance_label ?? null) as string | null,
+            displayName,
             powerId: powerByContract.get(c.id)!,
             mergedChildren: [] as any[],
             mergeTargets: [] as any[],
@@ -195,7 +201,7 @@ export default function FestivalEquipment() {
               festivalSlug={slug}
               conceptId={it.concept.id}
               conceptSlug={it.concept.slug}
-              conceptName={it.instanceLabel ? `${it.concept.name} ${it.instanceLabel}` : it.concept.name}
+              conceptName={it.displayName}
               contractId={it.contractId}
               powerId={it.powerId}
               assignedVehicleId={it.assignedVehicleId}
