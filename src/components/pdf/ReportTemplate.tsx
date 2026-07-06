@@ -26,10 +26,9 @@ const s = StyleSheet.create({
   festivalName: { fontSize: 22, fontWeight: 700 },
   festivalDates: { fontSize: 13, color: GRAY, marginTop: 4 },
   headerRow: { flexDirection: "row", alignItems: "center", marginTop: 28, marginBottom: 6 },
-  circle: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", marginRight: 12 },
-  circleDot: { width: 10, height: 10, borderRadius: 5 },
+  accentDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   reportTitle: { fontSize: 28, fontWeight: 700 },
-  subtitle: { fontSize: 11, color: GRAY, marginLeft: 44, marginBottom: 14 },
+  subtitle: { fontSize: 11, color: GRAY, marginBottom: 14 },
   divider: { borderBottom: `0.5pt solid ${LIGHT}`, marginBottom: 18 },
   summaryBox: { borderWidth: 0.5, borderColor: LIGHT, borderRadius: 6, padding: 12, marginBottom: 18 },
   footer: {
@@ -80,9 +79,7 @@ export function ReportTemplate({
         <Text style={s.festivalDates}>{N(festivalDates)}</Text>
 
         <View style={s.headerRow}>
-          <View style={[s.circle, { backgroundColor: accent.bg }]}>
-            <View style={[s.circleDot, { backgroundColor: accent.fg }]} />
-          </View>
+          <View style={[s.accentDot, { backgroundColor: accent.fg }]} />
           <Text style={s.reportTitle}>{N(reportTitle)}</Text>
         </View>
         {reportSubtitle ? <Text style={s.subtitle}>{N(reportSubtitle)}</Text> : null}
