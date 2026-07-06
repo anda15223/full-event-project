@@ -40,6 +40,9 @@ export default function EmployeesAll() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState<string>("__all__");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", date_of_birth: "", email: "", phone: "", home_location: "unknown" });
+
 
   const employeesQ = useQuery({
     queryKey: ["employees-master"],
