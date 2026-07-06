@@ -5,6 +5,7 @@ import { BINDER_SECTIONS } from "@/lib/binder";
 import { sortedCategories, categoryLabel, regroupForSoborgPDF } from "@/lib/soborgLoading";
 import { formatDateRange } from "@/lib/dateFormat";
 import { normalizeForPdf } from "@/lib/textNormalize";
+import { Table, LoadBadge, type TableRow } from "@/components/pdf/ReportTemplate";
 
 
 try {
