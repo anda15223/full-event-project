@@ -160,7 +160,10 @@ const tableStyles = StyleSheet.create({
   th: {
     flexDirection: "row",
     backgroundColor: HEADER_BG,
-    borderBottom: `0.75pt solid ${DARK}`,
+    borderTopWidth: 0.5,
+    borderTopColor: BORDER,
+    borderBottomWidth: 0.75,
+    borderBottomColor: DARK,
     paddingVertical: 5,
     paddingHorizontal: 6,
     fontSize: 8.5,
@@ -171,7 +174,8 @@ const tableStyles = StyleSheet.create({
   },
   tr: {
     flexDirection: "row",
-    borderBottom: `0.25pt solid ${BORDER}`,
+    borderBottomWidth: 0.25,
+    borderBottomColor: BORDER,
     paddingVertical: 4,
     paddingHorizontal: 6,
     fontSize: 10,
