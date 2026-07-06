@@ -409,6 +409,7 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
             className="h-7 col-span-5 text-xs" value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
+            onFocus={(e) => { e.currentTarget.scrollLeft = 0; e.currentTarget.setSelectionRange(0, 0); }}
             placeholder="Name" autoFocus
           />
           <Input
