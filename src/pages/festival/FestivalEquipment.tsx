@@ -35,7 +35,7 @@ export default function FestivalEquipment() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, assigned_vehicle_id, tent_primary_contract_id, instance_label, concepts!concept_id(id, slug, name)")
+        .select("id, concept_id, assigned_vehicle_id, tent_primary_contract_id, instance_label, concept_alias, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId).eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
