@@ -102,9 +102,13 @@ export default function FestivalTrolleyLoadsExport() {
           <Section
             key={num}
             title={`Trolley ${num}`}
-            meta={`${items.length} lines · ${totalQty} items`}
+            stats={[
+              { label: "types", value: items.length },
+              { label: "items", value: totalQty },
+            ]}
             breakBefore={idx > 0}
           >
+
             <Table<Item>
               columns={[
                 { header: "Concept", flex: 2.6, cell: (it) => it.concept_name },
