@@ -140,7 +140,7 @@ export default function FestivalEquipmentByCategoryExport() {
                 { header: "Trolley", flex: 1.6, align: "center", cell: (e) => e.trolley_numbers.length ? e.trolley_numbers.map((n) => `#${n}`).join(", ") : "—" },
                 { header: "Source", flex: 1.6, align: "center", cell: (e) => e.loads_from_soborg ? "SØBORG" : "ON-SITE" },
               ]}
-              rows={items.slice(0, 2)}
+              rows={items}
             />
           </Section>
         );
