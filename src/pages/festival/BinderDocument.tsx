@@ -79,19 +79,19 @@ const s = StyleSheet.create({
   sectionCircleNum: { fontSize: 13, fontWeight: 700 },
   sectionTitle: { fontSize: 22, fontWeight: 700, letterSpacing: -0.3 },
   sectionSubtitle: { fontSize: 10, color: GRAY, marginBottom: 10, marginLeft: 40 },
-  sectionDivider: { borderBottom: `0.5pt solid ${LIGHT}`, marginBottom: 16 },
+  sectionDivider: { borderBottomWidth: 0.5, borderBottomColor: "${LIGHT"}`, marginBottom: 16 },
   // Footer (3-col, "/" separators)
   footer: {
     position: "absolute", bottom: 24, left: 36, right: 36,
-    flexDirection: "row", borderTop: `0.5pt solid ${LIGHT}`, paddingTop: 6,
+    flexDirection: "row", borderTopWidth: 0.5, borderTopColor: "${LIGHT"}`, paddingTop: 6,
     fontSize: 8, color: MUTED,
   },
   footerLeft: { flex: 1, textAlign: "left" },
   footerCenter: { flex: 1, textAlign: "center" },
   footerRight: { flex: 1, textAlign: "right" },
   // Table
-  th: { flexDirection: "row", borderBottom: `0.5pt solid ${DARK}`, paddingBottom: 4, marginBottom: 4, fontWeight: 700, fontSize: 9 },
-  tr: { flexDirection: "row", borderBottom: `0.25pt solid ${LIGHT}`, paddingVertical: 4, fontSize: 9 },
+  th: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "${DARK"}`, paddingBottom: 4, marginBottom: 4, fontWeight: 700, fontSize: 9 },
+  tr: { flexDirection: "row", borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}`, paddingVertical: 4, fontSize: 9 },
   // Misc
   small: { fontSize: 9.5, lineHeight: 1.45 },
   warn: { color: RED },
@@ -103,7 +103,7 @@ const s = StyleSheet.create({
   tocRow: { flexDirection: "row", paddingVertical: 5, alignItems: "baseline" },
   tocNum: { width: 22, fontSize: 11, fontWeight: 600, color: GRAY },
   tocLabel: { fontSize: 12 },
-  tocLeader: { flex: 1, marginHorizontal: 6, borderBottom: `0.5pt dotted ${LIGHT}`, alignSelf: "center", height: 1 },
+  tocLeader: { flex: 1, marginHorizontal: 6, borderBottomWidth: 0.5, borderBottomColor: "${LIGHT", borderBottomStyle: "dotted"}`, alignSelf: "center", height: 1 },
   tocPage: { fontSize: 11, color: GRAY, fontWeight: 600, minWidth: 24, textAlign: "right" },
 });
 
@@ -345,7 +345,7 @@ function TimelinePage({ data }: { data: BinderData }) {
             const veh = (p.vehicles_assigned ?? []).map((id: string) => vMap.get(id) ?? id).filter(Boolean);
             const tasks = (p.tasks ?? []) as string[];
             return (
-              <View key={p.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+              <View key={p.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
                 <Text style={s.small}>
                   <Text style={[s.bold, { color: ACCENT.emerald.fg }]}>{phaseLabel(p.work_type)}</Text>
                   {p.scheduled_start_at ? `   ${fmtFull(p.scheduled_start_at)}` : ""}
@@ -404,7 +404,7 @@ function ContractsPage({ data }: { data: BinderData }) {
       <SectionHeader title="Contracts" meta={`${contracts.length} contracts`} />
       {contracts.length === 0 && <Text style={[s.small, { color: GRAY }]}>No contracts.</Text>}
       {contracts.map((k: any) => (
-        <View key={k.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+        <View key={k.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
           <Text style={[s.bold, s.small]}>{conceptName(k.concept_id)}{k.concept_alias ? ` (${k.concept_alias})` : ""}</Text>
           <Text style={s.small}>
             Status: <Text style={k.contract_status === "signed" ? s.ok : s.warn}>{k.contract_status ?? "—"}</Text>
@@ -496,7 +496,7 @@ function TopskiltPage({ data }: { data: BinderData }) {
         const c = cMap.get(k.concept_id) ?? {};
         const label = N(k.concept_alias) || N(c.name) || "—";
         return (
-          <View key={t.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <View key={t.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
             <Text style={[s.bold, s.small]}>{label}</Text>
             <Text style={s.small}>
               Design: <Text style={s.bold}>{t.design_status ?? "\u2014"}</Text>
@@ -521,7 +521,7 @@ function FacadePage({ data }: { data: BinderData }) {
       <SectionHeader title="Facade" meta={`${facade.length} entries`} />
       {facade.length === 0 && <Text style={[s.small, { color: GRAY }]}>No facade records yet.</Text>}
       {facade.map((f: any) => (
-        <View key={f.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+        <View key={f.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
           <Text style={[s.bold, s.small]}>{kMap.get(f.festival_contract_id) ?? "—"}</Text>
           <Text style={s.small}>
             Design: {f.design_status ?? "—"}   ·   Material: {f.material_orders_status ?? "—"}
@@ -573,7 +573,7 @@ function PowerPage({ data }: { data: BinderData }) {
         const allocKw = Number(p.total_kw_estimate) || 0;
         const gap = allocKw - demandKw;
         return (
-          <View key={p.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <View key={p.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
             <Text style={[s.bold, s.small]}>{label}{p.tent_location ? `  \u00b7  ${N(p.tent_location)}` : `  \u00b7  ${p.equipment_variant ?? "standalone"}`}</Text>
             <Text style={s.small}>
               Status: <Text style={s.bold}>{p.status ?? "\u2014"}</Text>
@@ -631,7 +631,7 @@ function CoolingPage({ data }: { data: BinderData }) {
             return N(k.concept_alias) || N(c.name) || "—";
           });
         return (
-          <View key={u.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <View key={u.id} style={{ marginBottom: 8, paddingBottom: 6, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
             <Text style={[s.bold, s.small]}>
               {`${N(u.unit_label) || "Unit"} — ${N(u.cooling_model) || "—"}${u.container_type ? `  (${N(u.container_type)})` : ""} — ${N(u.supplier) || "Supplier TBD"}`}
             </Text>
@@ -678,7 +678,7 @@ function SafetyPage({ data }: { data: BinderData }) {
       <Text style={[s.bold, s.small, { marginTop: 6, marginBottom: 4 }]}>PER-ZONE CHECKLISTS ({safetyZones?.length ?? 0})</Text>
       {(!safetyZones || safetyZones.length === 0) && <Text style={[s.small, { color: GRAY }]}>No zones defined.</Text>}
       {safetyZones?.map((z: any) => (
-        <View key={z.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+        <View key={z.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
           <Text style={[s.bold, s.small]}>{N(z.zone_label)}{z.zone_type ? `  (${z.zone_type})` : ""}{z.responsible_person ? `  ·  ${N(z.responsible_person)}` : ""}</Text>
           <Text style={s.small}>Fire extinguishers: {z.fire_extinguisher_count ?? 0} {chk(z.fire_extinguisher_checked)}{"   ·   "}Fire blankets: {z.fire_blanket_count ?? 0} {chk(z.fire_blanket_checked)}</Text>
           <Text style={s.small}>First aid kit: {chk(z.first_aid_kit)} {z.first_aid_checked ? "verified" : "not verified"}{"   ·   "}Permits: {chk(z.permits_obtained)}{"   ·   "}Briefing: {chk(z.briefing_done)}{z.briefing_date ? ` ${fmt(z.briefing_date)}` : ""}</Text>
@@ -706,7 +706,7 @@ function AccommodationPage({ data }: { data: BinderData }) {
       {accommodation.map((a: any) => {
         const rooms = roomsByAccom.get(a.id) ?? [];
         return (
-          <View key={a.id} style={{ marginBottom: 8, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <View key={a.id} style={{ marginBottom: 8, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
             <Text style={[s.bold, s.small]}>{N(a.provider_name) || a.accommodation_type || "—"} ({a.accommodation_type ?? "—"})</Text>
             <Text style={s.small}>
               {fmt(a.check_in_date)} to {fmt(a.check_out_date)}
@@ -750,7 +750,7 @@ function QuestionsPage({ data }: { data: BinderData }) {
       <SectionHeader title="Open Questions" meta={`${sorted.length} open`} />
       {sorted.length === 0 && <Text style={[s.small, { color: GRAY }]}>No open questions.</Text>}
       {sorted.map((q: any) => (
-        <View key={q.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+        <View key={q.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
           <Text style={[s.bold, s.small, q.priority === "critical" ? s.warn : q.priority === "high" ? s.amber : {}]}>
             [{q.priority}] {N(q.question)}
           </Text>
@@ -775,7 +775,7 @@ function RulesPage({ data }: { data: BinderData }) {
       <SectionHeader title="Active Rules" meta={`${filtered.length} critical/important rules apply`} />
       {filtered.length === 0 && <Text style={[s.small, { color: GRAY }]}>No active critical or important rules.</Text>}
       {filtered.map((r: any) => (
-        <View key={r.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+        <View key={r.id} style={{ marginBottom: 6, paddingBottom: 4, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
           <Text style={[s.bold, s.small, r.level === "critical" ? s.warn : s.amber]}>
             [{r.level}] {N(r.title)}
           </Text>
@@ -807,7 +807,7 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
       />
       {soborgLoading.vehicles.map((veh) => (
         <View key={veh.vehicle_id} style={{ marginBottom: 8 }} wrap={false}>
-          <Text style={[s.bold, { fontSize: 11, marginBottom: 3, paddingBottom: 2, borderBottom: `0.5pt solid ${DARK}` }]}>
+          <Text style={[s.bold, { fontSize: 11, marginBottom: 3, paddingBottom: 2, borderBottomWidth: 0.5, borderBottomColor: "${DARK"}` }]}>
             {N(veh.vehicle_type)}
             {veh.license_plate
               ? <Text style={{ fontSize: 9, fontWeight: 400 }}>  ·  {N(veh.license_plate)}</Text>
@@ -855,7 +855,7 @@ function SoborgLoadingPage({ data }: { data: BinderData }) {
         </View>
       ))}
       {soborgLoading.unassigned.concepts.length > 0 && (
-        <View style={{ marginTop: 8, padding: 6, border: `1pt solid ${AMBER}` }} wrap={false}>
+        <View style={{ marginTop: 8, padding: 6, borderWidth: 1, borderColor: "${AMBER"}` }} wrap={false}>
           <Text style={[s.bold, s.small, s.amber]}>Concepts without vehicle assignment</Text>
           {soborgLoading.unassigned.concepts.map((c) => (
             <Text key={c.contract_id} style={s.small}>
@@ -1000,7 +1000,7 @@ function PricesPage({ data }: { data: BinderData }) {
         const currency = parent?.currency ?? "DKK";
         const hasVeg = items.some((i: any) => i.is_vegetarian || i.is_vegan);
         return (
-          <View key={c.id} style={{ marginBottom: 12, paddingBottom: 6, borderBottom: `0.25pt solid ${LIGHT}` }} wrap={false}>
+          <View key={c.id} style={{ marginBottom: 12, paddingBottom: 6, borderBottomWidth: 0.25, borderBottomColor: "${LIGHT"}` }} wrap={false}>
             <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
             {items.length === 0 ? (
               <Text style={[s.small, { color: GRAY }]}>No prices set yet.</Text>
@@ -1043,7 +1043,7 @@ function BackCoverPage({ data }: { data: BinderData }) {
       <View style={{ marginTop: 36, alignSelf: "stretch" }}>
         {primaryContacts.length === 0 && <Text style={[s.small, { color: GRAY, textAlign: "center" }]}>No primary contacts marked.</Text>}
         {primaryContacts.map((c: any) => (
-          <View key={c.id} style={{ marginBottom: 14, padding: 12, border: `0.5pt solid ${LIGHT}`, borderRadius: 6 }}>
+          <View key={c.id} style={{ marginBottom: 14, padding: 12, borderWidth: 0.5, borderColor: "${LIGHT"}`, borderRadius: 6 }}>
             <Text style={[s.bold, { fontSize: 12 }]}>{N(c.full_name)} — {N(c.role)}</Text>
             {c.organization && <Text style={[s.small, { color: GRAY }]}>{N(c.organization)}</Text>}
             <Text style={[s.small, { marginTop: 4 }]}>Phone: {N(c.phone) || "\u2014"}     Email: {N(c.email) || "\u2014"}</Text>
