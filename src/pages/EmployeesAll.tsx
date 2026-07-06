@@ -31,7 +31,7 @@ type StaffRow = {
   festival_id: string;
   name: string | null;
   email: string | null;
-  phone: string | null;
+  
   home_location: string | null;
   staff_source: string | null;
   is_draft: boolean;
@@ -62,7 +62,7 @@ export default function EmployeesAll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff")
-        .select("id,festival_id,name,email,phone,home_location,staff_source,is_draft")
+        .select("id,festival_id,name,email,home_location,staff_source,is_draft")
         .eq("is_draft", false)
         .order("name", { ascending: true });
       if (error) throw error;
@@ -209,7 +209,6 @@ export default function EmployeesAll() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
               <TableHead>Home location</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Festival</TableHead>
@@ -226,7 +225,7 @@ export default function EmployeesAll() {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
                   No employees match.
                 </TableCell>
               </TableRow>
@@ -277,7 +276,6 @@ function EditableRow({
 }) {
   const [name, setName] = useState(row.name ?? "");
   const [email, setEmail] = useState(row.email ?? "");
-  const [phone, setPhone] = useState(row.phone ?? "");
   const [loc, setLoc] = useState(row.home_location ?? "");
 
   return (
@@ -300,17 +298,6 @@ function EditableRow({
             if (v !== (row.email ?? "")) onSave({ email: v || null });
           }}
           className="h-8"
-        />
-      </TableCell>
-      <TableCell>
-        <Input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          onBlur={() => {
-            const v = phone.trim();
-            if (v !== (row.phone ?? "")) onSave({ phone: v || null });
-          }}
-          className="h-8 w-[130px]"
         />
       </TableCell>
       <TableCell>
