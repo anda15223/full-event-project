@@ -69,13 +69,13 @@ export default function FestivalEquipmentExport() {
   if (!data) return <div className="p-12 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF…</div>;
   if (!data.festival) return <div className="p-12">Festival not found.</div>;
 
-  const allConcepts = data.concepts as any[];
-  const concepts = conceptFilter
-    ? allConcepts.filter((cn: any) => cn.slug === conceptFilter)
-    : allConcepts;
+  const allEntries = data.entries as { id: string; name: string; slug: string; rows: EquipmentRow[] }[];
+  const entries = conceptFilter
+    ? allEntries.filter((e) => e.slug === conceptFilter)
+    : allEntries;
   let totalItems = 0, totalPowered = 0, totalKw = 0;
-  concepts.forEach((cn: any) => {
-    const sum = summarizeConceptEquipment(data.eqByConcept.get(cn.id) ?? []);
+  entries.forEach((e) => {
+    const sum = summarizeConceptEquipment(e.rows);
     totalItems += sum.items; totalPowered += sum.powered; totalKw += sum.kw;
   });
 
@@ -83,7 +83,7 @@ export default function FestivalEquipmentExport() {
     <View>
       <Text style={[r.body, { fontWeight: 700, marginBottom: 4 }]}>Festival summary</Text>
       <Text style={r.small}>
-        {concepts.length} concepts · {totalItems} items · {totalPowered} powered · {totalKw.toFixed(1)} kW total
+        {entries.length} concepts · {totalItems} items · {totalPowered} powered · {totalKw.toFixed(1)} kW total
       </Text>
     </View>
   );
@@ -97,20 +97,20 @@ export default function FestivalEquipmentExport() {
       accentColor="slate"
       summary={summary}
     >
-      {concepts.length === 0 && <Text style={r.small}>No active concepts.</Text>}
-      {concepts.map((cn: any) => {
-        const rows = data.eqByConcept.get(cn.id) ?? [];
+      {entries.length === 0 && <Text style={r.small}>No active concepts.</Text>}
+      {entries.map((entry) => {
+        const rows = entry.rows;
         const grouped = groupByCategory(rows);
         const sum = summarizeConceptEquipment(rows);
         return (
-          <View key={cn.id} style={r.card} wrap={false}>
+          <View key={entry.id} style={r.card}>
             <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>{cn.name}</Text>
+              <Text style={r.cardTitle}>{entry.name}</Text>
               <Text style={r.small}>{sum.items} items · {sum.powered} powered · {sum.kw.toFixed(1)} kW</Text>
             </View>
             {rows.length === 0 && <Text style={r.small}>No equipment recorded.</Text>}
             {grouped.map(([cat, items]) => (
-              <View key={cat} style={{ marginTop: 6 }}>
+              <View key={cat} style={{ marginTop: 6 }} wrap={false}>
                 <Text style={r.h3}>{CATEGORY_META[cat as EquipCategory]?.label ?? cat}</Text>
                 {items.map((e) => (
                   <Text key={e.id} style={r.bullet}>
