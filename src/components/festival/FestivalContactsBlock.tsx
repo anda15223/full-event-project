@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,16 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
       return (data ?? []) as unknown as Contact[];
     },
   });
+
+  useEffect(() => {
+    if (!festivalId) return;
+    const ch = supabase.channel(`fi-contacts-${festivalId}`)
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "festival_contacts", filter: `festival_id=eq.${festivalId}` },
+        () => qc.invalidateQueries({ queryKey }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [festivalId, qc]);
 
   const grouped = useMemo(() => {
     const buckets: Record<string, Contact[]> = { festival: [], setup: [], concept: [], uncategorized: [] };
