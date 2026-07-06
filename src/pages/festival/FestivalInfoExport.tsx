@@ -18,6 +18,7 @@ type Festival = {
   start_date: string; end_date: string;
   city: string | null; address: string | null;
   lat: number | null; lng: number | null;
+  driving_url: string | null;
 };
 
 type Contact = {
