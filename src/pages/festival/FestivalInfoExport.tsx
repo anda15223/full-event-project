@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
-  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Image,
+  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Image, Link as PdfLink,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,8 @@ type HoursRow = {
 
 type LocationDoc = {
   id: string; file_name: string; description: string | null;
-  file_size_bytes: number | null;
+  file_size_bytes: number | null; file_path: string; mime_type: string | null;
+  signed_url?: string | null;
 };
 
 const COL_LABEL: Record<string, string> = {
@@ -266,13 +267,31 @@ function InfoDoc({
           </View>
           {docs.map(d => (
             <View key={d.id} style={s.docRow}>
-              <Text style={s.docName}>{N(d.file_name)}</Text>
+              <Text style={s.docName}>
+                {d.signed_url ? (
+                  <PdfLink src={d.signed_url} style={{ color: "#2563eb", textDecoration: "underline" }}>
+                    {N(d.file_name)}
+                  </PdfLink>
+                ) : N(d.file_name)}
+              </Text>
               <Text style={s.docDesc}>{N(d.description ?? "—")}</Text>
               <Text style={[s.tCell, { width: 60, textAlign: "right" }]}>{fmtBytes(d.file_size_bytes)}</Text>
             </View>
           ))}
+          <Text style={[reportStyles.small, { marginTop: 4, color: "#6b7280" }]}>
+            Tip: click a file name above to open the original document. Image documents are also embedded on the following pages.
+          </Text>
         </>
       )}
+
+      {/* Embedded image documents */}
+      {docs.filter(d => (d.mime_type ?? "").startsWith("image/") && d.signed_url).map(d => (
+        <View key={`img-${d.id}`} break style={{ marginTop: 8 }}>
+          <Text style={reportStyles.h2}>{N(d.file_name)}</Text>
+          {d.description ? <Text style={[reportStyles.small, { marginBottom: 6 }]}>{N(d.description)}</Text> : null}
+          <Image src={d.signed_url!} style={{ width: "100%", maxHeight: 640, objectFit: "contain" }} />
+        </View>
+      ))}
 
       {/* AI festival info summary */}
       {summary && SUMMARY_CATEGORIES.some(c => (summary[c.key] ?? []).length > 0) && (
@@ -335,7 +354,7 @@ export default function FestivalInfoExport() {
           .order("day_date", { ascending: true }),
         supabase
           .from("festival_location_documents" as any)
-          .select("id, file_name, description, file_size_bytes")
+          .select("id, file_name, description, file_size_bytes, file_path, mime_type")
           .eq("festival_id", fid)
           .order("uploaded_at", { ascending: false }),
         supabase
@@ -346,7 +365,18 @@ export default function FestivalInfoExport() {
       ]);
       setContacts((c ?? []) as Contact[]);
       setHours((h ?? []) as unknown as HoursRow[]);
-      setDocs((d ?? []) as unknown as LocationDoc[]);
+      const rawDocs = ((d ?? []) as unknown as LocationDoc[]);
+      const withUrls = await Promise.all(rawDocs.map(async (doc) => {
+        try {
+          const { data: signed } = await supabase.storage
+            .from("festival-location-docs")
+            .createSignedUrl(doc.file_path, 60 * 60 * 24 * 7);
+          return { ...doc, signed_url: signed?.signedUrl ?? null };
+        } catch {
+          return { ...doc, signed_url: null };
+        }
+      }));
+      setDocs(withUrls);
       setSummary(((si as any)?.summary ?? null) as Summary | null);
       setLoading(false);
     })();
