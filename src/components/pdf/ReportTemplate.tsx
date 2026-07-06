@@ -29,11 +29,11 @@ const s = StyleSheet.create({
   accentDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   reportTitle: { fontSize: 28, fontWeight: 700 },
   subtitle: { fontSize: 11, color: GRAY, marginTop: 4, marginBottom: 14 },
-  divider: { borderBottom: `0.5pt solid ${LIGHT}`, marginBottom: 18 },
-  summaryBox: { borderWidth: 0.5, borderColor: LIGHT, borderRadius: 6, padding: 12, marginBottom: 18 },
+  divider: { borderBottomWidth: 0.5, borderBottomColor: LIGHT, marginBottom: 18 },
+  summaryBox: { borderWidth: 0.5, borderColor: LIGHT, padding: 12, marginBottom: 18 },
   footer: {
     position: "absolute", bottom: 24, left: 36, right: 36,
-    flexDirection: "row", borderTop: `0.5pt solid ${LIGHT}`, paddingTop: 6,
+    flexDirection: "row", borderTopWidth: 0.5, borderTopColor: LIGHT, paddingTop: 6,
     fontSize: 8, color: MUTED,
   },
   footerLeft: { flex: 1, textAlign: "left" },
@@ -117,8 +117,8 @@ export const reportStyles = StyleSheet.create({
   label: { width: 100, fontSize: 9, color: GRAY, textTransform: "uppercase", letterSpacing: 0.4 },
   value: { flex: 1, fontSize: 11 },
   bullet: { fontSize: 10, marginLeft: 12, marginVertical: 1.5, lineHeight: 1.35 },
-  th: { flexDirection: "row", borderBottom: `0.5pt solid ${DARK}`, paddingBottom: 4, marginBottom: 4, fontSize: 9, fontWeight: 700 },
-  tr: { flexDirection: "row", borderBottom: `0.25pt solid ${LIGHT}`, paddingVertical: 3, fontSize: 10 },
+  th: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: DARK, paddingBottom: 4, marginBottom: 4, fontSize: 9, fontWeight: 700 },
+  tr: { flexDirection: "row", borderBottomWidth: 0.25, borderBottomColor: LIGHT, paddingVertical: 3, fontSize: 10 },
 });
 
 /* ============================================================================
@@ -160,8 +160,6 @@ const tableStyles = StyleSheet.create({
   th: {
     flexDirection: "row",
     backgroundColor: HEADER_BG,
-    borderTopWidth: 0.5,
-    borderTopColor: BORDER,
     borderBottomWidth: 0.75,
     borderBottomColor: DARK,
     paddingVertical: 5,
@@ -221,7 +219,10 @@ export function Table<T>({
   let dataIdx = -1;
   return (
     <View style={tableStyles.wrap}>
-      <View style={tableStyles.th} fixed>
+      <View style={tableStyles.th}>
+{/* NOTE: `fixed` cannot be used on nested Views — it only works on direct
+    children of Page. Applying it here caused clipBorderTop to receive
+    massively negative coords and threw `unsupported number` at render. */}
         {columns.map((col, i) => (
           <Text
             key={i}
@@ -237,10 +238,8 @@ export function Table<T>({
       </View>
       {rows.map((row, ri) => {
         if (isGroup(row)) {
-          // minPresenceAhead keeps the category header with at least ~40pt of
-          // following row space, preventing an orphaned header at page bottom.
           return (
-            <View key={ri} style={tableStyles.groupRow} wrap={false} minPresenceAhead={40}>
+            <View key={ri} style={tableStyles.groupRow} wrap={false}>
               <Text style={tableStyles.groupLabel}>{N(row.label)}</Text>
               {row.meta ? <Text style={tableStyles.groupMeta}>{N(row.meta)}</Text> : null}
             </View>
@@ -253,7 +252,6 @@ export function Table<T>({
           <View
             key={ri}
             style={[tableStyles.tr, striped ? tableStyles.trZebra : null] as any}
-            wrap={false}
           >
             {columns.map((col, ci) => {
               const raw = col.cell(row as TableDataRow<T>, dataIdx);
@@ -296,9 +294,11 @@ const badgeStyles = StyleSheet.create({
   base: {
     fontSize: 8.5,
     fontWeight: 700,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    // No borderRadius: react-pdf's border-radius clip math can overflow
+    // (`unsupported number` in clipBorderTop) when a rounded Text sits in a
+    // wrap={false} row near a page break. Keep it as a flat pill.
     textAlign: "center",
     letterSpacing: 0.3,
   },
@@ -323,7 +323,8 @@ export function Badge({ text, tone = "neutral" }: { text: string; tone?: "soborg
 const sectionStyles = StyleSheet.create({
   wrap: { marginBottom: 14 },
   header: {
-    borderBottom: `0.5pt solid ${LIGHT}`,
+    borderBottomWidth: 0.5,
+    borderBottomColor: LIGHT,
     paddingBottom: 6,
     marginBottom: 8,
   },
@@ -339,7 +340,6 @@ const sectionStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "baseline",
     backgroundColor: "#f1f2f4",
-    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
     marginRight: 6,
@@ -368,7 +368,7 @@ export function Section({
 }) {
   return (
     <View style={sectionStyles.wrap} break={breakBefore}>
-      <View style={sectionStyles.header}>
+      <View style={sectionStyles.header} wrap={false}>
         <View style={sectionStyles.titleRow}>
           <Text style={sectionStyles.title}>{N(title)}</Text>
           {meta && !stats ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
