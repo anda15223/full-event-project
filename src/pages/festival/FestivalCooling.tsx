@@ -92,7 +92,10 @@ export default function FestivalCooling() {
     const contractById = new Map<string, { isActive: boolean; slug: string; name: string }>();
     data.contracts.forEach((c) => {
       const cc = c.concepts;
-      if (cc) contractById.set(c.id, { isActive: c.is_active !== false, slug: cc.slug, name: cc.name });
+      if (!cc) return;
+      const alias = (c.concept_alias ?? "").trim();
+      const displayName = alias || (c.instance_label ? `${cc.name} ${c.instance_label}` : cc.name);
+      contractById.set(c.id, { isActive: c.is_active !== false, slug: cc.slug, name: displayName });
     });
     const linksByUnit = new Map<string, string[]>();
     data.links.forEach((l) => {
