@@ -85,7 +85,7 @@ export default function FestivalPricesExport() {
     >
       {conceptBlocks.length === 0 && <Text style={r.small}>No active concepts.</Text>}
       {conceptBlocks.map(({ concept, items, currency, hasVeg }) => (
-        <View key={concept.id} style={r.card} wrap={false}>
+        <View key={concept.id} style={r.card}>
           <View style={r.cardHeader}>
             <Text style={r.cardTitle}>{concept.name}</Text>
             <Text style={r.small}>{items.length} items · {currency}{hasVeg ? " · vegetarian present" : " · no vegetarian option"}</Text>
