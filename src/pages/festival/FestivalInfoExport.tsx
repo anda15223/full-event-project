@@ -154,9 +154,7 @@ function InfoDoc({
     if (grouped[k]) grouped[k].push(c);
   }
 
-  const expectedDays = eachDay(festival.start_date, festival.end_date);
-  const hoursByDay = new Map(hours.map(h => [h.day_date, h]));
-  const allDays = expectedDays.length > 0 ? expectedDays : hours.map(h => h.day_date);
+  const sortedHours = [...hours].sort((a, b) => (a.day_date + (a.concept_label ?? "")).localeCompare(b.day_date + (b.concept_label ?? "")));
 
   return (
     <ReportTemplate
