@@ -360,28 +360,25 @@ export function Section({
   children: import("react").ReactNode;
 }) {
   return (
-    <>
-      {breakBefore ? <View break /> : null}
-      <View style={sectionStyles.wrap}>
-        <View style={sectionStyles.header} wrap={false}>
-          <View style={sectionStyles.titleRow}>
-            <Text style={sectionStyles.title}>{N(title)}</Text>
-            {meta && !stats ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
-          </View>
-          {stats && stats.length ? (
-            <View style={sectionStyles.statsRow}>
-              {stats.map((st, i) => (
-                <View key={i} style={sectionStyles.statPill}>
-                  <Text style={sectionStyles.statValue}>{N(String(st.value))}</Text>
-                  <Text style={sectionStyles.statLabel}>{N(st.label)}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
+    <View style={sectionStyles.wrap} break={breakBefore}>
+      <View style={sectionStyles.header} wrap={false}>
+        <View style={sectionStyles.titleRow}>
+          <Text style={sectionStyles.title}>{N(title)}</Text>
+          {meta && !stats ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
         </View>
-        {children}
+        {stats && stats.length ? (
+          <View style={sectionStyles.statsRow}>
+            {stats.map((st, i) => (
+              <View key={i} style={sectionStyles.statPill}>
+                <Text style={sectionStyles.statValue}>{N(String(st.value))}</Text>
+                <Text style={sectionStyles.statLabel}>{N(st.label)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
-    </>
+      {children}
+    </View>
   );
 }
 
