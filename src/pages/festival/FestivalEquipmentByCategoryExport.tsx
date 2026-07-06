@@ -123,9 +123,14 @@ export default function FestivalEquipmentByCategoryExport() {
           <Section
             key={cat}
             title={meta?.label ?? cat}
-            meta={`${items.length} rows · ${catItems} items · ${catKw.toFixed(1)} kW`}
+            stats={[
+              { label: "types", value: items.length },
+              { label: "items", value: catItems },
+              { label: "kW", value: catKw.toFixed(1) },
+            ]}
             breakBefore={idx > 0}
           >
+
             <Table<Row>
               columns={[
                 { header: "Concept", flex: 2.6, cell: (e) => e.conceptName },
