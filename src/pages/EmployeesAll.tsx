@@ -83,17 +83,34 @@ export default function EmployeesAll() {
 
   const createOne = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("employees")
-        .insert({ name: "New employee", home_location: "unknown" });
+      const name = form.name.trim();
+      if (!name) throw new Error("Name is required");
+      if (!form.date_of_birth) throw new Error("Date of birth is required (unique key with name)");
+      const { error } = await supabase.from("employees").insert({
+        name,
+        date_of_birth: form.date_of_birth,
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        home_location: form.home_location || "unknown",
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employees-master"] });
       toast.success("Employee created");
+      setCreateOpen(false);
+      setForm({ name: "", date_of_birth: "", email: "", phone: "", home_location: "unknown" });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Create failed"),
+    onError: (e: any) => {
+      const msg = String(e?.message ?? "Create failed");
+      if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+        toast.error("An employee with this name and date of birth already exists.");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
+
 
   const removeOne = useMutation({
     mutationFn: async (id: string) => {
