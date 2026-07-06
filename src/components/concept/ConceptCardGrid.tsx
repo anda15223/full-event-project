@@ -412,7 +412,7 @@ function ConceptCardItem({
         </div>
       </div>
       <div className={disabled ? "pointer-events-none" : ""}>
-        {showVehicleSelector && (
+        {!minimal && showVehicleSelector && (
           <div className="mb-3">
             <VehicleSelector
               festivalId={festivalId}
@@ -421,7 +421,7 @@ function ConceptCardItem({
             />
           </div>
         )}
-        <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
+        {!minimal && <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>}
       </div>
     </div>
   );
