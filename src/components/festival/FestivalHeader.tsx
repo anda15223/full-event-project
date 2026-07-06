@@ -122,7 +122,7 @@ function CoordinatesDialog({
         } catch {}
       }
 
-      const updates: { lat: number; lng: number; address?: string; city?: string } = { lat: latNum, lng: lngNum };
+      const updates: { lat: number; lng: number; address?: string; city?: string; driving_url: string | null } = { lat: latNum, lng: lngNum, driving_url: drivingUrl.trim() || null };
       if (finalAddress) updates.address = finalAddress;
       if (city) updates.city = city;
 
