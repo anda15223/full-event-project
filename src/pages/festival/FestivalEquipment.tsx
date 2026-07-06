@@ -201,7 +201,7 @@ export default function FestivalEquipment() {
               festivalSlug={slug}
               conceptId={it.concept.id}
               conceptSlug={it.concept.slug}
-              conceptName={it.instanceLabel ? `${it.concept.name} ${it.instanceLabel}` : it.concept.name}
+              conceptName={it.displayName}
               contractId={it.contractId}
               powerId={it.powerId}
               assignedVehicleId={it.assignedVehicleId}
