@@ -312,39 +312,67 @@ export function Badge({ text, tone = "neutral" }: { text: string; tone?: "soborg
 const sectionStyles = StyleSheet.create({
   wrap: { marginBottom: 14 },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
     borderBottom: `0.5pt solid ${LIGHT}`,
-    paddingBottom: 4,
-    marginBottom: 8,
+    paddingBottom: 6,
+    marginBottom: 10,
   },
-  title: { fontSize: 15, fontWeight: 700, color: DARK },
+  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
+  title: { fontSize: 18, fontWeight: 700, color: DARK },
   meta: { fontSize: 9.5, color: GRAY },
+  statsRow: { flexDirection: "row", marginTop: 6, flexWrap: "wrap" },
+  stat: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    backgroundColor: "#f1f2f4",
+    borderRadius: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginRight: 6,
+    marginTop: 2,
+  },
+  statLabel: { fontSize: 8, color: GRAY, textTransform: "uppercase", letterSpacing: 0.4, marginRight: 4 },
+  statValue: { fontSize: 10, fontWeight: 700, color: DARK },
 });
+
+export type SectionStat = { label: string; value: string | number };
 
 export function Section({
   title,
   meta,
+  stats,
   breakBefore = false,
   children,
 }: {
   title: string;
   meta?: string;
+  stats?: SectionStat[];
   /** Force a page break before this section. Use for entries after the first. */
   breakBefore?: boolean;
   children: import("react").ReactNode;
 }) {
   return (
     <View style={sectionStyles.wrap} break={breakBefore}>
-      <View style={sectionStyles.header}>
-        <Text style={sectionStyles.title}>{N(title)}</Text>
-        {meta ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
+      <View style={sectionStyles.header} wrap={false}>
+        <View style={sectionStyles.titleRow}>
+          <Text style={sectionStyles.title}>{N(title)}</Text>
+          {meta && !stats ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
+        </View>
+        {stats && stats.length > 0 ? (
+          <View style={sectionStyles.statsRow}>
+            {stats.map((st, i) => (
+              <View key={i} style={sectionStyles.stat}>
+                <Text style={sectionStyles.statLabel}>{N(st.label)}</Text>
+                <Text style={sectionStyles.statValue}>{N(String(st.value))}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
       {children}
     </View>
   );
 }
+
 
 export const reportColors = {
   ok: "#059669",
