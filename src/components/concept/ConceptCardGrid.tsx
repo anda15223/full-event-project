@@ -268,7 +268,7 @@ export function ConceptCardGrid({
             hasFinanceAccess={hasFinanceAccess}
             enableManagerEdit={enableManagerEdit}
             staff={staffQ.data ?? []}
-            onManagerChange={(staffId) => upsertManager.mutate({ conceptId: c.id, staffId })}
+            onManagerChange={(staffId) => upsertManager.mutate({ contractId: row.id, conceptId: c.id, staffId })}
             festivalSlug={festivalSlug}
             festivalId={festivalId}
             showVehicleSelector={showVehicleSelector}
