@@ -39,6 +39,8 @@ interface Props {
   hideEmoji?: boolean;
   /** When provided, renders an active/inactive toggle on each card header. */
   festivalSlug?: string;
+  /** When true, hides subtitle, variation note, verify badge, vehicle selector, and body — only title + assigned team leader. */
+  minimal?: boolean;
 }
 
 interface ContractRow {
@@ -70,6 +72,7 @@ export function ConceptCardGrid({
   layout = "stack",
   hideEmoji = false,
   festivalSlug,
+  minimal = false,
 }: Props) {
   const qc = useQueryClient();
   const { draftMode } = useDraftMode();
@@ -275,6 +278,7 @@ export function ConceptCardGrid({
             renderConceptBody={renderConceptBody}
             conceptData={conceptData}
             contract={contract}
+            minimal={minimal}
           />
         );
       })}
@@ -302,6 +306,7 @@ interface ConceptCardItemProps {
   renderConceptBody: Props["renderConceptBody"];
   conceptData: Record<string, any>;
   contract: ConceptContract;
+  minimal?: boolean;
 }
 
 function ConceptCardItem({
@@ -324,6 +329,7 @@ function ConceptCardItem({
   renderConceptBody,
   conceptData,
   contract,
+  minimal = false,
 }: ConceptCardItemProps) {
   const { isActive } = useConceptIsActive(festivalSlug ? c.slug : undefined, festivalSlug ?? "");
   const disabled = festivalSlug ? !isActive : false;
@@ -351,7 +357,7 @@ function ConceptCardItem({
               </span>
             )}
           </div>
-          {(subtitle || verifyQuestion) && (
+          {!minimal && (subtitle || verifyQuestion) && (
             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
               {subtitle && <span>{subtitle}</span>}
               {hasFinanceAccess && verifyQuestion && (
@@ -364,7 +370,7 @@ function ConceptCardItem({
               )}
             </div>
           )}
-          {row.concept_variation_note && (
+          {!minimal && row.concept_variation_note && (
             <div className="text-xs italic text-muted-foreground mt-1">
               {row.concept_variation_note}
             </div>
@@ -406,7 +412,7 @@ function ConceptCardItem({
         </div>
       </div>
       <div className={disabled ? "pointer-events-none" : ""}>
-        {showVehicleSelector && (
+        {!minimal && showVehicleSelector && (
           <div className="mb-3">
             <VehicleSelector
               festivalId={festivalId}
@@ -415,7 +421,7 @@ function ConceptCardItem({
             />
           </div>
         )}
-        <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>
+        {!minimal && <div>{renderConceptBody(c, conceptData[c.id], manager, contract)}</div>}
       </div>
     </div>
   );
