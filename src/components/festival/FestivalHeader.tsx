@@ -69,12 +69,13 @@ function CountdownPill({ startDate }: { startDate: string }) {
 }
 
 function CoordinatesDialog({
-  festivalId, slug, currentLat, currentLng, currentAddress,
-}: { festivalId: string; slug: string; currentLat: number | null; currentLng: number | null; currentAddress?: string | null }) {
+  festivalId, slug, currentLat, currentLng, currentAddress, currentDrivingUrl,
+}: { festivalId: string; slug: string; currentLat: number | null; currentLng: number | null; currentAddress?: string | null; currentDrivingUrl?: string | null }) {
   const [open, setOpen] = useState(false);
   const [lat, setLat] = useState(currentLat?.toString() ?? "");
   const [lng, setLng] = useState(currentLng?.toString() ?? "");
   const [address, setAddress] = useState(currentAddress ?? "");
+  const [drivingUrl, setDrivingUrl] = useState(currentDrivingUrl ?? "");
   const [geocoding, setGeocoding] = useState(false);
   const qc = useQueryClient();
 
