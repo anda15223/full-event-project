@@ -78,7 +78,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
           {veh.concepts.map((cg) => {
             const grouped = regroupForSoborgPDF(cg.items_by_category);
             return (
-            <View key={cg.contract_id} wrap={false} style={{ marginBottom: 6 }}>
+            <View key={cg.contract_id} style={{ marginBottom: 6 }}>
               <Text style={s.conceptHeader}>
                 {N(cg.concept_name)}{cg.concept_alias ? ` — ${N(cg.concept_alias)}` : ""}
                 <Text style={s.small}>  ({cg.total_items} items)</Text>
@@ -142,7 +142,7 @@ export function SoborgLoadingDoc({ data }: { data: SoborgLoadingManifest }) {
             </View>
           )}
           {data.not_loaded_from_soborg.items.length > 0 && (
-            <View style={{ marginTop: 12 }} wrap={false}>
+            <View style={{ marginTop: 12 }}>
               <Text style={s.sectionTitle}>Delivered on-site (NOT loaded from Søborg)</Text>
               {data.not_loaded_from_soborg.items.map((u) => (
                 <Text key={u.id} style={s.item}>

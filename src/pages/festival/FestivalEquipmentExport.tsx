@@ -111,7 +111,7 @@ export default function FestivalEquipmentExport() {
           >
             {rows.length === 0 && <Text style={r.small}>No equipment recorded.</Text>}
             {grouped.map(([cat, items]) => (
-              <View key={cat} style={{ marginTop: 6 }} wrap={false}>
+              <View key={cat} style={{ marginTop: 6 }}>
                 <Text style={[r.h3, { marginBottom: 4 }]}>
                   {CATEGORY_META[cat as EquipCategory]?.label ?? cat}
                 </Text>
