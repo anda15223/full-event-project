@@ -426,13 +426,25 @@ export default function FestivalInfoExport() {
           const { data: signed } = await supabase.storage
             .from("festival-location-docs")
             .createSignedUrl(doc.file_path, 60 * 60 * 24 * 7);
-          return { ...doc, signed_url: signed?.signedUrl ?? null };
+          let signedUrl = signed?.signedUrl ?? null;
+          // For images, convert to data URL so react-pdf embed can't fail on CORS
+          if (signedUrl && (doc.mime_type ?? "").startsWith("image/")) {
+            const dataUrl = await fetchAsDataUrl(signedUrl);
+            if (!dataUrl) signedUrl = null; else signedUrl = dataUrl;
+          }
+          return { ...doc, signed_url: signedUrl };
         } catch {
           return { ...doc, signed_url: null };
         }
       }));
       setDocs(withUrls);
       setSummary(((si as any)?.summary ?? null) as Summary | null);
+
+      // Pre-fetch static map as data URL (any failure -> no map, doesn't break render)
+      if ((f as any).lat != null && (f as any).lng != null) {
+        const mUrl = mapImageUrl((f as any).lat, (f as any).lng);
+        setMapDataUrl(await fetchAsDataUrl(mUrl));
+      }
 
       // Concept lineup: contracts + per-contract manager assignment
       const { data: contracts } = await supabase
