@@ -6,8 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ReportTemplate, reportStyles as r } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, groupByCategory, type EquipmentRow } from "@/lib/equipmentStatus";
+import { normalizeForPdf } from "@/lib/textNormalize";
 
 const sb = supabase as any;
+const N = normalizeForPdf;
 
 export default function FestivalVehicleLoadsExport() {
   const { slug = "" } = useParams();
@@ -93,22 +95,22 @@ export default function FestivalVehicleLoadsExport() {
       {entries.map(([key, e]) => {
         const totalItems = e.concepts.reduce((s, c) => s + c.rows.reduce((x, r0) => x + r0.quantity, 0), 0);
         return (
-          <View key={key ?? "none"} style={r.card} wrap={false}>
+          <View key={key ?? "none"} style={r.card}>
             <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>🚛 {e.name}{e.plate ? ` · ${e.plate}` : ""}</Text>
-              <Text style={r.small}>{e.concepts.length} concept{e.concepts.length === 1 ? "" : "s"} · {totalItems} items</Text>
+              <Text style={r.cardTitle}>{N(e.name)}{e.plate ? ` - ${N(e.plate)}` : ""}</Text>
+              <Text style={r.small}>{e.concepts.length} concept{e.concepts.length === 1 ? "" : "s"} - {totalItems} items</Text>
             </View>
             {e.concepts.map((cn, i) => {
               const grouped = groupByCategory(cn.rows);
               return (
-                <View key={i} style={{ marginTop: 6 }}>
-                  <Text style={r.h3}>{cn.name}</Text>
+                <View key={i} style={{ marginTop: 8 }} wrap={false}>
+                  <Text style={r.h3}>{N(cn.name)}</Text>
                   {grouped.map(([cat, items]) => (
-                    <View key={cat} style={{ marginTop: 2 }}>
-                      <Text style={r.small}>{CATEGORY_META[cat as EquipCategory]?.emoji} {CATEGORY_META[cat as EquipCategory]?.label ?? cat}</Text>
+                    <View key={cat} style={{ marginTop: 3 }}>
+                      <Text style={r.small}>{N(CATEGORY_META[cat as EquipCategory]?.label ?? cat)}</Text>
                       {items.map((it) => (
                         <Text key={it.id} style={r.bullet}>
-                          • {it.equipment_name} × {it.quantity}
+                          - {N(it.equipment_name)} x {it.quantity}
                           {it.loads_from_soborg ? "  [SØBORG]" : "  [ON-SITE]"}
                         </Text>
                       ))}

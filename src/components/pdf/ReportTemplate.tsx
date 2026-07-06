@@ -22,7 +22,7 @@ const ACCENT = {
 export type AccentKey = keyof typeof ACCENT;
 
 const s = StyleSheet.create({
-  page: { paddingTop: 50, paddingBottom: 56, paddingHorizontal: 36, fontFamily: "Helvetica", fontSize: 11, lineHeight: 1.5, color: DARK },
+  page: { paddingTop: 50, paddingBottom: 56, paddingHorizontal: 36, fontFamily: "Inter", fontSize: 11, lineHeight: 1.5, color: DARK },
   festivalName: { fontSize: 22, fontWeight: 700 },
   festivalDates: { fontSize: 13, color: GRAY, marginTop: 4 },
   headerRow: { flexDirection: "row", alignItems: "center", marginTop: 28, marginBottom: 6 },
@@ -119,7 +119,7 @@ export const reportStyles = StyleSheet.create({
   row: { flexDirection: "row", marginVertical: 1.5 },
   label: { width: 100, fontSize: 9, color: GRAY, textTransform: "uppercase", letterSpacing: 0.4 },
   value: { flex: 1, fontSize: 11 },
-  bullet: { fontSize: 10, marginLeft: 12, marginVertical: 1.5, lineHeight: 1.5 },
+  bullet: { fontSize: 10, marginLeft: 12, marginVertical: 1.5, lineHeight: 1.35 },
   th: { flexDirection: "row", borderBottom: `0.5pt solid ${DARK}`, paddingBottom: 4, marginBottom: 4, fontSize: 9, fontWeight: 700 },
   tr: { flexDirection: "row", borderBottom: `0.25pt solid ${LIGHT}`, paddingVertical: 3, fontSize: 10 },
 });
