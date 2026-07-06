@@ -357,7 +357,7 @@ function ConceptCardItem({
               </span>
             )}
           </div>
-          {(subtitle || verifyQuestion) && (
+          {!minimal && (subtitle || verifyQuestion) && (
             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
               {subtitle && <span>{subtitle}</span>}
               {hasFinanceAccess && verifyQuestion && (
@@ -370,7 +370,7 @@ function ConceptCardItem({
               )}
             </div>
           )}
-          {row.concept_variation_note && (
+          {!minimal && row.concept_variation_note && (
             <div className="text-xs italic text-muted-foreground mt-1">
               {row.concept_variation_note}
             </div>
