@@ -487,7 +487,11 @@ export default function FestivalStaff() {
     s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
   const cityOptions = (() => {
     const seen = new Map<string, string>(); // key: lowercase, value: display label
-    seen.set("aarhus", "Aarhus");
+    // Seed with the staff-source cities so the filter matches the per-row picker.
+    SOURCE_OPTIONS.forEach((o) => {
+      if (o.value === "unknown") return;
+      seen.set(o.label.toLowerCase(), o.label);
+    });
     allRows.forEach((s) => {
       const raw = (s.home_location ?? "").trim();
       if (!raw) return;
@@ -497,6 +501,9 @@ export default function FestivalStaff() {
     return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
   })();
 
+  // Map staff_source slug -> display label (e.g. "aarhus" -> "aarhus", "soborg" -> "copenhagen").
+  const sourceLabelBySlug = new Map(SOURCE_OPTIONS.map((o) => [o.value, o.label.toLowerCase()]));
+
   const rows = allRows
     .filter((s) =>
       filter === "unconfirmed"
@@ -505,11 +512,14 @@ export default function FestivalStaff() {
         ? !s.contract_id && s.role !== "management"
         : true
     )
-    .filter((s) =>
-      cityFilter === "__all__"
-        ? true
-        : (s.home_location ?? "").trim().toLowerCase() === cityFilter.toLowerCase()
-    )
+    .filter((s) => {
+      if (cityFilter === "__all__") return true;
+      const target = cityFilter.toLowerCase();
+      const home = (s.home_location ?? "").trim().toLowerCase();
+      const src = sourceLabelBySlug.get((s as any).staff_source ?? "") ?? "";
+      return home === target || src === target;
+    })
+
     .filter((s) =>
       accomFilter === "any"
         ? true
