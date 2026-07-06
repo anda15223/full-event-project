@@ -154,6 +154,14 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             >
               <FileDown className="h-3 w-3" /> Export
             </a>
+            <button
+              type="button"
+              onClick={duplicateConcept}
+              title={`Duplicate ${conceptName} at this festival`}
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
+            >
+              <Copy className="h-3 w-3" /> Duplicate
+            </button>
             <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_PILL[status.status]}`}>
               {status.status === "green" ? "✅" : status.status === "amber" ? "⚠️" : "—"} {status.label}
             </span>
