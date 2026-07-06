@@ -147,6 +147,9 @@ const App = () => (
             <Route path="/festivals/:slug/soborg-loading/export" element={<Protected><FestivalSoborgLoadingExport /></Protected>} />
             <Route path="/festivals/:slug/equipment" element={<Protected><FestivalEquipment /></Protected>} />
             <Route path="/festivals/:slug/equipment/export" element={<Protected><FestivalEquipmentExport /></Protected>} />
+            <Route path="/festivals/:slug/equipment/export/trolleys" element={<Protected><FestivalTrolleyLoadsExport /></Protected>} />
+            <Route path="/festivals/:slug/equipment/export/vehicles" element={<Protected><FestivalVehicleLoadsExport /></Protected>} />
+            <Route path="/festivals/:slug/equipment/export/soborg" element={<Protected><FestivalSoborgPickListExport /></Protected>} />
             <Route path="/festivals/:slug/prices" element={<Protected><FestivalPrices /></Protected>} />
             <Route path="/festivals/:slug/prices/export" element={<Protected><FestivalPricesExport /></Protected>} />
             <Route path="/festivals/:slug/setup" element={<Protected><FestivalSetup /></Protected>} />
