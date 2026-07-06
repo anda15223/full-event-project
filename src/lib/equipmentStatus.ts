@@ -23,6 +23,8 @@ export const CATEGORY_META: Record<EquipCategory, { label: string; emoji: string
   other:              { label: "Other",             emoji: "▫️", order: 99 },
 };
 
+export type TrolleySplit = { id: string; trolley_number: number; quantity: number; notes: string | null };
+
 export type EquipmentRow = {
   id: string;
   festival_power_id: string;
@@ -35,6 +37,7 @@ export type EquipmentRow = {
   category: EquipCategory;
   loads_from_soborg: boolean;
   notes: string | null;
+  trolley_splits?: TrolleySplit[];
 };
 
 export type EquipStatus = { status: "green" | "amber" | "gray"; label: string };

@@ -4315,6 +4315,96 @@ export type Database = {
           },
         ]
       }
+      festival_equipment_trolley_split: {
+        Row: {
+          created_at: string
+          equipment_id: string
+          festival_id: string
+          id: string
+          notes: string | null
+          quantity: number
+          trolley_number: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          equipment_id: string
+          festival_id: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          trolley_number: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          equipment_id?: string
+          festival_id?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          trolley_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_equipment_trolley_split_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "festival_power_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_equipment_trolley_split_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
       festival_facade: {
         Row: {
           cost_dkk: number | null

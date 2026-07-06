@@ -3,7 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Wrench } from "lucide-react";
+import { ArrowLeft, Wrench, FileDown } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { EquipmentConceptCard } from "@/components/festival/cards/EquipmentConceptCard";
 import { computeConceptEquipmentStatus, summarizeConceptEquipment, EquipmentRow } from "@/lib/equipmentStatus";
 import type { ConceptSlug } from "@/components/concept/types";
@@ -68,9 +72,27 @@ export default function FestivalEquipment() {
           .in("festival_power_id", powerIds)
           .order("category").order("position");
         if (eErr) throw eErr;
+
+        // Fetch trolley splits for these equipment rows in one shot.
+        const eqIds = (eq ?? []).map((r: any) => r.id);
+        const splitsByEq = new Map<string, any[]>();
+        if (eqIds.length > 0) {
+          const { data: splits } = await (supabase as any)
+            .from("festival_equipment_trolley_split")
+            .select("id, equipment_id, trolley_number, quantity, notes")
+            .in("equipment_id", eqIds)
+            .order("trolley_number");
+          (splits ?? []).forEach((s: any) => {
+            const arr = splitsByEq.get(s.equipment_id) ?? [];
+            arr.push({ id: s.id, trolley_number: s.trolley_number, quantity: s.quantity, notes: s.notes });
+            splitsByEq.set(s.equipment_id, arr);
+          });
+        }
+
         (eq ?? []).forEach((r: any) => {
+          const row: EquipmentRow = { ...r, trolley_splits: splitsByEq.get(r.id) ?? [] };
           const arr = rowsByPower.get(r.festival_power_id) ?? [];
-          arr.push(r as EquipmentRow);
+          arr.push(row);
           rowsByPower.set(r.festival_power_id, arr);
         });
       }
@@ -160,10 +182,37 @@ export default function FestivalEquipment() {
             <Wrench className="h-7 w-7 text-slate-500" />
             <h1 className="text-3xl font-bold tracking-tight">Equipment & Trolleys</h1>
           </div>
-          <a href={`/festivals/${slug}/equipment/export`} target="_blank" rel="noopener noreferrer"
-             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
-            Export PDF
-          </a>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
+                <FileDown className="h-3.5 w-3.5" /> Export PDF
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="text-[11px]">Choose a report</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  📋 Equipment per concept
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/trolleys`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  🛒 Trolley load lists
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/vehicles`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  🚛 Vehicle load lists
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/soborg`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  📦 Søborg pick list
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Per-concept inventory grouped by category. Powered items contribute to electricity demand.
