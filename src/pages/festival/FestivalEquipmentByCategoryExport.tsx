@@ -4,7 +4,7 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r, fmtFilename } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, fmtFilename, Section, Table } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, type EquipmentRow, ALL_CATEGORIES } from "@/lib/equipmentStatus";
 
 const sb = supabase as any;
@@ -98,7 +98,7 @@ export default function FestivalEquipmentByCategoryExport() {
       summary={summary}
     >
       {categories.length === 0 && <Text style={r.small}>No equipment recorded.</Text>}
-      {categories.map((cat) => {
+      {categories.map((cat, idx) => {
         const items = (rowsByCat.get(cat) ?? []).slice().sort((a, b) =>
           a.conceptName.localeCompare(b.conceptName) || a.equipment_name.localeCompare(b.equipment_name)
         );
@@ -106,34 +106,24 @@ export default function FestivalEquipmentByCategoryExport() {
         const catKw = items.reduce((s, e) => s + (e.is_powered ? Number(e.power_kw ?? 0) * e.quantity : 0), 0);
         const meta = CATEGORY_META[cat];
         return (
-          <View key={cat} style={[r.card, { marginBottom: 10 }]} wrap>
-            <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>{meta?.label ?? cat}</Text>
-              <Text style={r.small}>{items.length} rows · {catItems} items · {catKw.toFixed(1)} kW</Text>
-            </View>
-            <View style={r.th}>
-              <Text style={{ flex: COLS.concept }}>Concept</Text>
-              <Text style={{ flex: COLS.name }}>Equipment</Text>
-              <Text style={{ flex: COLS.qty, textAlign: "right" }}>Qty</Text>
-              <Text style={{ flex: COLS.kw, textAlign: "right" }}>kW / each</Text>
-              <Text style={{ flex: COLS.powered, textAlign: "center" }}>Powered</Text>
-              <Text style={{ flex: COLS.load, textAlign: "center" }}>Load</Text>
-            </View>
-            {items.map((e) => (
-              <View key={e.id} style={r.tr} wrap={false}>
-                <Text style={{ flex: COLS.concept }}>{e.conceptName}</Text>
-                <Text style={{ flex: COLS.name }}>{e.equipment_name}</Text>
-                <Text style={{ flex: COLS.qty, textAlign: "right" }}>{e.quantity}</Text>
-                <Text style={{ flex: COLS.kw, textAlign: "right" }}>
-                  {e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—"}
-                </Text>
-                <Text style={{ flex: COLS.powered, textAlign: "center" }}>{e.is_powered ? "Yes" : "—"}</Text>
-                <Text style={{ flex: COLS.load, textAlign: "center" }}>
-                  {e.loads_from_soborg ? "Søborg" : "On-site"}
-                </Text>
-              </View>
-            ))}
-          </View>
+          <Section
+            key={cat}
+            title={meta?.label ?? cat}
+            meta={`${items.length} rows · ${catItems} items · ${catKw.toFixed(1)} kW`}
+            breakBefore={idx > 0}
+          >
+            <Table
+              columns={[
+                { header: "Concept", flex: 3, cell: (e: Row) => e.conceptName },
+                { header: "Equipment", flex: 5, cell: (e: Row) => e.equipment_name },
+                { header: "Qty", flex: 1, align: "right", cell: (e: Row) => String(e.quantity) },
+                { header: "kW / each", flex: 1.4, align: "right", cell: (e: Row) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
+                { header: "Powered", flex: 1.2, align: "center", cell: (e: Row) => e.is_powered ? "Yes" : "—" },
+                { header: "Load", flex: 1.4, align: "center", cell: (e: Row) => e.loads_from_soborg ? "Søborg" : "On-site" },
+              ]}
+              rows={items}
+            />
+          </Section>
         );
       })}
     </ReportTemplate>
