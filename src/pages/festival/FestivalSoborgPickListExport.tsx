@@ -82,7 +82,7 @@ export default function FestivalSoborgPickListExport() {
               { label: "types", value: items.length },
               { label: "items", value: qty },
             ]}
-            breakBefore={idx > 0}
+            breakBefore={false}
           >
 
             <Table
