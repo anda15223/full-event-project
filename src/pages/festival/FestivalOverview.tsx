@@ -778,33 +778,8 @@ export default function FestivalOverview() {
             conceptData={statsQ.data?.byConcept ?? {}}
             layout="stack"
             hideEmoji
-            renderConceptBody={(concept, data) => {
-              const s = data ?? {};
-              const signed = s.contractSigned;
-              const contractLabel =
-                signed === true ? "signed" : signed === false ? "pending" : "missing";
-              const contractCls =
-                signed === true
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                  : signed === false
-                  ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300"
-                  : "border-destructive/40 bg-destructive/10 text-destructive";
-              return (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    <span className={cn("px-2 py-0.5 rounded border font-medium", contractCls)}>
-                      Contract: {contractLabel}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Setup phases: {s.setupCount ?? 0} · Equipment: {s.equipQty ?? 0} items · Cooling: {statsQ.data?.totalCooling ?? 0} units (festival)
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Open actions (festival-wide): 🔴 {statsQ.data?.actionTotals.crit ?? 0} critical · 🟠 {statsQ.data?.actionTotals.high ?? 0} high · 🟡 {statsQ.data?.actionTotals.normal ?? 0} normal
-                  </div>
-                </div>
-              );
-            }}
+            minimal
+            renderConceptBody={() => null}
           />
         </section>
       )}
