@@ -135,13 +135,14 @@ function mapImageUrl(lat: number, lng: number): string {
 }
 
 function InfoDoc({
-  festival, contacts, hours, docs, summary,
+  festival, contacts, hours, docs, summary, lineup,
 }: {
   festival: Festival;
   contacts: Contact[];
   hours: HoursRow[];
   docs: LocationDoc[];
   summary: Summary | null;
+  lineup: LineupRow[];
 }) {
   const dates = formatDateRange(festival.start_date, festival.end_date);
   const hasCoords = festival.lat != null && festival.lng != null;
