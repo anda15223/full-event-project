@@ -159,6 +159,9 @@ const tableStyles = StyleSheet.create({
   wrap: { marginBottom: 8 },
   th: {
     flexDirection: "row",
+    backgroundColor: HEADER_BG,
+    borderBottomWidth: 0.75,
+    borderBottomColor: DARK,
     paddingVertical: 5,
     paddingHorizontal: 6,
     fontSize: 8.5,
