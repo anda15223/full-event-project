@@ -228,7 +228,10 @@ export function ConceptCardGrid({
           color_hex: row.concept.color_hex,
           short_name: row.concept.short_name,
         };
-        const manager = managerByConcept.get(c.id) ?? null;
+        const manager =
+          managerByContract.byContract.get(row.id) ??
+          managerByContract.byConceptFallback.get(c.id) ??
+          null;
         const slug = c.slug as ConceptSlug;
         const emoji = CONCEPT_EMOJI[slug] ?? "🍽️";
         const baseLabel = CONCEPT_LABELS[slug] ?? c.name;
