@@ -480,10 +480,11 @@ export default function FestivalTransportExport() {
         </div>
       </div>
       <div className="flex-1 bg-muted">
-        <PDFViewer width="100%" height="100%" showToolbar style={{ border: 0 }}>
+        <PDFViewer width="100%" height="100%" showToolbar style={{ border: 0, width: "100%", height: "100%" }}>
           {doc}
         </PDFViewer>
       </div>
+
     </div>
   );
 }
