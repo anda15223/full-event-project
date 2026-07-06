@@ -64,7 +64,7 @@ export default function FestivalPower() {
         const pid = c.tent_primary_contract_id as string | null;
         if (pid && c.concepts) {
           const arr = childrenByPrimary.get(pid) ?? [];
-          arr.push({ contractId: c.id, conceptName: c.concepts.name, conceptSlug: c.concepts.slug, mergedInto: pid });
+          arr.push({ contractId: c.id, conceptName: nameFor(c), conceptSlug: c.concepts.slug, mergedInto: pid });
           childrenByPrimary.set(pid, arr);
         }
       });
@@ -72,14 +72,13 @@ export default function FestivalPower() {
       const items = list
         .filter((c) => c.concepts && pmap.has(c.id) && !c.tent_primary_contract_id)
         .map((c) => {
-          // Targets: other concepts that are NOT already a primary of something
-          // (allow only flat merging — pick a sibling that is itself standalone & has no children)
           const targets: SiblingConcept[] = list
             .filter((o) => o.id !== c.id && o.concepts && !o.tent_primary_contract_id && !childrenByPrimary.has(o.id))
-            .map((o) => ({ contractId: o.id, conceptName: o.concepts.name, conceptSlug: o.concepts.slug, mergedInto: null }));
+            .map((o) => ({ contractId: o.id, conceptName: nameFor(o), conceptSlug: o.concepts.slug, mergedInto: null }));
           return {
             contractId: c.id as string,
             concept: c.concepts as Concept,
+            displayName: nameFor(c),
             power: pmap.get(c.id)!,
             mergedChildren: childrenByPrimary.get(c.id) ?? [],
             mergeTargets: childrenByPrimary.has(c.id) ? [] : targets,
