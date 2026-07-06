@@ -4,7 +4,7 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r, Section, Table } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, Section, Table, LoadBadge, type TableRow } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, type EquipmentRow } from "@/lib/equipmentStatus";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
@@ -93,19 +93,29 @@ export default function FestivalVehicleLoadsExport() {
     >
       {entries.length === 0 && <Text style={r.small}>No vehicle assignments yet.</Text>}
       {entries.map(([key, e], idx) => {
-        const flat: (EquipmentRow & { concept: string; catLabel: string })[] = [];
+        type ItRow = EquipmentRow & { concept: string; catLabel: string; cat: EquipCategory };
+        const byCat = new Map<EquipCategory, ItRow[]>();
         e.concepts.forEach((cn) => {
           cn.rows.forEach((row) => {
             const cat = (row.category ?? "other") as EquipCategory;
-            flat.push({ ...row, concept: cn.name, catLabel: CATEGORY_META[cat]?.label ?? cat });
+            const arr = byCat.get(cat) ?? [];
+            arr.push({ ...row, concept: cn.name, catLabel: CATEGORY_META[cat]?.label ?? cat, cat });
+            byCat.set(cat, arr);
           });
         });
-        flat.sort((a, b) =>
-          a.concept.localeCompare(b.concept) ||
-          a.catLabel.localeCompare(b.catLabel) ||
-          a.equipment_name.localeCompare(b.equipment_name)
+        const sortedCats = Array.from(byCat.keys()).sort((a, b) =>
+          (CATEGORY_META[a]?.order ?? 99) - (CATEGORY_META[b]?.order ?? 99)
         );
-        const totalItems = flat.reduce((s, x) => s + x.quantity, 0);
+        const tableRows: TableRow<ItRow>[] = [];
+        sortedCats.forEach((cat) => {
+          const items = (byCat.get(cat) ?? []).slice().sort((a, b) =>
+            a.concept.localeCompare(b.concept) || a.equipment_name.localeCompare(b.equipment_name)
+          );
+          const qty = items.reduce((s, x) => s + x.quantity, 0);
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} lines · ${qty} items` });
+          items.forEach((it) => tableRows.push(it as any));
+        });
+        const totalItems = Array.from(byCat.values()).reduce((s, arr) => s + arr.reduce((x, r0) => x + r0.quantity, 0), 0);
         return (
           <Section
             key={key ?? "none"}
@@ -113,15 +123,16 @@ export default function FestivalVehicleLoadsExport() {
             meta={`${e.concepts.length} concept${e.concepts.length === 1 ? "" : "s"} · ${totalItems} items`}
             breakBefore={idx > 0}
           >
-            <Table
+            <Table<ItRow>
               columns={[
-                { header: "Concept", flex: 3, cell: (it) => it.concept },
-                { header: "Category", flex: 2, cell: (it) => it.catLabel },
-                { header: "Equipment", flex: 5, cell: (it) => it.equipment_name },
-                { header: "Qty", flex: 1, align: "right", cell: (it) => String(it.quantity) },
-                { header: "Load", flex: 1.4, align: "center", cell: (it) => it.loads_from_soborg ? "Søborg" : "On-site" },
+                { header: "Concept", flex: 2.4, cell: (it) => it.concept },
+                { header: "Item name", flex: 4, cell: (it) => it.equipment_name },
+                { header: "Qty", flex: 1, align: "right", mono: true, cell: (it) => String(it.quantity) },
+                { header: "Power (kW)", flex: 1.6, align: "right", mono: true, cell: (it) => it.is_powered ? Number(it.power_kw ?? 0).toFixed(2) : "—" },
+                { header: "Trolley", flex: 1.4, align: "center", cell: () => "—" },
+                { header: "Source", flex: 1.6, align: "center", cell: (it) => <LoadBadge soborg={it.loads_from_soborg} /> },
               ]}
-              rows={flat}
+              rows={tableRows}
             />
           </Section>
         );
