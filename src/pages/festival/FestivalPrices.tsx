@@ -124,6 +124,60 @@ export default function FestivalPrices() {
         tables={CARD_TABLES.prices}
         currentFestivalId={festivalId ?? ""}
         onCommitted={() => window.location.reload()}
+        extraImport={async (sourceFestivalId, targetFestivalId) => {
+          // The generic cloner copies festival_concept_prices (parent) but not
+          // festival_concept_price_item (children, keyed by concept_prices_id).
+          // Re-map source parent ids → new draft parent ids via concept_id,
+          // then bulk-insert copies of the items.
+          const { data: srcParents, error: srcErr } = await sb
+            .from("festival_concept_prices")
+            .select("id, concept_id")
+            .eq("festival_id", sourceFestivalId)
+            .eq("is_draft", false);
+          if (srcErr) throw srcErr;
+          const srcRows = (srcParents ?? []) as { id: string; concept_id: string }[];
+          if (srcRows.length === 0) return;
+
+          const { data: tgtParents, error: tgtErr } = await sb
+            .from("festival_concept_prices")
+            .select("id, concept_id")
+            .eq("festival_id", targetFestivalId)
+            .eq("is_draft", true);
+          if (tgtErr) throw tgtErr;
+          const tgtByConcept = new Map<string, string>();
+          ((tgtParents ?? []) as { id: string; concept_id: string }[])
+            .forEach((r) => tgtByConcept.set(r.concept_id, r.id));
+
+          const idMap = new Map<string, string>();
+          srcRows.forEach((r) => {
+            const newId = tgtByConcept.get(r.concept_id);
+            if (newId) idMap.set(r.id, newId);
+          });
+          if (idMap.size === 0) return;
+
+          const srcIds = [...idMap.keys()];
+          const { data: srcItems, error: itemsErr } = await sb
+            .from("festival_concept_price_item")
+            .select("*")
+            .in("concept_prices_id", srcIds);
+          if (itemsErr) throw itemsErr;
+          const items = (srcItems ?? []) as Record<string, unknown>[];
+          if (items.length === 0) return;
+
+          // Wipe any items already attached to these draft parents (idempotent re-import).
+          await sb
+            .from("festival_concept_price_item")
+            .delete()
+            .in("concept_prices_id", [...idMap.values()]);
+
+          const cleaned = items.map((it) => {
+            const { id: _id, created_at: _ca, ...rest } = it as any;
+            return { ...rest, concept_prices_id: idMap.get(it.concept_prices_id as string) };
+          });
+          const { error: insErr } = await sb.from("festival_concept_price_item").insert(cleaned);
+          if (insErr) throw insErr;
+          return `+${cleaned.length} price items`;
+        }}
       />
       <div>
         <Link to={`/festivals/${slug}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:underline">
