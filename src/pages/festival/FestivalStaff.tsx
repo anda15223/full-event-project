@@ -602,7 +602,7 @@ export default function FestivalStaff() {
           <SelectContent>
             <SelectItem value="__all__">All cities</SelectItem>
             {cityOptions.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
