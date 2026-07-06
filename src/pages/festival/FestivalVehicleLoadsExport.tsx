@@ -112,7 +112,7 @@ export default function FestivalVehicleLoadsExport() {
             a.concept.localeCompare(b.concept) || a.equipment_name.localeCompare(b.equipment_name)
           );
           const qty = items.reduce((s, x) => s + x.quantity, 0);
-          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} types · ${qty} items` });
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} ${items.length === 1 ? "type" : "types"} · ${qty} ${qty === 1 ? "item" : "items"}` });
           items.forEach((it) => tableRows.push(it as any));
         });
         const totalItems = Array.from(byCat.values()).reduce((s, arr) => s + arr.reduce((x, r0) => x + r0.quantity, 0), 0);
