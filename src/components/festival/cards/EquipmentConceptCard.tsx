@@ -413,6 +413,14 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+          <Select value={cat} onValueChange={(v) => setCat(v as EquipCategory)}>
+            <SelectTrigger className="h-6 text-[11px] w-auto min-w-[130px] px-2"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALL_CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>{CATEGORY_META[c].emoji} {CATEGORY_META[c].label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <label className="inline-flex items-center gap-1.5"><Switch checked={powered} onCheckedChange={setPowered} /> Powered</label>
           <label className="inline-flex items-center gap-1.5"><Switch checked={soborg} onCheckedChange={setSoborg} /> Søborg</label>
           {powered && (
