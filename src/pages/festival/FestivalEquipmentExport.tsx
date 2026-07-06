@@ -121,7 +121,7 @@ export default function FestivalEquipmentExport() {
         const tableRows: TableRow<EqWithTrolleys>[] = [];
         grouped.forEach(([cat, items]) => {
           const qty = items.reduce((s, e) => s + e.quantity, 0);
-          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} types · ${qty} items` });
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} ${items.length === 1 ? "type" : "types"} · ${qty} ${qty === 1 ? "item" : "items"}` });
           items.forEach((it) => tableRows.push(it as any));
         });
         return (
