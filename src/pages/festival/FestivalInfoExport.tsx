@@ -374,6 +374,7 @@ export default function FestivalInfoExport() {
           .from("festival_contacts")
           .select("id, full_name, role, email, phone, organization, role_category")
           .eq("festival_id", fid)
+          .eq("is_draft", false)
           .order("full_name", { ascending: true }),
         supabase
           .from("festival_service_hours" as any)
