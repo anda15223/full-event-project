@@ -1326,25 +1326,28 @@ function VehicleEditDrawer({
   const [capacity, setCapacity] = useState(initialCapacity);
   const [status, setStatus] = useState(vehicle.status ?? "planned");
   const [notes, setNotes] = useState(vehicle.notes ?? "");
+  const [name, setName] = useState(vName(vehicle));
 
   useEffect(() => {
     setCapacity(vCapacity(vehicle) ?? 0);
     setStatus(vehicle.status ?? "planned");
     setNotes(vehicle.notes ?? "");
+    setName(vName(vehicle));
   }, [vehicle, open]);
 
   const save = useMutation({
     mutationFn: async () => {
-      // Per-assignment fields stay on festival_transport. Capacity is canonical → dual-write.
+      const trimmedName = name.trim();
+      // Per-assignment fields stay on festival_transport. Capacity + vehicle_type are canonical → dual-write.
       const legacyP = supabase
         .from("festival_transport")
-        .update({ capacity, status, notes, updated_at: new Date().toISOString() })
+        .update({ capacity, status, notes, vehicle_type: trimmedName, updated_at: new Date().toISOString() })
         .eq("id", vehicle.id);
       const canonicalP = vehicle.season_rental_id
-        ? supabase.from("season_rentals").update({ capacity }).eq("id", vehicle.season_rental_id)
+        ? supabase.from("season_rentals").update({ capacity, vehicle_type: trimmedName }).eq("id", vehicle.season_rental_id)
         : null;
       if (!vehicle.season_rental_id) {
-        console.warn("VehicleEditDrawer: vehicle has no season_rental_id, skipping canonical capacity write", vehicle.id);
+        console.warn("VehicleEditDrawer: vehicle has no season_rental_id, skipping canonical write", vehicle.id);
       }
       const [legacyRes, canonicalRes] = await Promise.all([
         Promise.resolve(legacyP),
@@ -1369,9 +1372,10 @@ function VehicleEditDrawer({
         </SheetHeader>
         <div className="space-y-4 py-4">
           <div>
-            <Label>Vehicle</Label>
-            <p className="text-sm font-medium">{vName(vehicle)}</p>
+            <Label>Vehicle name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sprinter #2" />
           </div>
+
           <div>
             <Label>Capacity</Label>
             <Input type="number" value={capacity} onChange={(e) => setCapacity(parseInt(e.target.value) || 0)} />
