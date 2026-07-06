@@ -816,6 +816,14 @@ export default function FestivalStaff() {
                                                 }
                                                 return;
                                               }
+                                              // If a different person already occupies this slot, clear them first
+                                              // so we don't end up with two people on the same station.
+                                              if (current && current.id !== personId) {
+                                                updateStaff.mutate({
+                                                  id: current.id,
+                                                  patch: { station: null, concept_id: null, contract_id: null },
+                                                });
+                                              }
                                               updateStaff.mutate({
                                                 id: personId,
                                                 patch: {
