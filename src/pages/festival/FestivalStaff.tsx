@@ -480,29 +480,10 @@ export default function FestivalStaff() {
   const [cityFilter, setCityFilter] = useState<string>("__all__");
   const [accomFilter, setAccomFilter] = useState<"any" | "yes" | "no">("any");
 
-  // City list is built from free-text `home_location` entries. We normalize
-  // (case-insensitive, trimmed) so "copenhaga", "Copenhaga", "COPENHAGA" all
-  // collapse into one option displayed in Title Case.
-  const toTitleCase = (s: string) =>
-    s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
-  const cityOptions = (() => {
-    const seen = new Map<string, string>(); // key: lowercase, value: display label
-    // Seed with the staff-source cities so the filter matches the per-row picker.
-    SOURCE_OPTIONS.forEach((o) => {
-      if (o.value === "unknown") return;
-      seen.set(o.label.toLowerCase(), o.label);
-    });
-    allRows.forEach((s) => {
-      const raw = (s.home_location ?? "").trim();
-      if (!raw) return;
-      const key = raw.toLowerCase();
-      if (!seen.has(key)) seen.set(key, toTitleCase(raw));
-    });
-    return Array.from(seen.values()).sort((a, b) => a.localeCompare(b));
-  })();
-
-  // Map staff_source slug -> display label (e.g. "aarhus" -> "aarhus", "soborg" -> "copenhagen").
-  const sourceLabelBySlug = new Map(SOURCE_OPTIONS.map((o) => [o.value, o.label.toLowerCase()]));
+  // Location filter is driven strictly by `staff_source` (the canonical field).
+  // Each option maps to a source slug so typos in old free-text fields don't
+  // create duplicate/misspelled entries like "Aaarhus" or "åRhus".
+  const cityOptions = SOURCE_OPTIONS.map((o) => ({ value: o.value, label: o.label }));
 
   const rows = allRows
     .filter((s) =>
@@ -514,10 +495,7 @@ export default function FestivalStaff() {
     )
     .filter((s) => {
       if (cityFilter === "__all__") return true;
-      const target = cityFilter.toLowerCase();
-      const home = (s.home_location ?? "").trim().toLowerCase();
-      const src = sourceLabelBySlug.get((s as any).staff_source ?? "") ?? "";
-      return home === target || src === target;
+      return ((s as any).staff_source ?? "unknown") === cityFilter;
     })
 
     .filter((s) =>
@@ -624,7 +602,7 @@ export default function FestivalStaff() {
           <SelectContent>
             <SelectItem value="__all__">All cities</SelectItem>
             {cityOptions.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
