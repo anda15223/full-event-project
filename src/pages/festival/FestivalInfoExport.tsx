@@ -438,9 +438,9 @@ export default function FestivalInfoExport() {
         if (staffIds.length > 0) {
           const { data: staff } = await supabase
             .from("festival_staff")
-            .select("id, full_name")
+            .select("id, name")
             .in("id", staffIds);
-          for (const s of (staff ?? []) as any[]) staffNameById.set(s.id, s.full_name);
+          for (const s of (staff ?? []) as any[]) staffNameById.set(s.id, s.name);
         }
       }
       const CONCEPT_LABELS: Record<string, string> = {
