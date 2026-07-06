@@ -135,6 +135,22 @@ function mapImageUrl(lat: number, lng: number): string {
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=14&size=520x320&maptype=mapnik&markers=${lat},${lng},red-pushpin`;
 }
 
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(typeof r.result === "string" ? r.result : null);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 function InfoDoc({
   festival, contacts, hours, docs, summary, lineup,
 }: {
