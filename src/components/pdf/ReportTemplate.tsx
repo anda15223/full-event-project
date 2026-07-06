@@ -227,13 +227,16 @@ export function Table<T>({
       </View>
       {rows.map((row, ri) => {
         if (isGroup(row)) {
+          // minPresenceAhead keeps the category header with at least ~40pt of
+          // following row space, preventing an orphaned header at page bottom.
           return (
-            <View key={ri} style={tableStyles.groupRow} wrap={false}>
+            <View key={ri} style={tableStyles.groupRow} wrap={false} minPresenceAhead={40}>
               <Text style={tableStyles.groupLabel}>{N(row.label)}</Text>
               {row.meta ? <Text style={tableStyles.groupMeta}>{N(row.meta)}</Text> : null}
             </View>
           );
         }
+
         dataIdx += 1;
         const striped = zebra && dataIdx % 2 === 1;
         return (
@@ -310,25 +313,45 @@ export function Badge({ text, tone = "neutral" }: { text: string; tone?: "soborg
 const sectionStyles = StyleSheet.create({
   wrap: { marginBottom: 14 },
   header: {
+    borderBottom: `0.5pt solid ${LIGHT}`,
+    paddingBottom: 6,
+    marginBottom: 8,
+  },
+  titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    borderBottom: `0.5pt solid ${LIGHT}`,
-    paddingBottom: 4,
-    marginBottom: 8,
   },
-  title: { fontSize: 15, fontWeight: 700, color: DARK },
+  title: { fontSize: 18, fontWeight: 700, color: DARK },
   meta: { fontSize: 9.5, color: GRAY },
+  statsRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 6 },
+  statPill: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    backgroundColor: "#f1f2f4",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
+    marginBottom: 2,
+  },
+  statValue: { fontSize: 10, fontWeight: 700, color: DARK },
+  statLabel: { fontSize: 8.5, color: GRAY, marginLeft: 4, textTransform: "uppercase", letterSpacing: 0.4 },
 });
+
+export type SectionStat = { label: string; value: string | number };
 
 export function Section({
   title,
   meta,
+  stats,
   breakBefore = false,
   children,
 }: {
   title: string;
   meta?: string;
+  /** Small labeled pills rendered under the title (preferred over `meta`). */
+  stats?: SectionStat[];
   /** Force a page break before this section. Use for entries after the first. */
   breakBefore?: boolean;
   children: import("react").ReactNode;
@@ -336,13 +359,26 @@ export function Section({
   return (
     <View style={sectionStyles.wrap} break={breakBefore}>
       <View style={sectionStyles.header}>
-        <Text style={sectionStyles.title}>{N(title)}</Text>
-        {meta ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
+        <View style={sectionStyles.titleRow}>
+          <Text style={sectionStyles.title}>{N(title)}</Text>
+          {meta && !stats ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
+        </View>
+        {stats && stats.length ? (
+          <View style={sectionStyles.statsRow}>
+            {stats.map((st, i) => (
+              <View key={i} style={sectionStyles.statPill}>
+                <Text style={sectionStyles.statValue}>{N(String(st.value))}</Text>
+                <Text style={sectionStyles.statLabel}>{N(st.label)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
       {children}
     </View>
   );
 }
+
 
 export const reportColors = {
   ok: "#059669",

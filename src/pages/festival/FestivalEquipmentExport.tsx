@@ -121,16 +121,21 @@ export default function FestivalEquipmentExport() {
         const tableRows: TableRow<EqWithTrolleys>[] = [];
         grouped.forEach(([cat, items]) => {
           const qty = items.reduce((s, e) => s + e.quantity, 0);
-          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} lines · ${qty} items` });
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} types · ${qty} items` });
           items.forEach((it) => tableRows.push(it as any));
         });
         return (
           <Section
             key={entry.id}
             title={entry.name}
-            meta={`${sum.items} items · ${sum.powered} powered · ${sum.kw.toFixed(1)} kW`}
+            stats={[
+              { label: "items", value: sum.items },
+              { label: "powered", value: sum.powered },
+              { label: "kW", value: sum.kw.toFixed(1) },
+            ]}
             breakBefore={idx > 0}
           >
+
             {rows.length === 0 ? (
               <Text style={r.small}>No equipment recorded.</Text>
             ) : (

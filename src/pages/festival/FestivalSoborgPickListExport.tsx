@@ -78,9 +78,13 @@ export default function FestivalSoborgPickListExport() {
           <Section
             key={cat}
             title={CATEGORY_META[cat as EquipCategory]?.label ?? cat}
-            meta={`${items.length} lines · ${qty} items`}
+            stats={[
+              { label: "types", value: items.length },
+              { label: "items", value: qty },
+            ]}
             breakBefore={idx > 0}
           >
+
             <Table
               columns={[
                 { header: "Concept", flex: 2.6, cell: (it: any) => it.concept_name },
