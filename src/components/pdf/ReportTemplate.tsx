@@ -318,8 +318,6 @@ export function Badge({ text, tone = "neutral" }: { text: string; tone?: "soborg
 const sectionStyles = StyleSheet.create({
   wrap: { marginBottom: 14 },
   header: {
-    borderBottomWidth: 0.5,
-    borderBottomColor: LIGHT,
     paddingBottom: 6,
     marginBottom: 8,
   },
