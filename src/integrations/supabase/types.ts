@@ -1805,6 +1805,7 @@ export type Database = {
           concept_id: string
           created_at: string | null
           draft_source_festival_id: string | null
+          festival_contract_id: string | null
           festival_id: string
           id: string
           is_draft: boolean
@@ -1817,6 +1818,7 @@ export type Database = {
           concept_id: string
           created_at?: string | null
           draft_source_festival_id?: string | null
+          festival_contract_id?: string | null
           festival_id: string
           id?: string
           is_draft?: boolean
@@ -1829,6 +1831,7 @@ export type Database = {
           concept_id?: string
           created_at?: string | null
           draft_source_festival_id?: string | null
+          festival_contract_id?: string | null
           festival_id?: string
           id?: string
           is_draft?: boolean
@@ -1900,6 +1903,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trolley_pack_list"
             referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_concept_assignments_festival_contract_id_fkey"
+            columns: ["festival_contract_id"]
+            isOneToOne: false
+            referencedRelation: "festival_contracts"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "festival_concept_assignments_festival_id_fkey"
