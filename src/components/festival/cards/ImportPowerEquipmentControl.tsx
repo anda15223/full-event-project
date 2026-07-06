@@ -176,7 +176,9 @@ export function ImportPowerEquipmentControl({
         <SelectContent>
           {sources.map((s) => (
             <SelectItem key={s.powerId} value={s.powerId} className="text-xs">
-              {s.festivalName} ({s.rowCount})
+              {s.festivalName}
+              {s.stallCount > 1 ? ` · stall #${s.stallIndex}` : ""}
+              {" "}({s.rowCount} item{s.rowCount === 1 ? "" : "s"})
             </SelectItem>
           ))}
         </SelectContent>
