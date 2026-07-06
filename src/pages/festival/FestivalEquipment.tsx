@@ -197,6 +197,11 @@ export default function FestivalEquipment() {
                 </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/by-category`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  🗂️ Equipment by category (table)
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <a href={`/festivals/${slug}/equipment/export/trolleys`} target="_blank" rel="noopener noreferrer" className="text-xs">
                   🛒 Trolley load lists
                 </a>
