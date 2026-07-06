@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ExternalLink, Plus, Trash2, Zap, Truck, MapPin, FileDown } from "lucide-react";
+import { ExternalLink, Plus, Trash2, Zap, Truck, MapPin, FileDown, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
   ALL_CATEGORIES, CATEGORY_META, EquipCategory, EquipmentRow,
