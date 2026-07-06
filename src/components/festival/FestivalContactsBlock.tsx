@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Pencil, Trash2, Plus, Phone, Mail, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useDraftMode } from "@/hooks/useDraftMode";
 
 type Category = "festival" | "setup" | "concept";
 
@@ -55,8 +56,9 @@ const emptyForm = (cat: Category): FormState => ({
 });
 
 export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
+  const { draftMode } = useDraftMode();
   const qc = useQueryClient();
-  const queryKey = ["festival-contacts", festivalSlug];
+  const queryKey = ["festival-contacts-all", festivalId, draftMode];
 
   const { data: contacts, isLoading } = useQuery({
     queryKey,
@@ -65,7 +67,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
         .from("festival_contacts")
         .select("id, festival_id, full_name, role, organization, email, phone, role_category")
         .eq("festival_id", festivalId)
-        .eq("is_draft", false)
+        .eq("is_draft", draftMode)
         .order("full_name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as Contact[];
@@ -80,7 +82,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
         () => qc.invalidateQueries({ queryKey }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [festivalId, qc]);
+  }, [festivalId, qc, queryKey]);
 
   const grouped = useMemo(() => {
     const buckets: Record<string, Contact[]> = { festival: [], setup: [], concept: [], uncategorized: [] };
@@ -111,6 +113,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
     mutationFn: async (form: FormState) => {
       const { error } = await supabase.from("festival_contacts").insert({
         festival_id: festivalId,
+        is_draft: draftMode,
         full_name: form.full_name,
         role: form.role || null,
         phone: form.phone || null,
@@ -122,6 +125,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
       toast({ title: "Contact added" });
       setAdding(null);
     },
