@@ -182,10 +182,37 @@ export default function FestivalEquipment() {
             <Wrench className="h-7 w-7 text-slate-500" />
             <h1 className="text-3xl font-bold tracking-tight">Equipment & Trolleys</h1>
           </div>
-          <a href={`/festivals/${slug}/equipment/export`} target="_blank" rel="noopener noreferrer"
-             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
-            Export PDF
-          </a>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border hover:bg-muted">
+                <FileDown className="h-3.5 w-3.5" /> Export PDF
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="text-[11px]">Choose a report</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  📋 Equipment per concept
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/trolleys`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  🛒 Trolley load lists
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/vehicles`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  🚛 Vehicle load lists
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/festivals/${slug}/equipment/export/soborg`} target="_blank" rel="noopener noreferrer" className="text-xs">
+                  📦 Søborg pick list
+                </a>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Per-concept inventory grouped by category. Powered items contribute to electricity demand.
