@@ -4,7 +4,7 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r, Section, Table } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, Section, Table, LoadBadge } from "@/components/pdf/ReportTemplate";
 
 const sb = supabase as any;
 
