@@ -23,12 +23,12 @@ export type AccentKey = keyof typeof ACCENT;
 
 const s = StyleSheet.create({
   page: { paddingTop: 50, paddingBottom: 56, paddingHorizontal: 36, fontFamily: "Helvetica", fontSize: 11, lineHeight: 1.5, color: DARK },
-  festivalName: { fontSize: 22, fontWeight: 700, letterSpacing: -0.3 },
+  festivalName: { fontSize: 22, fontWeight: 700 },
   festivalDates: { fontSize: 13, color: GRAY, marginTop: 4 },
   headerRow: { flexDirection: "row", alignItems: "center", marginTop: 28, marginBottom: 6 },
   circle: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", marginRight: 12 },
   circleDot: { width: 10, height: 10, borderRadius: 5 },
-  reportTitle: { fontSize: 28, fontWeight: 700, letterSpacing: -0.4 },
+  reportTitle: { fontSize: 28, fontWeight: 700 },
   subtitle: { fontSize: 11, color: GRAY, marginLeft: 44, marginBottom: 14 },
   divider: { borderBottom: `0.5pt solid ${LIGHT}`, marginBottom: 18 },
   summaryBox: { borderWidth: 0.5, borderColor: LIGHT, borderRadius: 6, padding: 12, marginBottom: 18 },
