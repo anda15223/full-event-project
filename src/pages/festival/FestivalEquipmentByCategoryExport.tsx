@@ -4,15 +4,12 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r, fmtFilename, Section, Table } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, fmtFilename, Section, Table, LoadBadge } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, type EquipmentRow, ALL_CATEGORIES } from "@/lib/equipmentStatus";
 
 const sb = supabase as any;
 
-// Column layout (flex weights)
-const COLS = { concept: 3, name: 5, qty: 1, kw: 1.4, powered: 1.2, load: 1.4 };
-
-type Row = EquipmentRow & { conceptName: string; conceptColor?: string };
+type Row = EquipmentRow & { conceptName: string; conceptColor?: string; trolley_numbers: number[] };
 
 export default function FestivalEquipmentByCategoryExport() {
   const { slug = "" } = useParams();
@@ -37,6 +34,18 @@ export default function FestivalEquipmentByCategoryExport() {
       const { data: equipment } = powerIds.length
         ? await sb.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
+      const equipmentIds = (equipment ?? []).map((e: any) => e.id);
+
+      const { data: splits } = equipmentIds.length
+        ? await sb.from("festival_equipment_trolley_split")
+            .select("equipment_id, trolley_number").in("equipment_id", equipmentIds)
+        : { data: [] as any[] };
+      const trolleyByEq = new Map<string, number[]>();
+      (splits ?? []).forEach((s: any) => {
+        const arr = trolleyByEq.get(s.equipment_id) ?? [];
+        arr.push(s.trolley_number);
+        trolleyByEq.set(s.equipment_id, arr);
+      });
 
       const { data: concepts } = conceptIds.length
         ? await supabase.from("concepts").select("id, name, slug, color_hex").in("id", conceptIds)
@@ -57,7 +66,12 @@ export default function FestivalEquipmentByCategoryExport() {
         const cn = conceptMap.get(cid);
         const cat = (e.category ?? "other") as EquipCategory;
         const arr = rowsByCat.get(cat) ?? [];
-        arr.push({ ...e, conceptName: cn?.name ?? "—", conceptColor: cn?.color_hex });
+        arr.push({
+          ...e,
+          conceptName: cn?.name ?? "—",
+          conceptColor: cn?.color_hex,
+          trolley_numbers: (trolleyByEq.get(e.id) ?? []).sort((a, b) => a - b),
+        });
         rowsByCat.set(cat, arr);
       });
 
@@ -112,14 +126,14 @@ export default function FestivalEquipmentByCategoryExport() {
             meta={`${items.length} rows · ${catItems} items · ${catKw.toFixed(1)} kW`}
             breakBefore={idx > 0}
           >
-            <Table
+            <Table<Row>
               columns={[
-                { header: "Concept", flex: 3, cell: (e: Row) => e.conceptName },
-                { header: "Equipment", flex: 5, cell: (e: Row) => e.equipment_name },
-                { header: "Qty", flex: 1, align: "right", cell: (e: Row) => String(e.quantity) },
-                { header: "kW / each", flex: 1.4, align: "right", cell: (e: Row) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
-                { header: "Powered", flex: 1.2, align: "center", cell: (e: Row) => e.is_powered ? "Yes" : "—" },
-                { header: "Load", flex: 1.4, align: "center", cell: (e: Row) => e.loads_from_soborg ? "Søborg" : "On-site" },
+                { header: "Concept", flex: 2.6, cell: (e) => e.conceptName },
+                { header: "Item name", flex: 4, cell: (e) => e.equipment_name },
+                { header: "Qty", flex: 1, align: "right", mono: true, cell: (e) => String(e.quantity) },
+                { header: "Power (kW)", flex: 1.6, align: "right", mono: true, cell: (e) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
+                { header: "Trolley", flex: 1.6, align: "center", cell: (e) => e.trolley_numbers.length ? e.trolley_numbers.map((n) => `#${n}`).join(", ") : "—" },
+                { header: "Source", flex: 1.6, align: "center", cell: (e) => <LoadBadge soborg={e.loads_from_soborg} /> },
               ]}
               rows={items}
             />
