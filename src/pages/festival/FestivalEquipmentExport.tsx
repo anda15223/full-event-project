@@ -116,8 +116,14 @@ export default function FestivalEquipmentExport() {
       {entries.length === 0 && <Text style={r.small}>No active concepts.</Text>}
       {entries.map((entry, idx) => {
         const rows = entry.rows;
-        const grouped = groupByCategory(rows);
+        const grouped = groupByCategory(rows as any) as [EquipCategory, EqWithTrolleys[]][];
         const sum = summarizeConceptEquipment(rows);
+        const tableRows: TableRow<EqWithTrolleys>[] = [];
+        grouped.forEach(([cat, items]) => {
+          const qty = items.reduce((s, e) => s + e.quantity, 0);
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} lines · ${qty} items` });
+          items.forEach((it) => tableRows.push(it as any));
+        });
         return (
           <Section
             key={entry.id}
@@ -125,24 +131,20 @@ export default function FestivalEquipmentExport() {
             meta={`${sum.items} items · ${sum.powered} powered · ${sum.kw.toFixed(1)} kW`}
             breakBefore={idx > 0}
           >
-            {rows.length === 0 && <Text style={r.small}>No equipment recorded.</Text>}
-            {grouped.map(([cat, items]) => (
-              <View key={cat} style={{ marginTop: 6 }}>
-                <Text style={[r.h3, { marginBottom: 4 }]}>
-                  {CATEGORY_META[cat as EquipCategory]?.label ?? cat}
-                </Text>
-                <Table
-                  columns={[
-                    { header: "Equipment", flex: 6, cell: (e: EquipmentRow) => e.equipment_name },
-                    { header: "Qty", flex: 1, align: "right", cell: (e: EquipmentRow) => String(e.quantity) },
-                    { header: "kW / each", flex: 1.4, align: "right", cell: (e: EquipmentRow) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
-                    { header: "Powered", flex: 1.2, align: "center", cell: (e: EquipmentRow) => e.is_powered ? "Yes" : "—" },
-                    { header: "Load", flex: 1.4, align: "center", cell: (e: EquipmentRow) => e.loads_from_soborg ? "Søborg" : "On-site" },
-                  ]}
-                  rows={items}
-                />
-              </View>
-            ))}
+            {rows.length === 0 ? (
+              <Text style={r.small}>No equipment recorded.</Text>
+            ) : (
+              <Table<EqWithTrolleys>
+                columns={[
+                  { header: "Item name", flex: 5, cell: (e) => e.equipment_name },
+                  { header: "Qty", flex: 1, align: "right", mono: true, cell: (e) => String(e.quantity) },
+                  { header: "Power (kW)", flex: 1.6, align: "right", mono: true, cell: (e) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
+                  { header: "Trolley", flex: 1.6, align: "center", cell: (e) => e.trolley_numbers.length ? e.trolley_numbers.map((n) => `#${n}`).join(", ") : "—" },
+                  { header: "Source", flex: 1.6, align: "center", cell: (e) => <LoadBadge soborg={e.loads_from_soborg} /> },
+                ]}
+                rows={tableRows}
+              />
+            )}
           </Section>
         );
       })}
