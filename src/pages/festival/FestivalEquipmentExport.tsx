@@ -23,10 +23,15 @@ export default function FestivalEquipmentExport() {
       if (!f) return setData({ festival: null });
 
       const { data: contracts } = await supabase.from("festival_contracts")
-        .select("id, concept_id").eq("festival_id", f.id).eq("is_active", true);
-      const contractIds = (contracts ?? []).map((k: any) => k.id);
-      const conceptIds = (contracts ?? []).map((k: any) => k.concept_id);
+        .select("id, concept_id, instance_label, concept_alias, concepts!concept_id(name, slug, color_hex)")
+        .eq("festival_id", f.id).eq("is_active", true);
+      const cList = (contracts ?? []) as any[];
+      const nameFor = (c: any) => {
+        const alias = (c.concept_alias ?? "").trim();
+        return alias || (c.instance_label ? `${c.concepts?.name} ${c.instance_label}` : (c.concepts?.name ?? "Concept"));
+      };
 
+      const contractIds = cList.map((k) => k.id);
       const { data: power } = contractIds.length
         ? await supabase.from("festival_power").select("id, festival_contract_id").in("festival_contract_id", contractIds)
         : { data: [] as any[] };
@@ -36,26 +41,28 @@ export default function FestivalEquipmentExport() {
         ? await sb.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
 
-      const { data: concepts } = conceptIds.length
-        ? await supabase.from("concepts").select("id, name, slug, color_hex").in("id", conceptIds)
-        : { data: [] as any[] };
-
-      // Group equipment per concept via power.festival_contract_id → contract.concept_id
-      const powerToConcept = new Map<string, string>();
-      (power ?? []).forEach((p: any) => {
-        const k = (contracts ?? []).find((x: any) => x.id === p.festival_contract_id);
-        if (k) powerToConcept.set(p.id, k.concept_id);
-      });
-      const eqByConcept = new Map<string, EquipmentRow[]>();
+      // Group equipment per contract (not concept) so multiple instances stay separate
+      const powerToContract = new Map<string, string>();
+      (power ?? []).forEach((p: any) => powerToContract.set(p.id, p.festival_contract_id));
+      const eqByContract = new Map<string, EquipmentRow[]>();
       (equipment ?? []).forEach((e: any) => {
-        const cid = powerToConcept.get(e.festival_power_id);
+        const cid = powerToContract.get(e.festival_power_id);
         if (!cid) return;
-        const arr = eqByConcept.get(cid) ?? [];
+        const arr = eqByContract.get(cid) ?? [];
         arr.push(e);
-        eqByConcept.set(cid, arr);
+        eqByContract.set(cid, arr);
       });
 
-      setData({ festival: f, concepts: concepts ?? [], eqByConcept });
+      const entries = cList
+        .map((c) => ({
+          id: c.id,
+          name: nameFor(c),
+          slug: c.concepts?.slug ?? "",
+          rows: eqByContract.get(c.id) ?? [],
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setData({ festival: f, entries });
     })();
   }, [slug]);
 
