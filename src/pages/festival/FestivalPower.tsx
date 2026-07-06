@@ -215,13 +215,13 @@ export default function FestivalPower() {
         </div>
       ) : (
         <div className="grid gap-6 grid-cols-1 [grid-template-columns:repeat(auto-fit,minmax(520px,1fr))]">
-          {items.map(({ concept, power, contractId, mergedChildren, mergeTargets }) => (
+          {items.map(({ concept, power, contractId, displayName, mergedChildren, mergeTargets }) => (
             <PowerConceptCard
               key={power.id}
               festivalId={festivalId}
               festivalSlug={slug}
               conceptSlug={concept.slug}
-              conceptName={concept.name}
+              conceptName={displayName}
               contractId={contractId}
               power={power}
               equipment={combinedEquipmentFor(power.id, mergedChildren)}
