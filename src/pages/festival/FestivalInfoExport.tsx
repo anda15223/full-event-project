@@ -29,7 +29,7 @@ type Contact = {
 type HoursRow = {
   id: string; day_date: string;
   festival_open: string | null; festival_close: string | null;
-  prep_open: string | null; prep_close: string | null;
+  concept_label: string | null;
   notes: string | null;
 };
 
