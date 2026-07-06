@@ -65,6 +65,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
         .from("festival_contacts")
         .select("id, festival_id, full_name, role, organization, email, phone, role_category")
         .eq("festival_id", festivalId)
+        .eq("is_draft", false)
         .order("full_name", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as Contact[];
