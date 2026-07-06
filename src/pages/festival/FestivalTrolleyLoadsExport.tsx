@@ -4,7 +4,7 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, Section, Table } from "@/components/pdf/ReportTemplate";
 
 const sb = supabase as any;
 
@@ -93,33 +93,29 @@ export default function FestivalTrolleyLoadsExport() {
       summary={<View><Text style={r.small}>{trolleys.length} trolleys · {totalItems} items assigned</Text></View>}
     >
       {trolleys.length === 0 && <Text style={r.small}>No trolley assignments yet.</Text>}
-      {trolleys.map(([num, items]) => {
-        const byConcept = new Map<string, Item[]>();
-        items.forEach((it) => {
-          const arr = byConcept.get(it.concept_name) ?? [];
-          arr.push(it);
-          byConcept.set(it.concept_name, arr);
-        });
+      {trolleys.map(([num, items], idx) => {
         const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+        const sorted = items.slice().sort((a, b) =>
+          a.concept_name.localeCompare(b.concept_name) || a.equipment_name.localeCompare(b.equipment_name)
+        );
         return (
-          <View key={num} style={r.card} wrap={false}>
-            <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>🛒 Trolley {num}</Text>
-              <Text style={r.small}>{items.length} lines · {totalQty} items</Text>
-            </View>
-            {Array.from(byConcept.entries()).map(([cn, list]) => (
-              <View key={cn} style={{ marginTop: 4 }}>
-                <Text style={r.h3}>{cn}</Text>
-                {list.map((it, idx) => (
-                  <Text key={idx} style={r.bullet}>
-                    • {it.equipment_name} × {it.quantity}
-                    {it.is_powered && it.power_kw ? `  (${it.power_kw} kW)` : ""}
-                    {it.loads_from_soborg ? "  [SØBORG]" : ""}
-                  </Text>
-                ))}
-              </View>
-            ))}
-          </View>
+          <Section
+            key={num}
+            title={`Trolley ${num}`}
+            meta={`${items.length} lines · ${totalQty} items`}
+            breakBefore={idx > 0}
+          >
+            <Table
+              columns={[
+                { header: "Concept", flex: 3, cell: (it: Item) => it.concept_name },
+                { header: "Equipment", flex: 5, cell: (it: Item) => it.equipment_name },
+                { header: "Qty", flex: 1, align: "right", cell: (it: Item) => String(it.quantity) },
+                { header: "kW", flex: 1.2, align: "right", cell: (it: Item) => it.is_powered && it.power_kw ? Number(it.power_kw).toFixed(2) : "—" },
+                { header: "Load", flex: 1.4, align: "center", cell: (it: Item) => it.loads_from_soborg ? "Søborg" : "On-site" },
+              ]}
+              rows={sorted}
+            />
+          </Section>
         );
       })}
     </ReportTemplate>

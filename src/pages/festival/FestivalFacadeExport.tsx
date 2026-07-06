@@ -118,7 +118,7 @@ export default function FestivalFacadeExport() {
             const meta = facade?.design_status ? FACADE_STATUS_META[facade.design_status as keyof typeof FACADE_STATUS_META] : null;
             const photos = facade ? photosByFacade.get(facade.id) ?? [] : [];
             return (
-              <View key={c.id} style={styles.card} wrap={false}>
+              <View key={c.id} style={styles.card}>
                 <View style={styles.header}>
                   <Text style={styles.name}>
                     {c.concept?.name ?? "—"}{c.concept_alias ? ` — ${c.concept_alias}` : ""}

@@ -102,7 +102,7 @@ function CoolingDoc({
             .slice()
             .sort((a, b) => (a.concept?.display_order ?? 999) - (b.concept?.display_order ?? 999));
           return (
-            <View key={u.id} wrap={false} style={styles.unit}>
+            <View key={u.id} style={styles.unit}>
               <Text style={styles.unitTitle}>{u.unit_label}</Text>
               <View style={styles.pillRow}>
                 <Text style={styles.pill}>{u.cooling_model.replace("_", " ")}</Text>

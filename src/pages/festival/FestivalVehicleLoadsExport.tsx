@@ -4,8 +4,8 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r } from "@/components/pdf/ReportTemplate";
-import { CATEGORY_META, type EquipCategory, groupByCategory, type EquipmentRow } from "@/lib/equipmentStatus";
+import { ReportTemplate, reportStyles as r, Section, Table } from "@/components/pdf/ReportTemplate";
+import { CATEGORY_META, type EquipCategory, type EquipmentRow } from "@/lib/equipmentStatus";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
 const sb = supabase as any;
@@ -92,34 +92,38 @@ export default function FestivalVehicleLoadsExport() {
       summary={<View><Text style={r.small}>{entries.length} vehicle group{entries.length === 1 ? "" : "s"}</Text></View>}
     >
       {entries.length === 0 && <Text style={r.small}>No vehicle assignments yet.</Text>}
-      {entries.map(([key, e]) => {
-        const totalItems = e.concepts.reduce((s, c) => s + c.rows.reduce((x, r0) => x + r0.quantity, 0), 0);
+      {entries.map(([key, e], idx) => {
+        const flat: (EquipmentRow & { concept: string; catLabel: string })[] = [];
+        e.concepts.forEach((cn) => {
+          cn.rows.forEach((row) => {
+            const cat = (row.category ?? "other") as EquipCategory;
+            flat.push({ ...row, concept: cn.name, catLabel: CATEGORY_META[cat]?.label ?? cat });
+          });
+        });
+        flat.sort((a, b) =>
+          a.concept.localeCompare(b.concept) ||
+          a.catLabel.localeCompare(b.catLabel) ||
+          a.equipment_name.localeCompare(b.equipment_name)
+        );
+        const totalItems = flat.reduce((s, x) => s + x.quantity, 0);
         return (
-          <View key={key ?? "none"} style={r.card}>
-            <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>{N(e.name)}{e.plate ? ` - ${N(e.plate)}` : ""}</Text>
-              <Text style={r.small}>{e.concepts.length} concept{e.concepts.length === 1 ? "" : "s"} - {totalItems} items</Text>
-            </View>
-            {e.concepts.map((cn, i) => {
-              const grouped = groupByCategory(cn.rows);
-              return (
-                <View key={i} style={{ marginTop: 8 }}>
-                  <Text style={r.h3}>{N(cn.name)}</Text>
-                  {grouped.map(([cat, items]) => (
-                    <View key={cat} style={{ marginTop: 3 }} wrap={false}>
-                      <Text style={r.small}>{N(CATEGORY_META[cat as EquipCategory]?.label ?? cat)}</Text>
-                      {items.map((it) => (
-                        <Text key={it.id} style={r.bullet}>
-                          - {N(it.equipment_name)} x {it.quantity}
-                          {it.loads_from_soborg ? "  [SØBORG]" : "  [ON-SITE]"}
-                        </Text>
-                      ))}
-                    </View>
-                  ))}
-                </View>
-              );
-            })}
-          </View>
+          <Section
+            key={key ?? "none"}
+            title={`${N(e.name)}${e.plate ? ` — ${N(e.plate)}` : ""}`}
+            meta={`${e.concepts.length} concept${e.concepts.length === 1 ? "" : "s"} · ${totalItems} items`}
+            breakBefore={idx > 0}
+          >
+            <Table
+              columns={[
+                { header: "Concept", flex: 3, cell: (it) => it.concept },
+                { header: "Category", flex: 2, cell: (it) => it.catLabel },
+                { header: "Equipment", flex: 5, cell: (it) => it.equipment_name },
+                { header: "Qty", flex: 1, align: "right", cell: (it) => String(it.quantity) },
+                { header: "Load", flex: 1.4, align: "center", cell: (it) => it.loads_from_soborg ? "Søborg" : "On-site" },
+              ]}
+              rows={flat}
+            />
+          </Section>
         );
       })}
     </ReportTemplate>

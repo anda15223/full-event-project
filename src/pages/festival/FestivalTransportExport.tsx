@@ -233,7 +233,6 @@ function TransportPdf({
                 styles.vehicleBlock,
                 { borderLeftWidth: 4, borderLeftColor: cancelled ? PDF_COLORS.critical : statusColor.fg },
               ]}
-              wrap={false}
             >
               <View style={styles.vehicleHeader}>
                 <View style={{ flex: 1 }}>

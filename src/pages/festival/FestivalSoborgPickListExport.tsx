@@ -4,7 +4,7 @@ import { PDFViewer, Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, Section, Table } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, groupByCategory, type EquipmentRow } from "@/lib/equipmentStatus";
 
 const sb = supabase as any;
@@ -69,21 +69,28 @@ export default function FestivalSoborgPickListExport() {
       summary={<View><Text style={r.small}>{rows.length} line{rows.length === 1 ? "" : "s"} · {totalItems} items total</Text></View>}
     >
       {rows.length === 0 && <Text style={r.small}>Nothing tagged as Søborg for this festival.</Text>}
-      {grouped.map(([cat, items]) => {
+      {grouped.map(([cat, items], idx) => {
         const qty = items.reduce((s, i) => s + i.quantity, 0);
+        const sorted = items.slice().sort((a: any, b: any) =>
+          a.concept_name.localeCompare(b.concept_name) || a.equipment_name.localeCompare(b.equipment_name)
+        );
         return (
-          <View key={cat} style={r.card} wrap={false}>
-            <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>{CATEGORY_META[cat as EquipCategory]?.label ?? cat}</Text>
-              <Text style={r.small}>{items.length} lines · {qty} items</Text>
-            </View>
-            {items.map((it: any) => (
-              <Text key={it.id} style={r.bullet}>
-                • [{it.concept_name}] {it.equipment_name} × {it.quantity}
-                {it.is_powered && it.power_kw ? `  (${it.power_kw} kW)` : ""}
-              </Text>
-            ))}
-          </View>
+          <Section
+            key={cat}
+            title={CATEGORY_META[cat as EquipCategory]?.label ?? cat}
+            meta={`${items.length} lines · ${qty} items`}
+            breakBefore={idx > 0}
+          >
+            <Table
+              columns={[
+                { header: "Concept", flex: 3, cell: (it: any) => it.concept_name },
+                { header: "Equipment", flex: 5, cell: (it: any) => it.equipment_name },
+                { header: "Qty", flex: 1, align: "right", cell: (it: any) => String(it.quantity) },
+                { header: "kW / each", flex: 1.4, align: "right", cell: (it: any) => it.is_powered ? Number(it.power_kw ?? 0).toFixed(2) : "—" },
+              ]}
+              rows={sorted}
+            />
+          </Section>
         );
       })}
     </ReportTemplate>

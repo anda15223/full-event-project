@@ -96,7 +96,7 @@ export default function FestivalContactsExport() {
             const items = sorted.filter(c => c.contact_type === type);
             if (items.length === 0) return null;
             return (
-              <View key={type} style={styles.section} wrap={false}>
+              <View key={type} style={styles.section}>
                 <Text style={styles.sectionTitle}>{TYPE_LABEL[type]} ({items.length})</Text>
                 <View style={styles.grid}>
                   {items.map(c => (
