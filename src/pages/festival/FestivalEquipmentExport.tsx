@@ -23,10 +23,15 @@ export default function FestivalEquipmentExport() {
       if (!f) return setData({ festival: null });
 
       const { data: contracts } = await supabase.from("festival_contracts")
-        .select("id, concept_id").eq("festival_id", f.id).eq("is_active", true);
-      const contractIds = (contracts ?? []).map((k: any) => k.id);
-      const conceptIds = (contracts ?? []).map((k: any) => k.concept_id);
+        .select("id, concept_id, instance_label, concept_alias, concepts!concept_id(name, slug, color_hex)")
+        .eq("festival_id", f.id).eq("is_active", true);
+      const cList = (contracts ?? []) as any[];
+      const nameFor = (c: any) => {
+        const alias = (c.concept_alias ?? "").trim();
+        return alias || (c.instance_label ? `${c.concepts?.name} ${c.instance_label}` : (c.concepts?.name ?? "Concept"));
+      };
 
+      const contractIds = cList.map((k) => k.id);
       const { data: power } = contractIds.length
         ? await supabase.from("festival_power").select("id, festival_contract_id").in("festival_contract_id", contractIds)
         : { data: [] as any[] };
@@ -36,39 +41,41 @@ export default function FestivalEquipmentExport() {
         ? await sb.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
 
-      const { data: concepts } = conceptIds.length
-        ? await supabase.from("concepts").select("id, name, slug, color_hex").in("id", conceptIds)
-        : { data: [] as any[] };
-
-      // Group equipment per concept via power.festival_contract_id → contract.concept_id
-      const powerToConcept = new Map<string, string>();
-      (power ?? []).forEach((p: any) => {
-        const k = (contracts ?? []).find((x: any) => x.id === p.festival_contract_id);
-        if (k) powerToConcept.set(p.id, k.concept_id);
-      });
-      const eqByConcept = new Map<string, EquipmentRow[]>();
+      // Group equipment per contract (not concept) so multiple instances stay separate
+      const powerToContract = new Map<string, string>();
+      (power ?? []).forEach((p: any) => powerToContract.set(p.id, p.festival_contract_id));
+      const eqByContract = new Map<string, EquipmentRow[]>();
       (equipment ?? []).forEach((e: any) => {
-        const cid = powerToConcept.get(e.festival_power_id);
+        const cid = powerToContract.get(e.festival_power_id);
         if (!cid) return;
-        const arr = eqByConcept.get(cid) ?? [];
+        const arr = eqByContract.get(cid) ?? [];
         arr.push(e);
-        eqByConcept.set(cid, arr);
+        eqByContract.set(cid, arr);
       });
 
-      setData({ festival: f, concepts: concepts ?? [], eqByConcept });
+      const entries = cList
+        .map((c) => ({
+          id: c.id,
+          name: nameFor(c),
+          slug: c.concepts?.slug ?? "",
+          rows: eqByContract.get(c.id) ?? [],
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setData({ festival: f, entries });
     })();
   }, [slug]);
 
   if (!data) return <div className="p-12 flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Generating PDF…</div>;
   if (!data.festival) return <div className="p-12">Festival not found.</div>;
 
-  const allConcepts = data.concepts as any[];
-  const concepts = conceptFilter
-    ? allConcepts.filter((cn: any) => cn.slug === conceptFilter)
-    : allConcepts;
+  const allEntries = data.entries as { id: string; name: string; slug: string; rows: EquipmentRow[] }[];
+  const entries = conceptFilter
+    ? allEntries.filter((e) => e.slug === conceptFilter)
+    : allEntries;
   let totalItems = 0, totalPowered = 0, totalKw = 0;
-  concepts.forEach((cn: any) => {
-    const sum = summarizeConceptEquipment(data.eqByConcept.get(cn.id) ?? []);
+  entries.forEach((e) => {
+    const sum = summarizeConceptEquipment(e.rows);
     totalItems += sum.items; totalPowered += sum.powered; totalKw += sum.kw;
   });
 
@@ -76,7 +83,7 @@ export default function FestivalEquipmentExport() {
     <View>
       <Text style={[r.body, { fontWeight: 700, marginBottom: 4 }]}>Festival summary</Text>
       <Text style={r.small}>
-        {concepts.length} concepts · {totalItems} items · {totalPowered} powered · {totalKw.toFixed(1)} kW total
+        {entries.length} concepts · {totalItems} items · {totalPowered} powered · {totalKw.toFixed(1)} kW total
       </Text>
     </View>
   );
@@ -90,20 +97,20 @@ export default function FestivalEquipmentExport() {
       accentColor="slate"
       summary={summary}
     >
-      {concepts.length === 0 && <Text style={r.small}>No active concepts.</Text>}
-      {concepts.map((cn: any) => {
-        const rows = data.eqByConcept.get(cn.id) ?? [];
+      {entries.length === 0 && <Text style={r.small}>No active concepts.</Text>}
+      {entries.map((entry) => {
+        const rows = entry.rows;
         const grouped = groupByCategory(rows);
         const sum = summarizeConceptEquipment(rows);
         return (
-          <View key={cn.id} style={r.card} wrap={false}>
+          <View key={entry.id} style={r.card}>
             <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>{cn.name}</Text>
+              <Text style={r.cardTitle}>{entry.name}</Text>
               <Text style={r.small}>{sum.items} items · {sum.powered} powered · {sum.kw.toFixed(1)} kW</Text>
             </View>
             {rows.length === 0 && <Text style={r.small}>No equipment recorded.</Text>}
             {grouped.map(([cat, items]) => (
-              <View key={cat} style={{ marginTop: 6 }}>
+              <View key={cat} style={{ marginTop: 6 }} wrap={false}>
                 <Text style={r.h3}>{CATEGORY_META[cat as EquipCategory]?.label ?? cat}</Text>
                 {items.map((e) => (
                   <Text key={e.id} style={r.bullet}>

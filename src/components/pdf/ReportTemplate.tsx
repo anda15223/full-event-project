@@ -28,7 +28,7 @@ const s = StyleSheet.create({
   headerRow: { flexDirection: "row", alignItems: "center", marginTop: 28, marginBottom: 6 },
   accentDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
   reportTitle: { fontSize: 28, fontWeight: 700 },
-  subtitle: { fontSize: 11, color: GRAY, marginBottom: 14 },
+  subtitle: { fontSize: 11, color: GRAY, marginTop: 4, marginBottom: 14 },
   divider: { borderBottom: `0.5pt solid ${LIGHT}`, marginBottom: 18 },
   summaryBox: { borderWidth: 0.5, borderColor: LIGHT, borderRadius: 6, padding: 12, marginBottom: 18 },
   footer: {
