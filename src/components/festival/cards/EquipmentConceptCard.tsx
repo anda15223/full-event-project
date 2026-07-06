@@ -18,6 +18,7 @@ import { CONCEPT_EMOJI, type ConceptSlug } from "@/components/concept/types";
 import { useFestivalVehicles } from "@/hooks/useFestivalVehicles";
 import { TentMergedBanner, MergeIntoControl, type SiblingConcept } from "@/components/festival/TentMergeControls";
 import { ConceptTrolleysSection } from "@/components/festival/ConceptTrolleysSection";
+import { ImportPowerEquipmentControl } from "@/components/festival/cards/ImportPowerEquipmentControl";
 
 type Vehicle = { id: string; vehicle_type: string };
 
@@ -192,6 +193,13 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             </div>
           </div>
         )}
+
+        <ImportPowerEquipmentControl
+          currentFestivalId={festivalId}
+          conceptSlug={conceptSlug}
+          targetPowerId={powerId}
+          onImported={invalidate}
+        />
       </CardHeader>
 
       <CardContent className="p-0 divide-y">
