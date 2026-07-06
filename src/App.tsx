@@ -63,6 +63,7 @@ import FestivalStaffExport from "./pages/festival/FestivalStaffExport";
 import FestivalScheduling from "./pages/festival/FestivalScheduling";
 
 import FestivalEquipmentExport from "./pages/festival/FestivalEquipmentExport";
+import FestivalEquipmentByCategoryExport from "./pages/festival/FestivalEquipmentByCategoryExport";
 import FestivalTrolleyLoadsExport from "./pages/festival/FestivalTrolleyLoadsExport";
 import FestivalVehicleLoadsExport from "./pages/festival/FestivalVehicleLoadsExport";
 import FestivalSoborgPickListExport from "./pages/festival/FestivalSoborgPickListExport";
@@ -147,6 +148,7 @@ const App = () => (
             <Route path="/festivals/:slug/soborg-loading/export" element={<Protected><FestivalSoborgLoadingExport /></Protected>} />
             <Route path="/festivals/:slug/equipment" element={<Protected><FestivalEquipment /></Protected>} />
             <Route path="/festivals/:slug/equipment/export" element={<Protected><FestivalEquipmentExport /></Protected>} />
+            <Route path="/festivals/:slug/equipment/export/by-category" element={<Protected><FestivalEquipmentByCategoryExport /></Protected>} />
             <Route path="/festivals/:slug/equipment/export/trolleys" element={<Protected><FestivalTrolleyLoadsExport /></Protected>} />
             <Route path="/festivals/:slug/equipment/export/vehicles" element={<Protected><FestivalVehicleLoadsExport /></Protected>} />
             <Route path="/festivals/:slug/equipment/export/soborg" element={<Protected><FestivalSoborgPickListExport /></Protected>} />
