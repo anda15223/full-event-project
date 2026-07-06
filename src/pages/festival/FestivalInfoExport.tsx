@@ -406,6 +406,51 @@ export default function FestivalInfoExport() {
       }));
       setDocs(withUrls);
       setSummary(((si as any)?.summary ?? null) as Summary | null);
+
+      // Concept lineup: contracts + per-contract manager assignment
+      const { data: contracts } = await supabase
+        .from("festival_contracts")
+        .select("id, concept_alias, concept:concepts!concept_id(slug, name)")
+        .eq("festival_id", fid)
+        .eq("is_active", true);
+      const contractIds = (contracts ?? []).map((r: any) => r.id);
+      let assignmentsByContract = new Map<string, { role: string | null; manager_staff_id: string | null }>();
+      let staffNameById = new Map<string, string>();
+      if (contractIds.length > 0) {
+        const { data: assigns } = await supabase
+          .from("festival_concept_assignments")
+          .select("festival_contract_id, role, manager_staff_id")
+          .in("festival_contract_id", contractIds);
+        for (const a of (assigns ?? []) as any[]) {
+          if (a.festival_contract_id) {
+            assignmentsByContract.set(a.festival_contract_id, { role: a.role, manager_staff_id: a.manager_staff_id });
+          }
+        }
+        const staffIds = Array.from(new Set(Array.from(assignmentsByContract.values()).map(a => a.manager_staff_id).filter(Boolean) as string[]));
+        if (staffIds.length > 0) {
+          const { data: staff } = await supabase
+            .from("festival_staff")
+            .select("id, full_name")
+            .in("id", staffIds);
+          for (const s of (staff ?? []) as any[]) staffNameById.set(s.id, s.full_name);
+        }
+      }
+      const CONCEPT_LABELS: Record<string, string> = {
+        "fish-chips": "Fish & Chips", "gyros": "Gyropolis Gyros", "creperie": "La Creperie", "chicks": "Chicks 'n' Buns",
+      };
+      const rows: LineupRow[] = (contracts ?? []).map((c: any) => {
+        const base = CONCEPT_LABELS[c.concept?.slug] ?? c.concept?.name ?? "Concept";
+        const title = c.concept_alias?.trim() ? c.concept_alias : base;
+        const a = assignmentsByContract.get(c.id);
+        return {
+          id: c.id,
+          title,
+          role: a?.role ?? null,
+          manager_name: a?.manager_staff_id ? (staffNameById.get(a.manager_staff_id) ?? null) : null,
+        };
+      }).sort((a, b) => a.title.localeCompare(b.title));
+      setLineup(rows);
+
       setLoading(false);
     })();
   }, [slug]);
@@ -415,7 +460,7 @@ export default function FestivalInfoExport() {
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
-  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} />;
+  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} lineup={lineup} />;
 
   return (
     <div className="h-screen flex flex-col">
