@@ -121,6 +121,144 @@ export const reportStyles = StyleSheet.create({
   tr: { flexDirection: "row", borderBottom: `0.25pt solid ${LIGHT}`, paddingVertical: 3, fontSize: 10 },
 });
 
+/* ============================================================================
+   Shared table + section primitives
+   Use these across every export to get consistent grid layout and safe
+   pagination. `Section` puts its title on a fresh page after the first one.
+   `Table` renders a header + row grid using flex weights per column.
+   ============================================================================ */
+
+export type TableColumn<T> = {
+  header: string;
+  /** Flex weight for the column (relative). Defaults to 1. */
+  flex?: number;
+  /** Cell renderer. Return a string or a react-pdf primitive (Text/View). */
+  cell: (row: T, index: number) => import("react").ReactNode;
+  /** Optional alignment. */
+  align?: "left" | "right" | "center";
+};
+
+const tableStyles = StyleSheet.create({
+  wrap: { marginBottom: 6 },
+  th: {
+    flexDirection: "row",
+    borderBottom: `0.75pt solid ${DARK}`,
+    paddingVertical: 4,
+    fontSize: 8.5,
+    fontWeight: 700,
+    color: DARK,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  tr: {
+    flexDirection: "row",
+    borderBottom: `0.25pt solid ${LIGHT}`,
+    paddingVertical: 4,
+    fontSize: 10,
+    color: DARK,
+  },
+  cellText: { fontSize: 10, color: DARK },
+});
+
+export function Table<T>({
+  columns,
+  rows,
+  emptyLabel = "No data",
+}: {
+  columns: TableColumn<T>[];
+  rows: T[];
+  emptyLabel?: string;
+}) {
+  if (rows.length === 0) {
+    return <Text style={{ fontSize: 10, color: GRAY }}>{emptyLabel}</Text>;
+  }
+  return (
+    <View style={tableStyles.wrap}>
+      <View style={tableStyles.th} fixed>
+        {columns.map((col, i) => (
+          <Text
+            key={i}
+            style={{
+              flex: col.flex ?? 1,
+              textAlign: col.align ?? "left",
+              paddingRight: 6,
+            }}
+          >
+            {N(col.header)}
+          </Text>
+        ))}
+      </View>
+      {rows.map((row, ri) => (
+        <View key={ri} style={tableStyles.tr} wrap={false}>
+          {columns.map((col, ci) => {
+            const raw = col.cell(row, ri);
+            const node =
+              typeof raw === "string" || typeof raw === "number" ? (
+                <Text style={tableStyles.cellText}>{N(String(raw))}</Text>
+              ) : (
+                raw
+              );
+            return (
+              <View
+                key={ci}
+                style={{
+                  flex: col.flex ?? 1,
+                  paddingRight: 6,
+                  alignItems:
+                    col.align === "right"
+                      ? "flex-end"
+                      : col.align === "center"
+                        ? "center"
+                        : "flex-start",
+                }}
+              >
+                {node}
+              </View>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const sectionStyles = StyleSheet.create({
+  wrap: { marginBottom: 14 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    borderBottom: `0.5pt solid ${LIGHT}`,
+    paddingBottom: 4,
+    marginBottom: 8,
+  },
+  title: { fontSize: 15, fontWeight: 700, color: DARK },
+  meta: { fontSize: 9.5, color: GRAY },
+});
+
+export function Section({
+  title,
+  meta,
+  breakBefore = false,
+  children,
+}: {
+  title: string;
+  meta?: string;
+  /** Force a page break before this section. Use for entries after the first. */
+  breakBefore?: boolean;
+  children: import("react").ReactNode;
+}) {
+  return (
+    <View style={sectionStyles.wrap} break={breakBefore}>
+      <View style={sectionStyles.header}>
+        <Text style={sectionStyles.title}>{N(title)}</Text>
+        {meta ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
 export const reportColors = {
   ok: "#059669",
   warn: "#e11d48",
