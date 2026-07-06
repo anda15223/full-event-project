@@ -372,6 +372,11 @@ function CategoryBlock({ cat, items, powerId, festivalId, onChange }:
 
 function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; festivalId: string; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(row.equipment_name);
+  const [displayQty, setDisplayQty] = useState(row.quantity);
+  const [displayKw, setDisplayKw] = useState(row.power_kw);
+  const [displayPowered, setDisplayPowered] = useState(row.is_powered);
+  const [displaySoborg, setDisplaySoborg] = useState(row.loads_from_soborg);
   const [name, setName] = useState(row.equipment_name);
   const [qty, setQty] = useState(String(row.quantity));
   const [kw, setKw] = useState(row.power_kw == null ? "" : String(row.power_kw));
@@ -380,17 +385,44 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
   const [ptype, setPtype] = useState<string>(row.power_type ?? "unset");
   const [cat, setCat] = useState<EquipCategory>(row.category);
 
+  useEffect(() => {
+    if (editing) return;
+    setDisplayName(row.equipment_name);
+    setDisplayQty(row.quantity);
+    setDisplayKw(row.power_kw);
+    setDisplayPowered(row.is_powered);
+    setDisplaySoborg(row.loads_from_soborg);
+    setName(row.equipment_name);
+    setQty(String(row.quantity));
+    setKw(row.power_kw == null ? "" : String(row.power_kw));
+    setPowered(row.is_powered);
+    setSoborg(row.loads_from_soborg);
+    setPtype(row.power_type ?? "unset");
+    setCat(row.category);
+  }, [editing, row.equipment_name, row.quantity, row.power_kw, row.is_powered, row.loads_from_soborg, row.power_type, row.category]);
+
   async function save() {
+    const nextName = name.trim() || row.equipment_name;
+    const nextQty = Math.max(1, parseInt(qty) || 1);
+    const nextKw = powered && kw ? Number(kw) : null;
     const { error } = await supabase.from("festival_power_equipment").update({
-      equipment_name: name.trim() || row.equipment_name,
-      quantity: Math.max(1, parseInt(qty) || 1),
-      power_kw: powered && kw ? Number(kw) : null,
+      equipment_name: nextName,
+      quantity: nextQty,
+      power_kw: nextKw,
       is_powered: powered,
       loads_from_soborg: soborg,
       power_type: powered && ptype !== "unset" ? ptype : null,
       category: cat,
     }).eq("id", row.id);
     if (error) return toast.error(error.message);
+    setDisplayName(nextName);
+    setDisplayQty(nextQty);
+    setDisplayKw(nextKw);
+    setDisplayPowered(powered);
+    setDisplaySoborg(soborg);
+    setName(nextName);
+    setQty(String(nextQty));
+    setKw(nextKw == null ? "" : String(nextKw));
     setEditing(false);
     onChange();
   }
@@ -474,12 +506,12 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
       onClick={() => setEditing(true)}
       className="w-full text-left grid grid-cols-12 gap-2 items-center px-2 py-1.5 rounded hover:bg-muted/60 transition-colors text-xs group"
     >
-      <span className="col-span-5 truncate font-medium">{row.equipment_name}</span>
-      <span className="col-span-1 tabular-nums text-muted-foreground">×{row.quantity}</span>
+      <span className="col-span-5 truncate font-medium">{displayName}</span>
+      <span className="col-span-1 tabular-nums text-muted-foreground">×{displayQty}</span>
       <span className="col-span-2 tabular-nums">
-        {row.is_powered ? (
+        {displayPowered ? (
           <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-            <Zap className="h-3 w-3" />{row.power_kw ? `${row.power_kw} kW` : "?"}
+            <Zap className="h-3 w-3" />{displayKw ? `${displayKw} kW` : "?"}
           </span>
         ) : <span className="text-muted-foreground/50">—</span>}
       </span>
@@ -501,11 +533,11 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
       </span>
       <span className="col-span-2 text-right">
         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border ${
-          row.loads_from_soborg
+          displaySoborg
             ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30"
             : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
         }`}>
-          <MapPin className="h-2.5 w-2.5" />{row.loads_from_soborg ? "Søborg" : "On-site"}
+          <MapPin className="h-2.5 w-2.5" />{displaySoborg ? "Søborg" : "On-site"}
         </span>
       </span>
     </button>
