@@ -216,33 +216,28 @@ function InfoDoc({
         )}
       </View>
 
-      {/* Hours */}
-      <Text style={reportStyles.h2}>Hours</Text>
-      {allDays.length === 0 ? (
+      {/* Service hours */}
+      <Text style={reportStyles.h2}>Service hours</Text>
+      {sortedHours.length === 0 ? (
         <Text style={reportStyles.small}>No hours set.</Text>
       ) : (
         <View style={s.hoursTable}>
           <View style={s.th}>
             <Text style={[s.thCell, s.cDate]}>Date</Text>
+            <Text style={[s.thCell, { flex: 1 }]}>Concept</Text>
             <Text style={[s.thCell, s.cTime]}>Open</Text>
             <Text style={[s.thCell, s.cTime]}>Close</Text>
-            <Text style={[s.thCell, s.cTime]}>Prep open</Text>
-            <Text style={[s.thCell, s.cTime]}>Prep close</Text>
             <Text style={[s.thCell, s.cNotes]}>Notes</Text>
           </View>
-          {allDays.map(day => {
-            const h = hoursByDay.get(day);
-            return (
-              <View key={day} style={s.tr}>
-                <Text style={[s.tCell, s.cDate]}>{formatDayLabel(day)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.festival_open ?? null)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.festival_close ?? null)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.prep_open ?? null)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.prep_close ?? null)}</Text>
-                <Text style={[s.tCell, s.cNotes]}>{N(h?.notes ?? "")}</Text>
-              </View>
-            );
-          })}
+          {sortedHours.map(h => (
+            <View key={h.id} style={s.tr}>
+              <Text style={[s.tCell, s.cDate]}>{formatDayLabel(h.day_date)}</Text>
+              <Text style={[s.tCell, { flex: 1 }]}>{N(h.concept_label ?? "All concepts")}</Text>
+              <Text style={[s.tCell, s.cTime]}>{fmtTime(h.festival_open)}</Text>
+              <Text style={[s.tCell, s.cTime]}>{fmtTime(h.festival_close)}</Text>
+              <Text style={[s.tCell, s.cNotes]}>{N(h.notes ?? "")}</Text>
+            </View>
+          ))}
         </View>
       )}
 
