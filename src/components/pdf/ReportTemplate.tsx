@@ -174,8 +174,6 @@ const tableStyles = StyleSheet.create({
   },
   tr: {
     flexDirection: "row",
-    borderBottomWidth: 0.25,
-    borderBottomColor: BORDER,
     paddingVertical: 4,
     paddingHorizontal: 6,
     fontSize: 10,
