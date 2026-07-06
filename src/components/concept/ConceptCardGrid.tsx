@@ -72,6 +72,7 @@ export function ConceptCardGrid({
   layout = "stack",
   hideEmoji = false,
   festivalSlug,
+  minimal = false,
 }: Props) {
   const qc = useQueryClient();
   const { draftMode } = useDraftMode();
