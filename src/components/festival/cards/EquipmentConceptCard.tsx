@@ -129,22 +129,22 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
   }, [festivalId, contractId, rows.length]);
 
   async function duplicateFromSibling(sib: Sibling) {
-    if (sib.rowCount === 0) {
-      toast.info(`${sib.name} has no equipment to copy`);
+    if (rows.length === 0) {
+      toast.info(`${conceptName} has no equipment to copy`);
       return;
     }
-    if (!confirm(`Copy ${sib.rowCount} item${sib.rowCount === 1 ? "" : "s"} from ${sib.name} into ${conceptName}?`)) return;
+    if (!confirm(`Copy ${rows.length} item${rows.length === 1 ? "" : "s"} from ${conceptName} into ${sib.name}?${sib.rowCount > 0 ? `\n\n${sib.name} already has ${sib.rowCount} item${sib.rowCount === 1 ? "" : "s"} — these will be appended.` : ""}`)) return;
     const { data: sourceRows, error: fetchErr } = await (supabase as any)
-      .from("festival_power_equipment").select("*").eq("festival_power_id", sib.powerId);
+      .from("festival_power_equipment").select("*").eq("festival_power_id", powerId);
     if (fetchErr) return toast.error(fetchErr.message);
     const inserts = (sourceRows ?? []).map(({ id, created_at, updated_at, festival_power_id, ...rest }: any) => ({
-      ...rest, festival_power_id: powerId,
+      ...rest, festival_power_id: sib.powerId,
     }));
     if (inserts.length === 0) return toast.info("Nothing to copy");
     const { error: insErr } = await (supabase as any)
       .from("festival_power_equipment").insert(inserts);
     if (insErr) return toast.error(insErr.message);
-    toast.success(`Copied ${inserts.length} item${inserts.length === 1 ? "" : "s"} from ${sib.name}`);
+    toast.success(`Copied ${inserts.length} item${inserts.length === 1 ? "" : "s"} into ${sib.name}`);
     invalidate();
   }
 
@@ -203,14 +203,14 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  title={`Copy equipment into ${conceptName} from another concept at this festival`}
+                  title={`Copy this equipment list into another concept at this festival`}
                   className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
                 >
                   <Copy className="h-3 w-3" /> Duplicate
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel className="text-[11px]">Copy equipment from…</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-[11px]">Copy equipment into…</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {siblings.length === 0 ? (
                   <DropdownMenuItem disabled className="text-xs text-muted-foreground">
