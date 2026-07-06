@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -13,10 +12,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
-import { ArrowLeft, Search, Wand2 } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 const SOURCE_OPTIONS = [
   { value: "soborg", label: "Copenhagen" },
@@ -31,8 +27,6 @@ type StaffRow = {
   festival_id: string;
   name: string | null;
   email: string | null;
-  
-  home_location: string | null;
   staff_source: string | null;
   is_draft: boolean;
 };
@@ -43,9 +37,7 @@ export default function EmployeesAll() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [festivalFilter, setFestivalFilter] = useState<string>("__all__");
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameFrom, setRenameFrom] = useState("");
-  const [renameTo, setRenameTo] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<string>("__all__");
 
   const festivalsQ = useQuery({
     queryKey: ["all-festivals-min"],
@@ -62,7 +54,7 @@ export default function EmployeesAll() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_staff")
-        .select("id,festival_id,name,email,home_location,staff_source,is_draft")
+        .select("id,festival_id,name,email,staff_source,is_draft")
         .eq("is_draft", false)
         .order("name", { ascending: true });
       if (error) throw error;
@@ -79,29 +71,6 @@ export default function EmployeesAll() {
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
-  const bulkRename = useMutation({
-    mutationFn: async ({ from, to }: { from: string; to: string }) => {
-      const rows = (staffQ.data ?? []).filter(
-        (r) => (r.home_location ?? "").trim().toLowerCase() === from.trim().toLowerCase(),
-      );
-      if (rows.length === 0) return 0;
-      const { error } = await supabase
-        .from("festival_staff")
-        .update({ home_location: to.trim() })
-        .in("id", rows.map((r) => r.id));
-      if (error) throw error;
-      return rows.length;
-    },
-    onSuccess: (n) => {
-      qc.invalidateQueries({ queryKey: ["all-employees-across-festivals"] });
-      toast.success(`Renamed ${n} row${n === 1 ? "" : "s"}`);
-      setRenameOpen(false);
-      setRenameFrom("");
-      setRenameTo("");
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Rename failed"),
-  });
-
   const festivalById = useMemo(
     () => Object.fromEntries((festivalsQ.data ?? []).map((f) => [f.id, f])),
     [festivalsQ.data],
@@ -111,31 +80,15 @@ export default function EmployeesAll() {
     const q = search.trim().toLowerCase();
     return (staffQ.data ?? [])
       .filter((r) => festivalFilter === "__all__" || r.festival_id === festivalFilter)
+      .filter((r) => sourceFilter === "__all__" || (r.staff_source ?? "unknown") === sourceFilter)
       .filter((r) => {
         if (!q) return true;
         return (
           (r.name ?? "").toLowerCase().includes(q) ||
-          (r.email ?? "").toLowerCase().includes(q) ||
-          (r.home_location ?? "").toLowerCase().includes(q)
+          (r.email ?? "").toLowerCase().includes(q)
         );
       });
-  }, [staffQ.data, search, festivalFilter]);
-
-  // Location groups (case-insensitive) for typo detection
-  const locationGroups = useMemo(() => {
-    const m = new Map<string, { display: string; count: number }>();
-    (staffQ.data ?? []).forEach((r) => {
-      const raw = (r.home_location ?? "").trim();
-      if (!raw) return;
-      const key = raw.toLowerCase();
-      const cur = m.get(key);
-      if (cur) cur.count += 1;
-      else m.set(key, { display: raw, count: 1 });
-    });
-    return Array.from(m.entries())
-      .map(([k, v]) => ({ key: k, ...v }))
-      .sort((a, b) => a.display.localeCompare(b.display));
-  }, [staffQ.data]);
+  }, [staffQ.data, search, festivalFilter, sourceFilter]);
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-[1400px] mx-auto">
@@ -149,46 +102,25 @@ export default function EmployeesAll() {
         </div>
       </div>
 
-      <div className="rounded-md border p-3 space-y-2 bg-muted/30">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-medium">Home locations ({locationGroups.length})</div>
-          <div className="text-xs text-muted-foreground">
-            Click a chip to bulk-rename all rows using that location.
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {locationGroups.length === 0 && (
-            <span className="text-xs text-muted-foreground">No home locations yet.</span>
-          )}
-          {locationGroups.map((g) => (
-            <button
-              key={g.key}
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border bg-background hover:bg-accent"
-              onClick={() => {
-                setRenameFrom(g.display);
-                setRenameTo(g.display);
-                setRenameOpen(true);
-              }}
-              title="Rename all rows with this location"
-            >
-              <Wand2 className="h-3 w-3 opacity-60" />
-              <span className="font-medium">{g.display}</span>
-              <span className="text-muted-foreground">· {g.count}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search className="h-4 w-4 absolute left-2 top-2.5 text-muted-foreground" />
           <Input
             className="pl-8 h-9 w-[240px]"
-            placeholder="Search name, email, location…"
+            placeholder="Search name, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Select value={sourceFilter} onValueChange={setSourceFilter}>
+          <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">All sources</SelectItem>
+            {SOURCE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select value={festivalFilter} onValueChange={setFestivalFilter}>
           <SelectTrigger className="h-9 w-[220px]"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -209,7 +141,6 @@ export default function EmployeesAll() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Home location</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Festival</TableHead>
             </TableRow>
@@ -225,7 +156,7 @@ export default function EmployeesAll() {
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
                   No employees match.
                 </TableCell>
               </TableRow>
@@ -233,36 +164,6 @@ export default function EmployeesAll() {
           </TableBody>
         </Table>
       </div>
-
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename home location</DialogTitle>
-            <DialogDescription>
-              Updates every row whose location matches "{renameFrom}" (case-insensitive) across all festivals.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">From</Label>
-              <Input value={renameFrom} onChange={(e) => setRenameFrom(e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs">To</Label>
-              <Input value={renameTo} onChange={(e) => setRenameTo(e.target.value)} placeholder="Aarhus" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => bulkRename.mutate({ from: renameFrom, to: renameTo })}
-              disabled={!renameFrom.trim() || !renameTo.trim() || bulkRename.isPending}
-            >
-              {bulkRename.isPending ? "Renaming…" : "Rename all"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -276,7 +177,6 @@ function EditableRow({
 }) {
   const [name, setName] = useState(row.name ?? "");
   const [email, setEmail] = useState(row.email ?? "");
-  const [loc, setLoc] = useState(row.home_location ?? "");
 
   return (
     <TableRow>
@@ -301,23 +201,11 @@ function EditableRow({
         />
       </TableCell>
       <TableCell>
-        <Input
-          value={loc}
-          onChange={(e) => setLoc(e.target.value)}
-          onBlur={() => {
-            const v = loc.trim();
-            if (v !== (row.home_location ?? "")) onSave({ home_location: v || null });
-          }}
-          className="h-8 w-[140px]"
-          placeholder="e.g. Aarhus"
-        />
-      </TableCell>
-      <TableCell>
         <Select
           value={row.staff_source ?? "unknown"}
           onValueChange={(v) => onSave({ staff_source: v })}
         >
-          <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             {SOURCE_OPTIONS.map((o) => (
               <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
