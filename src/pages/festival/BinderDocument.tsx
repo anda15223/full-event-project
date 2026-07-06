@@ -949,30 +949,36 @@ function EquipmentPage({ data }: { data: BinderData }) {
           byCat.set(r.category ?? "other", arr);
         });
         const cats = Array.from(byCat.keys()).sort((a, b) => CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b));
+        // Build table rows: one group row per category, then data rows
+        const tableRows: TableRow<any>[] = [];
+        cats.forEach((cat) => {
+          const list = (byCat.get(cat) ?? []).slice().sort((a: any, b: any) =>
+            String(a.equipment_name).localeCompare(String(b.equipment_name))
+          );
+          tableRows.push({ __group: true, label: catLabel[cat] ?? cat, meta: `${list.length} type${list.length === 1 ? "" : "s"}` });
+          list.forEach((e: any) => tableRows.push(e));
+        });
         return (
-          <View key={c.id} style={{ marginBottom: 16 }} wrap={false}>
-            <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
-            <Text style={[s.small, { color: status.color, fontWeight: 700 }]}>{status.label}</Text>
-            <Text style={[s.small, { color: GRAY, marginBottom: 4 }]}>
-              {items} items · {powered} powered · {kw.toFixed(1)} kW · Travels with: {vehLabel(k?.assigned_vehicle_id)}
-            </Text>
-            {cats.map((cat) => {
-              const list = byCat.get(cat) ?? [];
-              return (
-                <View key={cat} style={{ marginTop: 3 }}>
-                  <Text style={[s.small, s.bold, { textTransform: "uppercase", color: GRAY, letterSpacing: 0.5 }]}>
-                    {catLabel[cat] ?? cat}  ({list.length})
-                  </Text>
-                  {list.map((e: any) => (
-                    <Text key={e.id} style={[s.small, { marginLeft: 8 }]}>
-                      • {e.quantity ?? 1}× {N(e.equipment_name)}
-                      {e.is_powered && e.power_kw ? ` — ${Number(e.power_kw).toFixed(2)} kW` : ""}
-                      {"  "}<Text style={{ color: GRAY, textTransform: "uppercase", fontSize: 7.5 }}>{e.loads_from_soborg ? "[SØBORG]" : "[ON-SITE]"}</Text>
-                    </Text>
-                  ))}
-                </View>
-              );
-            })}
+          <View key={c.id} style={{ marginBottom: 14 }}>
+            <View wrap={false}>
+              <Text style={[s.bold, { fontSize: 14 }]}>{N(c.name)}</Text>
+              <Text style={[s.small, { color: status.color, fontWeight: 700 }]}>{status.label}</Text>
+              <Text style={[s.small, { color: GRAY, marginBottom: 4 }]}>
+                {items} items · {powered} powered · {kw.toFixed(1)} kW · Travels with: {vehLabel(k?.assigned_vehicle_id)}
+              </Text>
+            </View>
+            {rows.length > 0 && (
+              <Table
+                columns={[
+                  { header: "Item name", flex: 4, cell: (e: any) => N(e.equipment_name) },
+                  { header: "Qty", flex: 0.8, align: "right", mono: true, cell: (e: any) => String(e.quantity ?? 1) },
+                  { header: "Power (kW)", flex: 1.4, align: "right", mono: true, cell: (e: any) => e.is_powered && e.power_kw ? Number(e.power_kw).toFixed(2) : "—" },
+                  { header: "Trolley", flex: 1.3, align: "center", cell: (e: any) => e.trolley_label ? N(String(e.trolley_label)) : "—" },
+                  { header: "Source", flex: 1.4, align: "center", cell: (e: any) => <LoadBadge soborg={!!e.loads_from_soborg} /> },
+                ]}
+                rows={tableRows}
+              />
+            )}
           </View>
         );
       })}
