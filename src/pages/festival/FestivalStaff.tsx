@@ -585,6 +585,11 @@ export default function FestivalStaff() {
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" asChild>
+            <Link to="/employees">
+              <Users className="h-4 w-4 mr-1" /> All employees
+            </Link>
+          </Button>
+          <Button size="sm" variant="outline" asChild>
             <Link to={`/festivals/${slug}/staff/export`}>
               <FileDown className="h-4 w-4 mr-1" /> Export
             </Link>
@@ -596,6 +601,7 @@ export default function FestivalStaff() {
           />
 
         </div>
+
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
