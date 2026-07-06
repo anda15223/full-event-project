@@ -22,7 +22,7 @@ const ACCENT = {
 export type AccentKey = keyof typeof ACCENT;
 
 const s = StyleSheet.create({
-  page: { paddingTop: 50, paddingBottom: 56, paddingHorizontal: 36, fontFamily: "Inter", fontSize: 11, lineHeight: 1.5, color: DARK },
+  page: { paddingTop: 50, paddingBottom: 56, paddingHorizontal: 36, fontFamily: "Helvetica", fontSize: 11, lineHeight: 1.5, color: DARK },
   festivalName: { fontSize: 22, fontWeight: 700, letterSpacing: -0.3 },
   festivalDates: { fontSize: 13, color: GRAY, marginTop: 4 },
   headerRow: { flexDirection: "row", alignItems: "center", marginTop: 28, marginBottom: 6 },
