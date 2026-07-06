@@ -74,7 +74,7 @@ export default function FestivalSoborgPickListExport() {
         return (
           <View key={cat} style={r.card} wrap={false}>
             <View style={r.cardHeader}>
-              <Text style={r.cardTitle}>{CATEGORY_META[cat as EquipCategory]?.emoji} {CATEGORY_META[cat as EquipCategory]?.label ?? cat}</Text>
+              <Text style={r.cardTitle}>{CATEGORY_META[cat as EquipCategory]?.label ?? cat}</Text>
               <Text style={r.small}>{items.length} lines · {qty} items</Text>
             </View>
             {items.map((it: any) => (
