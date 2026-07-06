@@ -135,8 +135,24 @@ function mapImageUrl(lat: number, lng: number): string {
   return `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=14&size=520x320&maptype=mapnik&markers=${lat},${lng},red-pushpin`;
 }
 
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const r = new FileReader();
+      r.onloadend = () => resolve(typeof r.result === "string" ? r.result : null);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 function InfoDoc({
-  festival, contacts, hours, docs, summary, lineup,
+  festival, contacts, hours, docs, summary, lineup, mapDataUrl,
 }: {
   festival: Festival;
   contacts: Contact[];
@@ -144,6 +160,7 @@ function InfoDoc({
   docs: LocationDoc[];
   summary: Summary | null;
   lineup: LineupRow[];
+  mapDataUrl: string | null;
 }) {
   const dates = formatDateRange(festival.start_date, festival.end_date);
   const hasCoords = festival.lat != null && festival.lng != null;
@@ -205,13 +222,13 @@ function InfoDoc({
             <Text style={[reportStyles.small, { marginTop: 4 }]}>Coordinates not set.</Text>
           )}
         </View>
-        {hasCoords ? (
+        {hasCoords && mapDataUrl ? (
           <View style={s.mapBox}>
-            <Image src={mapImageUrl(festival.lat!, festival.lng!)} style={s.mapImg} />
+            <Image src={mapDataUrl} style={s.mapImg} />
           </View>
         ) : (
           <View style={s.mapPlaceholder}>
-            <Text>No map available</Text>
+            <Text>{hasCoords ? "Map unavailable" : "No map available"}</Text>
           </View>
         )}
       </View>
@@ -355,6 +372,7 @@ export default function FestivalInfoExport() {
   const [docs, setDocs] = useState<LocationDoc[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [lineup, setLineup] = useState<LineupRow[]>([]);
+  const [mapDataUrl, setMapDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -408,13 +426,25 @@ export default function FestivalInfoExport() {
           const { data: signed } = await supabase.storage
             .from("festival-location-docs")
             .createSignedUrl(doc.file_path, 60 * 60 * 24 * 7);
-          return { ...doc, signed_url: signed?.signedUrl ?? null };
+          let signedUrl = signed?.signedUrl ?? null;
+          // For images, convert to data URL so react-pdf embed can't fail on CORS
+          if (signedUrl && (doc.mime_type ?? "").startsWith("image/")) {
+            const dataUrl = await fetchAsDataUrl(signedUrl);
+            if (!dataUrl) signedUrl = null; else signedUrl = dataUrl;
+          }
+          return { ...doc, signed_url: signedUrl };
         } catch {
           return { ...doc, signed_url: null };
         }
       }));
       setDocs(withUrls);
       setSummary(((si as any)?.summary ?? null) as Summary | null);
+
+      // Pre-fetch static map as data URL (any failure -> no map, doesn't break render)
+      if ((f as any).lat != null && (f as any).lng != null) {
+        const mUrl = mapImageUrl((f as any).lat, (f as any).lng);
+        setMapDataUrl(await fetchAsDataUrl(mUrl));
+      }
 
       // Concept lineup: contracts + per-contract manager assignment
       const { data: contracts } = await supabase
@@ -469,7 +499,7 @@ export default function FestivalInfoExport() {
   }
   if (!festival) return <div className="p-6">Festival not found.</div>;
 
-  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} lineup={lineup} />;
+  const doc = <InfoDoc festival={festival} contacts={contacts} hours={hours} docs={docs} summary={summary} lineup={lineup} mapDataUrl={mapDataUrl} />;
 
   return (
     <div className="h-screen flex flex-col">
