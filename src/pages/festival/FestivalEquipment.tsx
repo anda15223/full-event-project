@@ -88,11 +88,17 @@ export default function FestivalEquipment() {
       const items = list
         .filter((c) => c.concepts && powerByContract.has(c.id))
         .map((c) => {
+          const alias = (c.concept_alias ?? "").trim();
+          const displayName = alias
+            ? alias
+            : c.instance_label
+              ? `${c.concepts.name} ${c.instance_label}`
+              : c.concepts.name;
           return {
             contractId: c.id as string,
             assignedVehicleId: (c.assigned_vehicle_id ?? null) as string | null,
             concept: c.concepts,
-            instanceLabel: ((c.concept_alias?.trim() || c.instance_label) ?? null) as string | null,
+            displayName,
             powerId: powerByContract.get(c.id)!,
             mergedChildren: [] as any[],
             mergeTargets: [] as any[],
