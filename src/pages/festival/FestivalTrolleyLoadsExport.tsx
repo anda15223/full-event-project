@@ -105,13 +105,14 @@ export default function FestivalTrolleyLoadsExport() {
             meta={`${items.length} lines · ${totalQty} items`}
             breakBefore={idx > 0}
           >
-            <Table
+            <Table<Item>
               columns={[
-                { header: "Concept", flex: 3, cell: (it: Item) => it.concept_name },
-                { header: "Equipment", flex: 5, cell: (it: Item) => it.equipment_name },
-                { header: "Qty", flex: 1, align: "right", cell: (it: Item) => String(it.quantity) },
-                { header: "kW", flex: 1.2, align: "right", cell: (it: Item) => it.is_powered && it.power_kw ? Number(it.power_kw).toFixed(2) : "—" },
-                { header: "Load", flex: 1.4, align: "center", cell: (it: Item) => it.loads_from_soborg ? "Søborg" : "On-site" },
+                { header: "Concept", flex: 2.6, cell: (it) => it.concept_name },
+                { header: "Item name", flex: 4, cell: (it) => it.equipment_name },
+                { header: "Qty", flex: 1, align: "right", mono: true, cell: (it) => String(it.quantity) },
+                { header: "Power (kW)", flex: 1.6, align: "right", mono: true, cell: (it) => it.is_powered && it.power_kw ? Number(it.power_kw).toFixed(2) : "—" },
+                { header: "Trolley", flex: 1.4, align: "center", cell: (it) => `#${it.trolley_number}` },
+                { header: "Source", flex: 1.6, align: "center", cell: (it) => <LoadBadge soborg={it.loads_from_soborg} /> },
               ]}
               rows={sorted}
             />
