@@ -392,7 +392,15 @@ export default function FestivalInfoExport() {
           .maybeSingle(),
       ]);
       setContacts((c ?? []) as Contact[]);
-      setHours((h ?? []) as unknown as HoursRow[]);
+      const hRaw = (h ?? []) as any[];
+      setHours(hRaw.map(row => ({
+        id: row.id,
+        day_date: row.service_date,
+        festival_open: row.open_time,
+        festival_close: row.close_time,
+        concept_label: row.concept?.name ?? null,
+        notes: row.notes ?? null,
+      })));
       const rawDocs = ((d ?? []) as unknown as LocationDoc[]);
       const withUrls = await Promise.all(rawDocs.map(async (doc) => {
         try {
