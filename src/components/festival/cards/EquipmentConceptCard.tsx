@@ -203,14 +203,14 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  title={`Copy equipment into ${conceptName} from another concept at this festival`}
+                  title={`Copy this equipment list into another concept at this festival`}
                   className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
                 >
                   <Copy className="h-3 w-3" /> Duplicate
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel className="text-[11px]">Copy equipment from…</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-[11px]">Copy equipment into…</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {siblings.length === 0 ? (
                   <DropdownMenuItem disabled className="text-xs text-muted-foreground">
