@@ -68,9 +68,27 @@ export default function FestivalEquipment() {
           .in("festival_power_id", powerIds)
           .order("category").order("position");
         if (eErr) throw eErr;
+
+        // Fetch trolley splits for these equipment rows in one shot.
+        const eqIds = (eq ?? []).map((r: any) => r.id);
+        const splitsByEq = new Map<string, any[]>();
+        if (eqIds.length > 0) {
+          const { data: splits } = await (supabase as any)
+            .from("festival_equipment_trolley_split")
+            .select("id, equipment_id, trolley_number, quantity, notes")
+            .in("equipment_id", eqIds)
+            .order("trolley_number");
+          (splits ?? []).forEach((s: any) => {
+            const arr = splitsByEq.get(s.equipment_id) ?? [];
+            arr.push({ id: s.id, trolley_number: s.trolley_number, quantity: s.quantity, notes: s.notes });
+            splitsByEq.set(s.equipment_id, arr);
+          });
+        }
+
         (eq ?? []).forEach((r: any) => {
+          const row: EquipmentRow = { ...r, trolley_splits: splitsByEq.get(r.id) ?? [] };
           const arr = rowsByPower.get(r.festival_power_id) ?? [];
-          arr.push(r as EquipmentRow);
+          arr.push(row);
           rowsByPower.set(r.festival_power_id, arr);
         });
       }
