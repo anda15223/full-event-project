@@ -5,8 +5,10 @@ import { Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r, reportColors as c, fmtFilename, Section, Table } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, reportColors as c, fmtFilename, Section, Table, LoadBadge, type TableRow } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, type EquipmentRow, summarizeConceptEquipment, groupByCategory } from "@/lib/equipmentStatus";
+
+type EqWithTrolleys = EquipmentRow & { trolley_numbers: number[] };
 
 const sb = supabase as any;
 
@@ -40,16 +42,30 @@ export default function FestivalEquipmentExport() {
       const { data: equipment } = powerIds.length
         ? await sb.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
+      const equipmentIds = (equipment ?? []).map((e: any) => e.id);
+
+      // Trolley splits per equipment row
+      const { data: splits } = equipmentIds.length
+        ? await sb.from("festival_equipment_trolley_split")
+            .select("equipment_id, trolley_number")
+            .in("equipment_id", equipmentIds)
+        : { data: [] as any[] };
+      const trolleyByEq = new Map<string, number[]>();
+      (splits ?? []).forEach((s: any) => {
+        const arr = trolleyByEq.get(s.equipment_id) ?? [];
+        arr.push(s.trolley_number);
+        trolleyByEq.set(s.equipment_id, arr);
+      });
 
       // Group equipment per contract (not concept) so multiple instances stay separate
       const powerToContract = new Map<string, string>();
       (power ?? []).forEach((p: any) => powerToContract.set(p.id, p.festival_contract_id));
-      const eqByContract = new Map<string, EquipmentRow[]>();
+      const eqByContract = new Map<string, EqWithTrolleys[]>();
       (equipment ?? []).forEach((e: any) => {
         const cid = powerToContract.get(e.festival_power_id);
         if (!cid) return;
         const arr = eqByContract.get(cid) ?? [];
-        arr.push(e);
+        arr.push({ ...(e as EquipmentRow), trolley_numbers: (trolleyByEq.get(e.id) ?? []).sort((a, b) => a - b) });
         eqByContract.set(cid, arr);
       });
 
