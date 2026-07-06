@@ -1,13 +1,9 @@
 /**
  * Central PDF font registration for @react-pdf/renderer.
  *
- * Inter is the primary font — Open Sans v17 silently drops fi/fl
- * ligatures (e.g. "Confirm" → "Confrm"). Inter renders ligatures
- * cleanly and covers Danish chars (æ Æ ø Ø å Å).
- *
- * Open Sans remains registered as a fallback for any legacy refs.
- *
- * CDN: jsdelivr (chosen in Sprint 5 for reliable WOFF URLs).
+ * OpenSans TTF is the stable PDF font. Avoid WOFF here: react-pdf can
+ * render missing letters/ligatures in generated reports with some WOFFs.
+ * These gstatic TTF URLs are already used by legacy festival exports.
  */
 import { Font } from "@react-pdf/renderer";
 
@@ -21,19 +17,18 @@ export function registerPdfFonts() {
     Font.register({
       family: "Inter",
       fonts: [
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-400-normal.woff", fontWeight: 400 },
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-ext-400-italic.woff", fontWeight: 400, fontStyle: "italic" },
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-500-normal.woff", fontWeight: 500 },
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-600-normal.woff", fontWeight: 600 },
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.18/files/inter-latin-ext-700-normal.woff", fontWeight: 700 },
+        { src: "https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf", fontWeight: 400 },
+        { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 500 },
+        { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 600 },
+        { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 700 },
       ],
     });
 
     Font.register({
       family: "OpenSans",
       fonts: [
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-ext-400-normal.woff", fontWeight: 400 },
-        { src: "https://cdn.jsdelivr.net/npm/@fontsource/open-sans@5.0.28/files/open-sans-latin-ext-700-normal.woff", fontWeight: 700 },
+        { src: "https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf", fontWeight: 400 },
+        { src: "https://fonts.gstatic.com/s/opensans/v17/mem5YaGs126MiZpBA-UN7rgOUuhsKKSTjw.ttf", fontWeight: 700 },
       ],
     });
 
