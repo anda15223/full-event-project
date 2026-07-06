@@ -12,7 +12,11 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search, Plus, Trash2 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Search, Plus, Trash2, Loader2 } from "lucide-react";
+
 
 const LOCATION_OPTIONS = [
   { value: "soborg", label: "Copenhagen" },
