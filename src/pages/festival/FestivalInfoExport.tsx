@@ -267,13 +267,31 @@ function InfoDoc({
           </View>
           {docs.map(d => (
             <View key={d.id} style={s.docRow}>
-              <Text style={s.docName}>{N(d.file_name)}</Text>
+              <Text style={s.docName}>
+                {d.signed_url ? (
+                  <PdfLink src={d.signed_url} style={{ color: "#2563eb", textDecoration: "underline" }}>
+                    {N(d.file_name)}
+                  </PdfLink>
+                ) : N(d.file_name)}
+              </Text>
               <Text style={s.docDesc}>{N(d.description ?? "—")}</Text>
               <Text style={[s.tCell, { width: 60, textAlign: "right" }]}>{fmtBytes(d.file_size_bytes)}</Text>
             </View>
           ))}
+          <Text style={[reportStyles.small, { marginTop: 4, color: "#6b7280" }]}>
+            Tip: click a file name above to open the original document. Image documents are also embedded on the following pages.
+          </Text>
         </>
       )}
+
+      {/* Embedded image documents */}
+      {docs.filter(d => (d.mime_type ?? "").startsWith("image/") && d.signed_url).map(d => (
+        <View key={`img-${d.id}`} break style={{ marginTop: 8 }}>
+          <Text style={reportStyles.h2}>{N(d.file_name)}</Text>
+          {d.description ? <Text style={[reportStyles.small, { marginBottom: 6 }]}>{N(d.description)}</Text> : null}
+          <Image src={d.signed_url!} style={{ width: "100%", maxHeight: 640, objectFit: "contain" }} />
+        </View>
+      ))}
 
       {/* AI festival info summary */}
       {summary && SUMMARY_CATEGORIES.some(c => (summary[c.key] ?? []).length > 0) && (
