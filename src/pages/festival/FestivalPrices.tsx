@@ -125,58 +125,95 @@ export default function FestivalPrices() {
         currentFestivalId={festivalId ?? ""}
         onCommitted={() => window.location.reload()}
         extraImport={async (sourceFestivalId, targetFestivalId) => {
-          // The generic cloner copies festival_concept_prices (parent) but not
-          // festival_concept_price_item (children, keyed by concept_prices_id).
-          // Re-map source parent ids → new draft parent ids via concept_id,
-          // then bulk-insert copies of the items.
+          // Prices have a UNIQUE(festival_id, concept_id), so the generic
+          // cloner can't stage drafts when the target already has live rows.
+          // We handle prices ourselves: copy the parent price row's fields
+          // (currency, notes, etc.) onto the existing target live rows, and
+          // replace their child items with copies from the source.
           const { data: srcParents, error: srcErr } = await sb
             .from("festival_concept_prices")
-            .select("id, concept_id")
+            .select("*")
             .eq("festival_id", sourceFestivalId)
             .eq("is_draft", false);
           if (srcErr) throw srcErr;
-          const srcRows = (srcParents ?? []) as { id: string; concept_id: string }[];
-          if (srcRows.length === 0) return;
+          const srcRows = (srcParents ?? []) as any[];
+          if (srcRows.length === 0) return "no source prices found";
 
+          // Fetch target rows (both live + any drafts) by concept_id.
           const { data: tgtParents, error: tgtErr } = await sb
             .from("festival_concept_prices")
-            .select("id, concept_id")
-            .eq("festival_id", targetFestivalId)
-            .eq("is_draft", true);
+            .select("id, concept_id, is_draft")
+            .eq("festival_id", targetFestivalId);
           if (tgtErr) throw tgtErr;
-          const tgtByConcept = new Map<string, string>();
-          ((tgtParents ?? []) as { id: string; concept_id: string }[])
-            .forEach((r) => tgtByConcept.set(r.concept_id, r.id));
+          const tgtByConcept = new Map<string, { id: string; is_draft: boolean }>();
+          ((tgtParents ?? []) as any[]).forEach((r) => {
+            const existing = tgtByConcept.get(r.concept_id);
+            // Prefer live target over draft
+            if (!existing || (existing.is_draft && !r.is_draft)) {
+              tgtByConcept.set(r.concept_id, { id: r.id, is_draft: r.is_draft });
+            }
+          });
 
           const idMap = new Map<string, string>();
-          srcRows.forEach((r) => {
-            const newId = tgtByConcept.get(r.concept_id);
-            if (newId) idMap.set(r.id, newId);
-          });
-          if (idMap.size === 0) return;
+          const parentUpdates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+          const parentInserts: any[] = [];
 
+          for (const s of srcRows) {
+            const { id: srcId, festival_id: _f, created_at: _c, updated_at: _u, is_draft: _d, draft_source_festival_id: _ds, ...fields } = s;
+            const tgt = tgtByConcept.get(s.concept_id);
+            if (tgt) {
+              idMap.set(srcId, tgt.id);
+              parentUpdates.push({ id: tgt.id, patch: fields });
+            } else {
+              parentInserts.push({ ...fields, festival_id: targetFestivalId, is_draft: false });
+            }
+          }
+
+          // Update existing target parents with source fields.
+          for (const u of parentUpdates) {
+            const { error } = await sb.from("festival_concept_prices").update(u.patch).eq("id", u.id);
+            if (error) throw error;
+          }
+          // Insert any missing parents (concepts that don't yet have a row at target).
+          if (parentInserts.length > 0) {
+            const { data: inserted, error } = await sb
+              .from("festival_concept_prices")
+              .insert(parentInserts)
+              .select("id, concept_id");
+            if (error) throw error;
+            const byConcept = new Map<string, string>();
+            ((inserted ?? []) as any[]).forEach((r) => byConcept.set(r.concept_id, r.id));
+            srcRows.forEach((s) => {
+              if (!idMap.has(s.id)) {
+                const newId = byConcept.get(s.concept_id);
+                if (newId) idMap.set(s.id, newId);
+              }
+            });
+          }
+
+          if (idMap.size === 0) return "no matching concepts";
+
+          // Replace items on those target parents.
           const srcIds = [...idMap.keys()];
+          const tgtIds = [...idMap.values()];
           const { data: srcItems, error: itemsErr } = await sb
             .from("festival_concept_price_item")
             .select("*")
             .in("concept_prices_id", srcIds);
           if (itemsErr) throw itemsErr;
-          const items = (srcItems ?? []) as Record<string, unknown>[];
-          if (items.length === 0) return;
+          const rawItems = (srcItems ?? []) as Record<string, unknown>[];
 
-          // Wipe any items already attached to these draft parents (idempotent re-import).
-          await sb
-            .from("festival_concept_price_item")
-            .delete()
-            .in("concept_prices_id", [...idMap.values()]);
+          await sb.from("festival_concept_price_item").delete().in("concept_prices_id", tgtIds);
 
-          const cleaned = items.map((it) => {
-            const { id: _id, created_at: _ca, ...rest } = it as any;
+          if (rawItems.length === 0) return `${parentUpdates.length + parentInserts.length} price rows copied, no items`;
+
+          const cleaned = rawItems.map((it) => {
+            const { id: _id, created_at: _ca, updated_at: _ua, ...rest } = it as any;
             return { ...rest, concept_prices_id: idMap.get(it.concept_prices_id as string) };
           });
           const { error: insErr } = await sb.from("festival_concept_price_item").insert(cleaned);
           if (insErr) throw insErr;
-          return `+${cleaned.length} price items`;
+          return `${parentUpdates.length + parentInserts.length} prices + ${cleaned.length} items copied`;
         }}
       />
       <div>
