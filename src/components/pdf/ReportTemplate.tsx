@@ -181,12 +181,11 @@ const tableStyles = StyleSheet.create({
     backgroundColor: GROUP_BG,
     borderTop: `0.5pt solid ${BORDER}`,
     borderBottom: `0.5pt solid ${BORDER}`,
-    paddingVertical: 5,
+    paddingVertical: 4,
     paddingHorizontal: 6,
   },
-  groupLabel: { fontSize: 10, fontWeight: 700, color: DARK, textTransform: "uppercase", letterSpacing: 0.6 },
-  groupMeta: { fontSize: 9, color: GRAY, textAlign: "right" },
-
+  groupLabel: { fontSize: 10, fontWeight: 700, color: DARK, textTransform: "uppercase", letterSpacing: 0.5 },
+  groupMeta: { fontSize: 9, color: GRAY },
   cellText: { fontSize: 10, color: DARK },
   cellMono: { fontSize: 10, color: DARK, fontFamily: "OpenSans" },
 });
@@ -229,13 +228,12 @@ export function Table<T>({
       {rows.map((row, ri) => {
         if (isGroup(row)) {
           return (
-            <View key={ri} style={tableStyles.groupRow} wrap={false} minPresenceAhead={36}>
+            <View key={ri} style={tableStyles.groupRow} wrap={false}>
               <Text style={tableStyles.groupLabel}>{N(row.label)}</Text>
               {row.meta ? <Text style={tableStyles.groupMeta}>{N(row.meta)}</Text> : null}
             </View>
           );
         }
-
         dataIdx += 1;
         const striped = zebra && dataIdx % 2 === 1;
         return (
@@ -312,67 +310,39 @@ export function Badge({ text, tone = "neutral" }: { text: string; tone?: "soborg
 const sectionStyles = StyleSheet.create({
   wrap: { marginBottom: 14 },
   header: {
-    borderBottom: `0.5pt solid ${LIGHT}`,
-    paddingBottom: 6,
-    marginBottom: 10,
-  },
-  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
-  title: { fontSize: 18, fontWeight: 700, color: DARK },
-  meta: { fontSize: 9.5, color: GRAY },
-  statsRow: { flexDirection: "row", marginTop: 6, flexWrap: "wrap" },
-  stat: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "baseline",
-    backgroundColor: "#f1f2f4",
-    borderRadius: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 6,
-    marginTop: 2,
+    borderBottom: `0.5pt solid ${LIGHT}`,
+    paddingBottom: 4,
+    marginBottom: 8,
   },
-  statLabel: { fontSize: 8, color: GRAY, textTransform: "uppercase", letterSpacing: 0.4, marginRight: 4 },
-  statValue: { fontSize: 10, fontWeight: 700, color: DARK },
+  title: { fontSize: 15, fontWeight: 700, color: DARK },
+  meta: { fontSize: 9.5, color: GRAY },
 });
-
-export type SectionStat = { label: string; value: string | number };
 
 export function Section({
   title,
   meta,
-  stats,
   breakBefore = false,
   children,
 }: {
   title: string;
   meta?: string;
-  stats?: SectionStat[];
   /** Force a page break before this section. Use for entries after the first. */
   breakBefore?: boolean;
   children: import("react").ReactNode;
 }) {
   return (
     <View style={sectionStyles.wrap} break={breakBefore}>
-      <View style={sectionStyles.header} wrap={false}>
-        <View style={sectionStyles.titleRow}>
-          <Text style={sectionStyles.title}>{N(title)}</Text>
-          {meta && !stats ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
-        </View>
-        {stats && stats.length > 0 ? (
-          <View style={sectionStyles.statsRow}>
-            {stats.map((st, i) => (
-              <View key={i} style={sectionStyles.stat}>
-                <Text style={sectionStyles.statLabel}>{N(st.label)}</Text>
-                <Text style={sectionStyles.statValue}>{N(String(st.value))}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
+      <View style={sectionStyles.header}>
+        <Text style={sectionStyles.title}>{N(title)}</Text>
+        {meta ? <Text style={sectionStyles.meta}>{N(meta)}</Text> : null}
       </View>
       {children}
     </View>
   );
 }
-
 
 export const reportColors = {
   ok: "#059669",

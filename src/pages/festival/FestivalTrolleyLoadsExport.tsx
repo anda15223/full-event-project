@@ -102,7 +102,7 @@ export default function FestivalTrolleyLoadsExport() {
           <Section
             key={num}
             title={`Trolley ${num}`}
-            meta={`${items.length} types · ${totalQty} items`}
+            meta={`${items.length} lines · ${totalQty} items`}
             breakBefore={idx > 0}
           >
             <Table<Item>
