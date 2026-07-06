@@ -71,6 +71,7 @@ import FestivalPricesExport from "./pages/festival/FestivalPricesExport";
 import FestivalSetupExport from "./pages/festival/FestivalSetupExport";
 import FestivalInfoExport from "./pages/festival/FestivalInfoExport";
 import StaffDirectory from "./pages/StaffDirectory";
+import EmployeesAll from "./pages/EmployeesAll";
 import CompanySettings from "./pages/crew/CompanySettings";
 import FestivalCrewHire from "./pages/crew/FestivalCrewHire";
 import OnboardWizard from "./pages/onboard/OnboardWizard";
