@@ -39,13 +39,18 @@ export default function FestivalPower() {
     queryFn: async () => {
       const { data: contracts, error: cErr } = await supabase
         .from("festival_contracts")
-        .select("id, concept_id, tent_primary_contract_id, concepts!concept_id(id, slug, name)")
+        .select("id, concept_id, tent_primary_contract_id, concept_alias, instance_label, concepts!concept_id(id, slug, name)")
         .eq("festival_id", festivalId)
         .eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
+      // Match every other card: prefer the aliased/instance name over the raw concept name
+      const nameFor = (c: any) => {
+        const alias = (c.concept_alias ?? "").trim();
+        return alias || (c.instance_label ? `${c.concepts?.name ?? ""} ${c.instance_label}`.trim() : (c.concepts?.name ?? "Concept"));
+      };
       const contractIds = list.map((c) => c.id);
-      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow; contractId: string; mergedChildren: SiblingConcept[]; mergeTargets: SiblingConcept[] }> };
+      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow; contractId: string; displayName: string; mergedChildren: SiblingConcept[]; mergeTargets: SiblingConcept[] }> };
 
       const { data: powers, error: pErr } = await supabase
         .from("festival_power").select("*").in("festival_contract_id", contractIds);
@@ -59,7 +64,7 @@ export default function FestivalPower() {
         const pid = c.tent_primary_contract_id as string | null;
         if (pid && c.concepts) {
           const arr = childrenByPrimary.get(pid) ?? [];
-          arr.push({ contractId: c.id, conceptName: c.concepts.name, conceptSlug: c.concepts.slug, mergedInto: pid });
+          arr.push({ contractId: c.id, conceptName: nameFor(c), conceptSlug: c.concepts.slug, mergedInto: pid });
           childrenByPrimary.set(pid, arr);
         }
       });
@@ -67,14 +72,13 @@ export default function FestivalPower() {
       const items = list
         .filter((c) => c.concepts && pmap.has(c.id) && !c.tent_primary_contract_id)
         .map((c) => {
-          // Targets: other concepts that are NOT already a primary of something
-          // (allow only flat merging — pick a sibling that is itself standalone & has no children)
           const targets: SiblingConcept[] = list
             .filter((o) => o.id !== c.id && o.concepts && !o.tent_primary_contract_id && !childrenByPrimary.has(o.id))
-            .map((o) => ({ contractId: o.id, conceptName: o.concepts.name, conceptSlug: o.concepts.slug, mergedInto: null }));
+            .map((o) => ({ contractId: o.id, conceptName: nameFor(o), conceptSlug: o.concepts.slug, mergedInto: null }));
           return {
             contractId: c.id as string,
             concept: c.concepts as Concept,
+            displayName: nameFor(c),
             power: pmap.get(c.id)!,
             mergedChildren: childrenByPrimary.get(c.id) ?? [],
             mergeTargets: childrenByPrimary.has(c.id) ? [] : targets,
@@ -211,13 +215,13 @@ export default function FestivalPower() {
         </div>
       ) : (
         <div className="grid gap-6 grid-cols-1 [grid-template-columns:repeat(auto-fit,minmax(520px,1fr))]">
-          {items.map(({ concept, power, contractId, mergedChildren, mergeTargets }) => (
+          {items.map(({ concept, power, contractId, displayName, mergedChildren, mergeTargets }) => (
             <PowerConceptCard
               key={power.id}
               festivalId={festivalId}
               festivalSlug={slug}
               conceptSlug={concept.slug}
-              conceptName={concept.name}
+              conceptName={displayName}
               contractId={contractId}
               power={power}
               equipment={combinedEquipmentFor(power.id, mergedChildren)}
