@@ -301,6 +301,25 @@ function InfoDoc({
         </View>
       ))}
 
+      {/* Concept lineup */}
+      {lineup.length > 0 && (
+        <>
+          <Text style={reportStyles.h2}>Concept lineup</Text>
+          <View style={s.th}>
+            <Text style={[s.thCell, { flex: 2 }]}>Concept</Text>
+            <Text style={[s.thCell, { flex: 2 }]}>Manager</Text>
+            <Text style={[s.thCell, { width: 90 }]}>Role</Text>
+          </View>
+          {lineup.map(row => (
+            <View key={row.id} style={s.tr}>
+              <Text style={[s.tCell, { flex: 2 }]}>{N(row.title)}</Text>
+              <Text style={[s.tCell, { flex: 2 }]}>{N(row.manager_name ?? "—")}</Text>
+              <Text style={[s.tCell, { width: 90 }]}>{N(row.role ?? "—")}</Text>
+            </View>
+          ))}
+        </>
+      )}
+
       {/* AI festival info summary */}
       {summary && SUMMARY_CATEGORIES.some(c => (summary[c.key] ?? []).length > 0) && (
         <>
