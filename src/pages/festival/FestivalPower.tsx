@@ -44,8 +44,13 @@ export default function FestivalPower() {
         .eq("is_active", true);
       if (cErr) throw cErr;
       const list = (contracts ?? []) as any[];
+      // Match every other card: prefer the aliased/instance name over the raw concept name
+      const nameFor = (c: any) => {
+        const alias = (c.concept_alias ?? "").trim();
+        return alias || (c.instance_label ? `${c.concepts?.name ?? ""} ${c.instance_label}`.trim() : (c.concepts?.name ?? "Concept"));
+      };
       const contractIds = list.map((c) => c.id);
-      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow; contractId: string; mergedChildren: SiblingConcept[]; mergeTargets: SiblingConcept[] }> };
+      if (contractIds.length === 0) return { items: [] as Array<{ concept: Concept; power: PowerRow; contractId: string; displayName: string; mergedChildren: SiblingConcept[]; mergeTargets: SiblingConcept[] }> };
 
       const { data: powers, error: pErr } = await supabase
         .from("festival_power").select("*").in("festival_contract_id", contractIds);
