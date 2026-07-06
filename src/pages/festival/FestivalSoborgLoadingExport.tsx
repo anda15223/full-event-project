@@ -30,7 +30,7 @@ const s = StyleSheet.create({
   page: { padding: 32, paddingBottom: 44, fontFamily: "Inter", fontSize: 9.5, color: "#111" },
   h1: { fontSize: 18, fontWeight: 700 },
   meta: { fontSize: 9, color: "#666", marginTop: 2 },
-  vehicleHeader: { marginTop: 4, marginBottom: 8, padding: 6, backgroundColor: "#f1f1f1", borderLeft: "3pt solid #111" },
+  vehicleHeader: { marginTop: 4, marginBottom: 8, padding: 6, backgroundColor: "#f1f1f1", borderLeftWidth: 3, borderLeftColor: "#111" },
   vehicleTitle: { fontSize: 13, fontWeight: 700 },
   conceptHeader: { marginTop: 8, marginBottom: 4, fontSize: 11, fontWeight: 700 },
   catLabel: { marginTop: 4, marginBottom: 2, fontSize: 8.5, fontWeight: 700, color: "#444", textTransform: "uppercase" },
@@ -41,9 +41,9 @@ const s = StyleSheet.create({
   footer: {
     position: "absolute", bottom: 18, left: 32, right: 32,
     flexDirection: "row", justifyContent: "space-between",
-    fontSize: 8, color: "#777", borderTop: "0.5pt solid #ddd", paddingTop: 4,
+    fontSize: 8, color: "#777", borderTopWidth: 0.5, borderTopColor: "#ddd", paddingTop: 4,
   },
-  warnBox: { marginTop: 10, padding: 8, border: "1pt solid #d68910", backgroundColor: "#fff8e1" },
+  warnBox: { marginTop: 10, padding: 8, borderWidth: 1, borderColor: "#d68910", backgroundColor: "#fff8e1" },
   sectionTitle: { fontSize: 13, fontWeight: 700, marginBottom: 4 },
 });
 
