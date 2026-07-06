@@ -149,9 +149,10 @@ export default function EmployeesAll() {
           <h1 className="font-heading text-2xl font-semibold">All employees</h1>
           <Badge variant="secondary">{employeesQ.data?.length ?? 0}</Badge>
         </div>
-        <Button size="sm" onClick={() => createOne.mutate()}>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-1" /> New employee
         </Button>
+
       </div>
 
       <p className="text-xs text-muted-foreground">
