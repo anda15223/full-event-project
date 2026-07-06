@@ -229,12 +229,13 @@ export function Table<T>({
       {rows.map((row, ri) => {
         if (isGroup(row)) {
           return (
-            <View key={ri} style={tableStyles.groupRow} wrap={false}>
+            <View key={ri} style={tableStyles.groupRow} wrap={false} minPresenceAhead={36}>
               <Text style={tableStyles.groupLabel}>{N(row.label)}</Text>
               {row.meta ? <Text style={tableStyles.groupMeta}>{N(row.meta)}</Text> : null}
             </View>
           );
         }
+
         dataIdx += 1;
         const striped = zebra && dataIdx % 2 === 1;
         return (
