@@ -8479,6 +8479,7 @@ export type Database = {
           crew_register_url_2: string | null
           crew_register_username: string | null
           crew_register_username_2: string | null
+          driving_url: string | null
           end_date: string
           festival_duration_days: number | null
           id: string
@@ -8539,6 +8540,7 @@ export type Database = {
           crew_register_url_2?: string | null
           crew_register_username?: string | null
           crew_register_username_2?: string | null
+          driving_url?: string | null
           end_date: string
           festival_duration_days?: number | null
           id?: string
@@ -8599,6 +8601,7 @@ export type Database = {
           crew_register_url_2?: string | null
           crew_register_username?: string | null
           crew_register_username_2?: string | null
+          driving_url?: string | null
           end_date?: string
           festival_duration_days?: number | null
           id?: string
