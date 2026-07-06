@@ -404,28 +404,28 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
   if (editing) {
     return (
       <div className="rounded-md border border-primary/40 bg-primary/5 p-2 space-y-2">
+        <Input
+          className="h-8 w-full text-xs" value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
+          onFocus={(e) => { e.currentTarget.scrollLeft = 0; e.currentTarget.setSelectionRange(0, e.currentTarget.value.length); }}
+          placeholder="Equipment name" autoFocus
+        />
         <div className="grid grid-cols-12 gap-2 items-center text-xs">
           <Input
-            className="h-7 col-span-5 text-xs" value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
-            onFocus={(e) => { e.currentTarget.scrollLeft = 0; e.currentTarget.setSelectionRange(0, 0); }}
-            placeholder="Name" autoFocus
-          />
-          <Input
-            className="h-7 col-span-2 text-xs" value={qty}
+            className="h-7 col-span-4 text-xs" value={qty}
             onChange={(e) => setQty(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
             placeholder="Qty" type="number" min={1}
           />
           <Input
-            className="h-7 col-span-3 text-xs" value={kw}
+            className="h-7 col-span-5 text-xs" value={kw}
             onChange={(e) => setKw(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }}
             placeholder="kW" type="number" step="0.1" disabled={!powered}
           />
-          <div className="col-span-2 flex justify-end gap-1">
-            <Button size="sm" className="h-7 text-xs px-3" onClick={save}>Save</Button>
+          <div className="col-span-3 flex justify-end gap-1">
+            <Button size="sm" className="h-7 text-xs px-3 w-full" onClick={save}>Save</Button>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
