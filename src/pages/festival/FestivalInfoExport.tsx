@@ -18,6 +18,7 @@ type Festival = {
   start_date: string; end_date: string;
   city: string | null; address: string | null;
   lat: number | null; lng: number | null;
+  driving_url: string | null;
 };
 
 type Contact = {
@@ -29,7 +30,7 @@ type Contact = {
 type HoursRow = {
   id: string; day_date: string;
   festival_open: string | null; festival_close: string | null;
-  prep_open: string | null; prep_close: string | null;
+  concept_label: string | null;
   notes: string | null;
 };
 
@@ -153,9 +154,7 @@ function InfoDoc({
     if (grouped[k]) grouped[k].push(c);
   }
 
-  const expectedDays = eachDay(festival.start_date, festival.end_date);
-  const hoursByDay = new Map(hours.map(h => [h.day_date, h]));
-  const allDays = expectedDays.length > 0 ? expectedDays : hours.map(h => h.day_date);
+  const sortedHours = [...hours].sort((a, b) => (a.day_date + (a.concept_label ?? "")).localeCompare(b.day_date + (b.concept_label ?? "")));
 
   return (
     <ReportTemplate
@@ -195,6 +194,12 @@ function InfoDoc({
                 <Text style={s.label}>Map link</Text>
                 <Text style={s.value}>https://maps.google.com/?q={festival.lat},{festival.lng}</Text>
               </View>
+              {festival.driving_url ? (
+                <View style={s.row}>
+                  <Text style={s.label}>Driving</Text>
+                  <Text style={s.value}>{festival.driving_url}</Text>
+                </View>
+              ) : null}
             </>
           ) : (
             <Text style={[reportStyles.small, { marginTop: 4 }]}>Coordinates not set.</Text>
@@ -211,33 +216,28 @@ function InfoDoc({
         )}
       </View>
 
-      {/* Hours */}
-      <Text style={reportStyles.h2}>Hours</Text>
-      {allDays.length === 0 ? (
+      {/* Service hours */}
+      <Text style={reportStyles.h2}>Service hours</Text>
+      {sortedHours.length === 0 ? (
         <Text style={reportStyles.small}>No hours set.</Text>
       ) : (
         <View style={s.hoursTable}>
           <View style={s.th}>
             <Text style={[s.thCell, s.cDate]}>Date</Text>
+            <Text style={[s.thCell, { flex: 1 }]}>Concept</Text>
             <Text style={[s.thCell, s.cTime]}>Open</Text>
             <Text style={[s.thCell, s.cTime]}>Close</Text>
-            <Text style={[s.thCell, s.cTime]}>Prep open</Text>
-            <Text style={[s.thCell, s.cTime]}>Prep close</Text>
             <Text style={[s.thCell, s.cNotes]}>Notes</Text>
           </View>
-          {allDays.map(day => {
-            const h = hoursByDay.get(day);
-            return (
-              <View key={day} style={s.tr}>
-                <Text style={[s.tCell, s.cDate]}>{formatDayLabel(day)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.festival_open ?? null)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.festival_close ?? null)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.prep_open ?? null)}</Text>
-                <Text style={[s.tCell, s.cTime]}>{fmtTime(h?.prep_close ?? null)}</Text>
-                <Text style={[s.tCell, s.cNotes]}>{N(h?.notes ?? "")}</Text>
-              </View>
-            );
-          })}
+          {sortedHours.map(h => (
+            <View key={h.id} style={s.tr}>
+              <Text style={[s.tCell, s.cDate]}>{formatDayLabel(h.day_date)}</Text>
+              <Text style={[s.tCell, { flex: 1 }]}>{N(h.concept_label ?? "All concepts")}</Text>
+              <Text style={[s.tCell, s.cTime]}>{fmtTime(h.festival_open)}</Text>
+              <Text style={[s.tCell, s.cTime]}>{fmtTime(h.festival_close)}</Text>
+              <Text style={[s.tCell, s.cNotes]}>{N(h.notes ?? "")}</Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -362,7 +362,7 @@ export default function FestivalInfoExport() {
       if (!slug) return;
       const { data: f } = await supabase
         .from("festivals")
-        .select("id, name, slug, start_date, end_date, city, address, lat, lng")
+        .select("id, name, slug, start_date, end_date, city, address, lat, lng, driving_url")
         .eq("slug", slug)
         .maybeSingle();
       if (!f) { setLoading(false); return; }
@@ -376,10 +376,10 @@ export default function FestivalInfoExport() {
           .eq("festival_id", fid)
           .order("full_name", { ascending: true }),
         supabase
-          .from("festival_hours" as any)
-          .select("id, day_date, festival_open, festival_close, prep_open, prep_close, notes")
+          .from("festival_service_hours" as any)
+          .select("id, service_date, open_time, close_time, notes, concept:concepts(name, slug)")
           .eq("festival_id", fid)
-          .order("day_date", { ascending: true }),
+          .order("service_date", { ascending: true }),
         supabase
           .from("festival_location_documents" as any)
           .select("id, file_name, description, file_size_bytes, file_path, mime_type")
@@ -392,7 +392,15 @@ export default function FestivalInfoExport() {
           .maybeSingle(),
       ]);
       setContacts((c ?? []) as Contact[]);
-      setHours((h ?? []) as unknown as HoursRow[]);
+      const hRaw = (h ?? []) as any[];
+      setHours(hRaw.map(row => ({
+        id: row.id,
+        day_date: row.service_date,
+        festival_open: row.open_time,
+        festival_close: row.close_time,
+        concept_label: row.concept?.name ?? null,
+        notes: row.notes ?? null,
+      })));
       const rawDocs = ((d ?? []) as unknown as LocationDoc[]);
       const withUrls = await Promise.all(rawDocs.map(async (doc) => {
         try {
@@ -430,9 +438,9 @@ export default function FestivalInfoExport() {
         if (staffIds.length > 0) {
           const { data: staff } = await supabase
             .from("festival_staff")
-            .select("id, full_name")
+            .select("id, name")
             .in("id", staffIds);
-          for (const s of (staff ?? []) as any[]) staffNameById.set(s.id, s.full_name);
+          for (const s of (staff ?? []) as any[]) staffNameById.set(s.id, s.name);
         }
       }
       const CONCEPT_LABELS: Record<string, string> = {
