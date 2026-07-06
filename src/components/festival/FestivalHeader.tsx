@@ -165,8 +165,18 @@ function CoordinatesDialog({
             <div>
               <Label htmlFor="lng">Longitude</Label>
               <Input id="lng" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="9.4239" />
-            </div>
           </div>
+          <div>
+            <Label htmlFor="driving_url">Custom driving link (optional)</Label>
+            <Input
+              id="driving_url"
+              value={drivingUrl}
+              onChange={(e) => setDrivingUrl(e.target.value)}
+              placeholder="https://maps.google.com/... or https://waze.com/..."
+            />
+            <p className="text-xs text-muted-foreground mt-1">If set, the Navigate button will open this link instead of the default map directions. Useful for special festival entrances (e.g. Grøn).</p>
+          </div>
+        </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
