@@ -39,6 +39,9 @@ export function formatDateRange(
   const year = (d: Date) => d.getFullYear();
 
   if (sameMonth && !long) {
+    if (day(s) === day(e)) {
+      return `${day(e)}${NBSP}${month(e)}${NBSP}${year(e)}`;
+    }
     return `${day(s)}${EN_DASH}${day(e)}${NBSP}${month(e)}${NBSP}${year(e)}`;
   }
   if (sameYear) {
