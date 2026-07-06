@@ -128,7 +128,7 @@ export default function FestivalEquipmentByCategoryExport() {
               { label: "items", value: catItems },
               { label: "kW", value: catKw.toFixed(1) },
             ]}
-            breakBefore={false}
+            breakBefore={idx > 0}
           >
 
             <Table<Row>
