@@ -112,7 +112,7 @@ export default function FestivalVehicleLoadsExport() {
             a.concept.localeCompare(b.concept) || a.equipment_name.localeCompare(b.equipment_name)
           );
           const qty = items.reduce((s, x) => s + x.quantity, 0);
-          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} lines · ${qty} items` });
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} types · ${qty} items` });
           items.forEach((it) => tableRows.push(it as any));
         });
         const totalItems = Array.from(byCat.values()).reduce((s, arr) => s + arr.reduce((x, r0) => x + r0.quantity, 0), 0);
@@ -120,9 +120,13 @@ export default function FestivalVehicleLoadsExport() {
           <Section
             key={key ?? "none"}
             title={`${N(e.name)}${e.plate ? ` — ${N(e.plate)}` : ""}`}
-            meta={`${e.concepts.length} concept${e.concepts.length === 1 ? "" : "s"} · ${totalItems} items`}
+            stats={[
+              { label: "concepts", value: e.concepts.length },
+              { label: "items", value: totalItems },
+            ]}
             breakBefore={idx > 0}
           >
+
             <Table<ItRow>
               columns={[
                 { header: "Concept", flex: 2.4, cell: (it) => it.concept },
