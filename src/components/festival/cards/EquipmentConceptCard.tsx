@@ -378,6 +378,7 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
   const [powered, setPowered] = useState(row.is_powered);
   const [soborg, setSoborg] = useState(row.loads_from_soborg);
   const [ptype, setPtype] = useState<string>(row.power_type ?? "unset");
+  const [cat, setCat] = useState<EquipCategory>(row.category);
 
   async function save() {
     const { error } = await supabase.from("festival_power_equipment").update({
@@ -387,6 +388,7 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
       is_powered: powered,
       loads_from_soborg: soborg,
       power_type: powered && ptype !== "unset" ? ptype : null,
+      category: cat,
     }).eq("id", row.id);
     if (error) return toast.error(error.message);
     setEditing(false);
@@ -411,6 +413,14 @@ function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () =
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+          <Select value={cat} onValueChange={(v) => setCat(v as EquipCategory)}>
+            <SelectTrigger className="h-6 text-[11px] w-auto min-w-[130px] px-2"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALL_CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>{CATEGORY_META[c].emoji} {CATEGORY_META[c].label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <label className="inline-flex items-center gap-1.5"><Switch checked={powered} onCheckedChange={setPowered} /> Powered</label>
           <label className="inline-flex items-center gap-1.5"><Switch checked={soborg} onCheckedChange={setSoborg} /> Søborg</label>
           {powered && (
