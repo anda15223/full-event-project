@@ -103,10 +103,10 @@ export default function FestivalVehicleLoadsExport() {
             {e.concepts.map((cn, i) => {
               const grouped = groupByCategory(cn.rows);
               return (
-                <View key={i} style={{ marginTop: 8 }} wrap={false}>
+                <View key={i} style={{ marginTop: 8 }}>
                   <Text style={r.h3}>{N(cn.name)}</Text>
                   {grouped.map(([cat, items]) => (
-                    <View key={cat} style={{ marginTop: 3 }}>
+                    <View key={cat} style={{ marginTop: 3 }} wrap={false}>
                       <Text style={r.small}>{N(CATEGORY_META[cat as EquipCategory]?.label ?? cat)}</Text>
                       {items.map((it) => (
                         <Text key={it.id} style={r.bullet}>
