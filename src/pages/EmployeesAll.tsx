@@ -12,7 +12,11 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search, Plus, Trash2 } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Search, Plus, Trash2, Loader2 } from "lucide-react";
+
 
 const LOCATION_OPTIONS = [
   { value: "soborg", label: "Copenhagen" },
@@ -36,6 +40,9 @@ export default function EmployeesAll() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [locationFilter, setLocationFilter] = useState<string>("__all__");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", date_of_birth: "", email: "", phone: "", home_location: "unknown" });
+
 
   const employeesQ = useQuery({
     queryKey: ["employees-master"],
@@ -76,17 +83,34 @@ export default function EmployeesAll() {
 
   const createOne = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from("employees")
-        .insert({ name: "New employee", home_location: "unknown" });
+      const name = form.name.trim();
+      if (!name) throw new Error("Name is required");
+      if (!form.date_of_birth) throw new Error("Date of birth is required (unique key with name)");
+      const { error } = await supabase.from("employees").insert({
+        name,
+        date_of_birth: form.date_of_birth,
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
+        home_location: form.home_location || "unknown",
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["employees-master"] });
       toast.success("Employee created");
+      setCreateOpen(false);
+      setForm({ name: "", date_of_birth: "", email: "", phone: "", home_location: "unknown" });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Create failed"),
+    onError: (e: any) => {
+      const msg = String(e?.message ?? "Create failed");
+      if (msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("unique")) {
+        toast.error("An employee with this name and date of birth already exists.");
+      } else {
+        toast.error(msg);
+      }
+    },
   });
+
 
   const removeOne = useMutation({
     mutationFn: async (id: string) => {
@@ -125,9 +149,10 @@ export default function EmployeesAll() {
           <h1 className="font-heading text-2xl font-semibold">All employees</h1>
           <Badge variant="secondary">{employeesQ.data?.length ?? 0}</Badge>
         </div>
-        <Button size="sm" onClick={() => createOne.mutate()}>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="h-4 w-4 mr-1" /> New employee
         </Button>
+
       </div>
 
       <p className="text-xs text-muted-foreground">
@@ -197,9 +222,73 @@ export default function EmployeesAll() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={createOpen} onOpenChange={(o) => !createOne.isPending && setCreateOpen(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New employee</DialogTitle>
+            <DialogDescription>
+              Name + date of birth are the unique key — the same person can never be created twice.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Full name *</label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                autoFocus
+                placeholder="e.g. Jane Doe"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Date of birth *</label>
+              <Input
+                type="date"
+                value={form.date_of_birth}
+                onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Phone</label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Email</label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Home location</label>
+              <Select value={form.home_location} onValueChange={(v) => setForm({ ...form, home_location: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {LOCATION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)} disabled={createOne.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createOne.mutate()}
+              disabled={createOne.isPending || !form.name.trim() || !form.date_of_birth}
+            >
+              {createOne.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Create employee
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 
 function EditableRow({
   row, usageCount, onSave, onDelete,
