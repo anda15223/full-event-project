@@ -5,8 +5,10 @@ import { Text, View } from "@react-pdf/renderer";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
-import { ReportTemplate, reportStyles as r, reportColors as c, fmtFilename, Section, Table } from "@/components/pdf/ReportTemplate";
+import { ReportTemplate, reportStyles as r, reportColors as c, fmtFilename, Section, Table, LoadBadge, type TableRow } from "@/components/pdf/ReportTemplate";
 import { CATEGORY_META, type EquipCategory, type EquipmentRow, summarizeConceptEquipment, groupByCategory } from "@/lib/equipmentStatus";
+
+type EqWithTrolleys = EquipmentRow & { trolley_numbers: number[] };
 
 const sb = supabase as any;
 
@@ -40,16 +42,30 @@ export default function FestivalEquipmentExport() {
       const { data: equipment } = powerIds.length
         ? await sb.from("festival_power_equipment").select("*").in("festival_power_id", powerIds)
         : { data: [] as any[] };
+      const equipmentIds = (equipment ?? []).map((e: any) => e.id);
+
+      // Trolley splits per equipment row
+      const { data: splits } = equipmentIds.length
+        ? await sb.from("festival_equipment_trolley_split")
+            .select("equipment_id, trolley_number")
+            .in("equipment_id", equipmentIds)
+        : { data: [] as any[] };
+      const trolleyByEq = new Map<string, number[]>();
+      (splits ?? []).forEach((s: any) => {
+        const arr = trolleyByEq.get(s.equipment_id) ?? [];
+        arr.push(s.trolley_number);
+        trolleyByEq.set(s.equipment_id, arr);
+      });
 
       // Group equipment per contract (not concept) so multiple instances stay separate
       const powerToContract = new Map<string, string>();
       (power ?? []).forEach((p: any) => powerToContract.set(p.id, p.festival_contract_id));
-      const eqByContract = new Map<string, EquipmentRow[]>();
+      const eqByContract = new Map<string, EqWithTrolleys[]>();
       (equipment ?? []).forEach((e: any) => {
         const cid = powerToContract.get(e.festival_power_id);
         if (!cid) return;
         const arr = eqByContract.get(cid) ?? [];
-        arr.push(e);
+        arr.push({ ...(e as EquipmentRow), trolley_numbers: (trolleyByEq.get(e.id) ?? []).sort((a, b) => a - b) });
         eqByContract.set(cid, arr);
       });
 
@@ -100,8 +116,14 @@ export default function FestivalEquipmentExport() {
       {entries.length === 0 && <Text style={r.small}>No active concepts.</Text>}
       {entries.map((entry, idx) => {
         const rows = entry.rows;
-        const grouped = groupByCategory(rows);
+        const grouped = groupByCategory(rows as any) as [EquipCategory, EqWithTrolleys[]][];
         const sum = summarizeConceptEquipment(rows);
+        const tableRows: TableRow<EqWithTrolleys>[] = [];
+        grouped.forEach(([cat, items]) => {
+          const qty = items.reduce((s, e) => s + e.quantity, 0);
+          tableRows.push({ __group: true, label: CATEGORY_META[cat]?.label ?? cat, meta: `${items.length} lines · ${qty} items` });
+          items.forEach((it) => tableRows.push(it as any));
+        });
         return (
           <Section
             key={entry.id}
@@ -109,24 +131,20 @@ export default function FestivalEquipmentExport() {
             meta={`${sum.items} items · ${sum.powered} powered · ${sum.kw.toFixed(1)} kW`}
             breakBefore={idx > 0}
           >
-            {rows.length === 0 && <Text style={r.small}>No equipment recorded.</Text>}
-            {grouped.map(([cat, items]) => (
-              <View key={cat} style={{ marginTop: 6 }}>
-                <Text style={[r.h3, { marginBottom: 4 }]}>
-                  {CATEGORY_META[cat as EquipCategory]?.label ?? cat}
-                </Text>
-                <Table
-                  columns={[
-                    { header: "Equipment", flex: 6, cell: (e: EquipmentRow) => e.equipment_name },
-                    { header: "Qty", flex: 1, align: "right", cell: (e: EquipmentRow) => String(e.quantity) },
-                    { header: "kW / each", flex: 1.4, align: "right", cell: (e: EquipmentRow) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
-                    { header: "Powered", flex: 1.2, align: "center", cell: (e: EquipmentRow) => e.is_powered ? "Yes" : "—" },
-                    { header: "Load", flex: 1.4, align: "center", cell: (e: EquipmentRow) => e.loads_from_soborg ? "Søborg" : "On-site" },
-                  ]}
-                  rows={items}
-                />
-              </View>
-            ))}
+            {rows.length === 0 ? (
+              <Text style={r.small}>No equipment recorded.</Text>
+            ) : (
+              <Table<EqWithTrolleys>
+                columns={[
+                  { header: "Item name", flex: 5, cell: (e) => e.equipment_name },
+                  { header: "Qty", flex: 1, align: "right", mono: true, cell: (e) => String(e.quantity) },
+                  { header: "Power (kW)", flex: 1.6, align: "right", mono: true, cell: (e) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
+                  { header: "Trolley", flex: 1.6, align: "center", cell: (e) => e.trolley_numbers.length ? e.trolley_numbers.map((n) => `#${n}`).join(", ") : "—" },
+                  { header: "Source", flex: 1.6, align: "center", cell: (e) => <LoadBadge soborg={e.loads_from_soborg} /> },
+                ]}
+                rows={tableRows}
+              />
+            )}
           </Section>
         );
       })}

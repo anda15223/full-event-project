@@ -132,18 +132,33 @@ export type TableColumn<T> = {
   header: string;
   /** Flex weight for the column (relative). Defaults to 1. */
   flex?: number;
-  /** Cell renderer. Return a string or a react-pdf primitive (Text/View). */
+  /** Cell renderer. Return a string, number, or a react-pdf primitive. */
   cell: (row: T, index: number) => import("react").ReactNode;
   /** Optional alignment. */
   align?: "left" | "right" | "center";
+  /** Monospace-friendly (used for numeric columns). */
+  mono?: boolean;
 };
 
+/** A row that spans every column, drawn as a full-width category header band. */
+export type TableGroupRow = { __group: true; label: string; meta?: string };
+/** A data row (any shape). */
+export type TableDataRow<T> = { __group?: false } & T;
+export type TableRow<T> = TableGroupRow | TableDataRow<T>;
+
+const ZEBRA_BG = "#f7f8fa";
+const HEADER_BG = "#f1f2f4";
+const GROUP_BG = "#eef1f6";
+const BORDER = "#d8dbe0";
+
 const tableStyles = StyleSheet.create({
-  wrap: { marginBottom: 6 },
+  wrap: { marginBottom: 8, borderWidth: 0.5, borderColor: BORDER, borderRadius: 3 },
   th: {
     flexDirection: "row",
+    backgroundColor: HEADER_BG,
     borderBottom: `0.75pt solid ${DARK}`,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 6,
     fontSize: 8.5,
     fontWeight: 700,
     color: DARK,
@@ -152,26 +167,48 @@ const tableStyles = StyleSheet.create({
   },
   tr: {
     flexDirection: "row",
-    borderBottom: `0.25pt solid ${LIGHT}`,
+    borderBottom: `0.25pt solid ${BORDER}`,
     paddingVertical: 4,
+    paddingHorizontal: 6,
     fontSize: 10,
     color: DARK,
   },
+  trZebra: { backgroundColor: ZEBRA_BG },
+  groupRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: GROUP_BG,
+    borderTop: `0.5pt solid ${BORDER}`,
+    borderBottom: `0.5pt solid ${BORDER}`,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  groupLabel: { fontSize: 10, fontWeight: 700, color: DARK, textTransform: "uppercase", letterSpacing: 0.5 },
+  groupMeta: { fontSize: 9, color: GRAY },
   cellText: { fontSize: 10, color: DARK },
+  cellMono: { fontSize: 10, color: DARK, fontFamily: "OpenSans" },
 });
+
+function isGroup<T>(r: TableRow<T>): r is TableGroupRow {
+  return (r as TableGroupRow).__group === true;
+}
 
 export function Table<T>({
   columns,
   rows,
   emptyLabel = "No data",
+  zebra = true,
 }: {
   columns: TableColumn<T>[];
-  rows: T[];
+  rows: TableRow<T>[];
   emptyLabel?: string;
+  zebra?: boolean;
 }) {
   if (rows.length === 0) {
     return <Text style={{ fontSize: 10, color: GRAY }}>{emptyLabel}</Text>;
   }
+  let dataIdx = -1;
   return (
     <View style={tableStyles.wrap}>
       <View style={tableStyles.th} fixed>
@@ -188,38 +225,86 @@ export function Table<T>({
           </Text>
         ))}
       </View>
-      {rows.map((row, ri) => (
-        <View key={ri} style={tableStyles.tr} wrap={false}>
-          {columns.map((col, ci) => {
-            const raw = col.cell(row, ri);
-            const node =
-              typeof raw === "string" || typeof raw === "number" ? (
-                <Text style={tableStyles.cellText}>{N(String(raw))}</Text>
-              ) : (
-                raw
+      {rows.map((row, ri) => {
+        if (isGroup(row)) {
+          return (
+            <View key={ri} style={tableStyles.groupRow} wrap={false}>
+              <Text style={tableStyles.groupLabel}>{N(row.label)}</Text>
+              {row.meta ? <Text style={tableStyles.groupMeta}>{N(row.meta)}</Text> : null}
+            </View>
+          );
+        }
+        dataIdx += 1;
+        const striped = zebra && dataIdx % 2 === 1;
+        return (
+          <View
+            key={ri}
+            style={[tableStyles.tr, striped ? tableStyles.trZebra : null] as any}
+            wrap={false}
+          >
+            {columns.map((col, ci) => {
+              const raw = col.cell(row as TableDataRow<T>, dataIdx);
+              const node =
+                typeof raw === "string" || typeof raw === "number" ? (
+                  <Text style={col.mono ? tableStyles.cellMono : tableStyles.cellText}>
+                    {N(String(raw))}
+                  </Text>
+                ) : (
+                  raw
+                );
+              return (
+                <View
+                  key={ci}
+                  style={{
+                    flex: col.flex ?? 1,
+                    paddingRight: 6,
+                    alignItems:
+                      col.align === "right"
+                        ? "flex-end"
+                        : col.align === "center"
+                          ? "center"
+                          : "flex-start",
+                  }}
+                >
+                  {node}
+                </View>
               );
-            return (
-              <View
-                key={ci}
-                style={{
-                  flex: col.flex ?? 1,
-                  paddingRight: 6,
-                  alignItems:
-                    col.align === "right"
-                      ? "flex-end"
-                      : col.align === "center"
-                        ? "center"
-                        : "flex-start",
-                }}
-              >
-                {node}
-              </View>
-            );
-          })}
-        </View>
-      ))}
+            })}
+          </View>
+        );
+      })}
     </View>
   );
+}
+
+/* ----- Reusable cell primitives ---------------------------------------- */
+
+const badgeStyles = StyleSheet.create({
+  base: {
+    fontSize: 8.5,
+    fontWeight: 700,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  soborg:   { color: "#1d4ed8", backgroundColor: "#dbeafe" },
+  onsite:   { color: "#047857", backgroundColor: "#d1fae5" },
+  neutral:  { color: "#374151", backgroundColor: "#e5e7eb" },
+  warn:     { color: "#b45309", backgroundColor: "#fef3c7" },
+});
+
+export function LoadBadge({ soborg }: { soborg: boolean }) {
+  return (
+    <Text style={[badgeStyles.base, soborg ? badgeStyles.soborg : badgeStyles.onsite]}>
+      {soborg ? "SØBORG" : "ON-SITE"}
+    </Text>
+  );
+}
+
+export function Badge({ text, tone = "neutral" }: { text: string; tone?: "soborg" | "onsite" | "neutral" | "warn" }) {
+  return <Text style={[badgeStyles.base, badgeStyles[tone]]}>{N(text)}</Text>;
 }
 
 const sectionStyles = StyleSheet.create({
