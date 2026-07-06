@@ -46,7 +46,7 @@ export default function FestivalCooling() {
         supabase.from("festival_cooling_unit")
           .select("*").eq("festival_id", festivalId).eq("is_draft", draftMode).order("delivery_date", { ascending: true, nullsFirst: false }),
         supabase.from("festival_contracts")
-          .select("id, is_active, concepts!festival_contracts_concept_id_fkey(slug, name)")
+          .select("id, is_active, concept_alias, instance_label, concepts!festival_contracts_concept_id_fkey(slug, name)")
           .eq("festival_id", festivalId),
       ]);
       if (unitsRes.error) throw unitsRes.error;
@@ -92,7 +92,10 @@ export default function FestivalCooling() {
     const contractById = new Map<string, { isActive: boolean; slug: string; name: string }>();
     data.contracts.forEach((c) => {
       const cc = c.concepts;
-      if (cc) contractById.set(c.id, { isActive: c.is_active !== false, slug: cc.slug, name: cc.name });
+      if (!cc) return;
+      const alias = (c.concept_alias ?? "").trim();
+      const displayName = alias || (c.instance_label ? `${cc.name} ${c.instance_label}` : cc.name);
+      contractById.set(c.id, { isActive: c.is_active !== false, slug: cc.slug, name: displayName });
     });
     const linksByUnit = new Map<string, string[]>();
     data.links.forEach((l) => {
