@@ -92,14 +92,14 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
       .eq("concept_id", existing.concept_id);
     const nextNum = (count ?? 1) + 1;
     const { id, created_at, updated_at, tent_primary_contract_id, ...rest } = existing;
-    const insertRow = { ...rest, instance_label: `#${nextNum}`, assigned_vehicle_id: null, tent_primary_contract_id: null };
+    const insertRow = { ...rest, instance_label: String(nextNum), assigned_vehicle_id: null, tent_primary_contract_id: null };
     const { data: created, error: insErr } = await (supabase as any)
       .from("festival_contracts").insert(insertRow).select("id").maybeSingle();
     if (insErr || !created) return toast.error(insErr?.message ?? "Could not duplicate");
     const { error: powErr } = await (supabase as any)
       .from("festival_power").insert({ festival_contract_id: created.id });
     if (powErr) return toast.error(powErr.message);
-    toast.success(`Duplicated as ${conceptName} #${nextNum}`);
+    toast.success(`Duplicated as ${conceptName} ${nextNum}`);
     invalidate();
   }
 
