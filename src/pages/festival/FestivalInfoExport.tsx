@@ -362,7 +362,7 @@ export default function FestivalInfoExport() {
       if (!slug) return;
       const { data: f } = await supabase
         .from("festivals")
-        .select("id, name, slug, start_date, end_date, city, address, lat, lng")
+        .select("id, name, slug, start_date, end_date, city, address, lat, lng, driving_url")
         .eq("slug", slug)
         .maybeSingle();
       if (!f) { setLoading(false); return; }
