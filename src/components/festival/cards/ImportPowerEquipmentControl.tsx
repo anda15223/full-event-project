@@ -12,6 +12,9 @@ type Source = {
   festivalName: string;
   powerId: string;
   rowCount: number;
+  stallIndex: number;   // 1-based position among same-concept stalls at that festival
+  stallCount: number;   // total stalls of this concept at that festival
+  createdAt: string;
 };
 
 interface Props {
