@@ -39,6 +39,8 @@ interface Props {
   hideEmoji?: boolean;
   /** When provided, renders an active/inactive toggle on each card header. */
   festivalSlug?: string;
+  /** When true, hides subtitle, variation note, verify badge, vehicle selector, and body — only title + assigned team leader. */
+  minimal?: boolean;
 }
 
 interface ContractRow {
