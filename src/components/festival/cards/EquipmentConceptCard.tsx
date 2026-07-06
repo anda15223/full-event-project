@@ -84,26 +84,67 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
     invalidate();
   }
 
-  async function duplicateConcept() {
-    if (!confirm(`Duplicate ${conceptName}? This creates another independent instance at this festival.`)) return;
-    const { data: existing, error: fetchErr } = await (supabase as any)
-      .from("festival_contracts").select("*").eq("id", contractId).maybeSingle();
-    if (fetchErr || !existing) return toast.error(fetchErr?.message ?? "Could not load contract");
-    const { count } = await (supabase as any)
-      .from("festival_contracts")
-      .select("id", { count: "exact", head: true })
-      .eq("festival_id", existing.festival_id)
-      .eq("concept_id", existing.concept_id);
-    const nextNum = (count ?? 1) + 1;
-    const { id, created_at, updated_at, tent_primary_contract_id, ...rest } = existing;
-    const insertRow = { ...rest, instance_label: String(nextNum), assigned_vehicle_id: null, tent_primary_contract_id: null };
-    const { data: created, error: insErr } = await (supabase as any)
-      .from("festival_contracts").insert(insertRow).select("id").maybeSingle();
-    if (insErr || !created) return toast.error(insErr?.message ?? "Could not duplicate");
-    const { error: powErr } = await (supabase as any)
-      .from("festival_power").insert({ festival_contract_id: created.id });
-    if (powErr) return toast.error(powErr.message);
-    toast.success(`Duplicated as ${conceptName} ${nextNum}`);
+  // Sibling concepts (enabled at this festival) available as duplicate sources.
+  type Sibling = { contractId: string; powerId: string; name: string; rowCount: number };
+  const [siblings, setSiblings] = useState<Sibling[]>([]);
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { data: contracts } = await (supabase as any)
+        .from("festival_contracts")
+        .select("id, concept_alias, instance_label, concepts!concept_id(name)")
+        .eq("festival_id", festivalId).eq("is_active", true)
+        .neq("id", contractId);
+      const list = (contracts ?? []) as any[];
+      if (list.length === 0) { if (!cancel) setSiblings([]); return; }
+      const cIds = list.map((c) => c.id);
+      const { data: powers } = await (supabase as any)
+        .from("festival_power").select("id, festival_contract_id")
+        .in("festival_contract_id", cIds);
+      const powerList = (powers ?? []) as any[];
+      const powerIds = powerList.map((p) => p.id);
+      const { data: eq } = powerIds.length
+        ? await (supabase as any).from("festival_power_equipment")
+            .select("festival_power_id").in("festival_power_id", powerIds)
+        : { data: [] as any[] };
+      const countByPower = new Map<string, number>();
+      (eq ?? []).forEach((r: any) => {
+        countByPower.set(r.festival_power_id, (countByPower.get(r.festival_power_id) ?? 0) + 1);
+      });
+      const out: Sibling[] = powerList.map((p) => {
+        const c = list.find((x) => x.id === p.festival_contract_id);
+        if (!c) return null;
+        const alias = (c.concept_alias ?? "").trim();
+        const name = alias
+          ? alias
+          : c.instance_label
+            ? `${c.concepts?.name ?? "Concept"} ${c.instance_label}`
+            : (c.concepts?.name ?? "Concept");
+        return { contractId: c.id, powerId: p.id, name, rowCount: countByPower.get(p.id) ?? 0 };
+      }).filter(Boolean) as Sibling[];
+      out.sort((a, b) => a.name.localeCompare(b.name));
+      if (!cancel) setSiblings(out);
+    })();
+    return () => { cancel = true; };
+  }, [festivalId, contractId, rows.length]);
+
+  async function duplicateFromSibling(sib: Sibling) {
+    if (sib.rowCount === 0) {
+      toast.info(`${sib.name} has no equipment to copy`);
+      return;
+    }
+    if (!confirm(`Copy ${sib.rowCount} item${sib.rowCount === 1 ? "" : "s"} from ${sib.name} into ${conceptName}?`)) return;
+    const { data: sourceRows, error: fetchErr } = await (supabase as any)
+      .from("festival_power_equipment").select("*").eq("festival_power_id", sib.powerId);
+    if (fetchErr) return toast.error(fetchErr.message);
+    const inserts = (sourceRows ?? []).map(({ id, created_at, updated_at, festival_power_id, ...rest }: any) => ({
+      ...rest, festival_power_id: powerId,
+    }));
+    if (inserts.length === 0) return toast.info("Nothing to copy");
+    const { error: insErr } = await (supabase as any)
+      .from("festival_power_equipment").insert(inserts);
+    if (insErr) return toast.error(insErr.message);
+    toast.success(`Copied ${inserts.length} item${inserts.length === 1 ? "" : "s"} from ${sib.name}`);
     invalidate();
   }
 
