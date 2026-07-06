@@ -311,7 +311,7 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
           </div>
         ) : (
           grouped.map(([cat, items]) => (
-            <CategoryBlock key={cat} cat={cat} items={items} powerId={powerId} onChange={invalidate} />
+            <CategoryBlock key={cat} cat={cat} items={items} powerId={powerId} festivalId={festivalId} onChange={invalidate} />
           ))
         )}
         {grouped.length > 0 && (
