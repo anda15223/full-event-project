@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ReportTemplate, reportStyles as r, Section, Table } from "@/components/pdf/ReportTemplate";
-import { CATEGORY_META, type EquipCategory, groupByCategory, type EquipmentRow } from "@/lib/equipmentStatus";
+import { CATEGORY_META, type EquipCategory, type EquipmentRow } from "@/lib/equipmentStatus";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
 const sb = supabase as any;
