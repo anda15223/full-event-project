@@ -46,7 +46,7 @@ export default function FestivalCooling() {
         supabase.from("festival_cooling_unit")
           .select("*").eq("festival_id", festivalId).eq("is_draft", draftMode).order("delivery_date", { ascending: true, nullsFirst: false }),
         supabase.from("festival_contracts")
-          .select("id, is_active, concepts!festival_contracts_concept_id_fkey(slug, name)")
+          .select("id, is_active, concept_alias, instance_label, concepts!festival_contracts_concept_id_fkey(slug, name)")
           .eq("festival_id", festivalId),
       ]);
       if (unitsRes.error) throw unitsRes.error;
