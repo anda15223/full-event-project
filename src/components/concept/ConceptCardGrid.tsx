@@ -278,6 +278,7 @@ export function ConceptCardGrid({
             renderConceptBody={renderConceptBody}
             conceptData={conceptData}
             contract={contract}
+            minimal={minimal}
           />
         );
       })}
