@@ -336,8 +336,8 @@ function Stat({ label, value, accent, small }: { label: string; value: string | 
   );
 }
 
-function CategoryBlock({ cat, items, powerId, onChange }:
-  { cat: EquipCategory; items: EquipmentRow[]; powerId: string; onChange: () => void }) {
+function CategoryBlock({ cat, items, powerId, festivalId, onChange }:
+  { cat: EquipCategory; items: EquipmentRow[]; powerId: string; festivalId: string; onChange: () => void }) {
   const meta = CATEGORY_META[cat] ?? { label: cat, emoji: "▫️", order: 99 };
   const types = items.length;
   const totalQty = items.reduce((s, r) => s + r.quantity, 0);
@@ -359,7 +359,7 @@ function CategoryBlock({ cat, items, powerId, onChange }:
         </button>
       </div>
       <div className="space-y-1">
-        {items.map((r) => <EquipmentRowItem key={r.id} row={r} onChange={onChange} />)}
+        {items.map((r) => <EquipmentRowItem key={r.id} row={r} festivalId={festivalId} onChange={onChange} />)}
       </div>
       {adding && (
         <div className="mt-2 pt-2 border-t border-dashed">
@@ -370,7 +370,7 @@ function CategoryBlock({ cat, items, powerId, onChange }:
   );
 }
 
-function EquipmentRowItem({ row, onChange }: { row: EquipmentRow; onChange: () => void }) {
+function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; festivalId: string; onChange: () => void }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(row.equipment_name);
   const [qty, setQty] = useState(String(row.quantity));
