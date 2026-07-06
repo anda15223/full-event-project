@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
 import { Link, useParams } from "react-router-dom";
 import {
-  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Image,
+  Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Image, Link as PdfLink,
 } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
