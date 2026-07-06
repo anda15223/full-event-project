@@ -372,6 +372,7 @@ export default function FestivalInfoExport() {
   const [docs, setDocs] = useState<LocationDoc[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [lineup, setLineup] = useState<LineupRow[]>([]);
+  const [mapDataUrl, setMapDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
