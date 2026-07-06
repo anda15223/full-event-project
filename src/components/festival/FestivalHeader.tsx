@@ -22,6 +22,7 @@ export interface FestivalHeaderProps {
     lng: number | null;
     address?: string | null;
     city?: string | null;
+    driving_url?: string | null;
   };
   rightSlot?: React.ReactNode;
   compact?: boolean;
