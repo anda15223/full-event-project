@@ -22,6 +22,7 @@ export interface FestivalHeaderProps {
     lng: number | null;
     address?: string | null;
     city?: string | null;
+    driving_url?: string | null;
   };
   rightSlot?: React.ReactNode;
   compact?: boolean;
@@ -68,12 +69,13 @@ function CountdownPill({ startDate }: { startDate: string }) {
 }
 
 function CoordinatesDialog({
-  festivalId, slug, currentLat, currentLng, currentAddress,
-}: { festivalId: string; slug: string; currentLat: number | null; currentLng: number | null; currentAddress?: string | null }) {
+  festivalId, slug, currentLat, currentLng, currentAddress, currentDrivingUrl,
+}: { festivalId: string; slug: string; currentLat: number | null; currentLng: number | null; currentAddress?: string | null; currentDrivingUrl?: string | null }) {
   const [open, setOpen] = useState(false);
   const [lat, setLat] = useState(currentLat?.toString() ?? "");
   const [lng, setLng] = useState(currentLng?.toString() ?? "");
   const [address, setAddress] = useState(currentAddress ?? "");
+  const [drivingUrl, setDrivingUrl] = useState(currentDrivingUrl ?? "");
   const [geocoding, setGeocoding] = useState(false);
   const qc = useQueryClient();
 
@@ -120,7 +122,7 @@ function CoordinatesDialog({
         } catch {}
       }
 
-      const updates: { lat: number; lng: number; address?: string; city?: string } = { lat: latNum, lng: lngNum };
+      const updates: { lat: number; lng: number; address?: string; city?: string; driving_url: string | null } = { lat: latNum, lng: lngNum, driving_url: drivingUrl.trim() || null };
       if (finalAddress) updates.address = finalAddress;
       if (city) updates.city = city;
 
@@ -163,8 +165,18 @@ function CoordinatesDialog({
             <div>
               <Label htmlFor="lng">Longitude</Label>
               <Input id="lng" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="9.4239" />
-            </div>
           </div>
+          <div>
+            <Label htmlFor="driving_url">Custom driving link (optional)</Label>
+            <Input
+              id="driving_url"
+              value={drivingUrl}
+              onChange={(e) => setDrivingUrl(e.target.value)}
+              placeholder="https://maps.google.com/... or https://waze.com/..."
+            />
+            <p className="text-xs text-muted-foreground mt-1">If set, the Navigate button will open this link instead of the default map directions. Useful for special festival entrances (e.g. Grøn).</p>
+          </div>
+        </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
@@ -222,6 +234,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                   currentLat={festival.lat}
                   currentLng={festival.lng}
                   currentAddress={festival.address}
+                  currentDrivingUrl={festival.driving_url}
                 />
               </div>
             )}
@@ -235,12 +248,12 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
               )}
               <Button asChild size="sm" variant="default">
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${festival.lat},${festival.lng}`}
+                  href={festival.driving_url || `https://www.google.com/maps/dir/?api=1&destination=${festival.lat},${festival.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Open navigation in Google Maps"
+                  aria-label="Open navigation"
                 >
-                  Navigate
+                  Navigate{festival.driving_url ? " (custom)" : ""}
                 </a>
               </Button>
               <CoordinatesDialog
@@ -249,6 +262,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                 currentLat={festival.lat}
                 currentLng={festival.lng}
                 currentAddress={festival.address}
+                currentDrivingUrl={festival.driving_url}
               />
             </div>
           )}

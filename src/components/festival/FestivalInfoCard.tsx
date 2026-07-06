@@ -71,6 +71,9 @@ export interface FestivalInfoCardProps {
     date_end: string;
     lat: number | null;
     lng: number | null;
+    address?: string | null;
+    city?: string | null;
+    driving_url?: string | null;
   };
   defaultOpen?: boolean;
 }

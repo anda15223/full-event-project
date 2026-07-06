@@ -564,7 +564,7 @@ export default function FestivalOverview() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festivals")
-        .select("id, name, slug, start_date, end_date, city, address, lat, lng")
+        .select("id, name, slug, start_date, end_date, city, address, lat, lng, driving_url")
         .eq("slug", slug).maybeSingle();
       if (error) throw error;
       return data;
@@ -715,6 +715,9 @@ export default function FestivalOverview() {
           date_end: f.end_date,
           lat: (f as any).lat ?? null,
           lng: (f as any).lng ?? null,
+          address: (f as any).address ?? null,
+          city: (f as any).city ?? null,
+          driving_url: (f as any).driving_url ?? null,
         }}
       />
 

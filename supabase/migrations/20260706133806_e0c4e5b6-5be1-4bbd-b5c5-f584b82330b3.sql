@@ -1,0 +1,1 @@
+ALTER TABLE public.festivals ADD COLUMN IF NOT EXISTS driving_url text;
