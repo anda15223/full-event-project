@@ -181,11 +181,12 @@ const tableStyles = StyleSheet.create({
     backgroundColor: GROUP_BG,
     borderTop: `0.5pt solid ${BORDER}`,
     borderBottom: `0.5pt solid ${BORDER}`,
-    paddingVertical: 4,
+    paddingVertical: 5,
     paddingHorizontal: 6,
   },
-  groupLabel: { fontSize: 10, fontWeight: 700, color: DARK, textTransform: "uppercase", letterSpacing: 0.5 },
-  groupMeta: { fontSize: 9, color: GRAY },
+  groupLabel: { fontSize: 10, fontWeight: 700, color: DARK, textTransform: "uppercase", letterSpacing: 0.6 },
+  groupMeta: { fontSize: 9, color: GRAY, textAlign: "right" },
+
   cellText: { fontSize: 10, color: DARK },
   cellMono: { fontSize: 10, color: DARK, fontFamily: "OpenSans" },
 });
