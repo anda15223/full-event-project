@@ -222,13 +222,13 @@ function InfoDoc({
             <Text style={[reportStyles.small, { marginTop: 4 }]}>Coordinates not set.</Text>
           )}
         </View>
-        {hasCoords ? (
+        {hasCoords && mapDataUrl ? (
           <View style={s.mapBox}>
-            <Image src={mapImageUrl(festival.lat!, festival.lng!)} style={s.mapImg} />
+            <Image src={mapDataUrl} style={s.mapImg} />
           </View>
         ) : (
           <View style={s.mapPlaceholder}>
-            <Text>No map available</Text>
+            <Text>{hasCoords ? "Map unavailable" : "No map available"}</Text>
           </View>
         )}
       </View>
