@@ -85,7 +85,7 @@ function TimelineDoc({ festival, events }: { festival: Festival; events: Event[]
   const generated = new Date().toLocaleString("en-GB", { dateStyle: "long" });
 
   const renderSection = (title: string, list: Event[], color: string) => list.length === 0 ? null : (
-    <View style={styles.section} wrap={false}>
+    <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color }]}>{title} ({list.length})</Text>
       {list.map(ev => (
         <View key={ev.id} style={styles.row} wrap={false}>

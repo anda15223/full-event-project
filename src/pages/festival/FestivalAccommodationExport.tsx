@@ -142,7 +142,7 @@ export default function FestivalAccommodationExport() {
             const currency = r.currency || "DKK";
 
             return (
-              <View key={r.id} style={s.card} wrap={false}>
+              <View key={r.id} style={s.card}>
                 <Text style={s.h2}>
                   {r.provider_name || "—"} ({ACC_TYPE_LABEL[r.accommodation_type as AccType]})
                 </Text>

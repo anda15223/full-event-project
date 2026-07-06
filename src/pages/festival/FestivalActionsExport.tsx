@@ -86,7 +86,7 @@ function ActionsDoc({ festival, items, concepts }: { festival: Festival; items: 
           const list = grouped[status];
           if (!list?.length) return null;
           return (
-            <View key={status} style={styles.section} wrap={false}>
+            <View key={status} style={styles.section}>
               <Text style={styles.sectionTitle}>{STATUS_LABEL[status]} ({list.length})</Text>
               {list.map((it) => {
                 const concept = it.concept_id ? concepts.get(it.concept_id) : null;
