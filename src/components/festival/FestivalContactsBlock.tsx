@@ -58,7 +58,7 @@ const emptyForm = (cat: Category): FormState => ({
 export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
   const { draftMode } = useDraftMode();
   const qc = useQueryClient();
-  const queryKey = ["festival-contacts-all", festivalId, draftMode];
+  const queryKey = useMemo(() => ["festival-contacts-all", festivalId, draftMode] as const, [festivalId, draftMode]);
 
   const { data: contacts, isLoading } = useQuery({
     queryKey,
@@ -104,6 +104,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
       toast({ title: "Saved" });
     },
     onError: (e) => toast({ title: "Save failed", description: (e as Error).message, variant: "destructive" }),
@@ -139,6 +140,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["festival-contacts-aggregated"] });
       toast({ title: "Contact deleted" });
       setDeleting(null);
     },
