@@ -54,9 +54,10 @@ export function ImportPowerEquipmentControl({
       // 2) All contracts (any festival except current) for this concept
       const { data: contracts } = await supabase
         .from("festival_contracts")
-        .select("id, festival_id, festivals!festival_id(id,name,start_date)")
+        .select("id, festival_id, created_at, festivals!festival_id(id,name,start_date)")
         .eq("concept_id", concept.id).eq("is_active", true)
-        .neq("festival_id", currentFestivalId);
+        .neq("festival_id", currentFestivalId)
+        .order("created_at", { ascending: true });
       const list = (contracts ?? []) as any[];
       if (list.length === 0) { setSources([]); setLoading(false); return; }
 
@@ -77,20 +78,37 @@ export function ImportPowerEquipmentControl({
         countByPower.set(r.festival_power_id, (countByPower.get(r.festival_power_id) ?? 0) + 1);
       });
 
-      const out: Source[] = powerList
-        .map((p) => {
-          const contract = list.find((c) => c.id === p.festival_contract_id);
-          const fest = contract?.festivals;
-          const count = countByPower.get(p.id) ?? 0;
-          if (!fest || count === 0) return null;
+      // Index stalls per (festival) in contract creation order so duplicates
+      // become #1, #2, … (Tårnby has Fish 1 + Fish 2, Gyros 1 + Gyros 2, etc.)
+      const perFestivalIndex = new Map<string, number>();
+      const perFestivalTotal = new Map<string, number>();
+      list.forEach((c) => {
+        const fid = c.festival_id;
+        perFestivalTotal.set(fid, (perFestivalTotal.get(fid) ?? 0) + 1);
+      });
+
+      const out: Source[] = list
+        .map((c) => {
+          const power = powerList.find((p) => p.festival_contract_id === c.id);
+          if (!power) return null;
+          const fest = c.festivals;
+          const count = countByPower.get(power.id) ?? 0;
+          if (!fest) return null;
+          const idx = (perFestivalIndex.get(fest.id) ?? 0) + 1;
+          perFestivalIndex.set(fest.id, idx);
           return {
             festivalId: fest.id, festivalName: fest.name,
-            powerId: p.id, rowCount: count,
+            powerId: power.id, rowCount: count,
+            stallIndex: idx,
+            stallCount: perFestivalTotal.get(fest.id) ?? 1,
+            createdAt: c.created_at,
           } as Source;
         })
         .filter(Boolean) as Source[];
 
-      out.sort((a, b) => a.festivalName.localeCompare(b.festivalName));
+      out.sort((a, b) =>
+        a.festivalName.localeCompare(b.festivalName) || a.stallIndex - b.stallIndex,
+      );
       if (!cancel) { setSources(out); setLoading(false); }
     })();
     return () => { cancel = true; };
