@@ -39,6 +39,13 @@ type LocationDoc = {
   signed_url?: string | null;
 };
 
+type LineupRow = {
+  id: string;
+  title: string;
+  role: string | null;
+  manager_name: string | null;
+};
+
 const COL_LABEL: Record<string, string> = {
   festival: "Festival",
   setup: "Setup team",
