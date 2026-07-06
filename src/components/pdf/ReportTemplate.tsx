@@ -152,7 +152,11 @@ const GROUP_BG = "#eef1f6";
 const BORDER = "#d8dbe0";
 
 const tableStyles = StyleSheet.create({
-  wrap: { marginBottom: 8, borderWidth: 0.5, borderColor: BORDER, borderRadius: 3 },
+  // NOTE: no borderRadius / borderWidth on the wrap — react-pdf's border-clip
+  // math overflows (`unsupported number: -9.7e+21` in clipBorderTop) when a
+  // bordered+rounded container is split across pages with wrap={false} rows.
+  // Borders live on the rows themselves.
+  wrap: { marginBottom: 8 },
   th: {
     flexDirection: "row",
     backgroundColor: HEADER_BG,
