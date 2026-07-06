@@ -222,9 +222,73 @@ export default function EmployeesAll() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={createOpen} onOpenChange={(o) => !createOne.isPending && setCreateOpen(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New employee</DialogTitle>
+            <DialogDescription>
+              Name + date of birth are the unique key — the same person can never be created twice.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Full name *</label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                autoFocus
+                placeholder="e.g. Jane Doe"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Date of birth *</label>
+              <Input
+                type="date"
+                value={form.date_of_birth}
+                onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground">Phone</label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Email</label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Home location</label>
+              <Select value={form.home_location} onValueChange={(v) => setForm({ ...form, home_location: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {LOCATION_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)} disabled={createOne.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createOne.mutate()}
+              disabled={createOne.isPending || !form.name.trim() || !form.date_of_birth}
+            >
+              {createOne.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Create employee
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 
 function EditableRow({
   row, usageCount, onSave, onDelete,
