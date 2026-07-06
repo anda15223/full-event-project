@@ -92,6 +92,7 @@ export default function FestivalEquipment() {
             contractId: c.id as string,
             assignedVehicleId: (c.assigned_vehicle_id ?? null) as string | null,
             concept: c.concepts,
+            instanceLabel: (c.instance_label ?? null) as string | null,
             powerId: powerByContract.get(c.id)!,
             mergedChildren: [] as any[],
             mergeTargets: [] as any[],
