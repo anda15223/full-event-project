@@ -234,6 +234,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                   currentLat={festival.lat}
                   currentLng={festival.lng}
                   currentAddress={festival.address}
+                  currentDrivingUrl={festival.driving_url}
                 />
               </div>
             )}
@@ -247,12 +248,12 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
               )}
               <Button asChild size="sm" variant="default">
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${festival.lat},${festival.lng}`}
+                  href={festival.driving_url || `https://www.google.com/maps/dir/?api=1&destination=${festival.lat},${festival.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="Open navigation in Google Maps"
+                  aria-label="Open navigation"
                 >
-                  Navigate
+                  Navigate{festival.driving_url ? " (custom)" : ""}
                 </a>
               </Button>
               <CoordinatesDialog
@@ -261,6 +262,7 @@ export function FestivalHeader({ festival, rightSlot, compact = false }: Festiva
                 currentLat={festival.lat}
                 currentLng={festival.lng}
                 currentAddress={festival.address}
+                currentDrivingUrl={festival.driving_url}
               />
             </div>
           )}
