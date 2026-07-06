@@ -227,13 +227,16 @@ export function Table<T>({
       </View>
       {rows.map((row, ri) => {
         if (isGroup(row)) {
+          // minPresenceAhead keeps the category header with at least ~40pt of
+          // following row space, preventing an orphaned header at page bottom.
           return (
-            <View key={ri} style={tableStyles.groupRow} wrap={false}>
+            <View key={ri} style={tableStyles.groupRow} wrap={false} minPresenceAhead={40}>
               <Text style={tableStyles.groupLabel}>{N(row.label)}</Text>
               {row.meta ? <Text style={tableStyles.groupMeta}>{N(row.meta)}</Text> : null}
             </View>
           );
         }
+
         dataIdx += 1;
         const striped = zebra && dataIdx % 2 === 1;
         return (
