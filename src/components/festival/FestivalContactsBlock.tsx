@@ -121,7 +121,7 @@ export function FestivalContactsBlock({ festivalId, festivalSlug }: Props) {
         email: form.email || null,
         organization: form.organization || null,
         role_category: form.role_category,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
