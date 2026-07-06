@@ -194,6 +194,12 @@ function InfoDoc({
                 <Text style={s.label}>Map link</Text>
                 <Text style={s.value}>https://maps.google.com/?q={festival.lat},{festival.lng}</Text>
               </View>
+              {festival.driving_url ? (
+                <View style={s.row}>
+                  <Text style={s.label}>Driving</Text>
+                  <Text style={s.value}>{festival.driving_url}</Text>
+                </View>
+              ) : null}
             </>
           ) : (
             <Text style={[reportStyles.small, { marginTop: 4 }]}>Coordinates not set.</Text>
