@@ -2687,6 +2687,7 @@ export type Database = {
           inspection_date: string | null
           inspection_self_paid_if_late: boolean | null
           inspection_time: string | null
+          instance_label: string | null
           is_active: boolean
           is_draft: boolean
           key_obligations: string | null
@@ -2774,6 +2775,7 @@ export type Database = {
           inspection_date?: string | null
           inspection_self_paid_if_late?: boolean | null
           inspection_time?: string | null
+          instance_label?: string | null
           is_active?: boolean
           is_draft?: boolean
           key_obligations?: string | null
@@ -2861,6 +2863,7 @@ export type Database = {
           inspection_date?: string | null
           inspection_self_paid_if_late?: boolean | null
           inspection_time?: string | null
+          instance_label?: string | null
           is_active?: boolean
           is_draft?: boolean
           key_obligations?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.festival_contracts ADD COLUMN IF NOT EXISTS instance_label text;

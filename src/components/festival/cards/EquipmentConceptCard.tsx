@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ExternalLink, Plus, Trash2, Zap, Truck, MapPin, FileDown } from "lucide-react";
+import { ExternalLink, Plus, Trash2, Zap, Truck, MapPin, FileDown, Copy } from "lucide-react";
 import { toast } from "sonner";
 import {
   ALL_CATEGORIES, CATEGORY_META, EquipCategory, EquipmentRow,
@@ -80,6 +80,29 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
     invalidate();
   }
 
+  async function duplicateConcept() {
+    if (!confirm(`Duplicate ${conceptName}? This creates another independent instance at this festival.`)) return;
+    const { data: existing, error: fetchErr } = await (supabase as any)
+      .from("festival_contracts").select("*").eq("id", contractId).maybeSingle();
+    if (fetchErr || !existing) return toast.error(fetchErr?.message ?? "Could not load contract");
+    const { count } = await (supabase as any)
+      .from("festival_contracts")
+      .select("id", { count: "exact", head: true })
+      .eq("festival_id", existing.festival_id)
+      .eq("concept_id", existing.concept_id);
+    const nextNum = (count ?? 1) + 1;
+    const { id, created_at, updated_at, tent_primary_contract_id, ...rest } = existing;
+    const insertRow = { ...rest, instance_label: `#${nextNum}`, assigned_vehicle_id: null, tent_primary_contract_id: null };
+    const { data: created, error: insErr } = await (supabase as any)
+      .from("festival_contracts").insert(insertRow).select("id").maybeSingle();
+    if (insErr || !created) return toast.error(insErr?.message ?? "Could not duplicate");
+    const { error: powErr } = await (supabase as any)
+      .from("festival_power").insert({ festival_contract_id: created.id });
+    if (powErr) return toast.error(powErr.message);
+    toast.success(`Duplicated as ${conceptName} #${nextNum}`);
+    invalidate();
+  }
+
   return (
     <Card className="overflow-hidden border bg-card shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="space-y-3 pb-4 border-b bg-gradient-to-br from-card to-muted/30">
@@ -131,6 +154,14 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             >
               <FileDown className="h-3 w-3" /> Export
             </a>
+            <button
+              type="button"
+              onClick={duplicateConcept}
+              title={`Duplicate ${conceptName} at this festival`}
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
+            >
+              <Copy className="h-3 w-3" /> Duplicate
+            </button>
             <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_PILL[status.status]}`}>
               {status.status === "green" ? "✅" : status.status === "amber" ? "⚠️" : "—"} {status.label}
             </span>
