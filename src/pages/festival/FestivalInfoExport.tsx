@@ -376,10 +376,10 @@ export default function FestivalInfoExport() {
           .eq("festival_id", fid)
           .order("full_name", { ascending: true }),
         supabase
-          .from("festival_hours" as any)
-          .select("id, day_date, festival_open, festival_close, prep_open, prep_close, notes")
+          .from("festival_service_hours" as any)
+          .select("id, service_date, open_time, close_time, notes, concept:concepts(name, slug)")
           .eq("festival_id", fid)
-          .order("day_date", { ascending: true }),
+          .order("service_date", { ascending: true }),
         supabase
           .from("festival_location_documents" as any)
           .select("id, file_name, description, file_size_bytes, file_path, mime_type")
