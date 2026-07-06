@@ -199,14 +199,39 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             >
               <FileDown className="h-3 w-3" /> Export
             </a>
-            <button
-              type="button"
-              onClick={duplicateConcept}
-              title={`Duplicate ${conceptName} at this festival`}
-              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
-            >
-              <Copy className="h-3 w-3" /> Duplicate
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title={`Copy equipment into ${conceptName} from another concept at this festival`}
+                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border hover:bg-muted"
+                >
+                  <Copy className="h-3 w-3" /> Duplicate
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-[11px]">Copy equipment from…</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {siblings.length === 0 ? (
+                  <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+                    No other concepts at this festival
+                  </DropdownMenuItem>
+                ) : (
+                  siblings.map((s) => (
+                    <DropdownMenuItem
+                      key={s.contractId}
+                      onSelect={() => duplicateFromSibling(s)}
+                      className="text-xs flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate">{s.name}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+                        {s.rowCount} item{s.rowCount === 1 ? "" : "s"}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_PILL[status.status]}`}>
               {status.status === "green" ? "✅" : status.status === "amber" ? "⚠️" : "—"} {status.label}
             </span>
