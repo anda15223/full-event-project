@@ -339,9 +339,10 @@ const sectionStyles = StyleSheet.create({
   statPill: {
     flexDirection: "row",
     alignItems: "baseline",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 8,
+    backgroundColor: "#f1f2f4",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
     marginBottom: 2,
   },
   statValue: { fontSize: 10, fontWeight: 700, color: DARK },
