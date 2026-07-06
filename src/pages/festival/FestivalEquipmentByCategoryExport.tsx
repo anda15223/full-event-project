@@ -133,14 +133,10 @@ export default function FestivalEquipmentByCategoryExport() {
 
             <Table<Row>
               columns={[
-                { header: "Concept", flex: 2.6, cell: (e) => e.conceptName },
                 { header: "Item name", flex: 4, cell: (e) => e.equipment_name },
-                { header: "Qty", flex: 1, align: "right", mono: true, cell: (e) => String(e.quantity) },
-                { header: "Power (kW)", flex: 1.6, align: "right", mono: true, cell: (e) => e.is_powered ? Number(e.power_kw ?? 0).toFixed(2) : "—" },
-                { header: "Trolley", flex: 1.6, align: "center", cell: (e) => e.trolley_numbers.length ? e.trolley_numbers.map((n) => `#${n}`).join(", ") : "—" },
-                { header: "Source", flex: 1.6, align: "center", cell: (e) => <LoadBadge soborg={e.loads_from_soborg} /> },
+                { header: "Qty", flex: 1, align: "right", cell: (e) => String(e.quantity) },
               ]}
-              rows={items}
+              rows={items.slice(0, 2)}
             />
           </Section>
         );
