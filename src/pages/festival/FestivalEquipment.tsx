@@ -47,7 +47,19 @@ export default function FestivalEquipment() {
       if (pErr) throw pErr;
       const powerByContract = new Map<string, string>();
       (powers ?? []).forEach((p: any) => powerByContract.set(p.festival_contract_id, p.id));
-      const powerIds = (powers ?? []).map((p: any) => p.id);
+
+      // Auto-create festival_power rows for active contracts that don't have one yet,
+      // so the Equipment page is usable even before the user visits Power.
+      const missing = cIds.filter((id) => !powerByContract.has(id));
+      if (missing.length > 0) {
+        const { data: created, error: cpErr } = await (supabase as any)
+          .from("festival_power")
+          .insert(missing.map((id) => ({ festival_id: festivalId, festival_contract_id: id })))
+          .select("id, festival_contract_id");
+        if (cpErr) throw cpErr;
+        (created ?? []).forEach((p: any) => powerByContract.set(p.festival_contract_id, p.id));
+      }
+      const powerIds = Array.from(powerByContract.values());
 
       const rowsByPower = new Map<string, EquipmentRow[]>();
       if (powerIds.length > 0) {
