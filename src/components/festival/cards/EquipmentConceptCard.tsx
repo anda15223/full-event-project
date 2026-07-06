@@ -439,16 +439,26 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
           </button>
           <button onClick={() => setEditing(false)} className="hover:underline">Cancel</button>
         </div>
+        <TrolleySplitsEditor
+          equipmentId={row.id}
+          festivalId={festivalId}
+          totalQty={Math.max(1, parseInt(qty) || 1)}
+          splits={row.trolley_splits ?? []}
+          onChange={onChange}
+        />
       </div>
     );
   }
+
+  const splits = row.trolley_splits ?? [];
+  const trolleyAssignedQty = splits.reduce((s, x) => s + x.quantity, 0);
 
   return (
     <button
       onClick={() => setEditing(true)}
       className="w-full text-left grid grid-cols-12 gap-2 items-center px-2 py-1.5 rounded hover:bg-muted/60 transition-colors text-xs group"
     >
-      <span className="col-span-6 truncate font-medium">{row.equipment_name}</span>
+      <span className="col-span-5 truncate font-medium">{row.equipment_name}</span>
       <span className="col-span-1 tabular-nums text-muted-foreground">×{row.quantity}</span>
       <span className="col-span-2 tabular-nums">
         {row.is_powered ? (
@@ -457,7 +467,23 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
           </span>
         ) : <span className="text-muted-foreground/50">—</span>}
       </span>
-      <span className="col-span-3 text-right">
+      <span className="col-span-2 flex flex-wrap gap-0.5 justify-start">
+        {splits.length === 0 ? (
+          <span className="text-[10px] text-muted-foreground/60 italic">no trolley</span>
+        ) : splits.map((s) => (
+          <span key={s.id} title={`Trolley ${s.trolley_number} · ${s.quantity} pcs`}
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] border bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30 tabular-nums">
+            T{s.trolley_number}·{s.quantity}
+          </span>
+        ))}
+        {splits.length > 0 && trolleyAssignedQty !== row.quantity && (
+          <span title={`Assigned ${trolleyAssignedQty} of ${row.quantity}`}
+            className="inline-flex items-center px-1 py-0.5 rounded text-[10px] border bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">
+            ⚠︎
+          </span>
+        )}
+      </span>
+      <span className="col-span-2 text-right">
         <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border ${
           row.loads_from_soborg
             ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30"
@@ -467,6 +493,70 @@ function EquipmentRowItem({ row, festivalId, onChange }: { row: EquipmentRow; fe
         </span>
       </span>
     </button>
+  );
+}
+
+function TrolleySplitsEditor({ equipmentId, festivalId, totalQty, splits, onChange }: {
+  equipmentId: string; festivalId: string; totalQty: number;
+  splits: { id: string; trolley_number: number; quantity: number }[]; onChange: () => void;
+}) {
+  const [num, setNum] = useState("");
+  const [qty, setQty] = useState("1");
+  const [busy, setBusy] = useState(false);
+  const assigned = splits.reduce((s, x) => s + x.quantity, 0);
+
+  async function add() {
+    const n = parseInt(num);
+    const q = Math.max(1, parseInt(qty) || 1);
+    if (!n || n < 1) return toast.error("Trolley number required");
+    setBusy(true);
+    const { error } = await (supabase as any)
+      .from("festival_equipment_trolley_split")
+      .upsert({ equipment_id: equipmentId, festival_id: festivalId, trolley_number: n, quantity: q },
+        { onConflict: "equipment_id,trolley_number" });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    setNum(""); setQty("1");
+    onChange();
+  }
+  async function remove(id: string) {
+    const { error } = await (supabase as any)
+      .from("festival_equipment_trolley_split").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    onChange();
+  }
+
+  return (
+    <div className="rounded-md border bg-background/60 p-2 space-y-1.5">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <span>🛒 Trolley split</span>
+        <span className="tabular-nums normal-case tracking-normal">
+          {assigned} / {totalQty} pcs assigned
+        </span>
+      </div>
+      {splits.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {splits.map((s) => (
+            <span key={s.id}
+              className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[11px] border bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30 tabular-nums">
+              Trolley {s.trolley_number} · {s.quantity}
+              <button onClick={() => remove(s.id)} className="hover:bg-violet-500/20 rounded-full p-0.5" title="Remove">
+                <Trash2 className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-1.5">
+        <Input className="h-6 w-16 text-[11px]" placeholder="T#" type="number" min={1}
+          value={num} onChange={(e) => setNum(e.target.value)} />
+        <Input className="h-6 w-16 text-[11px]" placeholder="Qty" type="number" min={1}
+          value={qty} onChange={(e) => setQty(e.target.value)} />
+        <Button size="sm" className="h-6 text-[11px] px-2" onClick={add} disabled={busy}>
+          <Plus className="h-3 w-3" /> Assign
+        </Button>
+      </div>
+    </div>
   );
 }
 
