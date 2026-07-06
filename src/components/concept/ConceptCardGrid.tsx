@@ -306,6 +306,7 @@ interface ConceptCardItemProps {
   renderConceptBody: Props["renderConceptBody"];
   conceptData: Record<string, any>;
   contract: ConceptContract;
+  minimal?: boolean;
 }
 
 function ConceptCardItem({
