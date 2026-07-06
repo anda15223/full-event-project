@@ -193,6 +193,13 @@ export function EquipmentConceptCard(props: EquipmentConceptCardProps) {
             </div>
           </div>
         )}
+
+        <ImportPowerEquipmentControl
+          currentFestivalId={festivalId}
+          conceptSlug={conceptSlug}
+          targetPowerId={powerId}
+          onImported={invalidate}
+        />
       </CardHeader>
 
       <CardContent className="p-0 divide-y">
