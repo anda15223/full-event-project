@@ -110,7 +110,7 @@ export function ConceptCardGrid({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_concept_assignments")
-        .select("concept_id, manager_staff_id, festival_staff(id, name)")
+        .select("concept_id, festival_contract_id, manager_staff_id, festival_staff(id, name)")
         .eq("festival_id", festivalId)
         .eq("role", "manager");
       if (error) throw error;
@@ -133,33 +133,49 @@ export function ConceptCardGrid({
     enabled: !!festivalId,
   });
 
-  const managerByConcept = useMemo(() => {
-    const m = new Map<string, ConceptManager>();
+  // Prefer contract-scoped assignments; fall back to any legacy concept-only row.
+  const managerByContract = useMemo(() => {
+    const byContract = new Map<string, ConceptManager>();
+    const byConceptFallback = new Map<string, ConceptManager>();
     (assignmentsQ.data ?? []).forEach((row: any) => {
-      m.set(row.concept_id, {
+      const m: ConceptManager = {
         concept_id: row.concept_id,
         manager_staff_id: row.manager_staff_id,
         manager_name: row.festival_staff?.name ?? null,
-      });
+      };
+      if (row.festival_contract_id) byContract.set(row.festival_contract_id, m);
+      else byConceptFallback.set(row.concept_id, m);
     });
-    return m;
+    return { byContract, byConceptFallback };
   }, [assignmentsQ.data]);
 
   const upsertManager = useMutation({
-    mutationFn: async ({ conceptId, staffId }: { conceptId: string; staffId: string | null }) => {
-      const { error } = await supabase
+    mutationFn: async ({ contractId, conceptId, staffId }: { contractId: string; conceptId: string; staffId: string | null }) => {
+      // Try update first (per-contract row exists) — else insert.
+      const { data: existing } = await supabase
         .from("festival_concept_assignments")
-        .upsert(
-          {
+        .select("id")
+        .eq("festival_contract_id", contractId)
+        .eq("role", "manager")
+        .maybeSingle();
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("festival_concept_assignments")
+          .update({ manager_staff_id: staffId, updated_at: new Date().toISOString() })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("festival_concept_assignments")
+          .insert({
             festival_id: festivalId,
             concept_id: conceptId,
+            festival_contract_id: contractId,
             role: "manager",
             manager_staff_id: staffId,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "festival_id,concept_id,role" },
-        );
-      if (error) throw error;
+          });
+        if (error) throw error;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["concept-assignments", festivalId] }),
   });
@@ -212,7 +228,10 @@ export function ConceptCardGrid({
           color_hex: row.concept.color_hex,
           short_name: row.concept.short_name,
         };
-        const manager = managerByConcept.get(c.id) ?? null;
+        const manager =
+          managerByContract.byContract.get(row.id) ??
+          managerByContract.byConceptFallback.get(c.id) ??
+          null;
         const slug = c.slug as ConceptSlug;
         const emoji = CONCEPT_EMOJI[slug] ?? "🍽️";
         const baseLabel = CONCEPT_LABELS[slug] ?? c.name;
@@ -249,7 +268,7 @@ export function ConceptCardGrid({
             hasFinanceAccess={hasFinanceAccess}
             enableManagerEdit={enableManagerEdit}
             staff={staffQ.data ?? []}
-            onManagerChange={(staffId) => upsertManager.mutate({ conceptId: c.id, staffId })}
+            onManagerChange={(staffId) => upsertManager.mutate({ contractId: row.id, conceptId: c.id, staffId })}
             festivalSlug={festivalSlug}
             festivalId={festivalId}
             showVehicleSelector={showVehicleSelector}
