@@ -226,11 +226,7 @@ function InfoDoc({
           <View style={s.mapBox}>
             <Image src={mapDataUrl} style={s.mapImg} />
           </View>
-        ) : (
-          <View style={s.mapPlaceholder}>
-            <Text>{hasCoords ? "Map unavailable" : "No map available"}</Text>
-          </View>
-        )}
+        ) : null}
       </View>
 
       {/* Service hours */}
