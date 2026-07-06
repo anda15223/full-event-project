@@ -35,7 +35,8 @@ type HoursRow = {
 
 type LocationDoc = {
   id: string; file_name: string; description: string | null;
-  file_size_bytes: number | null;
+  file_size_bytes: number | null; file_path: string; mime_type: string | null;
+  signed_url?: string | null;
 };
 
 const COL_LABEL: Record<string, string> = {
