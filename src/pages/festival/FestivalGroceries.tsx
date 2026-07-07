@@ -1302,6 +1302,199 @@ function RecipeDialog({
   );
 }
 
+// ============================================================
+// Consumables view (per festival, fixed quantities)
+// ============================================================
+function ConsumablesView({
+  festivalId, consumables, ingredients, suppliers, onChange,
+}: {
+  festivalId: string | null;
+  consumables: Consumable[];
+  ingredients: Ingredient[];
+  suppliers: Supplier[];
+  onChange: () => void;
+}) {
+  const [newIngOpen, setNewIngOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+
+  if (!festivalId) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+
+  const addRow = async () => {
+    if (ingredients.length === 0) { toast.error("Create an ingredient first"); return; }
+    const { error } = await supabase.from("grocery_festival_consumables").insert({
+      festival_id: festivalId, ingredient_id: ingredients[0].id, qty: 0, unit_mode: "packs",
+    });
+    if (error) { toast.error(error.message); return; }
+    onChange();
+  };
+
+  const update = async (id: string, patch: Partial<Consumable>) => {
+    const { error } = await supabase.from("grocery_festival_consumables").update(patch).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    onChange();
+  };
+  const del = async (id: string) => {
+    const { error } = await supabase.from("grocery_festival_consumables").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    onChange();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          Fixed per-festival items (cleaning, gloves, foil, first-aid…). Not driven by sales, no safety margin.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" /> Import from festival
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setNewIngOpen(true)}>
+            <Plus className="h-4 w-4" /> New ingredient
+          </Button>
+          <Button size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Add line</Button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-foreground bg-muted/30">
+            <tr>
+              <th className="text-left p-2">Item</th>
+              <th className="text-left p-2">Supplier</th>
+              <th className="text-right p-2">Quantity</th>
+              <th className="text-left p-2">Mode</th>
+              <th className="text-left p-2">Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {consumables.length === 0 && (
+              <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No consumables yet.</td></tr>
+            )}
+            {consumables.map(c => {
+              const ing = ingredients.find(i => i.id === c.ingredient_id);
+              const sup = suppliers.find(s => s.id === ing?.supplier_id);
+              return (
+                <tr key={c.id} className="border-t">
+                  <td className="p-2">
+                    <Select value={c.ingredient_id} onValueChange={(v) => update(c.id, { ingredient_id: v })}>
+                      <SelectTrigger className="h-8 min-w-[200px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ingredients.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2 text-xs text-muted-foreground">{sup?.name ?? "—"}</td>
+                  <td className="p-2 text-right">
+                    <Input type="number" className="h-8 w-24 text-right ml-auto"
+                      defaultValue={c.qty}
+                      onBlur={(e) => {
+                        const n = Number(e.target.value) || 0;
+                        if (n !== c.qty) update(c.id, { qty: n });
+                      }} />
+                  </td>
+                  <td className="p-2">
+                    <Select value={c.unit_mode} onValueChange={(v) => update(c.id, { unit_mode: v as any })}>
+                      <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="packs">packs</SelectItem>
+                        <SelectItem value="units">units ({ing?.unit ?? "?"})</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
+                    <Input className="h-8" defaultValue={c.note ?? ""}
+                      onBlur={(e) => update(c.id, { note: e.target.value || null })} />
+                  </td>
+                  <td className="p-2 text-right">
+                    <Button size="sm" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {newIngOpen && (
+        <IngredientDialog
+          ingredient={null}
+          suppliers={suppliers}
+          onClose={() => setNewIngOpen(false)}
+          onSaved={() => { setNewIngOpen(false); onChange(); }}
+        />
+      )}
+      {importOpen && (
+        <ConsumablesImportDialog
+          festivalId={festivalId}
+          onClose={() => setImportOpen(false)}
+          onDone={() => { setImportOpen(false); onChange(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ConsumablesImportDialog({
+  festivalId, onClose, onDone,
+}: {
+  festivalId: string; onClose: () => void; onDone: () => void;
+}) {
+  const [sourceId, setSourceId] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+
+  const festivalsQ = useQuery({
+    queryKey: ["gr-consumables-fest-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("festivals").select("id,name,start_date").order("start_date", { ascending: false });
+      return (data ?? []).filter((f: any) => f.id !== festivalId);
+    },
+  });
+
+  const run = async () => {
+    if (!sourceId) { toast.error("Pick a festival"); return; }
+    setBusy(true);
+    try {
+      const { data: src, error: e1 } = await supabase.from("grocery_festival_consumables")
+        .select("ingredient_id, qty, unit_mode, note").eq("festival_id", sourceId);
+      if (e1) throw e1;
+      if (!src || src.length === 0) { toast("No consumables to copy"); onDone(); return; }
+      const rows = src.map((r: any) => ({ ...r, festival_id: festivalId }));
+      const { error } = await supabase.from("grocery_festival_consumables").insert(rows);
+      if (error) throw error;
+      toast.success(`Imported ${rows.length} consumables`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message || String(e));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Import consumables from festival</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <Label>Source festival</Label>
+          <Select value={sourceId} onValueChange={setSourceId}>
+            <SelectTrigger><SelectValue placeholder="Select festival" /></SelectTrigger>
+            <SelectContent>
+              {(festivalsQ.data ?? []).map((f: any) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Rows are appended — this does not replace existing entries.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={run} disabled={busy}>{busy ? "Importing…" : "Import"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ---------- Import dialog ----------
 function ImportDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [text, setText] = useState("");
