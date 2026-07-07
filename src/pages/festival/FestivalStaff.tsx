@@ -2318,17 +2318,34 @@ function ImportStationAssignmentsButton({
       });
 
       let updated = 0;
+      let unassigned = 0;
       let skippedNoMatch = 0;
-      let skippedNoContract = 0;
       for (const s of (srcStaff ?? []) as any[]) {
-        if (!s.station || !s.contract_id || !s.concept_id) continue;
+        if (!s.contract_id || !s.concept_id) continue;
         const targetPerson =
           (s.email && byEmail.get(normEmail(s.email))) ||
           (s.name && byName.get(normName(s.name))) ||
           null;
         if (!targetPerson) { skippedNoMatch++; continue; }
         const mappedContract = contractMap.get(s.contract_id);
-        if (!mappedContract) { skippedNoContract++; continue; }
+        if (!mappedContract) {
+          // Source concept (e.g. "Fish 2") isn't active at this festival —
+          // park the person in the "Not assigned" card instead of leaving
+          // them stuck on a stale assignment.
+          const { error: upErr } = await supabase
+            .from("festival_staff")
+            .update({
+              contract_id: null,
+              concept_id: null,
+              station: null,
+              role: "crew",
+            })
+            .eq("id", targetPerson.id);
+          if (upErr) throw upErr;
+          unassigned++;
+          continue;
+        }
+        if (!s.station) continue;
         const { error: upErr } = await supabase
           .from("festival_staff")
           .update({
@@ -2349,8 +2366,8 @@ function ImportStationAssignmentsButton({
 
       toast.success(
         `Applied ${updated} assignment${updated === 1 ? "" : "s"}` +
-        (skippedNoMatch ? ` · ${skippedNoMatch} person(s) not on this list` : "") +
-        (skippedNoContract ? ` · ${skippedNoContract} concept not on this festival` : ""),
+        (unassigned ? ` · ${unassigned} moved to Not assigned (concept not at this festival)` : "") +
+        (skippedNoMatch ? ` · ${skippedNoMatch} person(s) not on this list` : ""),
       );
       setPickerOpen(false);
       onDone();
