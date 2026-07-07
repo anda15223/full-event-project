@@ -338,6 +338,7 @@ export function FacadeConceptCard({
           <PerConceptFacadeImport
             festivalId={festivalId}
             conceptId={conceptId}
+            targetContractId={facade.festival_contract_id}
             targetFacadeId={facade.id}
             onImported={invalidate}
           />
