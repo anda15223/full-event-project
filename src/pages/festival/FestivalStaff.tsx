@@ -2297,15 +2297,30 @@ function ImportStationAssignmentsButton({
         .eq("is_active", true);
       if (tcErr) throw tcErr;
 
-      const contractMap = new Map<string, string>();
+      const normalizeAlias = (value: string | null | undefined) =>
+        (value ?? "").trim().toLowerCase();
+      const targetByExactAlias = new Map<string, any>();
+      const targetsByConcept = new Map<string, any[]>();
+      (tgtContracts ?? []).forEach((tc: any) => {
+        const list = targetsByConcept.get(tc.concept_id) ?? [];
+        list.push(tc);
+        targetsByConcept.set(tc.concept_id, list);
+
+        const alias = normalizeAlias(tc.concept_alias);
+        if (alias) targetByExactAlias.set(`${tc.concept_id}::${alias}`, tc);
+      });
+
+      const contractMap = new Map<string, { contractId: string; conceptId: string }>();
       (srcContracts ?? []).forEach((sc: any) => {
-        const match = (tgtContracts ?? []).find(
-          (tc: any) =>
-            tc.concept_id === sc.concept_id &&
-            (tc.concept_alias ?? "").trim().toLowerCase() ===
-              (sc.concept_alias ?? "").trim().toLowerCase(),
-        ) ?? (tgtContracts ?? []).find((tc: any) => tc.concept_id === sc.concept_id);
-        if (match) contractMap.set(sc.id, match.id);
+        const alias = normalizeAlias(sc.concept_alias);
+        let match: any | undefined;
+        if (alias) {
+          match = targetByExactAlias.get(`${sc.concept_id}::${alias}`);
+        } else {
+          const sameConcept = targetsByConcept.get(sc.concept_id) ?? [];
+          if (sameConcept.length === 1) match = sameConcept[0];
+        }
+        if (match) contractMap.set(sc.id, { contractId: match.id, conceptId: match.concept_id });
       });
 
       const normEmail = (e: string | null | undefined) => (e ?? "").trim().toLowerCase();
@@ -2349,8 +2364,8 @@ function ImportStationAssignmentsButton({
         const { error: upErr } = await supabase
           .from("festival_staff")
           .update({
-            contract_id: mappedContract,
-            concept_id: s.concept_id,
+            contract_id: mappedContract.contractId,
+            concept_id: mappedContract.conceptId,
             station: s.station,
             role: "crew",
           })
