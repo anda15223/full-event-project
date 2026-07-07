@@ -742,11 +742,13 @@ const PER_CONCEPT_COPY_FIELDS = [
 function PerConceptFacadeImport({
   festivalId,
   conceptId,
+  targetContractId,
   targetFacadeId,
   onImported,
 }: {
   festivalId: string;
   conceptId: string;
+  targetContractId: string;
   targetFacadeId: string;
   onImported: () => void;
 }) {
