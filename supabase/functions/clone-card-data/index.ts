@@ -49,6 +49,13 @@ const STRIP = new Set<string>([
   "hours",
 ]);
 
+// Per-table additional strips: columns whose value must be re-derived on the
+// target festival (unique-per-festival numbering, etc.) to avoid 23505 clashes.
+const PER_TABLE_STRIP: Record<string, string[]> = {
+  festival_staff: ["staff_number"], // trigger assign_festival_staff_number renumbers on insert
+};
+
+
 type Action = "import" | "commit" | "discard" | "count";
 
 interface Body {
