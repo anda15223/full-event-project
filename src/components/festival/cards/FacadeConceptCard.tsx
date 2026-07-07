@@ -327,7 +327,9 @@ export function FacadeConceptCard({
       {/* Photos */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-semibold">Photos</h4>
+          <h4 className="text-sm font-semibold">
+            Photos {photos.length > 0 && <span className="text-muted-foreground font-normal">· {photos.length}</span>}
+          </h4>
           <Button size="sm" variant="ghost" className="h-7 text-xs"
             onClick={() => photoInputRef.current?.click()} disabled={uploadingPhotos}>
             {uploadingPhotos ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "+ Add photos"}
@@ -337,21 +339,113 @@ export function FacadeConceptCard({
         </div>
         {photos.length === 0 ? (
           <label
-            className="block border-2 border-dashed border-border rounded-lg p-6 text-center text-sm text-muted-foreground cursor-pointer hover:bg-muted/30"
+            className="block border-2 border-dashed border-border rounded-lg p-8 text-center text-sm text-muted-foreground cursor-pointer hover:bg-muted/30 transition"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) uploadPhotos(e.dataTransfer.files); }}
           >
-            <ImageIcon className="h-5 w-5 mx-auto mb-1 opacity-50" />
-            Drop facade photos or click to upload
+            <ImageIcon className="h-6 w-6 mx-auto mb-2 opacity-50" />
+            <div className="font-medium text-foreground/70">Drop facade photos or click to upload</div>
+            <div className="text-[11px] mt-1">JPG · PNG · WebP · multiple files supported</div>
             <input type="file" multiple accept="image/jpeg,image/png,image/webp"
               className="hidden" onChange={(e) => e.target.files && uploadPhotos(e.target.files)} />
           </label>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-            {photos.map((p) => <PhotoTile key={p.id} photo={p} onDelete={() => deletePhoto(p)} />)}
+          <div
+            className="space-y-2"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) uploadPhotos(e.dataTransfer.files); }}
+          >
+            {/* Hero photo — first in display order */}
+            <HeroPhotoTile
+              photo={photos[0]}
+              onDelete={() => deletePhoto(photos[0])}
+              onCaption={(c) => updateCaption(photos[0].id, c)}
+            />
+            {photos.length > 1 && (
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {photos.slice(1).map((p) => (
+                  <PhotoTile
+                    key={p.id}
+                    photo={p}
+                    onDelete={() => deletePhoto(p)}
+                    onSetCover={() => setCover(p.id)}
+                  />
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="w-full text-[11px] text-muted-foreground hover:text-foreground border border-dashed rounded-md py-1.5 hover:bg-muted/30 transition"
+            >
+              + Drop more photos here or click to add
+            </button>
           </div>
         )}
       </div>
+
+      {/* Equipment linked to this concept */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold">
+            Equipment for {conceptName}{" "}
+            <span className="text-muted-foreground font-normal">· {equipment.length}</span>
+          </h4>
+          <div className="flex gap-1">
+            <Button asChild size="sm" variant="ghost" className="h-7 text-xs">
+              <a href={`/festivals/${festivalSlug}/equipment`}>Open list →</a>
+            </Button>
+            {equipment.length > 0 && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs"
+                onClick={() => setEquipOpen((v) => !v)}>
+                {equipOpen ? "Hide" : "Show"}
+              </Button>
+            )}
+          </div>
+        </div>
+        {equipmentQ.isLoading ? (
+          <div className="text-[11px] text-muted-foreground italic">Loading…</div>
+        ) : equipment.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic">
+            No equipment items assigned to this concept yet.
+          </div>
+        ) : equipOpen ? (
+          <div className="rounded-lg border divide-y text-xs">
+            {equipment.map((it) => {
+              const dims = [it.position_zone, it.zone].filter(Boolean).join(" · ");
+              const qty = it.quantity ?? it.qty ?? 1;
+              return (
+                <div key={it.id} className="flex items-center gap-2 px-2 py-1.5">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{it.name ?? "—"}</div>
+                    {(it.category || dims || it.notes) && (
+                      <div className="text-[10px] text-muted-foreground truncate">
+                        {[it.category, dims, it.notes].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
+                  </div>
+                  <InlineNumber
+                    value={qty}
+                    suffix="×"
+                    onSave={(v) => equipMutation.mutate({ id: it.id, qty: v ?? 1 })}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-[11px] text-muted-foreground">
+            {equipment.reduce((s, it) => s + (it.quantity ?? it.qty ?? 1), 0)} pieces across{" "}
+            {new Set(equipment.map((it) => it.category ?? "other")).size} categor
+            {new Set(equipment.map((it) => it.category ?? "other")).size === 1 ? "y" : "ies"}
+            {" · "}
+            <button className="underline hover:text-foreground" onClick={() => setEquipOpen(true)}>
+              show details
+            </button>
+          </div>
+        )}
+      </div>
+
 
       {/* Spec doc */}
       <div>
