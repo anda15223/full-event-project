@@ -139,7 +139,7 @@ export default function FestivalTransport() {
   const focusLegId = searchParams.get("leg");
 
   const { data: festival } = useQuery({
-    queryKey: ["festival", slug],
+    queryKey: ["transport-festival", slug],
     queryFn: async () => {
       const { data, error } = await supabase.from("festivals").select("id,slug,name,start_date,end_date,staff_import_source_festival_id").eq("slug", slug).maybeSingle();
       if (error) throw error;
@@ -1879,7 +1879,10 @@ async function importTransportSeatAssignments(
     return "seat allocations skipped — staff list was imported from a different festival";
   }
 
-  // 2. Fetch source transports (live) and target draft transports just created.
+  // 2. Fetch source transports (live) and target transports. Normally the target
+  // rows are drafts because this runs immediately after Import as draft. If a
+  // previous import was already committed before seat allocations ran, fall back
+  // to live target rows and pair them by vehicle signature/order.
   const [srcT, tgtT] = await Promise.all([
     supabase
       .from("festival_transport")
@@ -1899,10 +1902,21 @@ async function importTransportSeatAssignments(
   if (tgtT.error) throw tgtT.error;
 
   const srcRows = (srcT.data ?? []) as any[];
-  const tgtRows = (tgtT.data ?? []) as any[];
+  let tgtRows = (tgtT.data ?? []) as any[];
 
   if (tgtRows.length === 0) {
-    return "seat allocations skipped — no draft cars from this source were found. Was the transport import already committed? Try Discard, then Import as draft.";
+    const { data: liveTargets, error: liveErr } = await supabase
+      .from("festival_transport")
+      .select("*")
+      .eq("festival_id", targetFestivalId)
+      .eq("is_draft", false)
+      .order("created_at", { ascending: true });
+    if (liveErr) throw liveErr;
+    tgtRows = (liveTargets ?? []) as any[];
+  }
+
+  if (tgtRows.length === 0) {
+    return "seat allocations skipped — no target cars were found";
   }
 
   const sig = (r: any) =>
