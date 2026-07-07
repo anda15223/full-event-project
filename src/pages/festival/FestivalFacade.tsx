@@ -303,7 +303,7 @@ function FacadeImportBar({
 
         if (existing?.id) {
           const { error: uErr } = await supabase
-            .from("festival_facade").update(patch).eq("id", existing.id);
+            .from("festival_facade").update(patch as any).eq("id", existing.id);
           if (uErr) throw uErr;
         } else {
           const { error: iErr } = await supabase
