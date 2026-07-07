@@ -312,7 +312,16 @@ export default function FestivalGroceries() {
     return estimates.filter(e => e.day != null && daySet.has(e.day.slice(0, 10)));
   }, [estimates, days]);
 
-  const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active), [recipes]);
+  const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active && !r.location_only), [recipes]);
+  const locationOnlyIds = useMemo(() => new Set(recipes.filter(r => r.location_only).map(r => r.id)), [recipes]);
+  // Ingredients whose supplier is Triple Trading or Kollek get a fixed +20% margin
+  // (used INSTEAD of the festival safety margin). Recomputes when suppliers/ingredients change.
+  const bumpedMarginIngIds = useMemo(() => {
+    const packSups = new Set(
+      suppliers.filter(s => s.name === "Triple Trading" || s.name === "Kollek").map(s => s.id),
+    );
+    return new Set(ingredients.filter(i => i.supplier_id && packSups.has(i.supplier_id)).map(i => i.id));
+  }, [suppliers, ingredients]);
 
   // Calculation ------------------------------------------------------
   // Returns per-ingredient totals (merged food + packaging + consumables)
