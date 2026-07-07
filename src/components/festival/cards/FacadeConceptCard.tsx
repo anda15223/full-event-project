@@ -524,7 +524,9 @@ export function FacadeConceptCard({
   );
 }
 
-function PhotoTile({ photo, onDelete }: { photo: FacadePhotoRow; onDelete: () => void }) {
+function PhotoTile({
+  photo, onDelete, onSetCover,
+}: { photo: FacadePhotoRow; onDelete: () => void; onSetCover?: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -553,7 +555,16 @@ function PhotoTile({ photo, onDelete }: { photo: FacadePhotoRow; onDelete: () =>
       >
         <X className="h-3 w-3" />
       </button>
-      {photo.caption && (
+      {onSetCover && (
+        <button
+          onClick={onSetCover}
+          className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-background/80 text-[9px] opacity-0 group-hover:opacity-100 transition hover:bg-primary hover:text-primary-foreground"
+          aria-label="Set as cover"
+        >
+          Set cover
+        </button>
+      )}
+      {photo.caption && !onSetCover && (
         <div className="absolute bottom-0 inset-x-0 bg-background/80 text-[10px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100">
           {photo.caption}
         </div>
@@ -561,3 +572,53 @@ function PhotoTile({ photo, onDelete }: { photo: FacadePhotoRow; onDelete: () =>
     </div>
   );
 }
+
+function HeroPhotoTile({
+  photo, onDelete, onCaption,
+}: { photo: FacadePhotoRow; onDelete: () => void; onCaption: (c: string) => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [caption, setCaption] = useState(photo.caption ?? "");
+  useEffect(() => setCaption(photo.caption ?? ""), [photo.caption]);
+  useEffect(() => {
+    let alive = true;
+    supabase.storage.from("facade-designs")
+      .createSignedUrl(photo.file_path, 3600)
+      .then(({ data }) => { if (alive && data?.signedUrl) setUrl(data.signedUrl); });
+    return () => { alive = false; };
+  }, [photo.file_path]);
+
+  return (
+    <div className="relative rounded-xl overflow-hidden border bg-muted group">
+      <div className="aspect-[16/9] w-full">
+        {url ? (
+          <a href={url} target="_blank" rel="noreferrer">
+            <img src={url} alt={photo.caption ?? photo.file_name}
+              className="h-full w-full object-cover" loading="lazy" />
+          </a>
+        ) : (
+          <div className="h-full w-full flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin opacity-50" />
+          </div>
+        )}
+      </div>
+      <button
+        onClick={onDelete}
+        className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition hover:bg-destructive hover:text-destructive-foreground"
+        aria-label="Delete photo"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-background/80 text-[10px] font-medium uppercase tracking-wider">
+        Cover
+      </div>
+      <Input
+        value={caption}
+        onChange={(e) => setCaption(e.target.value)}
+        onBlur={() => { if (caption !== (photo.caption ?? "")) onCaption(caption); }}
+        placeholder="Add caption…"
+        className="border-0 rounded-none bg-background/70 backdrop-blur h-8 text-xs"
+      />
+    </div>
+  );
+}
+
