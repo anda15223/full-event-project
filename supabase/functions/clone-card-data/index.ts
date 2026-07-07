@@ -128,65 +128,100 @@ Deno.serve(async (req) => {
     }
 
     const imported: Record<string, number> = {};
+    const errors: Record<string, string> = {};
+
+    // Retry wrapper for transient upstream failures (e.g. Cloudflare 522).
+    const withRetry = async <T,>(fn: () => Promise<{ data?: T; error: any; count?: number | null }>, label: string) => {
+      let lastErr: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fn();
+          if (!res.error) return res;
+          lastErr = res.error;
+          const msg = String(res.error?.message ?? "");
+          // Only retry transient network/timeout errors
+          if (!/522|timeout|fetch failed|network|ECONN|ETIMEDOUT/i.test(msg)) return res;
+        } catch (e) {
+          lastErr = e;
+        }
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+      return { data: undefined as any, error: lastErr, count: null };
+    };
+
     for (const t of tables) {
-      // Wipe any prior drafts for this scope first, so re-import is idempotent.
-      await supabase
-        .from(t)
-        .delete()
-        .eq("festival_id", targetFestivalId)
-        .eq("is_draft", true);
+      try {
+        // Wipe any prior drafts for this scope first, so re-import is idempotent.
+        await withRetry(
+          () => supabase.from(t).delete().eq("festival_id", targetFestivalId).eq("is_draft", true) as any,
+          `${t} wipe`,
+        );
 
-      const { data: rows, error } = await supabase
-        .from(t)
-        .select("*")
-        .eq("festival_id", sourceFestivalId)
-        .eq("is_draft", false);
-      if (error) return json({ error: `${t} read: ${error.message}` }, 500);
-      if (!rows || rows.length === 0) {
-        imported[t] = 0;
-        continue;
-      }
-
-      const cleaned = rows.map((r: Record<string, unknown>) => {
-        const out: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(r)) {
-          if (STRIP.has(k)) continue;
-          out[k] = v;
+        const { data: rows, error } = await withRetry(
+          () => supabase.from(t).select("*").eq("festival_id", sourceFestivalId).eq("is_draft", false) as any,
+          `${t} read`,
+        );
+        if (error) {
+          errors[t] = `read: ${(error as any).message ?? String(error)}`.slice(0, 300);
+          continue;
         }
-        out.festival_id = targetFestivalId;
-        out.is_draft = true;
-        out.draft_source_festival_id = sourceFestivalId;
-        return out;
-      });
+        const rowList = (rows ?? []) as Record<string, unknown>[];
+        if (rowList.length === 0) {
+          imported[t] = 0;
+          continue;
+        }
 
-      // Bulk insert in chunks of 200.
-      let inserted = 0;
-      for (let i = 0; i < cleaned.length; i += 200) {
-        const chunk = cleaned.slice(i, i + 200);
-        let insErr: { message: string; code?: string } | null = null;
-        let count: number | null = null;
-        const res = await supabase.from(t).insert(chunk, { count: "exact" });
-        insErr = res.error as any;
-        count = res.count;
-        // If unique violation against existing live rows, fall back to per-row insert skipping conflicts.
-        if (insErr && (insErr as any).code === "23505") {
-          insErr = null;
-          count = 0;
-          for (const row of chunk) {
-            const single = await supabase.from(t).insert(row, { count: "exact" });
-            if (single.error) {
-              if ((single.error as any).code === "23505") continue; // skip duplicate
-              return json({ error: `${t} insert: ${single.error.message}` }, 500);
-            }
-            count += single.count ?? 1;
+        const cleaned = rowList.map((r) => {
+          const out: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(r)) {
+            if (STRIP.has(k)) continue;
+            out[k] = v;
           }
+          out.festival_id = targetFestivalId;
+          out.is_draft = true;
+          out.draft_source_festival_id = sourceFestivalId;
+          return out;
+        });
+
+        let inserted = 0;
+        let tableErr: string | null = null;
+        for (let i = 0; i < cleaned.length; i += 200) {
+          const chunk = cleaned.slice(i, i + 200);
+          const res = await withRetry(
+            () => supabase.from(t).insert(chunk, { count: "exact" }) as any,
+            `${t} insert`,
+          );
+          let insErr: any = res.error;
+          let count: number | null = res.count ?? null;
+          if (insErr && (insErr as any).code === "23505") {
+            insErr = null;
+            count = 0;
+            for (const row of chunk) {
+              const single = await supabase.from(t).insert(row, { count: "exact" });
+              if (single.error) {
+                if ((single.error as any).code === "23505") continue;
+                insErr = single.error;
+                break;
+              }
+              count += single.count ?? 1;
+            }
+          }
+          if (insErr) {
+            tableErr = `insert: ${(insErr as any).message ?? String(insErr)}`.slice(0, 300);
+            break;
+          }
+          inserted += count ?? chunk.length;
         }
-        if (insErr) return json({ error: `${t} insert: ${insErr.message}` }, 500);
-        inserted += count ?? chunk.length;
+        if (tableErr) {
+          errors[t] = tableErr;
+        }
+        imported[t] = inserted;
+      } catch (e) {
+        errors[t] = (e as Error).message?.slice(0, 300) ?? "unknown error";
       }
-      imported[t] = inserted;
     }
-    return json({ imported });
+    return json({ imported, errors });
+
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
