@@ -331,7 +331,7 @@ function ConceptCardItem({
   contract,
   minimal = false,
 }: ConceptCardItemProps) {
-  const { isActive } = useConceptIsActive(festivalSlug ? c.slug : undefined, festivalSlug ?? "");
+  const isActive = (row as any).is_active !== false;
   const disabled = festivalSlug ? !isActive : false;
 
   return (
