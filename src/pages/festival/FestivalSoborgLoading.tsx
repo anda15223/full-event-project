@@ -196,21 +196,53 @@ function ImportFromFestivalDialog({
   const runImport = async (sourceFestivalId: string, name: string) => {
     setBusy(sourceFestivalId);
     try {
-      // 1) Source + target contracts (with concept_id + assigned_vehicle_id)
+      // 1) Source + target contracts. Multiple stalls can share the same concept_id,
+      //    so we pair them by (concept_id, index-within-concept ordered by created_at).
       const [srcContractsRes, tgtContractsRes] = await Promise.all([
         sb.from("festival_contracts")
-          .select("id, concept_id, assigned_vehicle_id")
-          .eq("festival_id", sourceFestivalId).eq("is_active", true),
+          .select("id, concept_id, assigned_vehicle_id, created_at")
+          .eq("festival_id", sourceFestivalId).eq("is_active", true)
+          .order("created_at", { ascending: true }),
         sb.from("festival_contracts")
-          .select("id, concept_id")
-          .eq("festival_id", currentFestivalId).eq("is_active", true),
+          .select("id, concept_id, created_at")
+          .eq("festival_id", currentFestivalId).eq("is_active", true)
+          .order("created_at", { ascending: true }),
       ]);
       const srcContracts = (srcContractsRes.data ?? []) as any[];
       const tgtContracts = (tgtContractsRes.data ?? []) as any[];
-      const tgtByConcept = new Map(tgtContracts.map((c) => [c.concept_id, c.id]));
+
+      // Group by concept_id → ordered array, then pair by index.
+      const groupBy = (rows: any[]) => {
+        const m = new Map<string, any[]>();
+        for (const r of rows) {
+          const list = m.get(r.concept_id) ?? [];
+          list.push(r);
+          m.set(r.concept_id, list);
+        }
+        return m;
+      };
+      const srcByConcept = groupBy(srcContracts);
+      const tgtByConcept = groupBy(tgtContracts);
+
+      // Pairs of (srcContract, tgtContract) matched within same concept by index.
+      const pairs: { src: any; tgt: any }[] = [];
+      for (const [conceptId, srcList] of srcByConcept) {
+        const tgtList = tgtByConcept.get(conceptId) ?? [];
+        const n = Math.min(srcList.length, tgtList.length);
+        for (let i = 0; i < n; i++) pairs.push({ src: srcList[i], tgt: tgtList[i] });
+      }
+
+      // 1b) CLEAN: reset target-side vehicle assignments for these paired contracts
+      //     so a repeat import is idempotent and never leaves stale state.
+      const tgtContractIds = pairs.map((p) => p.tgt.id);
+      if (tgtContractIds.length) {
+        await sb.from("festival_contracts")
+          .update({ assigned_vehicle_id: null })
+          .in("id", tgtContractIds);
+      }
 
       // 2) Source vehicles → season_rental_id (so we can match across festivals)
-      const srcVehicleIds = Array.from(new Set(srcContracts.map((c) => c.assigned_vehicle_id).filter(Boolean)));
+      const srcVehicleIds = Array.from(new Set(pairs.map((p) => p.src.assigned_vehicle_id).filter(Boolean)));
       const srcVehMap = new Map<string, { season_rental_id: string | null; vehicle_type: string; license_plate: string | null }>();
       if (srcVehicleIds.length) {
         const { data: vs } = await sb.from("festival_transport")
@@ -225,46 +257,48 @@ function ImportFromFestivalDialog({
 
       // 3) Target vehicles index by season_rental_id
       const { data: tgtVehs } = await sb.from("festival_transport")
-        .select("id, season_rental_id, vehicle_type, license_plate")
+        .select("id, season_rental_id")
         .eq("festival_id", currentFestivalId);
       const tgtVehBySeason = new Map<string, string>();
       (tgtVehs ?? []).forEach((v: any) => {
         if (v.season_rental_id) tgtVehBySeason.set(v.season_rental_id, v.id);
       });
 
-      // 4) Assign vehicles to target contracts
+      // 4) Assign vehicles to target contracts (per pair)
       let assignedCount = 0;
-      for (const sc of srcContracts) {
-        const tgtContractId = tgtByConcept.get(sc.concept_id);
-        if (!tgtContractId || !sc.assigned_vehicle_id) continue;
-        const srcVeh = srcVehMap.get(sc.assigned_vehicle_id);
+      const assignErrors: string[] = [];
+      for (const { src, tgt } of pairs) {
+        if (!src.assigned_vehicle_id) continue;
+        const srcVeh = srcVehMap.get(src.assigned_vehicle_id);
         if (!srcVeh?.season_rental_id) continue;
         let tgtVehId = tgtVehBySeason.get(srcVeh.season_rental_id);
         if (!tgtVehId) {
-          const { data: newV } = await sb.from("festival_transport").insert({
+          const { data: newV, error: insErr } = await sb.from("festival_transport").insert({
             festival_id: currentFestivalId,
             vehicle_type: srcVeh.vehicle_type,
             license_plate: srcVeh.license_plate,
             season_rental_id: srcVeh.season_rental_id,
-            is_draft: true,
-            status: "draft",
+            is_draft: false,
+            status: "planned",
           }).select("id").single();
-          if (!newV) continue;
+          if (insErr || !newV) { assignErrors.push(insErr?.message ?? "insert vehicle"); continue; }
           tgtVehId = newV.id;
           tgtVehBySeason.set(srcVeh.season_rental_id, tgtVehId);
         }
-        await sb.from("festival_contracts").update({ assigned_vehicle_id: tgtVehId }).eq("id", tgtContractId);
-        assignedCount++;
+        const { data: upd, error: updErr } = await sb.from("festival_contracts")
+          .update({ assigned_vehicle_id: tgtVehId })
+          .eq("id", tgt.id)
+          .select("id");
+        if (updErr) { assignErrors.push(updErr.message); continue; }
+        if (upd && upd.length > 0) assignedCount++;
       }
 
-      // 5) Copy loads_from_soborg flags per concept (match equipment by name within concept's power)
+      // 5) Copy loads_from_soborg flags — per PAIR (no cross-stall pollution)
       let flagsCopied = 0;
-      for (const sc of srcContracts) {
-        const tgtContractId = tgtByConcept.get(sc.concept_id);
-        if (!tgtContractId) continue;
+      for (const { src, tgt } of pairs) {
         const [{ data: srcPowers }, { data: tgtPowers }] = await Promise.all([
-          sb.from("festival_power").select("id").eq("festival_contract_id", sc.id),
-          sb.from("festival_power").select("id").eq("festival_contract_id", tgtContractId),
+          sb.from("festival_power").select("id").eq("festival_contract_id", src.id),
+          sb.from("festival_power").select("id").eq("festival_contract_id", tgt.id),
         ]);
         const srcPowerIds = (srcPowers ?? []).map((p: any) => p.id);
         const tgtPowerIds = (tgtPowers ?? []).map((p: any) => p.id);
@@ -283,17 +317,21 @@ function ImportFromFestivalDialog({
           const k = String(e.equipment_name ?? "").trim().toLowerCase();
           if (k) srcFlagByName.set(k, !!e.loads_from_soborg);
         });
-        for (const t of (tgtEq ?? []) as any[]) {
-          const k = String(t.equipment_name ?? "").trim().toLowerCase();
+        for (const te of (tgtEq ?? []) as any[]) {
+          const k = String(te.equipment_name ?? "").trim().toLowerCase();
           if (!srcFlagByName.has(k)) continue;
           await sb.from("festival_power_equipment")
             .update({ loads_from_soborg: srcFlagByName.get(k) })
-            .eq("id", t.id);
+            .eq("id", te.id);
           flagsCopied++;
         }
       }
 
-      toast.success(`Imported from ${name}: ${assignedCount} vehicle assignment(s), ${flagsCopied} equipment flag(s).`);
+      const errSuffix = assignErrors.length ? ` (${assignErrors.length} vehicle error(s))` : "";
+      toast.success(
+        `Imported from ${name}: ${pairs.length} contract pair(s), ${assignedCount} vehicle assignment(s), ${flagsCopied} flag update(s)${errSuffix}.`
+      );
+      if (assignErrors.length) console.warn("[soborg import] vehicle errors:", assignErrors);
       onImported();
       onOpenChange(false);
     } catch (e: any) {
@@ -302,6 +340,7 @@ function ImportFromFestivalDialog({
       setBusy(null);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
