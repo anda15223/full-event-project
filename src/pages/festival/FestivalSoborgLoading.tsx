@@ -380,6 +380,7 @@ export default function FestivalSoborgLoading() {
   const [loading, setLoading] = useState(true);
   const [pickerForContract, setPickerForContract] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const reload = () => {
     setLoading(true);
