@@ -254,7 +254,64 @@ export default function FestivalAccommodation() {
         tables={CARD_TABLES.accommodation}
         currentFestivalId={festivalId}
         onCommitted={() => qc.invalidateQueries({ queryKey: ["accommodation-page", slug] })}
+        extraImport={async (sourceFestivalId, targetFestivalId) => {
+          // Also copy per-room bed assignments (text names) so the booking
+          // layout comes across intact — not just the top-level booking row.
+          const { data: srcAcc, error: srcErr } = await supabase
+            .from("festival_accommodation")
+            .select("id, created_at")
+            .eq("festival_id", sourceFestivalId)
+            .eq("is_draft", false)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true });
+          if (srcErr) throw new Error(srcErr.message);
+          const { data: tgtAcc, error: tgtErr } = await supabase
+            .from("festival_accommodation")
+            .select("id, created_at")
+            .eq("festival_id", targetFestivalId)
+            .eq("is_draft", true)
+            .eq("draft_source_festival_id", sourceFestivalId)
+            .order("created_at", { ascending: true })
+            .order("id", { ascending: true });
+          if (tgtErr) throw new Error(tgtErr.message);
+          if (!srcAcc?.length || !tgtAcc?.length) return;
+
+          const tgtIds = tgtAcc.map((a) => a.id);
+          // Idempotent re-import: clear any rooms already attached to fresh drafts.
+          await supabase
+            .from("festival_accommodation_room")
+            .delete()
+            .in("accommodation_id", tgtIds);
+
+          const srcIds = srcAcc.map((a) => a.id);
+          const { data: srcRooms, error: roomErr } = await supabase
+            .from("festival_accommodation_room")
+            .select("*")
+            .in("accommodation_id", srcIds);
+          if (roomErr) throw new Error(roomErr.message);
+          if (!srcRooms?.length) return;
+
+          const idMap = new Map<string, string>();
+          srcAcc.forEach((a, i) => {
+            if (tgtAcc[i]) idMap.set(a.id, tgtAcc[i].id);
+          });
+          const rows = srcRooms
+            .map((r: any) => {
+              const { id, created_at, updated_at, accommodation_id, ...rest } = r;
+              const mapped = idMap.get(accommodation_id);
+              if (!mapped) return null;
+              return { ...rest, accommodation_id: mapped };
+            })
+            .filter(Boolean) as any[];
+          if (!rows.length) return;
+          const { error: insErr } = await supabase
+            .from("festival_accommodation_room")
+            .insert(rows);
+          if (insErr) throw new Error(insErr.message);
+          return `+${rows.length} room${rows.length === 1 ? "" : "s"} with bed assignments`;
+        }}
       />
+
 
       {/* Summary pills */}
       {summary.bookings > 0 && (
