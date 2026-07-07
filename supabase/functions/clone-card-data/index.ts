@@ -122,19 +122,29 @@ Deno.serve(async (req) => {
       // prevents duplicate staff_number collisions and matches the UI wording.
       const replacingStaff = tables.some((t) => STAFF_REPLACE_TABLES.has(t));
       if (replacingStaff) {
-        const { error: assignmentErr } = await supabase
-          .from("transport_leg_assignments")
-          .update({ staff_id: null })
-          .in("leg_id", (await supabase
+        const { data: transports, error: transportReadErr } = await supabase
+          .from("festival_transport")
+          .select("id")
+          .eq("festival_id", targetFestivalId);
+        if (transportReadErr) return json({ error: `festival_transport: ${transportReadErr.message}` }, 500);
+
+        const transportIds = (transports ?? []).map((r: any) => r.id).filter(Boolean);
+        if (transportIds.length > 0) {
+          const { data: legs, error: legReadErr } = await supabase
             .from("transport_legs")
             .select("id")
-            .in("transport_id", (await supabase
-              .from("festival_transport")
-              .select("id")
-              .eq("festival_id", targetFestivalId)
-            ).data?.map((r: any) => r.id) ?? [])
-          ).data?.map((r: any) => r.id) ?? []);
-        if (assignmentErr) return json({ error: `transport_leg_assignments: ${assignmentErr.message}` }, 500);
+            .in("transport_id", transportIds);
+          if (legReadErr) return json({ error: `transport_legs: ${legReadErr.message}` }, 500);
+
+          const legIds = (legs ?? []).map((r: any) => r.id).filter(Boolean);
+          if (legIds.length > 0) {
+            const { error: assignmentErr } = await supabase
+              .from("transport_leg_assignments")
+              .update({ staff_id: null })
+              .in("leg_id", legIds);
+            if (assignmentErr) return json({ error: `transport_leg_assignments: ${assignmentErr.message}` }, 500);
+          }
+        }
 
         const { error: managerErr } = await supabase
           .from("festival_concept_assignments")
