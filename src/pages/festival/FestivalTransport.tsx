@@ -204,17 +204,26 @@ export default function FestivalTransport() {
   });
 
   const { data: staff = [] } = useQuery({
-    queryKey: ["festival-staff", festival?.id, draftMode],
+    queryKey: ["festival-staff-any-draft", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
+      // Load staff regardless of draft state — transport assignments may reference
+      // committed staff even when transport rows are still drafts (e.g. right after
+      // an import where the staff list was already committed).
       const { data, error } = await supabase
         .from("festival_staff")
-        .select("id,name,role,requires_transport,home_location")
+        .select("id,name,role,requires_transport,home_location,is_draft")
         .eq("festival_id", festival!.id)
-        .eq("is_draft", draftMode)
         .order("name");
       if (error) throw error;
-      return (data ?? []) as any as Staff[];
+      const seen = new Set<string>();
+      const out: any[] = [];
+      (data ?? []).forEach((s: any) => {
+        if (seen.has(s.id)) return;
+        seen.add(s.id);
+        out.push(s);
+      });
+      return out as any as Staff[];
     },
   });
 
