@@ -63,7 +63,8 @@ type Staff = {
 // Day window helpers — derive the list of dates shown as chips from the
 // festival's start/end date, with a buffer for early arrivals / pack-down.
 const BUFFER_BEFORE_DAYS = 3;
-const BUFFER_AFTER_DAYS = 1;
+const BUFFER_AFTER_DAYS = 3;
+
 
 function addDaysISO(iso: string, n: number): string {
   const d = new Date(iso + "T00:00:00Z");
