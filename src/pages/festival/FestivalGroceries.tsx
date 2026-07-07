@@ -1127,7 +1127,12 @@ function LibraryView({
             <tbody>
               {recipes.map(r => (
                 <tr key={r.id} className="border-t">
-                  <td className="p-2">{r.name}</td>
+                  <td className="p-2">
+                    {r.name}
+                    {r.location_only && (
+                      <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-orange-500/10 text-orange-700 border border-orange-500/30" title="Location-only product (hidden from festival estimates)">Location</span>
+                    )}
+                  </td>
                   <td className="p-2">{CONCEPT_LABEL[r.concept]}</td>
                   <td className="p-2">{r.type}</td>
                   <td className="p-2 text-right">{r.batch_g ?? "—"}</td>
