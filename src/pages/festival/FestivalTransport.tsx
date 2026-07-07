@@ -141,11 +141,22 @@ export default function FestivalTransport() {
   const { data: festival } = useQuery({
     queryKey: ["festival", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("festivals").select("id,slug,name,start_date,end_date").eq("slug", slug).maybeSingle();
+      const { data, error } = await supabase.from("festivals").select("id,slug,name,start_date,end_date,staff_import_source_festival_id").eq("slug", slug).maybeSingle();
       if (error) throw error;
-      return data as Festival | null;
+      return data as any;
     },
   });
+
+  const { data: staffSourceFestival } = useQuery({
+    queryKey: ["staff-source-festival", (festival as any)?.staff_import_source_festival_id],
+    enabled: !!(festival as any)?.staff_import_source_festival_id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("festivals").select("id,name").eq("id", (festival as any).staff_import_source_festival_id).maybeSingle();
+      if (error) throw error;
+      return data as { id: string; name: string } | null;
+    },
+  });
+
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["transport-vehicles", slug],
@@ -328,6 +339,19 @@ export default function FestivalTransport() {
           importTransportSeatAssignments(sourceFestivalId, currentFestivalId)
         }
       />
+      <div className="text-xs text-muted-foreground -mt-4 pl-3">
+        {staffSourceFestival ? (
+          <>💺 Seat allocations will follow only if you import from{" "}
+            <strong>{staffSourceFestival.name}</strong> (the source used for
+            this festival's staff list). Pick a different source and only cars
+            come in — seat assignments are skipped.
+          </>
+        ) : (
+          <>💺 No staff-list import is recorded on this festival yet, so seat
+            allocations cannot be auto-imported. Import the staff list first,
+            then import transport from the same festival.</>
+        )}
+      </div>
       {/* Print header (only in print) */}
       <div className="hidden print:block print-header">
         <div className="text-sm font-bold">
