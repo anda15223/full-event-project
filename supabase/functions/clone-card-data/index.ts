@@ -58,6 +58,8 @@ const PER_TABLE_STRIP: Record<string, string[]> = {
 
 type Action = "import" | "commit" | "discard" | "count";
 
+const STAFF_REPLACE_TABLES = new Set(["festival_staff", "festival_staff_vehicles"]);
+
 interface Body {
   action: Action;
   tables: string[];
@@ -113,6 +115,48 @@ Deno.serve(async (req) => {
 
     if (action === "commit") {
       const promoted: Record<string, number> = {};
+
+      // Staff card imports are replacement lists: when the user clicks
+      // "Set up for this event", the staged Tårnby staff list must replace
+      // any existing live Kolding staff list instead of being appended. This
+      // prevents duplicate staff_number collisions and matches the UI wording.
+      const replacingStaff = tables.some((t) => STAFF_REPLACE_TABLES.has(t));
+      if (replacingStaff) {
+        const { error: assignmentErr } = await supabase
+          .from("transport_leg_assignments")
+          .update({ staff_id: null })
+          .in("leg_id", (await supabase
+            .from("transport_legs")
+            .select("id")
+            .in("transport_id", (await supabase
+              .from("festival_transport")
+              .select("id")
+              .eq("festival_id", targetFestivalId)
+            ).data?.map((r: any) => r.id) ?? [])
+          ).data?.map((r: any) => r.id) ?? []);
+        if (assignmentErr) return json({ error: `transport_leg_assignments: ${assignmentErr.message}` }, 500);
+
+        const { error: managerErr } = await supabase
+          .from("festival_concept_assignments")
+          .update({ manager_staff_id: null })
+          .eq("festival_id", targetFestivalId);
+        if (managerErr) return json({ error: `festival_concept_assignments: ${managerErr.message}` }, 500);
+
+        const { error: vehicleErr } = await supabase
+          .from("festival_staff_vehicles")
+          .delete()
+          .eq("festival_id", targetFestivalId)
+          .eq("is_draft", false);
+        if (vehicleErr) return json({ error: `festival_staff_vehicles: ${vehicleErr.message}` }, 500);
+
+        const { error: staffErr } = await supabase
+          .from("festival_staff")
+          .delete()
+          .eq("festival_id", targetFestivalId)
+          .eq("is_draft", false);
+        if (staffErr) return json({ error: `festival_staff: ${staffErr.message}` }, 500);
+      }
+
       for (const t of tables) {
         const { error, count } = await supabase
           .from(t)
