@@ -715,6 +715,27 @@ export default function FestivalOverview() {
     },
   });
 
+  const staffStatusQ = useQuery({
+    queryKey: ["overview-staff-status", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data } = await supabase.from("festival_staff")
+        .select("name, role, contract_id, works_thursday, works_friday, works_saturday, works_sunday")
+        .eq("festival_id", festivalId!).eq("is_draft", false);
+      const rows = (data ?? []) as any[];
+      const total = rows.length;
+      if (total === 0) return { total: 0, complete: 0 };
+      const complete = rows.filter((r) => {
+        const hasName = !!(r.name && String(r.name).trim());
+        const hasRole = !!r.role;
+        const assigned = r.role === "management" || !!r.contract_id;
+        const anyDay = r.works_thursday || r.works_friday || r.works_saturday || r.works_sunday;
+        return hasName && hasRole && assigned && anyDay;
+      }).length;
+      return { total, complete };
+    },
+  });
+
   const soborgQ = useQuery({
     queryKey: ["overview-soborg", slug],
     enabled: !!slug,
