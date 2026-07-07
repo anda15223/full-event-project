@@ -715,6 +715,27 @@ export default function FestivalOverview() {
     },
   });
 
+  const staffStatusQ = useQuery({
+    queryKey: ["overview-staff-status", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data } = await supabase.from("festival_staff")
+        .select("name, role, contract_id, works_thursday, works_friday, works_saturday, works_sunday")
+        .eq("festival_id", festivalId!).eq("is_draft", false);
+      const rows = (data ?? []) as any[];
+      const total = rows.length;
+      if (total === 0) return { total: 0, complete: 0 };
+      const complete = rows.filter((r) => {
+        const hasName = !!(r.name && String(r.name).trim());
+        const hasRole = !!r.role;
+        const assigned = r.role === "management" || !!r.contract_id;
+        const anyDay = r.works_thursday || r.works_friday || r.works_saturday || r.works_sunday;
+        return hasName && hasRole && assigned && anyDay;
+      }).length;
+      return { total, complete };
+    },
+  });
+
   const soborgQ = useQuery({
     queryKey: ["overview-soborg", slug],
     enabled: !!slug,
@@ -1001,11 +1022,18 @@ export default function FestivalOverview() {
                 secondaryStat={prItems > 0 ? `${prItems} items` : "POS price lists"}
                 status={prItems > 0 ? "green" : "gray"} />
             );
+            const staffTotal = staffStatusQ.data?.total ?? 0;
+            const staffComplete = staffStatusQ.data?.complete ?? 0;
+            const staffStatus: "green" | "amber" | "gray" =
+              staffTotal === 0 ? "gray"
+              : staffComplete === staffTotal ? "green"
+              : "amber";
             tilesByKey["staff"] = (
               <FestivalTile key="staff" href={`/festivals/${slug}/staff`}
                 icon={UserCog} iconAccent="slate" title="Staff"
-                primaryStat="Crew list"
-                secondaryStat="Names, days, locations" status="gray" />
+                primaryStat={staffTotal > 0 ? `${staffTotal} crew` : "Crew list"}
+                secondaryStat={staffTotal > 0 ? `${staffComplete}/${staffTotal} complete` : "Names, days, locations"}
+                status={staffStatus} />
             );
             tilesByKey["scheduling"] = (
               <FestivalTile key="scheduling" href={`/festivals/${slug}/scheduling`}
