@@ -213,12 +213,26 @@ export default function FestivalGroceries() {
         } else if (it.subrecipe_id) {
           const sub = recipeById.get(it.subrecipe_id);
           if (!sub) continue;
-          const gramsNeeded = (it.qty_g ?? 0) * u;
-          const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-          for (const si of itemsByRecipe.get(sub.id) ?? []) {
-            if (si.ingredient_id) {
-              const scale = (si.qty_g ?? 0) / batch;
-              addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
+          if (sub.type === "product") {
+            // Product-as-subrecipe: qty_g on the line = grams of that product per parent unit.
+            // Expand as qty_units = qty_g / (sum of product's food qty_g), rounded to 0.01.
+            const subFood = (itemsByRecipe.get(sub.id) ?? []).filter(si => si.ingredient_id);
+            const totalFoodG = subFood.reduce((a, si) => a + (si.qty_g ?? 0), 0);
+            const gramsNeeded = (it.qty_g ?? 0);
+            const qtyUnits = totalFoodG > 0 ? Math.round((gramsNeeded / totalFoodG) * 100) / 100 : 0;
+            const scaled = qtyUnits * u;
+            for (const si of subFood) {
+              addIng(si.ingredient_id!, (si.qty_g ?? 0) * scaled, (si.qty_stk ?? 0) * scaled);
+            }
+            // NOTE: referenced product's packaging is intentionally NOT included.
+          } else {
+            const gramsNeeded = (it.qty_g ?? 0) * u;
+            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+            for (const si of itemsByRecipe.get(sub.id) ?? []) {
+              if (si.ingredient_id) {
+                const scale = (si.qty_g ?? 0) / batch;
+                addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
+              }
             }
           }
         }
@@ -1537,17 +1551,40 @@ async function runImport(json: any) {
   const supplierNames: string[] = json.suppliers ?? [];
   const recipesIn: any[] = json.recipes ?? [];
 
+  // Numeric-source detection: "239494", "239494.0", 239494, 239494.0 → BC Catering Roskilde + sku.
+  const isNumericSource = (src: any) =>
+    (typeof src === "number" && isFinite(src)) ||
+    (typeof src === "string" && /^\d+(\.\d+)?$/.test(src.trim()));
+  const numericToSku = (src: any): string => {
+    const s = String(src).trim();
+    // strip trailing ".0" / ".00" etc.
+    return s.replace(/\.0+$/, "");
+  };
+
+  // Canonicalize supplier display names (aliases → canonical).
+  const canonicalSupplier = (raw: string): string => {
+    const s = (raw || "").trim();
+    if (!s) return "Internal / Ask Marius";
+    const low = s.toLowerCase();
+    if (low === "homemade" || low === "ask marius" || low === "internal" || low === "internal / ask marius") return "Internal / Ask Marius";
+    if (low === "fra inco" || low === "inco") return "Inco";
+    if (low === "odin seafood") return "ODIN Seafood";
+    if (low === "bk frugt") return "BK Frugt";
+    if (low === "bc catering roskilde") return "BC Catering Roskilde";
+    if (low === "bc catering skanderborg") return "BC Catering Skanderborg";
+    return s;
+  };
+
   // Ensure special suppliers exist
-  const specialSuppliers = new Set<string>(supplierNames);
+  const specialSuppliers = new Set<string>();
+  for (const n of supplierNames) if (!isNumericSource(n)) specialSuppliers.add(canonicalSupplier(n));
   specialSuppliers.add("BC Catering Roskilde");
   specialSuppliers.add("Internal / Ask Marius");
   // Collect source-derived suppliers
   for (const r of recipesIn) for (const it of (r.items ?? [])) {
     const src = it.source;
-    if (typeof src === "string" && src && !/^\d+$/.test(src)) {
-      if (src === "Homemade" || src === "Ask Marius") specialSuppliers.add("Internal / Ask Marius");
-      else specialSuppliers.add(src);
-    }
+    if (isNumericSource(src)) continue; // handled via BC Catering Roskilde
+    if (typeof src === "string" && src.trim()) specialSuppliers.add(canonicalSupplier(src));
   }
 
   // upsert suppliers
@@ -1564,14 +1601,14 @@ async function runImport(json: any) {
   }
 
   const resolveSupplier = (source: any): { supplierId: string | null; sku: string | null } => {
-    if (source == null) return { supplierId: supplierMap.get("Internal / Ask Marius") ?? null, sku: null };
-    if (typeof source === "number" || (typeof source === "string" && /^\d+$/.test(source))) {
-      return { supplierId: supplierMap.get("BC Catering Roskilde") ?? null, sku: String(source) };
-    }
-    if (source === "Homemade" || source === "Ask Marius") {
+    if (source == null || (typeof source === "string" && !source.trim())) {
       return { supplierId: supplierMap.get("Internal / Ask Marius") ?? null, sku: null };
     }
-    return { supplierId: supplierMap.get(source) ?? null, sku: null };
+    if (isNumericSource(source)) {
+      return { supplierId: supplierMap.get("BC Catering Roskilde") ?? null, sku: numericToSku(source) };
+    }
+    const canon = canonicalSupplier(String(source));
+    return { supplierId: supplierMap.get(canon) ?? null, sku: null };
   };
 
   // Upsert ingredients from items
@@ -1604,9 +1641,14 @@ async function runImport(json: any) {
     return false;
   };
 
+  // Pre-index recipe names in the payload so items with matching names are treated as subrecipe refs
+  // (idempotency: prevents recreating orphaned "1 Chicken gyros"-style ingredients).
+  const incomingRecipeNames = new Set<string>((recipesIn ?? []).map((r: any) => r.name));
+
   for (const r of recipesIn) {
     for (const it of (r.items ?? [])) {
       if (it.subrecipe) continue;
+      if (it.name && incomingRecipeNames.has(it.name) && it.name !== r.name) continue;
       const name: string = it.name;
       if (!name) continue;
       const { supplierId, sku } = resolveSupplier(it.source);
@@ -1676,7 +1718,9 @@ async function runImport(json: any) {
     const packRows: any[] = [];
     let idx = 0, pIdx = 0;
     for (const it of (r.items ?? [])) {
-      if (it.subrecipe) {
+      // Auto-promote to subrecipe when an item's name matches an existing recipe.
+      const nameMatchesRecipe = it.name && recipeMap.has(it.name) && recipeMap.get(it.name) !== rid;
+      if (it.subrecipe || nameMatchesRecipe) {
         const subrecipe_id = recipeMap.get(it.name) ?? null;
         if (!subrecipe_id) continue;
         const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
