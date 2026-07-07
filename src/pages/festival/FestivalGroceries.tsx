@@ -382,8 +382,11 @@ export default function FestivalGroceries() {
             expand(sub.id, units * scale, false, new Set(visiting));
           } else {
             const gramsNeeded = (it.qty_g ?? 0) * scale;
-            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-            expand(sub.id, gramsNeeded / batch, false, new Set(visiting));
+            if (!sub.batch_g || sub.batch_g <= 0) {
+              console.warn(`[Groceries] Skipping sub-recipe "${sub.name}" — missing batch_g. Set batch size on the recipe.`);
+              continue;
+            }
+            expand(sub.id, gramsNeeded / sub.batch_g, false, new Set(visiting));
           }
         }
       }

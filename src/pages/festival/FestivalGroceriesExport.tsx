@@ -84,9 +84,24 @@ export default function FestivalGroceriesExport() {
           const sub = recipeById.get(it.subrecipe_id);
           if (!sub) continue;
           const grams = (it.qty_g ?? 0) * u;
-          const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
           const subItems = itemsByRecipe.get(sub.id) ?? [];
-          for (const si of subItems) if (si.ingredient_id) addIng(si.ingredient_id, grams * ((si.qty_g ?? 0) / batch), 0);
+          if (sub.type === "product") {
+            // Product sub-recipe: derive scale from the sum of its ingredient grams.
+            const totalG = subItems.reduce((a, si) => a + (si.qty_g ?? 0), 0);
+            if (totalG <= 0) {
+              console.warn(`[Groceries export] Skipping sub-recipe "${sub.name}" — total grams is 0.`);
+              continue;
+            }
+            const scale = grams / totalG;
+            for (const si of subItems) if (si.ingredient_id) addIng(si.ingredient_id, (si.qty_g ?? 0) * scale, 0);
+          } else {
+            // True subrecipe: needs batch_g. Never silently fall back to 1.
+            if (!sub.batch_g || sub.batch_g <= 0) {
+              console.warn(`[Groceries export] Skipping sub-recipe "${sub.name}" — missing batch_g. Set batch size on the recipe.`);
+              continue;
+            }
+            for (const si of subItems) if (si.ingredient_id) addIng(si.ingredient_id, grams * ((si.qty_g ?? 0) / sub.batch_g), 0);
+          }
         }
       }
       for (const p of packByRecipe.get(rid) ?? []) {
