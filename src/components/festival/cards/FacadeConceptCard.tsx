@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
-  Upload, FileText, Download, Image as ImageIcon, X, Loader2,
+  Upload, FileText, Download, Image as ImageIcon, X, Loader2, DownloadCloud,
 } from "lucide-react";
 import { computeFacadeStatus, FACADE_STATUS_PILL } from "@/lib/facadeStatus";
 import { FACADE_STATUSES, FACADE_STATUS_META } from "@/lib/facade";
