@@ -164,6 +164,8 @@ export default function FestivalGroceries() {
   const ingredients = ingredientsQ.data ?? [];
   const recipes = recipesQ.data ?? [];
   const items = itemsQ.data ?? [];
+  const packaging = packagingQ.data ?? [];
+  const consumables = consumablesQ.data ?? [];
   const estimates = estimatesQ.data ?? [];
   const safetyMargin = settingsQ.data?.safety_margin_pct ?? 10;
 
@@ -175,16 +177,23 @@ export default function FestivalGroceries() {
   const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active), [recipes]);
 
   // Calculation ------------------------------------------------------
+  // Returns per-ingredient totals (merged food + packaging + consumables)
+  // plus a flag set of ingredients that received a consumables contribution.
   const calculation = useMemo(() => {
-    // returns Map<ingredient_id, { g: number; stk: number }>
     const req = new Map<string, { g: number; stk: number }>();
+    const fromConsumable = new Set<string>();
     const itemsByRecipe = new Map<string, RecipeItem[]>();
     items.forEach(it => {
       const arr = itemsByRecipe.get(it.recipe_id) ?? [];
-      arr.push(it);
-      itemsByRecipe.set(it.recipe_id, arr);
+      arr.push(it); itemsByRecipe.set(it.recipe_id, arr);
+    });
+    const packByRecipe = new Map<string, RecipePackaging[]>();
+    packaging.forEach(p => {
+      const arr = packByRecipe.get(p.recipe_id) ?? [];
+      arr.push(p); packByRecipe.set(p.recipe_id, arr);
     });
     const recipeById = new Map(recipes.map(r => [r.id, r]));
+    const ingredientById = new Map(ingredients.map(i => [i.id, i]));
 
     const addIng = (ingId: string, g: number, stk: number) => {
       const cur = req.get(ingId) ?? { g: 0, stk: 0 };
@@ -192,58 +201,68 @@ export default function FestivalGroceries() {
       req.set(ingId, cur);
     };
 
-    const expand = (recipeId: string, unitsToExpand: number, isTopLevel: boolean) => {
-      const its = itemsByRecipe.get(recipeId) ?? [];
-      const rec = recipeById.get(recipeId);
-      for (const it of its) {
+    // Sum food + packaging driven by estimates (subject to safety margin)
+    const unitsByRecipe = new Map<string, number>();
+    for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+    for (const [rid, u] of unitsByRecipe) {
+      if (u <= 0) continue;
+      // food items
+      for (const it of itemsByRecipe.get(rid) ?? []) {
         if (it.ingredient_id) {
-          const g = (it.qty_g ?? 0) * unitsToExpand;
-          const stk = (it.qty_stk ?? 0) * unitsToExpand;
-          addIng(it.ingredient_id, g, stk);
+          addIng(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
         } else if (it.subrecipe_id) {
           const sub = recipeById.get(it.subrecipe_id);
           if (!sub) continue;
-          if (isTopLevel) {
-            // grams_needed of subrecipe
-            const gramsNeeded = (it.qty_g ?? 0) * unitsToExpand;
-            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-            // for each sub_item add gramsNeeded * (sub_item.qty_g / batch)
-            const subItems = itemsByRecipe.get(sub.id) ?? [];
-            for (const si of subItems) {
-              if (si.ingredient_id) {
-                const scale = (si.qty_g ?? 0) / batch;
-                addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
-              }
+          const gramsNeeded = (it.qty_g ?? 0) * u;
+          const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+          for (const si of itemsByRecipe.get(sub.id) ?? []) {
+            if (si.ingredient_id) {
+              const scale = (si.qty_g ?? 0) / batch;
+              addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
             }
           }
         }
       }
-    };
-
-    // Sum estimates per recipe
-    const unitsByRecipe = new Map<string, number>();
-    for (const e of estimates) {
-      unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+      // packaging items — always stk (add to whichever unit the ingredient uses)
+      for (const p of packByRecipe.get(rid) ?? []) {
+        const ing = ingredientById.get(p.ingredient_id);
+        if (!ing) continue;
+        const q = (p.qty_per_unit || 0) * u;
+        if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
+        else addIng(p.ingredient_id, q, 0);
+      }
     }
-    for (const [rid, u] of unitsByRecipe) {
-      if (u > 0) expand(rid, u, true);
-    }
 
-    // Apply safety margin
+    // Apply safety margin to everything so far
     const margin = 1 + (safetyMargin || 0) / 100;
-    for (const [k, v] of req) {
-      req.set(k, { g: v.g * margin, stk: v.stk * margin });
+    for (const [k, v] of req) req.set(k, { g: v.g * margin, stk: v.stk * margin });
+
+    // Add consumables (fixed, no margin)
+    for (const c of consumables) {
+      const ing = ingredientById.get(c.ingredient_id);
+      if (!ing) continue;
+      let g = 0, stk = 0;
+      if (c.unit_mode === "packs" && ing.pack_size) {
+        if (ing.unit === "stk") stk = c.qty * ing.pack_size;
+        else g = c.qty * ing.pack_size;
+      } else {
+        if (ing.unit === "stk") stk = c.qty;
+        else g = c.qty;
+      }
+      addIng(c.ingredient_id, g, stk);
+      fromConsumable.add(c.ingredient_id);
     }
-    return req;
-  }, [items, recipes, estimates, safetyMargin]);
+
+    return { req, fromConsumable };
+  }, [items, packaging, recipes, ingredients, estimates, consumables, safetyMargin]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
-    for (const [ingId, need] of calculation) {
+    for (const [ingId, need] of calculation.req) {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing?.pack_size) continue;
-      const req = ing.unit === "g" ? need.g : need.stk;
-      if (req > 0) n += Math.ceil(req / ing.pack_size);
+      const r = ing.unit === "g" ? need.g : need.stk;
+      if (r > 0) n += Math.ceil(r / ing.pack_size);
     }
     return n;
   }, [calculation, ingredients]);
