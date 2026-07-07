@@ -397,9 +397,20 @@ export default function FestivalGroceries() {
       expand(rid, u, true, new Set<string>());
     }
 
-    // Apply safety margin to everything so far
-    const margin = 1 + (safetyMargin || 0) / 100;
-    for (const [k, v] of req) req.set(k, { g: v.g * margin, stk: v.stk * margin });
+    // Skip location-only products in festival calculations.
+    for (const [rid, u] of unitsByRecipe) {
+      if (u <= 0) continue;
+      if (locationOnlyIds.has(rid)) continue;
+      expand(rid, u, true, new Set<string>());
+    }
+
+    // Apply per-ingredient margin: Triple Trading / Kollek packaging use fixed +20%,
+    // everything else uses the festival safety margin.
+    const foodMargin = 1 + (safetyMargin || 0) / 100;
+    for (const [k, v] of req) {
+      const m = bumpedMarginIngIds.has(k) ? 1.2 : foodMargin;
+      req.set(k, { g: v.g * m, stk: v.stk * m });
+    }
 
     // Add consumables (fixed, no margin) — includes equipment-driven auto rows.
     for (const c of effectiveConsumables) {
@@ -417,8 +428,8 @@ export default function FestivalGroceries() {
       fromConsumable.add(c.ingredient_id);
     }
 
-    return { req, fromConsumable };
-  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, effectiveConsumables, safetyMargin]);
+    return { req, fromConsumable, bumpedMarginIngIds };
+  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, effectiveConsumables, safetyMargin, locationOnlyIds, bumpedMarginIngIds]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
