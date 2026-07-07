@@ -77,6 +77,8 @@ import FestivalCrewHire from "./pages/crew/FestivalCrewHire";
 import OnboardWizard from "./pages/onboard/OnboardWizard";
 import AdminRoute from "./components/crew/AdminRoute";
 import OAuthConsent from "./pages/OAuthConsent";
+import FestivalGroceries from "./pages/festival/FestivalGroceries";
+import FestivalGroceriesExport from "./pages/festival/FestivalGroceriesExport";
 
 const queryClient = new QueryClient();
 
