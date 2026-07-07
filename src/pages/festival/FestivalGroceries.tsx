@@ -94,6 +94,25 @@ function fmtDayShort(d: string) {
   return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
+// ---------- Fryer classification (equipment-driven oil consumable) ----------
+// Read-only view over festival_equipment + equipment_catalog. Names are matched
+// case-insensitively. Capacity in litres:
+//   - "redfox" -> 25 L
+//   - "9 kw" / "9kw" -> 12 L
+//   - fallback for "fryser"/"fryer"/"friture" -> 12 L
+type FryerCategory = "redfox" | "9kw" | "other";
+function classifyFryer(name: string): { cap: number; category: FryerCategory; label: string } | null {
+  const n = (name || "").toLowerCase();
+  if (n.includes("redfox")) return { cap: 25, category: "redfox", label: "Redfox" };
+  if (n.includes("9 kw") || n.includes("9kw")) return { cap: 12, category: "9kw", label: "9kW" };
+  if (n.includes("fryser") || n.includes("fryer") || n.includes("friture")) return { cap: 12, category: "other", label: name };
+  return null;
+}
+function fmtL(x: number): string {
+  const rounded = Math.round(x * 10) / 10;
+  return (Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)).replace(".", ",");
+}
+
 // ============================================================
 export default function FestivalGroceries() {
   const { slug = "" } = useParams();
