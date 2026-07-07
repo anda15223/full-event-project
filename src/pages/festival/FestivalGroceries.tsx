@@ -941,7 +941,12 @@ function LibraryView({
                   <td className="p-2">{CONCEPT_LABEL[r.concept]}</td>
                   <td className="p-2">{r.type}</td>
                   <td className="p-2 text-right">{r.batch_g ?? "—"}</td>
-                  <td className="p-2 text-right">{(itemsByRecipe.get(r.id) ?? []).length}</td>
+                  <td className="p-2 text-right">
+                    {(itemsByRecipe.get(r.id) ?? []).length}
+                    {(packagingByRecipe.get(r.id) ?? []).length > 0 && (
+                      <span className="text-muted-foreground"> · {(packagingByRecipe.get(r.id) ?? []).length} pkg</span>
+                    )}
+                  </td>
                   <td className="p-2">
                     {violations.has(r.id) && (
                       <span title="Missing wrapping paper or take-away box" className="inline-flex items-center gap-1 text-amber-600">
