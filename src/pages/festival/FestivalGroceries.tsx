@@ -798,9 +798,10 @@ function OrdersView({
 // Library view
 // ============================================================
 function LibraryView({
-  suppliers, ingredients, recipes, items, onChange,
+  suppliers, ingredients, recipes, items, packaging, onChange,
 }: {
-  suppliers: Supplier[]; ingredients: Ingredient[]; recipes: Recipe[]; items: RecipeItem[];
+  suppliers: Supplier[]; ingredients: Ingredient[]; recipes: Recipe[];
+  items: RecipeItem[]; packaging: RecipePackaging[];
   onChange: () => void;
 }) {
   const [importOpen, setImportOpen] = useState(false);
@@ -817,6 +818,15 @@ function LibraryView({
     });
     return m;
   }, [items]);
+
+  const packagingByRecipe = useMemo(() => {
+    const m = new Map<string, RecipePackaging[]>();
+    packaging.forEach(p => {
+      const a = m.get(p.recipe_id) ?? [];
+      a.push(p); m.set(p.recipe_id, a);
+    });
+    return m;
+  }, [packaging]);
 
   const violations = useMemo(() => {
     const set = new Set<string>();
