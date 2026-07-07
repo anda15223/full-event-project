@@ -1544,17 +1544,16 @@ function ConsumablesView({
               </td>
               <td className="p-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1 whitespace-nowrap">
-                  <span>reserve</span>
+                  <span>backup ×</span>
                   <Input
-                    type="number" step="0.5" className="h-7 w-16 text-right"
-                    defaultValue={oilReserveL}
+                    type="number" step="0.1" min="1" className="h-7 w-16 text-right"
+                    defaultValue={oilBackupFactor}
                     onBlur={(e) => {
                       const n = Number(e.target.value);
-                      if (!Number.isFinite(n) || n < 0) return;
-                      if (n !== oilReserveL) onSaveOilReserve(n);
+                      if (!Number.isFinite(n) || n <= 0) return;
+                      if (n !== oilBackupFactor) onSaveOilBackupFactor(n);
                     }}
                   />
-                  <span>L</span>
                 </div>
               </td>
               <td className="p-2 text-xs text-muted-foreground">
