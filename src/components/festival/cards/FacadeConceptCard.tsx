@@ -426,16 +426,17 @@ export function FacadeConceptCard({
         ) : equipOpen ? (
           <div className="rounded-lg border divide-y text-xs">
             {equipment.map((it) => {
-              const dims = [it.position_zone, it.zone].filter(Boolean).join(" · ");
-              const qty = it.quantity ?? it.qty ?? 1;
+              const qty = it.quantity ?? 1;
+              const meta = [
+                it.power_type && it.power_type !== "none" ? `${it.power_type}${it.power_kw ? ` · ${it.power_kw} kW` : ""}` : null,
+                it.notes,
+              ].filter(Boolean).join(" · ");
               return (
                 <div key={it.id} className="flex items-center gap-2 px-2 py-1.5">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{it.name ?? "—"}</div>
-                    {(it.category || dims || it.notes) && (
-                      <div className="text-[10px] text-muted-foreground truncate">
-                        {[it.category, dims, it.notes].filter(Boolean).join(" · ")}
-                      </div>
+                    <div className="font-medium truncate">{it.equipment_name ?? "—"}</div>
+                    {meta && (
+                      <div className="text-[10px] text-muted-foreground truncate">{meta}</div>
                     )}
                   </div>
                   <InlineNumber
@@ -449,9 +450,7 @@ export function FacadeConceptCard({
           </div>
         ) : (
           <div className="text-[11px] text-muted-foreground">
-            {equipment.reduce((s, it) => s + (it.quantity ?? it.qty ?? 1), 0)} pieces across{" "}
-            {new Set(equipment.map((it) => it.category ?? "other")).size} categor
-            {new Set(equipment.map((it) => it.category ?? "other")).size === 1 ? "y" : "ies"}
+            {equipment.reduce((s, it) => s + (it.quantity ?? 1), 0)} pieces
             {" · "}
             <button className="underline hover:text-foreground" onClick={() => setEquipOpen(true)}>
               show details
