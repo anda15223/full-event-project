@@ -676,10 +676,11 @@ function PackSizeEditor({ ing, onSaved }: { ing: Ingredient; onSaved: () => void
 // Orders view
 // ============================================================
 function OrdersView({
-  festival, calculation, ingredients, suppliers, orderStatus, onSetStatus,
+  festival, req, fromConsumable, ingredients, suppliers, orderStatus, onSetStatus,
 }: {
   festival: Festival | null;
-  calculation: Map<string, { g: number; stk: number }>;
+  req: Map<string, { g: number; stk: number }>;
+  fromConsumable: Set<string>;
   ingredients: Ingredient[];
   suppliers: Supplier[];
   orderStatus: { supplier_id: string; status: "draft" | "sent" }[];
