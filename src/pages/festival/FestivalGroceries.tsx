@@ -1453,12 +1453,21 @@ function RecipeDialog({
 // Consumables view (per festival, fixed quantities)
 // ============================================================
 function ConsumablesView({
-  festivalId, consumables, ingredients, suppliers, onChange,
+  festivalId, consumables, ingredients, suppliers, autoOil, oilReserveL, onSaveOilReserve, onChange,
 }: {
   festivalId: string | null;
   consumables: Consumable[];
   ingredients: Ingredient[];
   suppliers: Supplier[];
+  autoOil: {
+    oilIngredient: Ingredient | null;
+    totalFryers: number;
+    totalL: number;
+    packs: number;
+    breakdown: string;
+  };
+  oilReserveL: number;
+  onSaveOilReserve: (val: number) => Promise<void> | void;
   onChange: () => void;
 }) {
   const [newIngOpen, setNewIngOpen] = useState(false);
@@ -1485,6 +1494,9 @@ function ConsumablesView({
     if (error) { toast.error(error.message); return; }
     onChange();
   };
+
+  const oilSup = autoOil.oilIngredient ? suppliers.find(s => s.id === autoOil.oilIngredient!.supplier_id) : null;
+  const hasFryers = autoOil.totalFryers > 0;
 
   return (
     <div className="space-y-4">
@@ -1516,8 +1528,46 @@ function ConsumablesView({
             </tr>
           </thead>
           <tbody>
+            {/* Auto row: equipment-driven frying oil */}
+            <tr className="border-t bg-emerald-50/40 dark:bg-emerald-950/20">
+              <td className="p-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Fritureolie (fra udstyr)</span>
+                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">auto</span>
+                </div>
+                {autoOil.oilIngredient && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{autoOil.oilIngredient.name} · {autoOil.oilIngredient.pack_label ?? "15 L dunk"}</div>
+                )}
+              </td>
+              <td className="p-2 text-xs text-muted-foreground">{oilSup?.name ?? "—"}</td>
+              <td className="p-2 text-right font-medium">
+                {hasFryers ? `${autoOil.packs} dunke` : "—"}
+              </td>
+              <td className="p-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1 whitespace-nowrap">
+                  <span>reserve</span>
+                  <Input
+                    type="number" step="0.5" className="h-7 w-16 text-right"
+                    defaultValue={oilReserveL}
+                    onBlur={(e) => {
+                      const n = Number(e.target.value);
+                      if (!Number.isFinite(n) || n < 0) return;
+                      if (n !== oilReserveL) onSaveOilReserve(n);
+                    }}
+                  />
+                  <span>L</span>
+                </div>
+              </td>
+              <td className="p-2 text-xs text-muted-foreground">
+                {hasFryers
+                  ? autoOil.breakdown
+                  : <span className="italic">Ingen frituregryder fundet i udstyr</span>}
+              </td>
+              <td className="p-2 text-right text-[10px] text-muted-foreground">udstyr</td>
+            </tr>
+
             {consumables.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No consumables yet.</td></tr>
+              <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No manual consumables yet.</td></tr>
             )}
             {consumables.map(c => {
               const ing = ingredients.find(i => i.id === c.ingredient_id);
