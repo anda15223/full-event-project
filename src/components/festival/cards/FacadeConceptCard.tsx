@@ -94,7 +94,7 @@ function InlineNumber({
 }
 
 export function FacadeConceptCard({
-  festivalId, festivalSlug, conceptSlug, conceptName, facade, photos,
+  festivalId, festivalSlug, conceptId, conceptSlug, conceptName, facade, photos,
 }: Props) {
   const qc = useQueryClient();
   const [uploadingSpec, setUploadingSpec] = useState(false);
