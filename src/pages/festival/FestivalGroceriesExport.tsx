@@ -31,20 +31,24 @@ export default function FestivalGroceriesExport() {
     queryKey: ["gr-export-data", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
-      const [ing, sup, rec, ri, est, set] = await Promise.all([
+      const [ing, sup, rec, ri, pkg, est, set, cons] = await Promise.all([
         supabase.from("grocery_ingredients").select("*"),
         supabase.from("grocery_suppliers").select("*"),
         supabase.from("grocery_recipes").select("*"),
         supabase.from("grocery_recipe_items").select("*"),
+        supabase.from("grocery_recipe_packaging").select("*"),
         supabase.from("grocery_estimates").select("*").eq("festival_id", festival!.id),
         supabase.from("grocery_settings").select("*").eq("festival_id", festival!.id).maybeSingle(),
+        supabase.from("grocery_festival_consumables").select("*").eq("festival_id", festival!.id),
       ]);
       return {
         ingredients: (ing.data ?? []) as Ingredient[],
         suppliers: (sup.data ?? []) as Supplier[],
         recipes: (rec.data ?? []) as Recipe[],
         items: (ri.data ?? []) as RecipeItem[],
+        packaging: (pkg.data ?? []) as any[],
         estimates: (est.data ?? []) as Estimate[],
+        consumables: (cons.data ?? []) as any[],
         margin: (set.data?.safety_margin_pct ?? 10) as number,
       };
     },
@@ -52,11 +56,14 @@ export default function FestivalGroceriesExport() {
 
   const calc = useMemo(() => {
     if (!dataQ.data) return new Map<string, { g: number; stk: number }>();
-    const { items, recipes, estimates, margin } = dataQ.data;
+    const { items, recipes, ingredients, estimates, packaging, consumables, margin } = dataQ.data;
     const req = new Map<string, { g: number; stk: number }>();
     const itemsByRecipe = new Map<string, RecipeItem[]>();
     items.forEach(it => { const a = itemsByRecipe.get(it.recipe_id) ?? []; a.push(it); itemsByRecipe.set(it.recipe_id, a); });
+    const packByRecipe = new Map<string, any[]>();
+    packaging.forEach((p: any) => { const a = packByRecipe.get(p.recipe_id) ?? []; a.push(p); packByRecipe.set(p.recipe_id, a); });
     const recipeById = new Map(recipes.map(r => [r.id, r]));
+    const ingById = new Map(ingredients.map(i => [i.id, i]));
     const addIng = (id: string, g: number, stk: number) => {
       const c = req.get(id) ?? { g: 0, stk: 0 };
       req.set(id, { g: c.g + g, stk: c.stk + stk });
@@ -77,9 +84,27 @@ export default function FestivalGroceriesExport() {
           for (const si of subItems) if (si.ingredient_id) addIng(si.ingredient_id, grams * ((si.qty_g ?? 0) / batch), 0);
         }
       }
+      for (const p of packByRecipe.get(rid) ?? []) {
+        const ing: any = ingById.get(p.ingredient_id);
+        if (!ing) continue;
+        const q = (p.qty_per_unit || 0) * u;
+        if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
+        else addIng(p.ingredient_id, q, 0);
+      }
     }
     const m = 1 + margin / 100;
     for (const [k, v] of req) req.set(k, { g: v.g * m, stk: v.stk * m });
+    for (const c of consumables as any[]) {
+      const ing: any = ingById.get(c.ingredient_id);
+      if (!ing) continue;
+      let g = 0, stk = 0;
+      if (c.unit_mode === "packs" && ing.pack_size) {
+        if (ing.unit === "stk") stk = c.qty * ing.pack_size; else g = c.qty * ing.pack_size;
+      } else {
+        if (ing.unit === "stk") stk = c.qty; else g = c.qty;
+      }
+      addIng(c.ingredient_id, g, stk);
+    }
     return req;
   }, [dataQ.data]);
 

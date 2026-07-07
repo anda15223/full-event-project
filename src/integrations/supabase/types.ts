@@ -8855,6 +8855,96 @@ export type Database = {
           },
         ]
       }
+      grocery_festival_consumables: {
+        Row: {
+          created_at: string
+          festival_id: string
+          id: string
+          ingredient_id: string
+          note: string | null
+          qty: number
+          unit_mode: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          festival_id: string
+          id?: string
+          ingredient_id: string
+          note?: string | null
+          qty?: number
+          unit_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          festival_id?: string
+          id?: string
+          ingredient_id?: string
+          note?: string | null
+          qty?: number
+          unit_mode?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_festival_consumables_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grocery_ingredients: {
         Row: {
           created_at: string
@@ -9038,6 +9128,48 @@ export type Database = {
           {
             foreignKeyName: "grocery_recipe_items_subrecipe_id_fkey"
             columns: ["subrecipe_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grocery_recipe_packaging: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          qty_per_unit: number
+          recipe_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          qty_per_unit?: number
+          recipe_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          qty_per_unit?: number
+          recipe_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grocery_recipe_packaging_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_recipe_packaging_recipe_id_fkey"
+            columns: ["recipe_id"]
             isOneToOne: false
             referencedRelation: "grocery_recipes"
             referencedColumns: ["id"]

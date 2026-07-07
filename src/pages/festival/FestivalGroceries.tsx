@@ -41,6 +41,13 @@ type RecipeItem = {
   id: string; recipe_id: string; ingredient_id: string | null;
   subrecipe_id: string | null; qty_g: number | null; qty_stk: number | null; sort_order: number;
 };
+type RecipePackaging = {
+  id: string; recipe_id: string; ingredient_id: string; qty_per_unit: number; sort_order: number;
+};
+type Consumable = {
+  id: string; festival_id: string; ingredient_id: string;
+  qty: number; unit_mode: "packs" | "units"; note: string | null;
+};
 type Estimate = { id: string; festival_id: string; recipe_id: string; day: string | null; units: number };
 
 const CONCEPT_LABEL: Record<Recipe["concept"], string> = {
@@ -108,6 +115,23 @@ export default function FestivalGroceries() {
       return (data ?? []) as RecipeItem[];
     },
   });
+  const packagingQ = useQuery({
+    queryKey: ["grocery_recipe_packaging"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grocery_recipe_packaging").select("*").order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as RecipePackaging[];
+    },
+  });
+  const consumablesQ = useQuery({
+    queryKey: ["grocery_festival_consumables", festival?.id],
+    enabled: !!festival?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grocery_festival_consumables").select("*").eq("festival_id", festival!.id);
+      if (error) throw error;
+      return (data ?? []) as Consumable[];
+    },
+  });
   const estimatesQ = useQuery({
     queryKey: ["grocery_estimates", festival?.id],
     enabled: !!festival?.id,
@@ -140,6 +164,8 @@ export default function FestivalGroceries() {
   const ingredients = ingredientsQ.data ?? [];
   const recipes = recipesQ.data ?? [];
   const items = itemsQ.data ?? [];
+  const packaging = packagingQ.data ?? [];
+  const consumables = consumablesQ.data ?? [];
   const estimates = estimatesQ.data ?? [];
   const safetyMargin = settingsQ.data?.safety_margin_pct ?? 10;
 
@@ -151,16 +177,23 @@ export default function FestivalGroceries() {
   const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active), [recipes]);
 
   // Calculation ------------------------------------------------------
+  // Returns per-ingredient totals (merged food + packaging + consumables)
+  // plus a flag set of ingredients that received a consumables contribution.
   const calculation = useMemo(() => {
-    // returns Map<ingredient_id, { g: number; stk: number }>
     const req = new Map<string, { g: number; stk: number }>();
+    const fromConsumable = new Set<string>();
     const itemsByRecipe = new Map<string, RecipeItem[]>();
     items.forEach(it => {
       const arr = itemsByRecipe.get(it.recipe_id) ?? [];
-      arr.push(it);
-      itemsByRecipe.set(it.recipe_id, arr);
+      arr.push(it); itemsByRecipe.set(it.recipe_id, arr);
+    });
+    const packByRecipe = new Map<string, RecipePackaging[]>();
+    packaging.forEach(p => {
+      const arr = packByRecipe.get(p.recipe_id) ?? [];
+      arr.push(p); packByRecipe.set(p.recipe_id, arr);
     });
     const recipeById = new Map(recipes.map(r => [r.id, r]));
+    const ingredientById = new Map(ingredients.map(i => [i.id, i]));
 
     const addIng = (ingId: string, g: number, stk: number) => {
       const cur = req.get(ingId) ?? { g: 0, stk: 0 };
@@ -168,58 +201,68 @@ export default function FestivalGroceries() {
       req.set(ingId, cur);
     };
 
-    const expand = (recipeId: string, unitsToExpand: number, isTopLevel: boolean) => {
-      const its = itemsByRecipe.get(recipeId) ?? [];
-      const rec = recipeById.get(recipeId);
-      for (const it of its) {
+    // Sum food + packaging driven by estimates (subject to safety margin)
+    const unitsByRecipe = new Map<string, number>();
+    for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+    for (const [rid, u] of unitsByRecipe) {
+      if (u <= 0) continue;
+      // food items
+      for (const it of itemsByRecipe.get(rid) ?? []) {
         if (it.ingredient_id) {
-          const g = (it.qty_g ?? 0) * unitsToExpand;
-          const stk = (it.qty_stk ?? 0) * unitsToExpand;
-          addIng(it.ingredient_id, g, stk);
+          addIng(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
         } else if (it.subrecipe_id) {
           const sub = recipeById.get(it.subrecipe_id);
           if (!sub) continue;
-          if (isTopLevel) {
-            // grams_needed of subrecipe
-            const gramsNeeded = (it.qty_g ?? 0) * unitsToExpand;
-            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-            // for each sub_item add gramsNeeded * (sub_item.qty_g / batch)
-            const subItems = itemsByRecipe.get(sub.id) ?? [];
-            for (const si of subItems) {
-              if (si.ingredient_id) {
-                const scale = (si.qty_g ?? 0) / batch;
-                addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
-              }
+          const gramsNeeded = (it.qty_g ?? 0) * u;
+          const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+          for (const si of itemsByRecipe.get(sub.id) ?? []) {
+            if (si.ingredient_id) {
+              const scale = (si.qty_g ?? 0) / batch;
+              addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
             }
           }
         }
       }
-    };
-
-    // Sum estimates per recipe
-    const unitsByRecipe = new Map<string, number>();
-    for (const e of estimates) {
-      unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+      // packaging items — always stk (add to whichever unit the ingredient uses)
+      for (const p of packByRecipe.get(rid) ?? []) {
+        const ing = ingredientById.get(p.ingredient_id);
+        if (!ing) continue;
+        const q = (p.qty_per_unit || 0) * u;
+        if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
+        else addIng(p.ingredient_id, q, 0);
+      }
     }
-    for (const [rid, u] of unitsByRecipe) {
-      if (u > 0) expand(rid, u, true);
-    }
 
-    // Apply safety margin
+    // Apply safety margin to everything so far
     const margin = 1 + (safetyMargin || 0) / 100;
-    for (const [k, v] of req) {
-      req.set(k, { g: v.g * margin, stk: v.stk * margin });
+    for (const [k, v] of req) req.set(k, { g: v.g * margin, stk: v.stk * margin });
+
+    // Add consumables (fixed, no margin)
+    for (const c of consumables) {
+      const ing = ingredientById.get(c.ingredient_id);
+      if (!ing) continue;
+      let g = 0, stk = 0;
+      if (c.unit_mode === "packs" && ing.pack_size) {
+        if (ing.unit === "stk") stk = c.qty * ing.pack_size;
+        else g = c.qty * ing.pack_size;
+      } else {
+        if (ing.unit === "stk") stk = c.qty;
+        else g = c.qty;
+      }
+      addIng(c.ingredient_id, g, stk);
+      fromConsumable.add(c.ingredient_id);
     }
-    return req;
-  }, [items, recipes, estimates, safetyMargin]);
+
+    return { req, fromConsumable };
+  }, [items, packaging, recipes, ingredients, estimates, consumables, safetyMargin]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
-    for (const [ingId, need] of calculation) {
+    for (const [ingId, need] of calculation.req) {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing?.pack_size) continue;
-      const req = ing.unit === "g" ? need.g : need.stk;
-      if (req > 0) n += Math.ceil(req / ing.pack_size);
+      const r = ing.unit === "g" ? need.g : need.stk;
+      if (r > 0) n += Math.ceil(r / ing.pack_size);
     }
     return n;
   }, [calculation, ingredients]);
@@ -320,6 +363,7 @@ export default function FestivalGroceries() {
           <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="calculation">Calculation</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="consumables">Consumables</TabsTrigger>
           <TabsTrigger value="library">Library</TabsTrigger>
         </TabsList>
 
@@ -329,7 +373,7 @@ export default function FestivalGroceries() {
             <Label className="text-sm">Safety margin</Label>
             <Input type="number" className="w-24" value={safetyMargin}
               onChange={(e) => saveSafetyMargin(Number(e.target.value) || 0)} />
-            <span className="text-xs text-muted-foreground">% added to all requirements</span>
+            <span className="text-xs text-muted-foreground">% added to food & packaging (not consumables)</span>
           </div>
           <EstimatesGrid
             days={days}
@@ -342,7 +386,8 @@ export default function FestivalGroceries() {
         {/* ============ CALCULATION ============ */}
         <TabsContent value="calculation" className="space-y-4">
           <CalculationView
-            calculation={calculation}
+            req={calculation.req}
+            fromConsumable={calculation.fromConsumable}
             ingredients={ingredients}
             suppliers={suppliers}
             onIngredientUpdated={() => qc.invalidateQueries({ queryKey: ["grocery_ingredients"] })}
@@ -353,11 +398,26 @@ export default function FestivalGroceries() {
         <TabsContent value="orders" className="space-y-4">
           <OrdersView
             festival={festival ?? null}
-            calculation={calculation}
+            req={calculation.req}
+            fromConsumable={calculation.fromConsumable}
             ingredients={ingredients}
             suppliers={suppliers}
             orderStatus={orderStatusQ.data ?? []}
             onSetStatus={setOrderStatus}
+          />
+        </TabsContent>
+
+        {/* ============ CONSUMABLES ============ */}
+        <TabsContent value="consumables" className="space-y-4">
+          <ConsumablesView
+            festivalId={festival?.id ?? null}
+            consumables={consumables}
+            ingredients={ingredients}
+            suppliers={suppliers}
+            onChange={() => {
+              qc.invalidateQueries({ queryKey: ["grocery_festival_consumables", festival?.id] });
+              qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
+            }}
           />
         </TabsContent>
 
@@ -368,11 +428,13 @@ export default function FestivalGroceries() {
             ingredients={ingredients}
             recipes={recipes}
             items={items}
+            packaging={packaging}
             onChange={() => {
               qc.invalidateQueries({ queryKey: ["grocery_suppliers"] });
               qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
               qc.invalidateQueries({ queryKey: ["grocery_recipes"] });
               qc.invalidateQueries({ queryKey: ["grocery_recipe_items"] });
+              qc.invalidateQueries({ queryKey: ["grocery_recipe_packaging"] });
             }}
           />
         </TabsContent>
@@ -491,9 +553,10 @@ function EstimateCell({ value, onSave }: { value: number; onSave: (v: number) =>
 // Calculation view
 // ============================================================
 function CalculationView({
-  calculation, ingredients, suppliers, onIngredientUpdated,
+  req, fromConsumable, ingredients, suppliers, onIngredientUpdated,
 }: {
-  calculation: Map<string, { g: number; stk: number }>;
+  req: Map<string, { g: number; stk: number }>;
+  fromConsumable: Set<string>;
   ingredients: Ingredient[];
   suppliers: Supplier[];
   onIngredientUpdated: () => void;
@@ -504,18 +567,19 @@ function CalculationView({
       required: number;
       packs: number | null;
       estCost: number | null;
+      isEvent: boolean;
     }[] = [];
-    for (const [ingId, need] of calculation) {
+    for (const [ingId, need] of req) {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
       const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
       const estCost = packs != null && ing.price_per_pack != null ? packs * ing.price_per_pack : null;
-      arr.push({ ing, required, packs, estCost });
+      arr.push({ ing, required, packs, estCost, isEvent: fromConsumable.has(ing.id) });
     }
     return arr;
-  }, [calculation, ingredients]);
+  }, [req, fromConsumable, ingredients]);
 
   const bySupplier = useMemo(() => {
     const map = new Map<string | null, typeof rows>();
@@ -532,7 +596,7 @@ function CalculationView({
 
   if (rows.length === 0) {
     return <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-      Enter estimates first to see calculated ingredient requirements.
+      Enter estimates or add consumables to see calculated requirements.
     </div>;
   }
 
@@ -554,12 +618,14 @@ function CalculationView({
               </tr>
             </thead>
             <tbody>
-              {items.map(({ ing, required, packs, estCost }) => {
+              {items.map(({ ing, required, packs, estCost, isEvent }) => {
                 const missingPack = !ing.pack_size;
                 return (
                   <tr key={ing.id} className={cn("border-t", missingPack && "bg-amber-500/10")}>
                     <td className="p-2">
-                      {ing.name} {ing.eco && <span className="text-emerald-600 text-xs">· ECO</span>}
+                      {ing.name}
+                      {ing.eco && <span className="text-emerald-600 text-xs"> · ECO</span>}
+                      {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
                     </td>
                     <td className="p-2 text-right">
                       {ing.unit === "g"
@@ -610,32 +676,33 @@ function PackSizeEditor({ ing, onSaved }: { ing: Ingredient; onSaved: () => void
 // Orders view
 // ============================================================
 function OrdersView({
-  festival, calculation, ingredients, suppliers, orderStatus, onSetStatus,
+  festival, req, fromConsumable, ingredients, suppliers, orderStatus, onSetStatus,
 }: {
   festival: Festival | null;
-  calculation: Map<string, { g: number; stk: number }>;
+  req: Map<string, { g: number; stk: number }>;
+  fromConsumable: Set<string>;
   ingredients: Ingredient[];
   suppliers: Supplier[];
   orderStatus: { supplier_id: string; status: "draft" | "sent" }[];
   onSetStatus: (supplierId: string, status: "draft" | "sent") => void;
 }) {
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { ing: Ingredient; required: number; packs: number | null }[]>();
-    for (const [ingId, need] of calculation) {
+    const map = new Map<string, { ing: Ingredient; required: number; packs: number | null; isEvent: boolean }[]>();
+    for (const [ingId, need] of req) {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing || !ing.supplier_id) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
       const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
       const arr = map.get(ing.supplier_id) ?? [];
-      arr.push({ ing, required, packs });
+      arr.push({ ing, required, packs, isEvent: fromConsumable.has(ing.id) });
       map.set(ing.supplier_id, arr);
     }
     return Array.from(map.entries()).map(([sid, items]) => ({
       supplier: suppliers.find(s => s.id === sid) ?? null,
       items: items.sort((a, b) => a.ing.name.localeCompare(b.ing.name)),
     })).filter(g => g.supplier);
-  }, [calculation, ingredients, suppliers]);
+  }, [req, fromConsumable, ingredients, suppliers]);
 
   const dateRange = festival?.start_date && festival?.end_date
     ? formatDateRange(festival.start_date, festival.end_date) : "";
@@ -703,9 +770,12 @@ function OrdersView({
                 </tr>
               </thead>
               <tbody>
-                {items.map(({ ing, required, packs }) => (
+                {items.map(({ ing, required, packs, isEvent }) => (
                   <tr key={ing.id} className="border-t">
-                    <td className="p-2">{ing.name}</td>
+                    <td className="p-2">
+                      {ing.name}
+                      {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
+                    </td>
                     <td className="p-2 text-right">
                       {ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`}
                     </td>
@@ -728,9 +798,10 @@ function OrdersView({
 // Library view
 // ============================================================
 function LibraryView({
-  suppliers, ingredients, recipes, items, onChange,
+  suppliers, ingredients, recipes, items, packaging, onChange,
 }: {
-  suppliers: Supplier[]; ingredients: Ingredient[]; recipes: Recipe[]; items: RecipeItem[];
+  suppliers: Supplier[]; ingredients: Ingredient[]; recipes: Recipe[];
+  items: RecipeItem[]; packaging: RecipePackaging[];
   onChange: () => void;
 }) {
   const [importOpen, setImportOpen] = useState(false);
@@ -748,43 +819,53 @@ function LibraryView({
     return m;
   }, [items]);
 
+  const packagingByRecipe = useMemo(() => {
+    const m = new Map<string, RecipePackaging[]>();
+    packaging.forEach(p => {
+      const a = m.get(p.recipe_id) ?? [];
+      a.push(p); m.set(p.recipe_id, a);
+    });
+    return m;
+  }, [packaging]);
+
   const violations = useMemo(() => {
     const set = new Set<string>();
     const ingById = new Map(ingredients.map(i => [i.id, i]));
     const recById = new Map(recipes.map(r => [r.id, r]));
     for (const r of recipes) {
       if (r.type !== "product") continue;
-      const its = itemsByRecipe.get(r.id) ?? [];
-      const ingNames: string[] = [];
+      const foodItems = itemsByRecipe.get(r.id) ?? [];
+      const packItems = packagingByRecipe.get(r.id) ?? [];
+      const foodIngNames: string[] = [];
       const subNames: string[] = [];
-      its.forEach(it => {
+      foodItems.forEach(it => {
         if (it.ingredient_id) {
           const ing = ingById.get(it.ingredient_id);
-          if (ing) ingNames.push(ing.name.toLowerCase());
+          if (ing) foodIngNames.push(ing.name.toLowerCase());
         } else if (it.subrecipe_id) {
           const sub = recById.get(it.subrecipe_id);
           if (sub) subNames.push(sub.name.toLowerCase());
         }
       });
-      const all = [...ingNames, ...subNames];
-      const hasWrap = all.some(n => n.includes("wrapping paper"));
-      const hasBox = all.some(n => n.includes("take away box") || n.includes("takeaway box"));
-      const hasFries = all.some(n => n.includes("fries") || n.includes("chips"));
+      const packNames = packItems
+        .map(p => ingById.get(p.ingredient_id)?.name.toLowerCase())
+        .filter((n): n is string => !!n);
+
+      const hasWrap = packNames.some(n => n.includes("wrapping paper"));
+      const hasBox = packNames.some(n => n.includes("take away box") || n.includes("takeaway box"));
+      const hasFries = [...foodIngNames, ...subNames].some(n => n.includes("fries") || n.includes("chips"));
       const isFish = r.concept === "fish";
       const isGyros = r.concept === "gyros";
       const isFriesProduct = r.name.toLowerCase().includes("fries");
       const isComboGyros = isGyros && (r.name.toLowerCase().includes("combo") || hasFries);
 
-      // wrapping paper rule
       if ((isFish || isGyros || isFriesProduct) && !hasWrap) set.add(r.id);
-      // take away box rule
       if (hasFries && !hasBox) {
-        // except non-combo gyros (single) — wrapping paper only
         if (!(isGyros && !isComboGyros)) set.add(r.id);
       }
     }
     return set;
-  }, [recipes, items, ingredients, itemsByRecipe]);
+  }, [recipes, items, packaging, ingredients, itemsByRecipe, packagingByRecipe]);
 
   return (
     <div className="space-y-6">
@@ -860,7 +941,12 @@ function LibraryView({
                   <td className="p-2">{CONCEPT_LABEL[r.concept]}</td>
                   <td className="p-2">{r.type}</td>
                   <td className="p-2 text-right">{r.batch_g ?? "—"}</td>
-                  <td className="p-2 text-right">{(itemsByRecipe.get(r.id) ?? []).length}</td>
+                  <td className="p-2 text-right">
+                    {(itemsByRecipe.get(r.id) ?? []).length}
+                    {(packagingByRecipe.get(r.id) ?? []).length > 0 && (
+                      <span className="text-muted-foreground"> · {(packagingByRecipe.get(r.id) ?? []).length} pkg</span>
+                    )}
+                  </td>
                   <td className="p-2">
                     {violations.has(r.id) && (
                       <span title="Missing wrapping paper or take-away box" className="inline-flex items-center gap-1 text-amber-600">
@@ -893,6 +979,7 @@ function LibraryView({
           ingredients={ingredients}
           recipes={recipes}
           existingItems={editRecipe ? (itemsByRecipe.get(editRecipe.id) ?? []) : []}
+          existingPackaging={editRecipe ? (packagingByRecipe.get(editRecipe.id) ?? []) : []}
           onClose={() => { setEditRecipe(null); setNewRecipe(false); }}
           onSaved={() => { setEditRecipe(null); setNewRecipe(false); onChange(); }}
         />
@@ -1002,13 +1089,15 @@ function IngredientDialog({
 
 // ---------- Recipe dialog ----------
 type DraftItem = { key: string; ingredient_id: string | null; subrecipe_id: string | null; qty_g: string; qty_stk: string };
+type DraftPack = { key: string; ingredient_id: string; qty_per_unit: string };
 
 function RecipeDialog({
-  recipe, ingredients, recipes, existingItems, onClose, onSaved,
+  recipe, ingredients, recipes, existingItems, existingPackaging, onClose, onSaved,
 }: {
   recipe: Recipe | null;
   ingredients: Ingredient[]; recipes: Recipe[];
   existingItems: RecipeItem[];
+  existingPackaging: RecipePackaging[];
   onClose: () => void; onSaved: () => void;
 }) {
   const [name, setName] = useState(recipe?.name ?? "");
@@ -1018,7 +1107,7 @@ function RecipeDialog({
   const [active, setActive] = useState(recipe?.active ?? true);
   const [draftItems, setDraftItems] = useState<DraftItem[]>(
     existingItems.length > 0
-      ? existingItems.map((it, i) => ({
+      ? existingItems.map((it) => ({
           key: it.id,
           ingredient_id: it.ingredient_id,
           subrecipe_id: it.subrecipe_id,
@@ -1026,6 +1115,11 @@ function RecipeDialog({
           qty_stk: it.qty_stk?.toString() ?? "",
         }))
       : [],
+  );
+  const [draftPack, setDraftPack] = useState<DraftPack[]>(
+    existingPackaging.map(p => ({
+      key: p.id, ingredient_id: p.ingredient_id, qty_per_unit: String(p.qty_per_unit ?? 1),
+    })),
   );
 
   const save = async () => {
@@ -1043,7 +1137,7 @@ function RecipeDialog({
       if (error) { toast.error(error.message); return; }
       recipeId = data.id;
     }
-    // Replace items
+    // Replace food items
     await supabase.from("grocery_recipe_items").delete().eq("recipe_id", recipeId!);
     const toInsert = draftItems
       .filter(d => d.ingredient_id || d.subrecipe_id)
@@ -1057,6 +1151,20 @@ function RecipeDialog({
       }));
     if (toInsert.length > 0) {
       const { error } = await supabase.from("grocery_recipe_items").insert(toInsert);
+      if (error) { toast.error(error.message); return; }
+    }
+    // Replace packaging
+    await supabase.from("grocery_recipe_packaging").delete().eq("recipe_id", recipeId!);
+    const packInsert = draftPack
+      .filter(d => d.ingredient_id)
+      .map((d, i) => ({
+        recipe_id: recipeId!,
+        ingredient_id: d.ingredient_id,
+        qty_per_unit: d.qty_per_unit ? Number(d.qty_per_unit) : 1,
+        sort_order: i,
+      }));
+    if (packInsert.length > 0) {
+      const { error } = await supabase.from("grocery_recipe_packaging").insert(packInsert);
       if (error) { toast.error(error.message); return; }
     }
     toast.success("Saved");
@@ -1114,7 +1222,7 @@ function RecipeDialog({
 
           <div className="border-t pt-3">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-sm">Items</h4>
+              <h4 className="font-medium text-sm">Ingredients (food)</h4>
               <Button size="sm" variant="outline" onClick={addItem}><Plus className="h-4 w-4" /> Add item</Button>
             </div>
             <div className="space-y-2">
@@ -1150,11 +1258,237 @@ function RecipeDialog({
               ))}
             </div>
           </div>
+
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="font-medium text-sm">Packaging & consumables</h4>
+                <p className="text-xs text-muted-foreground">Wrapping paper, take-away boxes, napkins, cutlery, sauce bags… (qty per sold unit)</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setDraftPack([...draftPack, { key: Math.random().toString(36), ingredient_id: "", qty_per_unit: "1" }])}>
+                <Plus className="h-4 w-4" /> Add packaging
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {draftPack.map(d => (
+                <div key={d.key} className="grid grid-cols-12 gap-2 items-center">
+                  <Select
+                    value={d.ingredient_id || ""}
+                    onValueChange={(v) => setDraftPack(draftPack.map(x => x.key === d.key ? { ...x, ingredient_id: v } : x))}
+                  >
+                    <SelectTrigger className="col-span-8"><SelectValue placeholder="Select packaging ingredient (stk)" /></SelectTrigger>
+                    <SelectContent>
+                      {ingredients.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="qty/unit" type="number" className="col-span-2" value={d.qty_per_unit}
+                    onChange={e => setDraftPack(draftPack.map(x => x.key === d.key ? { ...x, qty_per_unit: e.target.value } : x))} />
+                  <Button size="sm" variant="ghost" className="col-span-2"
+                    onClick={() => setDraftPack(draftPack.filter(x => x.key !== d.key))}>
+                    <Trash2 className="h-4 w-4" /> Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <DialogFooter>
           {recipe && <Button variant="destructive" onClick={del}><Trash2 className="h-4 w-4" /> Delete</Button>}
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============================================================
+// Consumables view (per festival, fixed quantities)
+// ============================================================
+function ConsumablesView({
+  festivalId, consumables, ingredients, suppliers, onChange,
+}: {
+  festivalId: string | null;
+  consumables: Consumable[];
+  ingredients: Ingredient[];
+  suppliers: Supplier[];
+  onChange: () => void;
+}) {
+  const [newIngOpen, setNewIngOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+
+  if (!festivalId) return <div className="p-8 text-sm text-muted-foreground">Loading…</div>;
+
+  const addRow = async () => {
+    if (ingredients.length === 0) { toast.error("Create an ingredient first"); return; }
+    const { error } = await supabase.from("grocery_festival_consumables").insert({
+      festival_id: festivalId, ingredient_id: ingredients[0].id, qty: 0, unit_mode: "packs",
+    });
+    if (error) { toast.error(error.message); return; }
+    onChange();
+  };
+
+  const update = async (id: string, patch: Partial<Consumable>) => {
+    const { error } = await supabase.from("grocery_festival_consumables").update(patch).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    onChange();
+  };
+  const del = async (id: string) => {
+    const { error } = await supabase.from("grocery_festival_consumables").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    onChange();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          Fixed per-festival items (cleaning, gloves, foil, first-aid…). Not driven by sales, no safety margin.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" /> Import from festival
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setNewIngOpen(true)}>
+            <Plus className="h-4 w-4" /> New ingredient
+          </Button>
+          <Button size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Add line</Button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-foreground bg-muted/30">
+            <tr>
+              <th className="text-left p-2">Item</th>
+              <th className="text-left p-2">Supplier</th>
+              <th className="text-right p-2">Quantity</th>
+              <th className="text-left p-2">Mode</th>
+              <th className="text-left p-2">Note</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {consumables.length === 0 && (
+              <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No consumables yet.</td></tr>
+            )}
+            {consumables.map(c => {
+              const ing = ingredients.find(i => i.id === c.ingredient_id);
+              const sup = suppliers.find(s => s.id === ing?.supplier_id);
+              return (
+                <tr key={c.id} className="border-t">
+                  <td className="p-2">
+                    <Select value={c.ingredient_id} onValueChange={(v) => update(c.id, { ingredient_id: v })}>
+                      <SelectTrigger className="h-8 min-w-[200px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ingredients.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2 text-xs text-muted-foreground">{sup?.name ?? "—"}</td>
+                  <td className="p-2 text-right">
+                    <Input type="number" className="h-8 w-24 text-right ml-auto"
+                      defaultValue={c.qty}
+                      onBlur={(e) => {
+                        const n = Number(e.target.value) || 0;
+                        if (n !== c.qty) update(c.id, { qty: n });
+                      }} />
+                  </td>
+                  <td className="p-2">
+                    <Select value={c.unit_mode} onValueChange={(v) => update(c.id, { unit_mode: v as any })}>
+                      <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="packs">packs</SelectItem>
+                        <SelectItem value="units">units ({ing?.unit ?? "?"})</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="p-2">
+                    <Input className="h-8" defaultValue={c.note ?? ""}
+                      onBlur={(e) => update(c.id, { note: e.target.value || null })} />
+                  </td>
+                  <td className="p-2 text-right">
+                    <Button size="sm" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {newIngOpen && (
+        <IngredientDialog
+          ingredient={null}
+          suppliers={suppliers}
+          onClose={() => setNewIngOpen(false)}
+          onSaved={() => { setNewIngOpen(false); onChange(); }}
+        />
+      )}
+      {importOpen && (
+        <ConsumablesImportDialog
+          festivalId={festivalId}
+          onClose={() => setImportOpen(false)}
+          onDone={() => { setImportOpen(false); onChange(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ConsumablesImportDialog({
+  festivalId, onClose, onDone,
+}: {
+  festivalId: string; onClose: () => void; onDone: () => void;
+}) {
+  const [sourceId, setSourceId] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+
+  const festivalsQ = useQuery({
+    queryKey: ["gr-consumables-fest-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("festivals").select("id,name,start_date").order("start_date", { ascending: false });
+      return (data ?? []).filter((f: any) => f.id !== festivalId);
+    },
+  });
+
+  const run = async () => {
+    if (!sourceId) { toast.error("Pick a festival"); return; }
+    setBusy(true);
+    try {
+      const { data: src, error: e1 } = await supabase.from("grocery_festival_consumables")
+        .select("ingredient_id, qty, unit_mode, note").eq("festival_id", sourceId);
+      if (e1) throw e1;
+      if (!src || src.length === 0) { toast("No consumables to copy"); onDone(); return; }
+      const rows = src.map((r: any) => ({ ...r, festival_id: festivalId }));
+      const { error } = await supabase.from("grocery_festival_consumables").insert(rows);
+      if (error) throw error;
+      toast.success(`Imported ${rows.length} consumables`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message || String(e));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Import consumables from festival</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <Label>Source festival</Label>
+          <Select value={sourceId} onValueChange={setSourceId}>
+            <SelectTrigger><SelectValue placeholder="Select festival" /></SelectTrigger>
+            <SelectContent>
+              {(festivalsQ.data ?? []).map((f: any) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Rows are appended — this does not replace existing entries.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={run} disabled={busy}>{busy ? "Importing…" : "Import"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1247,9 +1581,27 @@ async function runImport(json: any) {
     for (const i of existing ?? []) ingredientMap.set(i.name, i.id);
   }
 
+  // Detect packaging-style items by name keywords.
+  // Rule: paper, box, wrap, napkin, cutlery, fork, spoon, straw, lid — but "sauce bag" (or bag qualified as sauce) stays as food/ingredient.
   const isPackaging = (name: string) => {
     const n = name.toLowerCase();
-    return n.includes("wrapping paper") || n.includes("take away box") || n.includes("takeaway box");
+    if (n.includes("sauce bag") || n.includes("bag for sauce")) return false;
+    return (
+      n.includes("wrapping paper") ||
+      n.includes("take away box") || n.includes("takeaway box") ||
+      /\b(paper|napkin|cutlery|fork|spoon|straw|lid|wrap)\b/.test(n) ||
+      /\bbox\b/.test(n)
+    );
+  };
+  // Also treat "1 stk" qty_note items as packaging when their name looks disposable.
+  const looksDisposableName = (name: string) => {
+    const n = name.toLowerCase();
+    return /\b(paper|napkin|cutlery|fork|spoon|straw|lid|wrap|box|glove|foil|film|bag)\b/.test(n) && !n.includes("sauce bag");
+  };
+  const routeToPackaging = (it: any) => {
+    if (isPackaging(it.name)) return true;
+    if (it.qty_g == null && it.qty_note && /^\s*1\s*stk\b/i.test(String(it.qty_note)) && looksDisposableName(it.name)) return true;
+    return false;
   };
 
   for (const r of recipesIn) {
@@ -1258,7 +1610,7 @@ async function runImport(json: any) {
       const name: string = it.name;
       if (!name) continue;
       const { supplierId, sku } = resolveSupplier(it.source);
-      const forcedStk = isPackaging(name);
+      const forcedStk = routeToPackaging(it);
       const isStkByNote = it.qty_g == null && it.qty_note && /stk|^\d+\s*stk/i.test(String(it.qty_note));
       const unit: "g" | "stk" = forcedStk || isStkByNote ? "stk" : "g";
       const payload: any = {
@@ -1315,33 +1667,49 @@ async function runImport(json: any) {
     }
   }
 
-  // Replace items per recipe
+  // Replace items + packaging per recipe (idempotent)
   for (const r of sorted) {
     const rid = recipeMap.get(r.name)!;
     await supabase.from("grocery_recipe_items").delete().eq("recipe_id", rid);
-    const rows: any[] = [];
-    let idx = 0;
+    await supabase.from("grocery_recipe_packaging").delete().eq("recipe_id", rid);
+    const foodRows: any[] = [];
+    const packRows: any[] = [];
+    let idx = 0, pIdx = 0;
     for (const it of (r.items ?? [])) {
-      let ingredient_id: string | null = null;
-      let subrecipe_id: string | null = null;
       if (it.subrecipe) {
-        subrecipe_id = recipeMap.get(it.name) ?? null;
+        const subrecipe_id = recipeMap.get(it.name) ?? null;
         if (!subrecipe_id) continue;
-      } else {
-        ingredient_id = ingredientMap.get(it.name) ?? null;
-        if (!ingredient_id) continue;
+        const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
+        foodRows.push({
+          recipe_id: rid, ingredient_id: null, subrecipe_id,
+          qty_g, qty_stk: null, sort_order: idx++,
+        });
+        continue;
       }
-      const isPack = ingredient_id && isPackaging(it.name);
-      const isStkByNote = it.qty_g == null && it.qty_note && /stk|^\d+\s*stk/i.test(String(it.qty_note));
-      const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
-      const qty_stk = (isPack || isStkByNote) && qty_g == null ? 1 : null;
-      rows.push({
-        recipe_id: rid, ingredient_id, subrecipe_id,
-        qty_g, qty_stk, sort_order: idx++,
-      });
+      const ingredient_id = ingredientMap.get(it.name) ?? null;
+      if (!ingredient_id) continue;
+      if (routeToPackaging(it)) {
+        const qty_per_unit = it.qty_g != null && it.qty_g > 0 ? Number(it.qty_g) : 1;
+        packRows.push({
+          recipe_id: rid, ingredient_id,
+          qty_per_unit, sort_order: pIdx++,
+        });
+      } else {
+        const isStkByNote = it.qty_g == null && it.qty_note && /stk|^\d+\s*stk/i.test(String(it.qty_note));
+        const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
+        const qty_stk = isStkByNote && qty_g == null ? 1 : null;
+        foodRows.push({
+          recipe_id: rid, ingredient_id, subrecipe_id: null,
+          qty_g, qty_stk, sort_order: idx++,
+        });
+      }
     }
-    if (rows.length > 0) {
-      const { error } = await supabase.from("grocery_recipe_items").insert(rows);
+    if (foodRows.length > 0) {
+      const { error } = await supabase.from("grocery_recipe_items").insert(foodRows);
+      if (error) throw error;
+    }
+    if (packRows.length > 0) {
+      const { error } = await supabase.from("grocery_recipe_packaging").insert(packRows);
       if (error) throw error;
     }
   }
