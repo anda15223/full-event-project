@@ -1022,11 +1022,18 @@ export default function FestivalOverview() {
                 secondaryStat={prItems > 0 ? `${prItems} items` : "POS price lists"}
                 status={prItems > 0 ? "green" : "gray"} />
             );
+            const staffTotal = staffStatusQ.data?.total ?? 0;
+            const staffComplete = staffStatusQ.data?.complete ?? 0;
+            const staffStatus: "green" | "amber" | "gray" =
+              staffTotal === 0 ? "gray"
+              : staffComplete === staffTotal ? "green"
+              : "amber";
             tilesByKey["staff"] = (
               <FestivalTile key="staff" href={`/festivals/${slug}/staff`}
                 icon={UserCog} iconAccent="slate" title="Staff"
-                primaryStat="Crew list"
-                secondaryStat="Names, days, locations" status="gray" />
+                primaryStat={staffTotal > 0 ? `${staffTotal} crew` : "Crew list"}
+                secondaryStat={staffTotal > 0 ? `${staffComplete}/${staffTotal} complete` : "Names, days, locations"}
+                status={staffStatus} />
             );
             tilesByKey["scheduling"] = (
               <FestivalTile key="scheduling" href={`/festivals/${slug}/scheduling`}
