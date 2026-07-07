@@ -682,6 +682,71 @@ export default function FestivalStaff() {
           </PopoverContent>
         </Popover>
 
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 h-7 px-2 rounded-md border text-xs bg-background hover:bg-muted"
+              title="Remove an accommodation night from every person in the current filter"
+            >
+              <Minus className="h-3 w-3" /> Bulk remove night ({rows.length})
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-60 p-3" align="start">
+            <div className="text-xs font-semibold mb-2">
+              Remove night from {rows.length} filtered person{rows.length === 1 ? "" : "s"}
+            </div>
+            {dayWindow.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground italic">No dates available.</div>
+            ) : (
+              <div className="space-y-1">
+                {dayWindow.map((d) => {
+                  const presentCount = rows.filter(
+                    (r) => (r.accom_dates ?? []).includes(d.iso),
+                  ).length;
+                  return (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      disabled={presentCount === 0}
+                      onClick={async () => {
+                        const targets = rows.filter(
+                          (r) => (r.accom_dates ?? []).includes(d.iso),
+                        );
+                        if (targets.length === 0) return;
+                        await Promise.all(
+                          targets.map((r) => {
+                            const next = (r.accom_dates ?? []).filter((x) => x !== d.iso);
+                            return updateStaff.mutateAsync({
+                              id: r.id,
+                              patch: {
+                                accom_dates: next,
+                                needs_accommodation: next.length > 0 ? r.needs_accommodation : false,
+                              } as Partial<Staff>,
+                            });
+                          }),
+                        );
+                        toast.success(`Removed ${d.label} from ${targets.length} people`);
+                      }}
+                      className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <span className="tabular-nums">
+                        {d.label}
+                        {!d.isFestivalDay && (
+                          <span className="ml-1 text-[9px] uppercase text-muted-foreground">extra</span>
+                        )}
+                      </span>
+                      <span className="text-[9px] uppercase text-muted-foreground">
+                        {presentCount > 0 ? `−${presentCount}` : "none"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
         <span className="ml-auto text-muted-foreground">
           ✓ {confirmedCount} confirmed
         </span>
