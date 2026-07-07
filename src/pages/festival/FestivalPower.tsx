@@ -10,6 +10,8 @@ import {
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
 import type { SiblingConcept } from "@/components/festival/TentMergeControls";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
+import { PowerImportBar } from "@/components/festival/cards/PowerImportBar";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
