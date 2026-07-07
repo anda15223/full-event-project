@@ -1713,7 +1713,9 @@ async function runImport(json: any) {
     const packRows: any[] = [];
     let idx = 0, pIdx = 0;
     for (const it of (r.items ?? [])) {
-      if (it.subrecipe) {
+      // Auto-promote to subrecipe when an item's name matches an existing recipe.
+      const nameMatchesRecipe = it.name && recipeMap.has(it.name) && recipeMap.get(it.name) !== rid;
+      if (it.subrecipe || nameMatchesRecipe) {
         const subrecipe_id = recipeMap.get(it.name) ?? null;
         if (!subrecipe_id) continue;
         const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
