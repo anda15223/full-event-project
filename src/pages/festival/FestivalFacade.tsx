@@ -1,10 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Image as ImageIcon, Download } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon, Download, Loader2, Download as DownloadIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import {
   FacadeConceptCard, type FacadeRow, type FacadePhotoRow,
 } from "@/components/festival/cards/FacadeConceptCard";
