@@ -632,8 +632,8 @@ function OrdersView({
       map.set(ing.supplier_id, arr);
     }
     return Array.from(map.entries()).map(([sid, items]) => ({
-      supplier: suppliers.find(s => s.id === sid)!,
-      items: items.filter(i => i.supplier).sort((a, b) => a.ing.name.localeCompare(b.ing.name)),
+      supplier: suppliers.find(s => s.id === sid) ?? null,
+      items: items.sort((a, b) => a.ing.name.localeCompare(b.ing.name)),
     })).filter(g => g.supplier);
   }, [calculation, ingredients, suppliers]);
 
