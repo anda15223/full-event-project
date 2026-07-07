@@ -121,6 +121,52 @@ export function FacadeConceptCard({
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
+  // Equipment for this concept at this festival — name + qty + dimensions/notes.
+  const equipmentQ = useQuery({
+    queryKey: ["facade-concept-equipment", festivalId, conceptId],
+    enabled: !!festivalId && !!conceptId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_equipment")
+        .select("id,name,category,quantity,qty,notes,position_zone,zone")
+        .eq("festival_id", festivalId)
+        .eq("concept_id", conceptId)
+        .eq("is_draft", false)
+        .order("category", { ascending: true, nullsFirst: false })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const equipment = equipmentQ.data ?? [];
+  const [equipOpen, setEquipOpen] = useState(false);
+  const equipMutation = useMutation({
+    mutationFn: async ({ id, qty }: { id: string; qty: number }) => {
+      const { error } = await supabase.from("festival_equipment")
+        .update({ quantity: qty, qty } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["facade-concept-equipment", festivalId, conceptId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Save failed"),
+  });
+
+  const updateCaption = async (id: string, caption: string) => {
+    await supabase.from("festival_facade_photos").update({ caption } as any).eq("id", id);
+    invalidate();
+  };
+  const setCover = async (id: string) => {
+    // Set chosen photo to display_order 0, push others down by 1.
+    await supabase.from("festival_facade_photos").update({ display_order: 0 } as any).eq("id", id);
+    let idx = 1;
+    for (const p of photos.filter((x) => x.id !== id)) {
+      await supabase.from("festival_facade_photos").update({ display_order: idx } as any).eq("id", p.id);
+      idx++;
+    }
+    invalidate();
+  };
+
   const uploadSpec = async (file: File) => {
     setUploadingSpec(true);
     try {
