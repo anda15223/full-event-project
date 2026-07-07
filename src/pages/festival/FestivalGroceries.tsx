@@ -227,12 +227,12 @@ export default function FestivalGroceries() {
   const consumables = consumablesQ.data ?? [];
   const estimates = estimatesQ.data ?? [];
   const safetyMargin = settingsQ.data?.safety_margin_pct ?? 10;
-  const oilReserveL = settingsQ.data?.oil_refill_reserve_l ?? 2.5;
+  const oilBackupFactor = settingsQ.data?.oil_backup_factor ?? 2.0;
 
   // ---------- Equipment-driven auto oil consumable ----------
   // Reads the festival's assigned fryers (read-only) and produces a synthetic
-  // consumable row for "Organic frying oil" (Pride 15 L dunk). The refill
-  // reserve is a single flat amount per festival (default 2,5 L).
+  // consumable row for "Organic frying oil" (Pride 15 L dunk). Total litres =
+  // SUM(fryer capacities) * oil_backup_factor (default 2.0). Packs = CEIL(total / 15).
   const autoOil = useMemo(() => {
     const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
     const groups = new Map<FryerCategory, { label: string; cap: number; qty: number }>();
@@ -253,14 +253,13 @@ export default function FestivalGroceries() {
       parts.push(`${g.qty} x ${g.label} (${g.cap} L)`);
       capSum += g.qty * g.cap;
     }
-    const reserveL = totalFryers > 0 ? oilReserveL : 0;
-    const totalL = capSum + reserveL;
+    const totalL = capSum * oilBackupFactor;
     const packs = totalL > 0 ? Math.ceil(totalL / 15) : 0;
     const breakdown = totalFryers > 0
-      ? `${parts.join(" + ")} + ${fmtL(reserveL)} L reserve = ${fmtL(totalL)} L → ${packs} dunke`
+      ? `${parts.join(" + ")} = ${fmtL(capSum)} L × ${oilBackupFactor} = ${fmtL(totalL)} L → ${packs} dunke à 15 L`
       : "";
     return { oilIngredient, totalFryers, totalL, packs, breakdown };
-  }, [ingredients, fryerEquipQ.data, oilReserveL]);
+  }, [ingredients, fryerEquipQ.data, oilBackupFactor]);
 
   const autoConsumables = useMemo<Consumable[]>(() => {
     if (!autoOil.oilIngredient || autoOil.packs <= 0 || !festival?.id) return [];
