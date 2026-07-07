@@ -440,6 +440,48 @@ export default function FestivalSoborgLoading() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={resetting}
+            onClick={async () => {
+              if (!confirm("Clear ALL vehicle assignments and 'loads from Søborg' flags for this festival? This cannot be undone.")) return;
+              setResetting(true);
+              try {
+                // 1) Clear vehicle assignments on all active contracts
+                const { data: contracts, error: cErr } = await sb.from("festival_contracts")
+                  .select("id").eq("festival_id", festivalId).eq("is_active", true);
+                if (cErr) throw cErr;
+                const contractIds = (contracts ?? []).map((c: any) => c.id);
+                if (contractIds.length) {
+                  const { error: uErr } = await sb.from("festival_contracts")
+                    .update({ assigned_vehicle_id: null }).in("id", contractIds);
+                  if (uErr) throw uErr;
+                }
+                // 2) Clear loads_from_soborg on all equipment tied to those contracts
+                if (contractIds.length) {
+                  const { data: powers } = await sb.from("festival_power")
+                    .select("id").in("festival_contract_id", contractIds);
+                  const powerIds = (powers ?? []).map((p: any) => p.id);
+                  if (powerIds.length) {
+                    const { error: eErr } = await sb.from("festival_power_equipment")
+                      .update({ loads_from_soborg: false })
+                      .in("festival_power_id", powerIds);
+                    if (eErr) throw eErr;
+                  }
+                }
+                toast.success("Søborg loading reset. Ready for fresh import.");
+                reload();
+              } catch (e: any) {
+                toast.error("Reset failed: " + (e?.message ?? "unknown"));
+              } finally {
+                setResetting(false);
+              }
+            }}
+          >
+            {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+            Reset loading
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
             <Copy className="h-4 w-4" /> Import from festival
           </Button>
