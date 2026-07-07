@@ -239,6 +239,7 @@ export default function FestivalEquipment() {
         festivalId={festivalId}
         onChanged={() => {
           qc.invalidateQueries({ queryKey: ["equipment-page", slug] });
+          qc.invalidateQueries({ queryKey: ["festival-loading-vehicles", festivalId] });
         }}
       />
 
@@ -391,8 +392,9 @@ function EquipmentImportBar({
                 <AlertDialogTitle>Reset all equipment & trolley cars?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will delete every equipment item, trolley split, and trolley-car
-                  assignment for this festival. Concepts, contracts, and vehicles are kept.
-                  You can re-import from another festival afterwards.
+                  assignment for this festival, and clear the concept pack-into car links.
+                  Concepts, contracts, and vehicles are kept. You can re-import from another
+                  festival afterwards.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -406,8 +408,8 @@ function EquipmentImportBar({
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Matches by concept · overwrites current equipment & trolley cars for each concept.
-        Trolley-car → transport links are re-matched by vehicle type when possible; otherwise left blank.
+        Matches duplicate stalls by concept and label · overwrites current equipment & trolley cars for each matched stall.
+        Missing pack-into cars are created from the source festival when needed.
       </p>
     </div>
   );
@@ -421,40 +423,191 @@ const PWE_STRIP = new Set<string>([
   "linked_topskilt_id",
 ]);
 
+type ContractImportRow = {
+  id: string;
+  concept_id: string;
+  concept_alias: string | null;
+  instance_label: string | null;
+  created_at: string | null;
+  assigned_vehicle_id: string | null;
+};
+
+type ContractPair = {
+  src: ContractImportRow;
+  tgt: ContractImportRow;
+  conceptId: string;
+};
+
+const normalizeImportKey = (value: unknown) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const contractLabelKey = (row: ContractImportRow) =>
+  normalizeImportKey(row.concept_alias) || normalizeImportKey(row.instance_label);
+
+const contractSortKey = (row: ContractImportRow) =>
+  [contractLabelKey(row), row.created_at ?? "", row.id].join("|");
+
+function groupContractsByConcept(rows: ContractImportRow[]) {
+  const grouped = new Map<string, ContractImportRow[]>();
+  rows.forEach((row) => {
+    if (!row.concept_id) return;
+    const list = grouped.get(row.concept_id) ?? [];
+    list.push(row);
+    grouped.set(row.concept_id, list);
+  });
+  grouped.forEach((list) => list.sort((a, b) => contractSortKey(a).localeCompare(contractSortKey(b))));
+  return grouped;
+}
+
+function buildContractPairs(sourceRows: ContractImportRow[], targetRows: ContractImportRow[]): ContractPair[] {
+  const sourceByConcept = groupContractsByConcept(sourceRows);
+  const targetByConcept = groupContractsByConcept(targetRows);
+  const pairs: ContractPair[] = [];
+
+  for (const [conceptId, targetList] of targetByConcept) {
+    const sourceList = sourceByConcept.get(conceptId) ?? [];
+    if (sourceList.length === 0) continue;
+    const usedSource = new Set<number>();
+
+    targetList.forEach((target, targetIndex) => {
+      const targetKey = contractLabelKey(target);
+      let sourceIndex = targetKey
+        ? sourceList.findIndex((source, index) => !usedSource.has(index) && contractLabelKey(source) === targetKey)
+        : -1;
+
+      if (sourceIndex === -1 && !usedSource.has(targetIndex) && sourceList[targetIndex]) {
+        sourceIndex = targetIndex;
+      }
+      if (sourceIndex === -1) {
+        sourceIndex = sourceList.findIndex((_, index) => !usedSource.has(index));
+      }
+      if (sourceIndex === -1) return;
+
+      usedSource.add(sourceIndex);
+      pairs.push({ src: sourceList[sourceIndex], tgt: target, conceptId });
+    });
+  }
+
+  return pairs;
+}
+
+const TRANSPORT_CLONE_STRIP = new Set<string>([
+  "id", "created_at", "updated_at", "festival_id",
+  "accreditation_pdf_path", "accreditation_uploaded_at",
+]);
+
+function transportKeys(row: any) {
+  const norm = (value: unknown) => normalizeImportKey(value);
+  const keys: string[] = [];
+  if (row.season_rental_id) keys.push(`season:${row.season_rental_id}`);
+  if (norm(row.license_plate)) keys.push(`plate:${norm(row.license_plate)}`);
+  keys.push(`full:${[
+    row.vehicle_type, row.vehicle_purpose, row.rental_supplier_id, row.rental_supplier,
+    row.booking_reference, row.pickup_date, row.pickup_time, row.return_date, row.return_time,
+  ].map(norm).join("|")}`);
+  keys.push(`booking:${[
+    row.vehicle_type, row.rental_supplier_id, row.rental_supplier, row.booking_reference,
+  ].map(norm).join("|")}`);
+  keys.push(`type-date:${[
+    row.vehicle_type, row.pickup_date, row.return_date,
+  ].map(norm).join("|")}`);
+  return keys.filter((key) => !key.endsWith(":") && !key.endsWith(":||||") && !key.endsWith(":||"));
+}
+
+async function buildTransportMap(sourceFestivalId: string, targetFestivalId: string, sourceTransportIds: string[]) {
+  const uniqueSourceIds = Array.from(new Set(sourceTransportIds.filter(Boolean)));
+  const transportMap = new Map<string, string>();
+  if (uniqueSourceIds.length === 0) return { transportMap, createdVehicles: 0, unresolvedVehicles: 0 };
+
+  const [srcT, tgtT] = await Promise.all([
+    supabase.from("festival_transport").select("*").in("id", uniqueSourceIds),
+    supabase.from("festival_transport").select("*").eq("festival_id", targetFestivalId),
+  ]);
+  if (srcT.error) throw srcT.error;
+  if (tgtT.error) throw tgtT.error;
+
+  const targetByKey = new Map<string, string[]>();
+  const addTarget = (row: any) => {
+    transportKeys(row).forEach((key) => {
+      const list = targetByKey.get(key) ?? [];
+      list.push(row.id);
+      targetByKey.set(key, list);
+    });
+  };
+  (tgtT.data ?? []).forEach(addTarget);
+
+  const usedTargets = new Set<string>();
+  let createdVehicles = 0;
+
+  for (const source of (srcT.data ?? []) as any[]) {
+    let targetId: string | undefined;
+    for (const key of transportKeys(source)) {
+      targetId = (targetByKey.get(key) ?? []).find((id) => !usedTargets.has(id));
+      if (targetId) break;
+    }
+
+    if (!targetId) {
+      const clone: Record<string, unknown> = {};
+      Object.entries(source).forEach(([key, value]) => {
+        if (!TRANSPORT_CLONE_STRIP.has(key)) clone[key] = value;
+      });
+      clone.festival_id = targetFestivalId;
+      clone.is_draft = false;
+      clone.draft_source_festival_id = sourceFestivalId;
+      clone.status = "planned";
+      clone.vehicle_type = clone.vehicle_type || "Vehicle";
+
+      const { data, error } = await supabase.from("festival_transport")
+        .insert(clone as any)
+        .select("*")
+        .single();
+      if (error) throw error;
+      targetId = (data as any).id;
+      addTarget(data);
+      createdVehicles++;
+    }
+
+    transportMap.set(source.id, targetId);
+    usedTargets.add(targetId);
+  }
+
+  return {
+    transportMap,
+    createdVehicles,
+    unresolvedVehicles: uniqueSourceIds.length - transportMap.size,
+  };
+}
+
 async function importEquipmentAndTrolleys(
   sourceFestivalId: string,
   targetFestivalId: string,
 ): Promise<string> {
-  // 1. Build concept -> contract map for source and target.
+  // 1. Build source -> target contract pairs. Pair duplicates within the same concept,
+  //    instead of collapsing to one row per concept.
   const [srcC, tgtC] = await Promise.all([
     supabase.from("festival_contracts")
-      .select("id, concept_id")
-      .eq("festival_id", sourceFestivalId).eq("is_active", true),
+      .select("id, concept_id, concept_alias, instance_label, created_at, assigned_vehicle_id")
+      .eq("festival_id", sourceFestivalId).eq("is_active", true)
+      .order("created_at", { ascending: true }),
     supabase.from("festival_contracts")
-      .select("id, concept_id")
-      .eq("festival_id", targetFestivalId).eq("is_active", true),
+      .select("id, concept_id, concept_alias, instance_label, created_at, assigned_vehicle_id")
+      .eq("festival_id", targetFestivalId).eq("is_active", true)
+      .order("created_at", { ascending: true }),
   ]);
   if (srcC.error) throw srcC.error;
   if (tgtC.error) throw tgtC.error;
 
-  const srcContractByConcept = new Map<string, string>();
-  (srcC.data ?? []).forEach((c: any) => c.concept_id && srcContractByConcept.set(c.concept_id, c.id));
-  const tgtContractByConcept = new Map<string, string>();
-  (tgtC.data ?? []).forEach((c: any) => c.concept_id && tgtContractByConcept.set(c.concept_id, c.id));
-
-  // Pairs of (source_contract_id, target_contract_id) for concepts present on both sides.
-  const pairs: Array<{ src: string; tgt: string; conceptId: string }> = [];
-  for (const [conceptId, tgt] of tgtContractByConcept) {
-    const src = srcContractByConcept.get(conceptId);
-    if (src) pairs.push({ src, tgt, conceptId });
-  }
+  const pairs = buildContractPairs((srcC.data ?? []) as ContractImportRow[], (tgtC.data ?? []) as ContractImportRow[]);
   if (pairs.length === 0) {
     return "Nothing to import — no matching concepts on both festivals.";
   }
 
   // 2. Load festival_power rows on both sides for these contracts.
-  const srcContractIds = pairs.map((p) => p.src);
-  const tgtContractIds = pairs.map((p) => p.tgt);
+  const srcContractIds = pairs.map((p) => p.src.id);
+  const tgtContractIds = pairs.map((p) => p.tgt.id);
   const [srcP, tgtP] = await Promise.all([
     supabase.from("festival_power").select("id, festival_contract_id").in("festival_contract_id", srcContractIds),
     supabase.from("festival_power").select("id, festival_contract_id").in("festival_contract_id", tgtContractIds),
@@ -499,8 +652,8 @@ async function importEquipmentAndTrolleys(
 
   const srcContractToTargetPower = new Map<string, string>();
   for (const p of pairs) {
-    const tp = tgtPowerByContract.get(p.tgt);
-    if (tp) srcContractToTargetPower.set(p.src, tp);
+    const tp = tgtPowerByContract.get(p.tgt.id);
+    if (tp) srcContractToTargetPower.set(p.src.id, tp);
   }
 
   const eqMap = new Map<string, string>();
@@ -557,47 +710,40 @@ async function importEquipmentAndTrolleys(
     }
   }
 
-  // 6. Copy festival_trolley_assignments (trolley_id is per-concept, works cross-festival).
-  //    Map transport_id by vehicle type signature where possible; else null.
+  // 6. Copy vehicle assignments for equipment cards and trolley cars.
   const { data: srcAssigns, error: aErr } = await supabase
     .from("festival_trolley_assignments")
     .select("trolley_id, transport_id")
     .eq("festival_id", sourceFestivalId);
   if (aErr) throw aErr;
 
+  const referencedTransportIds = Array.from(new Set([
+    ...pairs.map((p) => p.src.assigned_vehicle_id).filter(Boolean),
+    ...(srcAssigns ?? []).map((a: any) => a.transport_id).filter(Boolean),
+  ])) as string[];
+  const { transportMap, createdVehicles, unresolvedVehicles } = await buildTransportMap(
+    sourceFestivalId,
+    targetFestivalId,
+    referencedTransportIds,
+  );
+
+  let assignedConceptCars = 0;
+  let unlinkedConceptCars = 0;
+  for (const pair of pairs) {
+    const mappedVehicle = pair.src.assigned_vehicle_id
+      ? transportMap.get(pair.src.assigned_vehicle_id) ?? null
+      : null;
+    if (pair.src.assigned_vehicle_id && !mappedVehicle) unlinkedConceptCars++;
+    const { error } = await supabase.from("festival_contracts")
+      .update({ assigned_vehicle_id: mappedVehicle })
+      .eq("id", pair.tgt.id);
+    if (error) throw error;
+    if (mappedVehicle) assignedConceptCars++;
+  }
+
   let insertedAssigns = 0;
   let unlinkedTransports = 0;
   if ((srcAssigns ?? []).length > 0) {
-    const srcTransportIds = Array.from(new Set(
-      (srcAssigns ?? []).map((a: any) => a.transport_id).filter(Boolean),
-    ));
-    let transportMap = new Map<string, string>();
-    if (srcTransportIds.length > 0) {
-      const [srcT, tgtT] = await Promise.all([
-        supabase.from("festival_transport").select("id, vehicle_type, rental_supplier, booking_reference")
-          .in("id", srcTransportIds),
-        supabase.from("festival_transport").select("id, vehicle_type, rental_supplier, booking_reference")
-          .eq("festival_id", targetFestivalId),
-      ]);
-      const sig = (r: any) => [r.vehicle_type ?? "", r.rental_supplier ?? "", r.booking_reference ?? ""].join("|");
-      const tgtBySig = new Map<string, string[]>();
-      (tgtT.data ?? []).forEach((r: any) => {
-        const k = sig(r);
-        const arr = tgtBySig.get(k) ?? [];
-        arr.push(r.id);
-        tgtBySig.set(k, arr);
-      });
-      const used = new Set<string>();
-      (srcT.data ?? []).forEach((r: any) => {
-        const arr = tgtBySig.get(sig(r)) ?? [];
-        const pick = arr.find((id) => !used.has(id));
-        if (pick) {
-          transportMap.set(r.id, pick);
-          used.add(pick);
-        }
-      });
-    }
-
     const rows: any[] = [];
     for (const a of (srcAssigns ?? []) as any[]) {
       const mappedTransport = a.transport_id ? transportMap.get(a.transport_id) ?? null : null;
@@ -620,9 +766,13 @@ async function importEquipmentAndTrolleys(
   const bits = [
     `${insertedEq} equipment items`,
     `${insertedSplits} trolley split${insertedSplits === 1 ? "" : "s"}`,
+    `${assignedConceptCars} concept car${assignedConceptCars === 1 ? "" : "s"} assigned`,
     `${insertedAssigns} trolley car${insertedAssigns === 1 ? "" : "s"} assigned`,
   ];
+  if (createdVehicles > 0) bits.push(`${createdVehicles} missing vehicle${createdVehicles === 1 ? "" : "s"} created`);
+  if (unlinkedConceptCars > 0) bits.push(`${unlinkedConceptCars} concept car${unlinkedConceptCars === 1 ? "" : "s"} left blank`);
   if (unlinkedTransports > 0) bits.push(`${unlinkedTransports} without matching vehicle`);
+  if (unresolvedVehicles > 0) bits.push(`${unresolvedVehicles} source vehicle${unresolvedVehicles === 1 ? "" : "s"} not found`);
   return bits.join(" · ");
 }
 
@@ -636,8 +786,14 @@ async function resetEquipmentAndTrolleys(festivalId: string): Promise<string> {
   let eqDeleted = 0;
   let splitDeleted = 0;
   let carsDeleted = 0;
+  let conceptCarsCleared = 0;
 
   if (contractIds.length > 0) {
+    const { count: vc } = await supabase.from("festival_contracts")
+      .update({ assigned_vehicle_id: null }, { count: "exact" })
+      .in("id", contractIds);
+    conceptCarsCleared = vc ?? 0;
+
     const { data: powers } = await supabase.from("festival_power")
       .select("id").in("festival_contract_id", contractIds);
     const powerIds = (powers ?? []).map((r: any) => r.id);
@@ -661,5 +817,5 @@ async function resetEquipmentAndTrolleys(festivalId: string): Promise<string> {
     .delete({ count: "exact" }).eq("festival_id", festivalId);
   carsDeleted = cc ?? 0;
 
-  return `Deleted ${eqDeleted} equipment items · ${splitDeleted} trolley splits · ${carsDeleted} trolley-car assignments.`;
+  return `Deleted ${eqDeleted} equipment items · ${splitDeleted} trolley splits · ${carsDeleted} trolley-car assignments · cleared ${conceptCarsCleared} concept car links.`;
 }
