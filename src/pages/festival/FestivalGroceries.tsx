@@ -834,37 +834,38 @@ function LibraryView({
     const recById = new Map(recipes.map(r => [r.id, r]));
     for (const r of recipes) {
       if (r.type !== "product") continue;
-      const its = itemsByRecipe.get(r.id) ?? [];
-      const ingNames: string[] = [];
+      const foodItems = itemsByRecipe.get(r.id) ?? [];
+      const packItems = packagingByRecipe.get(r.id) ?? [];
+      const foodIngNames: string[] = [];
       const subNames: string[] = [];
-      its.forEach(it => {
+      foodItems.forEach(it => {
         if (it.ingredient_id) {
           const ing = ingById.get(it.ingredient_id);
-          if (ing) ingNames.push(ing.name.toLowerCase());
+          if (ing) foodIngNames.push(ing.name.toLowerCase());
         } else if (it.subrecipe_id) {
           const sub = recById.get(it.subrecipe_id);
           if (sub) subNames.push(sub.name.toLowerCase());
         }
       });
-      const all = [...ingNames, ...subNames];
-      const hasWrap = all.some(n => n.includes("wrapping paper"));
-      const hasBox = all.some(n => n.includes("take away box") || n.includes("takeaway box"));
-      const hasFries = all.some(n => n.includes("fries") || n.includes("chips"));
+      const packNames = packItems
+        .map(p => ingById.get(p.ingredient_id)?.name.toLowerCase())
+        .filter((n): n is string => !!n);
+
+      const hasWrap = packNames.some(n => n.includes("wrapping paper"));
+      const hasBox = packNames.some(n => n.includes("take away box") || n.includes("takeaway box"));
+      const hasFries = [...foodIngNames, ...subNames].some(n => n.includes("fries") || n.includes("chips"));
       const isFish = r.concept === "fish";
       const isGyros = r.concept === "gyros";
       const isFriesProduct = r.name.toLowerCase().includes("fries");
       const isComboGyros = isGyros && (r.name.toLowerCase().includes("combo") || hasFries);
 
-      // wrapping paper rule
       if ((isFish || isGyros || isFriesProduct) && !hasWrap) set.add(r.id);
-      // take away box rule
       if (hasFries && !hasBox) {
-        // except non-combo gyros (single) — wrapping paper only
         if (!(isGyros && !isComboGyros)) set.add(r.id);
       }
     }
     return set;
-  }, [recipes, items, ingredients, itemsByRecipe]);
+  }, [recipes, items, packaging, ingredients, itemsByRecipe, packagingByRecipe]);
 
   return (
     <div className="space-y-6">
