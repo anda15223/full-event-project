@@ -69,6 +69,122 @@ interface Body {
   targetFestivalId: string;
 }
 
+type ContractRow = {
+  id: string;
+  concept_id: string;
+  concept_alias: string | null;
+  is_active?: boolean | null;
+};
+
+const normalizeAlias = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase();
+
+async function remapDraftStaffAssignments(
+  supabase: ReturnType<typeof createClient>,
+  sourceFestivalId: string,
+  targetFestivalId: string,
+) {
+  const [{ data: sourceContracts, error: sourceErr }, { data: targetContracts, error: targetErr }] =
+    await Promise.all([
+      supabase
+        .from("festival_contracts")
+        .select("id, concept_id, concept_alias, is_active")
+        .eq("festival_id", sourceFestivalId),
+      supabase
+        .from("festival_contracts")
+        .select("id, concept_id, concept_alias, is_active")
+        .eq("festival_id", targetFestivalId)
+        .eq("is_active", true),
+    ]);
+  if (sourceErr) throw new Error(`festival_contracts source: ${sourceErr.message}`);
+  if (targetErr) throw new Error(`festival_contracts target: ${targetErr.message}`);
+
+  const activeTargets = (targetContracts ?? []) as ContractRow[];
+  const targetByExactAlias = new Map<string, ContractRow>();
+  const targetsByConcept = new Map<string, ContractRow[]>();
+  activeTargets.forEach((tc) => {
+    const list = targetsByConcept.get(tc.concept_id) ?? [];
+    list.push(tc);
+    targetsByConcept.set(tc.concept_id, list);
+
+    const alias = normalizeAlias(tc.concept_alias);
+    if (alias) targetByExactAlias.set(`${tc.concept_id}::${alias}`, tc);
+  });
+
+  const contractMap = new Map<string, { contractId: string; conceptId: string }>();
+  ((sourceContracts ?? []) as ContractRow[]).forEach((sc) => {
+    const alias = normalizeAlias(sc.concept_alias);
+    let match: ContractRow | undefined;
+
+    if (alias) {
+      // Duplicate concepts (Fish 1/Fish 2, Gyros 1/Gyros 2) must match by alias.
+      // If the same alias is not active on the target festival, the staff member
+      // belongs in Not assigned instead of being moved to another duplicate stall.
+      match = targetByExactAlias.get(`${sc.concept_id}::${alias}`);
+    } else {
+      // Old rows without aliases are safe to map by concept only when the target
+      // festival has exactly one active contract for that concept.
+      const sameConcept = targetsByConcept.get(sc.concept_id) ?? [];
+      if (sameConcept.length === 1) match = sameConcept[0];
+    }
+
+    if (match) {
+      contractMap.set(sc.id, { contractId: match.id, conceptId: match.concept_id });
+    }
+  });
+
+  const { data: draftStaff, error: staffErr } = await supabase
+    .from("festival_staff")
+    .select("id, contract_id")
+    .eq("festival_id", targetFestivalId)
+    .eq("is_draft", true)
+    .eq("draft_source_festival_id", sourceFestivalId)
+    .not("contract_id", "is", null);
+  if (staffErr) throw new Error(`festival_staff remap: ${staffErr.message}`);
+
+  const clearIds: string[] = [];
+  const updateGroups = new Map<string, { conceptId: string; ids: string[] }>();
+  ((draftStaff ?? []) as { id: string; contract_id: string | null }[]).forEach((row) => {
+    if (!row.contract_id) return;
+    const mapped = contractMap.get(row.contract_id);
+    if (!mapped) {
+      clearIds.push(row.id);
+      return;
+    }
+    const group = updateGroups.get(mapped.contractId) ?? { conceptId: mapped.conceptId, ids: [] };
+    group.ids.push(row.id);
+    updateGroups.set(mapped.contractId, group);
+  });
+
+  const chunks = <T,>(items: T[], size = 100) => {
+    const out: T[][] = [];
+    for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+    return out;
+  };
+
+  let remapped = 0;
+  for (const [contractId, group] of updateGroups) {
+    for (const ids of chunks(group.ids)) {
+      const { error } = await supabase
+        .from("festival_staff")
+        .update({ contract_id: contractId, concept_id: group.conceptId, role: "crew" })
+        .in("id", ids);
+      if (error) throw new Error(`festival_staff remap update: ${error.message}`);
+      remapped += ids.length;
+    }
+  }
+
+  for (const ids of chunks(clearIds)) {
+    const { error } = await supabase
+      .from("festival_staff")
+      .update({ contract_id: null, concept_id: null, station: null, role: "crew" })
+      .in("id", ids);
+    if (error) throw new Error(`festival_staff unassign update: ${error.message}`);
+  }
+
+  return { remapped, unassigned: clearIds.length };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -293,17 +409,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // If staff was part of this import, remember the source festival on the
-    // target so downstream cards (Crew-by-concept station import) can lock
-    // themselves to the same source.
+    let staffRemap: { remapped: number; unassigned: number } | null = null;
+
+    // If staff was part of this import, remap source contract IDs to the active
+    // target festival contracts before the user previews/commits the draft.
+    // This keeps identical stations filled and parks staff from disabled
+    // duplicate stalls (for example Fish 2) in Not assigned.
     if (tables.some((t) => STAFF_REPLACE_TABLES.has(t))) {
+      staffRemap = await remapDraftStaffAssignments(supabase, sourceFestivalId, targetFestivalId);
+
       await supabase
         .from("festivals")
         .update({ staff_import_source_festival_id: sourceFestivalId })
         .eq("id", targetFestivalId);
     }
 
-    return json({ imported, errors });
+    return json({ imported, errors, staffRemap });
 
 
   } catch (e) {
