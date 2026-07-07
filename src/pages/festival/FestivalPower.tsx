@@ -206,9 +206,15 @@ export default function FestivalPower() {
       {festivalId && (
         <PowerImportBar
           currentFestivalId={festivalId}
-          onChanged={() => {
-            qc.invalidateQueries({ queryKey: ["power-page", slug] });
-            qc.invalidateQueries({ queryKey: ["power-equipment", slug] });
+          onChanged={async () => {
+            await qc.invalidateQueries({ predicate: (q) => {
+              const k = q.queryKey?.[0];
+              return k === "power-page" || k === "power-equipment";
+            }});
+            await qc.refetchQueries({ predicate: (q) => {
+              const k = q.queryKey?.[0];
+              return k === "power-page" || k === "power-equipment";
+            }});
           }}
         />
       )}
