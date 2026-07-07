@@ -76,7 +76,7 @@ export default function FestivalGroceriesExport() {
     const unitsByRecipe = new Map<string, number>();
     for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
     for (const [rid, u] of unitsByRecipe) {
-      if (u <= 0) continue;
+      if (u <= 0 || locationOnly.has(rid)) continue;
       const its = itemsByRecipe.get(rid) ?? [];
       for (const it of its) {
         if (it.ingredient_id) addIng(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
