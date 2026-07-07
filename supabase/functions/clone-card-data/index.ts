@@ -52,11 +52,15 @@ const STRIP = new Set<string>([
 // Per-table additional strips: columns whose value must be re-derived on the
 // target festival (unique-per-festival numbering, etc.) to avoid 23505 clashes.
 const PER_TABLE_STRIP: Record<string, string[]> = {
-  festival_staff: ["staff_number"], // trigger assign_festival_staff_number renumbers on insert
+  // Staff imports are staged as drafts and replace live rows on commit, so the
+  // source numbering can be preserved exactly without colliding with live rows.
+  festival_staff: [],
 };
 
 
 type Action = "import" | "commit" | "discard" | "count";
+
+const STAFF_REPLACE_TABLES = new Set(["festival_staff", "festival_staff_vehicles"]);
 
 interface Body {
   action: Action;
@@ -113,6 +117,58 @@ Deno.serve(async (req) => {
 
     if (action === "commit") {
       const promoted: Record<string, number> = {};
+
+      // Staff card imports are replacement lists: when the user clicks
+      // "Set up for this event", the staged Tårnby staff list must replace
+      // any existing live Kolding staff list instead of being appended. This
+      // prevents duplicate staff_number collisions and matches the UI wording.
+      const replacingStaff = tables.some((t) => STAFF_REPLACE_TABLES.has(t));
+      if (replacingStaff) {
+        const { data: transports, error: transportReadErr } = await supabase
+          .from("festival_transport")
+          .select("id")
+          .eq("festival_id", targetFestivalId);
+        if (transportReadErr) return json({ error: `festival_transport: ${transportReadErr.message}` }, 500);
+
+        const transportIds = (transports ?? []).map((r: any) => r.id).filter(Boolean);
+        if (transportIds.length > 0) {
+          const { data: legs, error: legReadErr } = await supabase
+            .from("transport_legs")
+            .select("id")
+            .in("transport_id", transportIds);
+          if (legReadErr) return json({ error: `transport_legs: ${legReadErr.message}` }, 500);
+
+          const legIds = (legs ?? []).map((r: any) => r.id).filter(Boolean);
+          if (legIds.length > 0) {
+            const { error: assignmentErr } = await supabase
+              .from("transport_leg_assignments")
+              .update({ staff_id: null })
+              .in("leg_id", legIds);
+            if (assignmentErr) return json({ error: `transport_leg_assignments: ${assignmentErr.message}` }, 500);
+          }
+        }
+
+        const { error: managerErr } = await supabase
+          .from("festival_concept_assignments")
+          .update({ manager_staff_id: null })
+          .eq("festival_id", targetFestivalId);
+        if (managerErr) return json({ error: `festival_concept_assignments: ${managerErr.message}` }, 500);
+
+        const { error: vehicleErr } = await supabase
+          .from("festival_staff_vehicles")
+          .delete()
+          .eq("festival_id", targetFestivalId)
+          .eq("is_draft", false);
+        if (vehicleErr) return json({ error: `festival_staff_vehicles: ${vehicleErr.message}` }, 500);
+
+        const { error: staffErr } = await supabase
+          .from("festival_staff")
+          .delete()
+          .eq("festival_id", targetFestivalId)
+          .eq("is_draft", false);
+        if (staffErr) return json({ error: `festival_staff: ${staffErr.message}` }, 500);
+      }
+
       for (const t of tables) {
         const { error, count } = await supabase
           .from(t)
@@ -159,10 +215,14 @@ Deno.serve(async (req) => {
     for (const t of tables) {
       try {
         // Wipe any prior drafts for this scope first, so re-import is idempotent.
-        await withRetry(
+        const wipeRes = await withRetry(
           () => supabase.from(t).delete().eq("festival_id", targetFestivalId).eq("is_draft", true) as any,
           `${t} wipe`,
         );
+        if (wipeRes.error) {
+          errors[t] = `wipe: ${(wipeRes.error as any).message ?? String(wipeRes.error)}`.slice(0, 300);
+          continue;
+        }
 
         const { data: rows, error } = await withRetry(
           () => supabase.from(t).select("*").eq("festival_id", sourceFestivalId).eq("is_draft", false) as any,
