@@ -770,9 +770,12 @@ function OrdersView({
                 </tr>
               </thead>
               <tbody>
-                {items.map(({ ing, required, packs }) => (
+                {items.map(({ ing, required, packs, isEvent }) => (
                   <tr key={ing.id} className="border-t">
-                    <td className="p-2">{ing.name}</td>
+                    <td className="p-2">
+                      {ing.name}
+                      {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
+                    </td>
                     <td className="p-2 text-right">
                       {ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`}
                     </td>
