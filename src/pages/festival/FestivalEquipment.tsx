@@ -235,6 +235,12 @@ export default function FestivalEquipment() {
           Items marked Søborg load from the warehouse; on-site items are delivered to the festival.
         </p>
       </div>
+      <EquipmentImportBar
+        festivalId={festivalId}
+        onChanged={() => {
+          qc.invalidateQueries({ queryKey: ["equipment-page", slug] });
+        }}
+      />
 
       {items.length > 0 && (
         <div className="flex flex-wrap gap-2 text-xs">
