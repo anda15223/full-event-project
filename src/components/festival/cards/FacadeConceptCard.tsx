@@ -155,7 +155,7 @@ export function FacadeConceptCard({
     },
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
-  };
+
 
   const updateCaption = async (id: string, caption: string) => {
     await supabase.from("festival_facade_photos").update({ caption } as any).eq("id", id);
