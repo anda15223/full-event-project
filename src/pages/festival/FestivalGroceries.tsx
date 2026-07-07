@@ -429,8 +429,8 @@ function EstimatesGrid({
         </thead>
         <tbody>
           {groups.map(([concept, recipes]) => (
-            <>
-              <tr key={`h-${concept}`} className="bg-muted/20">
+            <FragmentGroup key={concept}>
+              <tr className="bg-muted/20">
                 <td colSpan={cols.length + 2} className="p-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {CONCEPT_LABEL[concept]}
                 </td>
@@ -452,7 +452,7 @@ function EstimatesGrid({
                   </tr>
                 );
               })}
-            </>
+            </FragmentGroup>
           ))}
           <tr className="border-t bg-muted/40 font-semibold">
             <td className="p-2 sticky left-0 bg-muted/40">Grand total</td>
