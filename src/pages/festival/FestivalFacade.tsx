@@ -308,7 +308,7 @@ function FacadeImportBar({
         } else {
           const { error: iErr } = await supabase
             .from("festival_facade")
-            .insert({ ...patch, festival_contract_id: targetContractId });
+            .insert({ ...patch, festival_contract_id: targetContractId } as any);
           if (iErr) throw iErr;
         }
         updated++;
