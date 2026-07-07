@@ -41,6 +41,13 @@ type RecipeItem = {
   id: string; recipe_id: string; ingredient_id: string | null;
   subrecipe_id: string | null; qty_g: number | null; qty_stk: number | null; sort_order: number;
 };
+type RecipePackaging = {
+  id: string; recipe_id: string; ingredient_id: string; qty_per_unit: number; sort_order: number;
+};
+type Consumable = {
+  id: string; festival_id: string; ingredient_id: string;
+  qty: number; unit_mode: "packs" | "units"; note: string | null;
+};
 type Estimate = { id: string; festival_id: string; recipe_id: string; day: string | null; units: number };
 
 const CONCEPT_LABEL: Record<Recipe["concept"], string> = {
