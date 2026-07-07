@@ -335,6 +335,12 @@ export function FacadeConceptCard({
           <h3 className="text-xl font-bold truncate">{conceptName}</h3>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <PerConceptFacadeImport
+            festivalId={festivalId}
+            conceptId={conceptId}
+            targetFacadeId={facade.id}
+            onImported={invalidate}
+          />
           <Select
             value={facade.design_status ?? "not_started"}
             onValueChange={(v) => updateFacade.mutate({ design_status: v })}
@@ -716,4 +722,132 @@ function HeroPhotoTile({
     </div>
   );
 }
+
+// ----- Per-concept facade import (copies facade fields + photos from same concept at another festival) -----
+
+const PER_CONCEPT_COPY_FIELDS = [
+  "design_status", "design_concept_note", "design_file_path", "design_preview_path",
+  "material_type", "material_orders_status", "material_supplier",
+  "material_deadline", "print_deadline",
+  "dimensions_text", "dimensions_w_cm", "dimensions_h_cm", "panel_count", "cost_dkk",
+  "festival_approval_required",
+  "reused_from", "reuse_modifications", "installation_notes", "notes",
+  "tent_width_m", "tent_depth_m", "tent_height_m",
+  "facade_width_m", "facade_height_m",
+  "setup_notes", "spec_pdf_path", "spec_pdf_uploaded_at",
+  "last_parsed_at", "parse_summary",
+] as const;
+
+function PerConceptFacadeImport({
+  festivalId,
+  conceptId,
+  targetFacadeId,
+  onImported,
+}: {
+  festivalId: string;
+  conceptId: string;
+  targetFacadeId: string;
+  onImported: () => void;
+}) {
+  const [festivals, setFestivals] = useState<Array<{ id: string; name: string }>>([]);
+  const [sourceId, setSourceId] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!festivalId) return;
+    supabase.from("festivals").select("id,name")
+      .neq("id", festivalId)
+      .order("start_date", { ascending: false })
+      .then(({ data }) => setFestivals((data as any) ?? []));
+  }, [festivalId]);
+
+  const runImport = async () => {
+    if (!sourceId) return;
+    setBusy(true);
+    try {
+      // Find source contract for the same concept in the picked festival
+      const { data: srcContracts } = await supabase
+        .from("festival_contracts")
+        .select("id")
+        .eq("festival_id", sourceId)
+        .eq("concept_id", conceptId)
+        .eq("is_active", true)
+        .limit(1);
+      const srcContractId = (srcContracts ?? [])[0]?.id;
+      if (!srcContractId) {
+        toast.error("No matching concept at that festival");
+        return;
+      }
+
+      // Source facade row
+      const { data: srcFacade } = await supabase
+        .from("festival_facade")
+        .select("*")
+        .eq("festival_contract_id", srcContractId)
+        .maybeSingle();
+      if (!srcFacade) {
+        toast.error("Source has no facade data");
+        return;
+      }
+
+      // Copy facade fields onto target
+      const patch: Record<string, unknown> = {};
+      for (const k of PER_CONCEPT_COPY_FIELDS) {
+        if ((srcFacade as any)[k] !== undefined) patch[k] = (srcFacade as any)[k];
+      }
+      const { error: uErr } = await supabase
+        .from("festival_facade").update(patch as any).eq("id", targetFacadeId);
+      if (uErr) throw uErr;
+
+      // Copy photo rows (reuse existing storage paths)
+      const { data: srcPhotos } = await supabase
+        .from("festival_facade_photos")
+        .select("file_path, file_name, caption, display_order")
+        .eq("festival_facade_id", (srcFacade as any).id)
+        .order("display_order", { ascending: true });
+      let photoCount = 0;
+      if ((srcPhotos ?? []).length > 0) {
+        const rows = (srcPhotos ?? []).map((p: any) => ({
+          festival_facade_id: targetFacadeId,
+          file_path: p.file_path,
+          file_name: p.file_name,
+          caption: p.caption,
+          display_order: p.display_order,
+        }));
+        const { error: pErr } = await supabase
+          .from("festival_facade_photos").insert(rows as any);
+        if (pErr) throw pErr;
+        photoCount = rows.length;
+      }
+
+      toast.success(`Imported facade${photoCount ? ` + ${photoCount} photo${photoCount === 1 ? "" : "s"}` : ""}`);
+      setSourceId("");
+      onImported();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Import failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <Select value={sourceId} onValueChange={setSourceId}>
+        <SelectTrigger className="h-7 text-[11px] w-[140px]">
+          <SelectValue placeholder="Import from…" />
+        </SelectTrigger>
+        <SelectContent>
+          {festivals.map((f) => (
+            <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button size="sm" variant="outline" className="h-7 text-[11px] px-2"
+        disabled={!sourceId || busy} onClick={runImport}>
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <DownloadCloud className="h-3 w-3" />}
+      </Button>
+    </div>
+  );
+}
+
 
