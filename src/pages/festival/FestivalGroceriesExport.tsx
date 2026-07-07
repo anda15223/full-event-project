@@ -97,8 +97,11 @@ export default function FestivalGroceriesExport() {
         else addIng(p.ingredient_id, q, 0);
       }
     }
-    const m = 1 + margin / 100;
-    for (const [k, v] of req) req.set(k, { g: v.g * m, stk: v.stk * m });
+    const foodM = 1 + margin / 100;
+    for (const [k, v] of req) {
+      const mm = bumpedIng.has(k) ? 1.2 : foodM;
+      req.set(k, { g: v.g * mm, stk: v.stk * mm });
+    }
     for (const c of consumables as any[]) {
       const ing: any = ingById.get(c.ingredient_id);
       if (!ing) continue;
