@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 
+const safeCeil = (x: number) => Math.ceil(Math.round(x * 1e6) / 1e6);
+
 type Ingredient = {
   id: string; name: string; supplier_id: string | null; unit: "g" | "stk";
   pack_size: number | null; pack_label: string | null; price_per_pack: number | null;
@@ -120,7 +122,7 @@ export default function FestivalGroceriesExport() {
       if (!sup) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
-      const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
+      const packs = ing.pack_size ? safeCeil(required / ing.pack_size) : null;
       const entry = map.get(sup.id) ?? { supplier: sup, rows: [] };
       entry.rows.push({ ing, required, packs });
       map.set(sup.id, entry);
@@ -162,7 +164,7 @@ export default function FestivalGroceriesExport() {
                 <tr key={ing.id} className="border-b">
                   <td className="p-2">{ing.name}</td>
                   <td className="p-2 text-right">
-                    {ing.unit === "g" ? `${(required / 1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`}
+                    {ing.unit === "g" ? `${(required / 1000).toFixed(1)} kg` : `${safeCeil(required)} stk`}
                   </td>
                   <td className="p-2 text-right">{packs ?? "—"}</td>
                   <td className="p-2">{ing.pack_size ? `${ing.pack_size} ${ing.pack_label ?? ing.unit}` : "—"}</td>

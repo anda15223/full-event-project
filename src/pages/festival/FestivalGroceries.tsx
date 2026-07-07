@@ -54,14 +54,28 @@ const CONCEPT_LABEL: Record<Recipe["concept"], string> = {
   fish: "Fish & Chips", gyros: "Gyros", creperie: "Creperie", chicksbuns: "Chicks & Buns", other: "Other",
 };
 
+// Local-date arithmetic only — never round-trip through UTC (toISOString shifts by TZ offset).
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function daysBetween(a: string, b: string): string[] {
   const out: string[] = [];
-  const s = new Date(a + "T00:00:00");
-  const e = new Date(b + "T00:00:00");
+  const [sy, sm, sd] = a.split("-").map(Number);
+  const [ey, em, ed] = b.split("-").map(Number);
+  const s = new Date(sy, sm - 1, sd);
+  const e = new Date(ey, em - 1, ed);
   for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-    out.push(d.toISOString().slice(0, 10));
+    out.push(ymd(d));
   }
   return out;
+}
+
+// Ceil with floating-point tolerance so 220.0000000000003 → 220, not 221.
+function safeCeil(x: number): number {
+  return Math.ceil(Math.round(x * 1e6) / 1e6);
 }
 function fmtDayShort(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -201,50 +215,53 @@ export default function FestivalGroceries() {
       req.set(ingId, cur);
     };
 
+    // Recursive expansion:
+    //  - `scale` is a unit multiplier applied to each item's qty_g / qty_stk.
+    //  - Ingredient rows contribute directly.
+    //  - Subrecipe rows referring to a "subrecipe" (batch) expand via batch_g.
+    //  - Subrecipe rows referring to a "product" expand as
+    //      units_of_nested = qty_g / SUM(all recipe_items qty_g of the referenced product,
+    //                                    INCLUDING subrecipe rows)
+    //    then recurse. Nested product packaging is NOT included (only parent's counts).
+    const expand = (recipeId: string, scale: number, includePackaging: boolean, visiting: Set<string>) => {
+      if (visiting.has(recipeId)) return; // cycle guard
+      visiting.add(recipeId);
+      for (const it of itemsByRecipe.get(recipeId) ?? []) {
+        if (it.ingredient_id) {
+          addIng(it.ingredient_id, (it.qty_g ?? 0) * scale, (it.qty_stk ?? 0) * scale);
+        } else if (it.subrecipe_id) {
+          const sub = recipeById.get(it.subrecipe_id);
+          if (!sub) continue;
+          if (sub.type === "product") {
+            const subItems = itemsByRecipe.get(sub.id) ?? [];
+            const totalG = subItems.reduce((a, si) => a + (si.qty_g ?? 0), 0);
+            const gramsNeeded = it.qty_g ?? 0;
+            const units = totalG > 0 ? Math.round((gramsNeeded / totalG) * 100) / 100 : 0;
+            expand(sub.id, units * scale, false, new Set(visiting));
+          } else {
+            const gramsNeeded = (it.qty_g ?? 0) * scale;
+            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+            expand(sub.id, gramsNeeded / batch, false, new Set(visiting));
+          }
+        }
+      }
+      if (includePackaging) {
+        for (const p of packByRecipe.get(recipeId) ?? []) {
+          const ing = ingredientById.get(p.ingredient_id);
+          if (!ing) continue;
+          const q = (p.qty_per_unit || 0) * scale;
+          if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
+          else addIng(p.ingredient_id, q, 0);
+        }
+      }
+    };
+
     // Sum food + packaging driven by estimates (subject to safety margin)
     const unitsByRecipe = new Map<string, number>();
     for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
     for (const [rid, u] of unitsByRecipe) {
       if (u <= 0) continue;
-      // food items
-      for (const it of itemsByRecipe.get(rid) ?? []) {
-        if (it.ingredient_id) {
-          addIng(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
-        } else if (it.subrecipe_id) {
-          const sub = recipeById.get(it.subrecipe_id);
-          if (!sub) continue;
-          if (sub.type === "product") {
-            // Product-as-subrecipe: qty_g on the line = grams of that product per parent unit.
-            // Expand as qty_units = qty_g / (sum of product's food qty_g), rounded to 0.01.
-            const subFood = (itemsByRecipe.get(sub.id) ?? []).filter(si => si.ingredient_id);
-            const totalFoodG = subFood.reduce((a, si) => a + (si.qty_g ?? 0), 0);
-            const gramsNeeded = (it.qty_g ?? 0);
-            const qtyUnits = totalFoodG > 0 ? Math.round((gramsNeeded / totalFoodG) * 100) / 100 : 0;
-            const scaled = qtyUnits * u;
-            for (const si of subFood) {
-              addIng(si.ingredient_id!, (si.qty_g ?? 0) * scaled, (si.qty_stk ?? 0) * scaled);
-            }
-            // NOTE: referenced product's packaging is intentionally NOT included.
-          } else {
-            const gramsNeeded = (it.qty_g ?? 0) * u;
-            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-            for (const si of itemsByRecipe.get(sub.id) ?? []) {
-              if (si.ingredient_id) {
-                const scale = (si.qty_g ?? 0) / batch;
-                addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
-              }
-            }
-          }
-        }
-      }
-      // packaging items — always stk (add to whichever unit the ingredient uses)
-      for (const p of packByRecipe.get(rid) ?? []) {
-        const ing = ingredientById.get(p.ingredient_id);
-        if (!ing) continue;
-        const q = (p.qty_per_unit || 0) * u;
-        if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
-        else addIng(p.ingredient_id, q, 0);
-      }
+      expand(rid, u, true, new Set<string>());
     }
 
     // Apply safety margin to everything so far
@@ -276,7 +293,7 @@ export default function FestivalGroceries() {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing?.pack_size) continue;
       const r = ing.unit === "g" ? need.g : need.stk;
-      if (r > 0) n += Math.ceil(r / ing.pack_size);
+      if (r > 0) n += safeCeil(r / ing.pack_size);
     }
     return n;
   }, [calculation, ingredients]);
@@ -588,7 +605,7 @@ function CalculationView({
       if (!ing) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
-      const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
+      const packs = ing.pack_size ? safeCeil(required / ing.pack_size) : null;
       const estCost = packs != null && ing.price_per_pack != null ? packs * ing.price_per_pack : null;
       arr.push({ ing, required, packs, estCost, isEvent: fromConsumable.has(ing.id) });
     }
@@ -644,7 +661,7 @@ function CalculationView({
                     <td className="p-2 text-right">
                       {ing.unit === "g"
                         ? `${(required / 1000).toFixed(1)} kg`
-                        : `${Math.ceil(required)} stk`}
+                        : `${safeCeil(required)} stk`}
                     </td>
                     <td className="p-2">
                       {missingPack ? (
@@ -707,7 +724,7 @@ function OrdersView({
       if (!ing || !ing.supplier_id) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
-      const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
+      const packs = ing.pack_size ? safeCeil(required / ing.pack_size) : null;
       const arr = map.get(ing.supplier_id) ?? [];
       arr.push({ ing, required, packs, isEvent: fromConsumable.has(ing.id) });
       map.set(ing.supplier_id, arr);
@@ -728,7 +745,7 @@ function OrdersView({
     lines.push(`From: Fidibus Team / The Fish Project — aa@thefishproject.dk`);
     lines.push("");
     for (const { ing, required, packs } of items) {
-      const req = ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`;
+      const req = ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${safeCeil(required)} stk`;
       const packStr = ing.pack_size ? ` — ${packs} × ${ing.pack_size} ${ing.pack_label ?? ing.unit}` : "";
       lines.push(`• ${ing.name}: ${req}${packStr}`);
     }
@@ -791,7 +808,7 @@ function OrdersView({
                       {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
                     </td>
                     <td className="p-2 text-right">
-                      {ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`}
+                      {ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${safeCeil(required)} stk`}
                     </td>
                     <td className="p-2 text-right">{packs ?? "—"}</td>
                     <td className="p-2">
