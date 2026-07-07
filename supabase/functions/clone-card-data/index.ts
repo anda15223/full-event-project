@@ -292,7 +292,19 @@ Deno.serve(async (req) => {
         errors[t] = (e as Error).message?.slice(0, 300) ?? "unknown error";
       }
     }
+
+    // If staff was part of this import, remember the source festival on the
+    // target so downstream cards (Crew-by-concept station import) can lock
+    // themselves to the same source.
+    if (tables.some((t) => STAFF_REPLACE_TABLES.has(t))) {
+      await supabase
+        .from("festivals")
+        .update({ staff_import_source_festival_id: sourceFestivalId })
+        .eq("id", targetFestivalId);
+    }
+
     return json({ imported, errors });
+
 
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
