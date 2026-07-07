@@ -193,7 +193,7 @@ export default function FestivalGroceries() {
     queryFn: async () => {
       const { data, error } = await supabase.from("grocery_settings").select("*").eq("festival_id", festival!.id).maybeSingle();
       if (error) throw error;
-      return data as { festival_id: string; safety_margin_pct: number; oil_refill_reserve_l: number | null } | null;
+      return data as { festival_id: string; safety_margin_pct: number; oil_backup_factor: number | null } | null;
     },
   });
   // READ-ONLY: equipment for this festival. Joined via festival_equipment.equipment_id → equipment_catalog.name.
@@ -227,12 +227,12 @@ export default function FestivalGroceries() {
   const consumables = consumablesQ.data ?? [];
   const estimates = estimatesQ.data ?? [];
   const safetyMargin = settingsQ.data?.safety_margin_pct ?? 10;
-  const oilReserveL = settingsQ.data?.oil_refill_reserve_l ?? 2.5;
+  const oilBackupFactor = settingsQ.data?.oil_backup_factor ?? 2.0;
 
   // ---------- Equipment-driven auto oil consumable ----------
   // Reads the festival's assigned fryers (read-only) and produces a synthetic
-  // consumable row for "Organic frying oil" (Pride 15 L dunk). The refill
-  // reserve is a single flat amount per festival (default 2,5 L).
+  // consumable row for "Organic frying oil" (Pride 15 L dunk). Total litres =
+  // SUM(fryer capacities) * oil_backup_factor (default 2.0). Packs = CEIL(total / 15).
   const autoOil = useMemo(() => {
     const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
     const groups = new Map<FryerCategory, { label: string; cap: number; qty: number }>();
@@ -253,14 +253,13 @@ export default function FestivalGroceries() {
       parts.push(`${g.qty} x ${g.label} (${g.cap} L)`);
       capSum += g.qty * g.cap;
     }
-    const reserveL = totalFryers > 0 ? oilReserveL : 0;
-    const totalL = capSum + reserveL;
+    const totalL = capSum * oilBackupFactor;
     const packs = totalL > 0 ? Math.ceil(totalL / 15) : 0;
     const breakdown = totalFryers > 0
-      ? `${parts.join(" + ")} + ${fmtL(reserveL)} L reserve = ${fmtL(totalL)} L → ${packs} dunke`
+      ? `${parts.join(" + ")} = ${fmtL(capSum)} L × ${oilBackupFactor} = ${fmtL(totalL)} L → ${packs} dunke à 15 L`
       : "";
     return { oilIngredient, totalFryers, totalL, packs, breakdown };
-  }, [ingredients, fryerEquipQ.data, oilReserveL]);
+  }, [ingredients, fryerEquipQ.data, oilBackupFactor]);
 
   const autoConsumables = useMemo<Consumable[]>(() => {
     if (!autoOil.oilIngredient || autoOil.packs <= 0 || !festival?.id) return [];
@@ -425,11 +424,11 @@ export default function FestivalGroceries() {
     qc.invalidateQueries({ queryKey: ["grocery_settings", festival.id] });
   };
 
-  const saveOilReserve = async (val: number) => {
+  const saveOilBackupFactor = async (val: number) => {
     if (!festival?.id) return;
     const { error } = await supabase.from("grocery_settings")
       .upsert(
-        { festival_id: festival.id, safety_margin_pct: safetyMargin, oil_refill_reserve_l: val },
+        { festival_id: festival.id, safety_margin_pct: safetyMargin, oil_backup_factor: val },
         { onConflict: "festival_id" },
       );
     if (error) { toast.error(error.message); return; }
@@ -559,8 +558,8 @@ export default function FestivalGroceries() {
             ingredients={ingredients}
             suppliers={suppliers}
             autoOil={autoOil}
-            oilReserveL={oilReserveL}
-            onSaveOilReserve={saveOilReserve}
+            oilBackupFactor={oilBackupFactor}
+            onSaveOilBackupFactor={saveOilBackupFactor}
             onChange={() => {
               qc.invalidateQueries({ queryKey: ["grocery_festival_consumables", festival?.id] });
               qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
@@ -1453,7 +1452,7 @@ function RecipeDialog({
 // Consumables view (per festival, fixed quantities)
 // ============================================================
 function ConsumablesView({
-  festivalId, consumables, ingredients, suppliers, autoOil, oilReserveL, onSaveOilReserve, onChange,
+  festivalId, consumables, ingredients, suppliers, autoOil, oilBackupFactor, onSaveOilBackupFactor, onChange,
 }: {
   festivalId: string | null;
   consumables: Consumable[];
@@ -1466,8 +1465,8 @@ function ConsumablesView({
     packs: number;
     breakdown: string;
   };
-  oilReserveL: number;
-  onSaveOilReserve: (val: number) => Promise<void> | void;
+  oilBackupFactor: number;
+  onSaveOilBackupFactor: (val: number) => Promise<void> | void;
   onChange: () => void;
 }) {
   const [newIngOpen, setNewIngOpen] = useState(false);
@@ -1545,17 +1544,16 @@ function ConsumablesView({
               </td>
               <td className="p-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1 whitespace-nowrap">
-                  <span>reserve</span>
+                  <span>backup ×</span>
                   <Input
-                    type="number" step="0.5" className="h-7 w-16 text-right"
-                    defaultValue={oilReserveL}
+                    type="number" step="0.1" min="1" className="h-7 w-16 text-right"
+                    defaultValue={oilBackupFactor}
                     onBlur={(e) => {
                       const n = Number(e.target.value);
-                      if (!Number.isFinite(n) || n < 0) return;
-                      if (n !== oilReserveL) onSaveOilReserve(n);
+                      if (!Number.isFinite(n) || n <= 0) return;
+                      if (n !== oilBackupFactor) onSaveOilBackupFactor(n);
                     }}
                   />
-                  <span>L</span>
                 </div>
               </td>
               <td className="p-2 text-xs text-muted-foreground">
