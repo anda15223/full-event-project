@@ -1876,16 +1876,25 @@ async function importTransportSeatAssignments(
       .from("festival_transport")
       .select("*")
       .eq("festival_id", sourceFestivalId)
-      .eq("is_draft", false),
+      .eq("is_draft", false)
+      .order("created_at", { ascending: true }),
     supabase
       .from("festival_transport")
       .select("*")
       .eq("festival_id", targetFestivalId)
       .eq("is_draft", true)
-      .eq("draft_source_festival_id", sourceFestivalId),
+      .eq("draft_source_festival_id", sourceFestivalId)
+      .order("created_at", { ascending: true }),
   ]);
   if (srcT.error) throw srcT.error;
   if (tgtT.error) throw tgtT.error;
+
+  const srcRows = (srcT.data ?? []) as any[];
+  const tgtRows = (tgtT.data ?? []) as any[];
+
+  if (tgtRows.length === 0) {
+    return "seat allocations skipped — no draft cars from this source were found. Was the transport import already committed? Try Discard, then Import as draft.";
+  }
 
   const sig = (r: any) =>
     [
@@ -1899,18 +1908,37 @@ async function importTransportSeatAssignments(
       r.booking_reference ?? "",
     ].join("|");
 
-  const targetBySig = new Map<string, string>();
-  (tgtT.data ?? []).forEach((r: any) => targetBySig.set(sig(r), r.id));
+  const targetBySig = new Map<string, string[]>();
+  tgtRows.forEach((r) => {
+    const k = sig(r);
+    const arr = targetBySig.get(k) ?? [];
+    arr.push(r.id);
+    targetBySig.set(k, arr);
+  });
 
-  // Map sourceTransportId -> targetTransportId
   const transportMap = new Map<string, string>();
-  (srcT.data ?? []).forEach((r: any) => {
-    const tgtId = targetBySig.get(sig(r));
-    if (tgtId) transportMap.set(r.id, tgtId);
+  const usedTgt = new Set<string>();
+  srcRows.forEach((r) => {
+    const arr = targetBySig.get(sig(r)) ?? [];
+    const pick = arr.find((id) => !usedTgt.has(id));
+    if (pick) {
+      transportMap.set(r.id, pick);
+      usedTgt.add(pick);
+    }
+  });
+  const leftoverTgt = tgtRows.filter((r) => !usedTgt.has(r.id));
+  let li = 0;
+  srcRows.forEach((r) => {
+    if (transportMap.has(r.id)) return;
+    const t = leftoverTgt[li++];
+    if (t) {
+      transportMap.set(r.id, t.id);
+      usedTgt.add(t.id);
+    }
   });
 
   if (transportMap.size === 0) {
-    return "no matching cars to attach seat allocations to";
+    return "seat allocations skipped — could not pair source and target cars";
   }
 
   // 3. Fetch source legs + assignments.
