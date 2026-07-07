@@ -570,6 +570,7 @@ export default function FestivalGroceries() {
           <CalculationView
             req={calculation.req}
             fromConsumable={calculation.fromConsumable}
+            bumpedMargin={calculation.bumpedMarginIngIds}
             ingredients={ingredients}
             suppliers={suppliers}
             onIngredientUpdated={() => qc.invalidateQueries({ queryKey: ["grocery_ingredients"] })}
