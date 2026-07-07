@@ -8602,6 +8602,7 @@ export type Database = {
           setup_responsibility: string | null
           slug: string
           staff_emails: string | null
+          staff_import_source_festival_id: string | null
           start_date: string
           tent_size_overall: string | null
           updated_at: string | null
@@ -8663,6 +8664,7 @@ export type Database = {
           setup_responsibility?: string | null
           slug: string
           staff_emails?: string | null
+          staff_import_source_festival_id?: string | null
           start_date: string
           tent_size_overall?: string | null
           updated_at?: string | null
@@ -8724,13 +8726,64 @@ export type Database = {
           setup_responsibility?: string | null
           slug?: string
           staff_emails?: string | null
+          staff_import_source_festival_id?: string | null
           start_date?: string
           tent_size_overall?: string | null
           updated_at?: string | null
           website_domain?: string | null
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festivals_staff_import_source_festival_id_fkey"
+            columns: ["staff_import_source_festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
       }
       finance_rules: {
         Row: {

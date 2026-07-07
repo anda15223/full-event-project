@@ -1,0 +1,1 @@
+ALTER TABLE public.festivals ADD COLUMN IF NOT EXISTS staff_import_source_festival_id uuid REFERENCES public.festivals(id) ON DELETE SET NULL;
