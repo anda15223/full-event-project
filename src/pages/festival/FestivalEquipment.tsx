@@ -392,8 +392,9 @@ function EquipmentImportBar({
                 <AlertDialogTitle>Reset all equipment & trolley cars?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will delete every equipment item, trolley split, and trolley-car
-                  assignment for this festival. Concepts, contracts, and vehicles are kept.
-                  You can re-import from another festival afterwards.
+                  assignment for this festival, and clear the concept pack-into car links.
+                  Concepts, contracts, and vehicles are kept. You can re-import from another
+                  festival afterwards.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -407,8 +408,8 @@ function EquipmentImportBar({
         </div>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Matches by concept · overwrites current equipment & trolley cars for each concept.
-        Trolley-car → transport links are re-matched by vehicle type when possible; otherwise left blank.
+        Matches duplicate stalls by concept and label · overwrites current equipment & trolley cars for each matched stall.
+        Missing pack-into cars are created from the source festival when needed.
       </p>
     </div>
   );
