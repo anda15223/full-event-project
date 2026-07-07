@@ -201,6 +201,12 @@ export default function FestivalGroceries() {
     return [];
   }, [festival?.start_date, festival?.end_date]);
 
+  const estimatesForFestivalDays = useMemo(() => {
+    if (days.length === 0) return estimates;
+    const daySet = new Set(days);
+    return estimates.filter(e => e.day != null && daySet.has(e.day.slice(0, 10)));
+  }, [estimates, days]);
+
   const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active), [recipes]);
 
   // Calculation ------------------------------------------------------
@@ -271,7 +277,7 @@ export default function FestivalGroceries() {
 
     // Sum food + packaging driven by estimates (subject to safety margin)
     const unitsByRecipe = new Map<string, number>();
-    for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+    for (const e of estimatesForFestivalDays) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
     for (const [rid, u] of unitsByRecipe) {
       if (u <= 0) continue;
       expand(rid, u, true, new Set<string>());
@@ -298,7 +304,7 @@ export default function FestivalGroceries() {
     }
 
     return { req, fromConsumable };
-  }, [items, packaging, recipes, ingredients, estimates, consumables, safetyMargin]);
+  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, consumables, safetyMargin]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
@@ -350,9 +356,9 @@ export default function FestivalGroceries() {
 
   const productsEstimated = useMemo(() => {
     const set = new Set<string>();
-    for (const e of estimates) if ((e.units ?? 0) > 0) set.add(e.recipe_id);
+    for (const e of estimatesForFestivalDays) if ((e.units ?? 0) > 0) set.add(e.recipe_id);
     return set.size;
-  }, [estimates]);
+  }, [estimatesForFestivalDays]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
@@ -422,7 +428,7 @@ export default function FestivalGroceries() {
           <EstimatesGrid
             days={days}
             productRecipes={productRecipes}
-            estimates={estimates}
+            estimates={estimatesForFestivalDays}
             onSave={saveEstimate}
           />
         </TabsContent>
