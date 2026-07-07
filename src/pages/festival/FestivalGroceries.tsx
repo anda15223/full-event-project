@@ -293,7 +293,7 @@ export default function FestivalGroceries() {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing?.pack_size) continue;
       const r = ing.unit === "g" ? need.g : need.stk;
-      if (r > 0) n += Math.ceil(r / ing.pack_size);
+      if (r > 0) n += safeCeil(r / ing.pack_size);
     }
     return n;
   }, [calculation, ingredients]);
@@ -605,7 +605,7 @@ function CalculationView({
       if (!ing) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
-      const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
+      const packs = ing.pack_size ? safeCeil(required / ing.pack_size) : null;
       const estCost = packs != null && ing.price_per_pack != null ? packs * ing.price_per_pack : null;
       arr.push({ ing, required, packs, estCost, isEvent: fromConsumable.has(ing.id) });
     }
@@ -661,7 +661,7 @@ function CalculationView({
                     <td className="p-2 text-right">
                       {ing.unit === "g"
                         ? `${(required / 1000).toFixed(1)} kg`
-                        : `${Math.ceil(required)} stk`}
+                        : `${safeCeil(required)} stk`}
                     </td>
                     <td className="p-2">
                       {missingPack ? (
@@ -724,7 +724,7 @@ function OrdersView({
       if (!ing || !ing.supplier_id) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
-      const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
+      const packs = ing.pack_size ? safeCeil(required / ing.pack_size) : null;
       const arr = map.get(ing.supplier_id) ?? [];
       arr.push({ ing, required, packs, isEvent: fromConsumable.has(ing.id) });
       map.set(ing.supplier_id, arr);
@@ -745,7 +745,7 @@ function OrdersView({
     lines.push(`From: Fidibus Team / The Fish Project — aa@thefishproject.dk`);
     lines.push("");
     for (const { ing, required, packs } of items) {
-      const req = ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`;
+      const req = ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${safeCeil(required)} stk`;
       const packStr = ing.pack_size ? ` — ${packs} × ${ing.pack_size} ${ing.pack_label ?? ing.unit}` : "";
       lines.push(`• ${ing.name}: ${req}${packStr}`);
     }
@@ -808,7 +808,7 @@ function OrdersView({
                       {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
                     </td>
                     <td className="p-2 text-right">
-                      {ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${Math.ceil(required)} stk`}
+                      {ing.unit === "g" ? `${(required/1000).toFixed(1)} kg` : `${safeCeil(required)} stk`}
                     </td>
                     <td className="p-2 text-right">{packs ?? "—"}</td>
                     <td className="p-2">
