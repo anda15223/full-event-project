@@ -10,7 +10,7 @@ type Ingredient = {
   id: string; name: string; supplier_id: string | null; unit: "g" | "stk";
   pack_size: number | null; pack_label: string | null; price_per_pack: number | null;
 };
-type Recipe = { id: string; name: string; type: string; concept: string; batch_g: number | null; active: boolean };
+type Recipe = { id: string; name: string; type: string; concept: string; batch_g: number | null; active: boolean; location_only?: boolean };
 type RecipeItem = { id: string; recipe_id: string; ingredient_id: string | null; subrecipe_id: string | null; qty_g: number | null; qty_stk: number | null };
 type Estimate = { id: string; recipe_id: string; units: number };
 type Supplier = { id: string; name: string; contact_email: string | null };
@@ -58,7 +58,7 @@ export default function FestivalGroceriesExport() {
 
   const calc = useMemo(() => {
     if (!dataQ.data) return new Map<string, { g: number; stk: number }>();
-    const { items, recipes, ingredients, estimates, packaging, consumables, margin } = dataQ.data;
+    const { items, recipes, ingredients, estimates, packaging, consumables, margin, suppliers } = dataQ.data;
     const req = new Map<string, { g: number; stk: number }>();
     const itemsByRecipe = new Map<string, RecipeItem[]>();
     items.forEach(it => { const a = itemsByRecipe.get(it.recipe_id) ?? []; a.push(it); itemsByRecipe.set(it.recipe_id, a); });
@@ -66,6 +66,9 @@ export default function FestivalGroceriesExport() {
     packaging.forEach((p: any) => { const a = packByRecipe.get(p.recipe_id) ?? []; a.push(p); packByRecipe.set(p.recipe_id, a); });
     const recipeById = new Map(recipes.map(r => [r.id, r]));
     const ingById = new Map(ingredients.map(i => [i.id, i]));
+    const locationOnly = new Set(recipes.filter(r => r.location_only).map(r => r.id));
+    const packSupIds = new Set(suppliers.filter((s: any) => s.name === "Triple Trading" || s.name === "Kollek").map((s: any) => s.id));
+    const bumpedIng = new Set(ingredients.filter(i => i.supplier_id && packSupIds.has(i.supplier_id)).map(i => i.id));
     const addIng = (id: string, g: number, stk: number) => {
       const c = req.get(id) ?? { g: 0, stk: 0 };
       req.set(id, { g: c.g + g, stk: c.stk + stk });
@@ -73,7 +76,7 @@ export default function FestivalGroceriesExport() {
     const unitsByRecipe = new Map<string, number>();
     for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
     for (const [rid, u] of unitsByRecipe) {
-      if (u <= 0) continue;
+      if (u <= 0 || locationOnly.has(rid)) continue;
       const its = itemsByRecipe.get(rid) ?? [];
       for (const it of its) {
         if (it.ingredient_id) addIng(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
@@ -94,8 +97,11 @@ export default function FestivalGroceriesExport() {
         else addIng(p.ingredient_id, q, 0);
       }
     }
-    const m = 1 + margin / 100;
-    for (const [k, v] of req) req.set(k, { g: v.g * m, stk: v.stk * m });
+    const foodM = 1 + margin / 100;
+    for (const [k, v] of req) {
+      const mm = bumpedIng.has(k) ? 1.2 : foodM;
+      req.set(k, { g: v.g * mm, stk: v.stk * mm });
+    }
     for (const c of consumables as any[]) {
       const ing: any = ingById.get(c.ingredient_id);
       if (!ing) continue;

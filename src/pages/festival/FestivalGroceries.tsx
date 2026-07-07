@@ -35,7 +35,7 @@ type Ingredient = {
 type Recipe = {
   id: string; name: string; type: "product" | "subrecipe";
   concept: "fish" | "gyros" | "creperie" | "chicksbuns" | "other";
-  batch_g: number | null; active: boolean;
+  batch_g: number | null; active: boolean; location_only?: boolean;
 };
 type RecipeItem = {
   id: string; recipe_id: string; ingredient_id: string | null;
@@ -312,7 +312,16 @@ export default function FestivalGroceries() {
     return estimates.filter(e => e.day != null && daySet.has(e.day.slice(0, 10)));
   }, [estimates, days]);
 
-  const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active), [recipes]);
+  const productRecipes = useMemo(() => recipes.filter(r => r.type === "product" && r.active && !r.location_only), [recipes]);
+  const locationOnlyIds = useMemo(() => new Set(recipes.filter(r => r.location_only).map(r => r.id)), [recipes]);
+  // Ingredients whose supplier is Triple Trading or Kollek get a fixed +20% margin
+  // (used INSTEAD of the festival safety margin). Recomputes when suppliers/ingredients change.
+  const bumpedMarginIngIds = useMemo(() => {
+    const packSups = new Set(
+      suppliers.filter(s => s.name === "Triple Trading" || s.name === "Kollek").map(s => s.id),
+    );
+    return new Set(ingredients.filter(i => i.supplier_id && packSups.has(i.supplier_id)).map(i => i.id));
+  }, [suppliers, ingredients]);
 
   // Calculation ------------------------------------------------------
   // Returns per-ingredient totals (merged food + packaging + consumables)
@@ -380,17 +389,24 @@ export default function FestivalGroceries() {
       }
     };
 
-    // Sum food + packaging driven by estimates (subject to safety margin)
+    // Sum food + packaging driven by estimates (subject to per-ingredient margin)
     const unitsByRecipe = new Map<string, number>();
     for (const e of estimatesForFestivalDays) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+
+    // Skip location-only products in festival calculations.
     for (const [rid, u] of unitsByRecipe) {
       if (u <= 0) continue;
+      if (locationOnlyIds.has(rid)) continue;
       expand(rid, u, true, new Set<string>());
     }
 
-    // Apply safety margin to everything so far
-    const margin = 1 + (safetyMargin || 0) / 100;
-    for (const [k, v] of req) req.set(k, { g: v.g * margin, stk: v.stk * margin });
+    // Apply per-ingredient margin: Triple Trading / Kollek packaging use fixed +20%,
+    // everything else uses the festival safety margin.
+    const foodMargin = 1 + (safetyMargin || 0) / 100;
+    for (const [k, v] of req) {
+      const m = bumpedMarginIngIds.has(k) ? 1.2 : foodMargin;
+      req.set(k, { g: v.g * m, stk: v.stk * m });
+    }
 
     // Add consumables (fixed, no margin) — includes equipment-driven auto rows.
     for (const c of effectiveConsumables) {
@@ -408,8 +424,8 @@ export default function FestivalGroceries() {
       fromConsumable.add(c.ingredient_id);
     }
 
-    return { req, fromConsumable };
-  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, effectiveConsumables, safetyMargin]);
+    return { req, fromConsumable, bumpedMarginIngIds };
+  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, effectiveConsumables, safetyMargin, locationOnlyIds, bumpedMarginIngIds]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
@@ -554,6 +570,7 @@ export default function FestivalGroceries() {
           <CalculationView
             req={calculation.req}
             fromConsumable={calculation.fromConsumable}
+            bumpedMargin={calculation.bumpedMarginIngIds}
             ingredients={ingredients}
             suppliers={suppliers}
             onIngredientUpdated={() => qc.invalidateQueries({ queryKey: ["grocery_ingredients"] })}
@@ -722,10 +739,11 @@ function EstimateCell({ value, onSave }: { value: number; onSave: (v: number) =>
 // Calculation view
 // ============================================================
 function CalculationView({
-  req, fromConsumable, ingredients, suppliers, onIngredientUpdated,
+  req, fromConsumable, bumpedMargin, ingredients, suppliers, onIngredientUpdated,
 }: {
   req: Map<string, { g: number; stk: number }>;
   fromConsumable: Set<string>;
+  bumpedMargin: Set<string>;
   ingredients: Ingredient[];
   suppliers: Supplier[];
   onIngredientUpdated: () => void;
@@ -795,6 +813,9 @@ function CalculationView({
                       {ing.name}
                       {ing.eco && <span className="text-emerald-600 text-xs"> · ECO</span>}
                       {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
+                      {bumpedMargin.has(ing.id) && (
+                        <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-purple-500/10 text-purple-700 border border-purple-500/30" title="Fixed +20% packaging margin (Triple Trading / Kollek)">+20%</span>
+                      )}
                     </td>
                     <td className="p-2 text-right">
                       {ing.unit === "g"
@@ -1106,7 +1127,12 @@ function LibraryView({
             <tbody>
               {recipes.map(r => (
                 <tr key={r.id} className="border-t">
-                  <td className="p-2">{r.name}</td>
+                  <td className="p-2">
+                    {r.name}
+                    {r.location_only && (
+                      <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-orange-500/10 text-orange-700 border border-orange-500/30" title="Location-only product (hidden from festival estimates)">Location</span>
+                    )}
+                  </td>
                   <td className="p-2">{CONCEPT_LABEL[r.concept]}</td>
                   <td className="p-2">{r.type}</td>
                   <td className="p-2 text-right">{r.batch_g ?? "—"}</td>
