@@ -199,19 +199,36 @@ export default function FestivalGroceries() {
       return data as { festival_id: string; safety_margin_pct: number; oil_backup_factor: number | null } | null;
     },
   });
-  // READ-ONLY: equipment for this festival. Joined via festival_equipment.equipment_id → equipment_catalog.name.
+  // READ-ONLY: fryer equipment for this festival via festival_power_equipment,
+  // joined through festival_power → festival_contracts.
   const fryerEquipQ = useQuery({
     queryKey: ["groceries-fryer-equipment", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
+      const { data: contracts, error: cErr } = await supabase
+        .from("festival_contracts")
+        .select("id")
+        .eq("festival_id", festival!.id)
+        .eq("is_active", true);
+      if (cErr) throw cErr;
+      const cIds = (contracts ?? []).map((c: any) => c.id);
+      if (cIds.length === 0) return [] as Array<{ quantity: number | null; equipment_name: string; power_kw: number | null }>;
+      const { data: powers, error: pErr } = await supabase
+        .from("festival_power")
+        .select("id")
+        .in("festival_contract_id", cIds);
+      if (pErr) throw pErr;
+      const pIds = (powers ?? []).map((p: any) => p.id);
+      if (pIds.length === 0) return [];
       const { data, error } = await supabase
-        .from("festival_equipment")
-        .select("qty, equipment:equipment_catalog(name)")
-        .eq("festival_id", festival!.id);
+        .from("festival_power_equipment")
+        .select("equipment_name, quantity, power_kw")
+        .in("festival_power_id", pIds);
       if (error) throw error;
-      return (data ?? []) as Array<{ qty: number | null; equipment: { name: string } | null }>;
+      return (data ?? []) as Array<{ quantity: number | null; equipment_name: string; power_kw: number | null }>;
     },
   });
+
   const orderStatusQ = useQuery({
     queryKey: ["grocery_order_status", festival?.id],
     enabled: !!festival?.id,
