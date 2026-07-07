@@ -2143,4 +2143,142 @@ function CrewRegisterCard({
   );
 }
 
+function ImportStationAssignmentsButton({
+  festivalId,
+  sourceFestivalId,
+  targetStaff,
+  targetConceptGroups,
+  onDone,
+}: {
+  festivalId: string;
+  sourceFestivalId: string | null;
+  targetStaff: Staff[];
+  targetConceptGroups: ConceptGroup[];
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [sourceName, setSourceName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sourceFestivalId) { setSourceName(null); return; }
+    supabase.from("festivals").select("name").eq("id", sourceFestivalId).maybeSingle()
+      .then(({ data }) => setSourceName((data as any)?.name ?? null));
+  }, [sourceFestivalId]);
+
+  const disabled = !sourceFestivalId || busy;
+
+  const run = async () => {
+    if (!sourceFestivalId) return;
+    if (!confirm(
+      `Copy station & concept assignments from ${sourceName ?? "the imported source"}?\n\n` +
+      `Only staff whose name/email matches will be updated. Slots without a matching person stay empty.`
+    )) return;
+    setBusy(true);
+    try {
+      // Source staff with a real assignment
+      const { data: srcStaff, error: srcErr } = await supabase
+        .from("festival_staff")
+        .select("id, name, email, contract_id, concept_id, station")
+        .eq("festival_id", sourceFestivalId)
+        .eq("is_draft", false);
+      if (srcErr) throw srcErr;
+
+      // Source contracts (to map source contract_id → concept + alias)
+      const { data: srcContracts, error: scErr } = await supabase
+        .from("festival_contracts")
+        .select("id, concept_id, concept_alias")
+        .eq("festival_id", sourceFestivalId)
+        .eq("is_active", true);
+      if (scErr) throw scErr;
+
+      // Target contracts (this festival)
+      const { data: tgtContracts, error: tcErr } = await supabase
+        .from("festival_contracts")
+        .select("id, concept_id, concept_alias")
+        .eq("festival_id", festivalId)
+        .eq("is_active", true);
+      if (tcErr) throw tcErr;
+
+      // Map: source contract_id → target contract_id (by concept + alias)
+      const contractMap = new Map<string, string>();
+      (srcContracts ?? []).forEach((sc: any) => {
+        const match = (tgtContracts ?? []).find(
+          (tc: any) =>
+            tc.concept_id === sc.concept_id &&
+            (tc.concept_alias ?? "").trim().toLowerCase() ===
+              (sc.concept_alias ?? "").trim().toLowerCase(),
+        ) ?? (tgtContracts ?? []).find((tc: any) => tc.concept_id === sc.concept_id);
+        if (match) contractMap.set(sc.id, match.id);
+      });
+
+      const normEmail = (e: string | null | undefined) => (e ?? "").trim().toLowerCase();
+      const normName = (n: string | null | undefined) => (n ?? "").trim().toLowerCase();
+      const byEmail = new Map<string, Staff>();
+      const byName = new Map<string, Staff>();
+      targetStaff.forEach((p) => {
+        if (p.email) byEmail.set(normEmail(p.email), p);
+        if (p.name) byName.set(normName(p.name), p);
+      });
+
+      let updated = 0;
+      let skippedNoMatch = 0;
+      let skippedNoContract = 0;
+      for (const s of (srcStaff ?? []) as any[]) {
+        if (!s.station || !s.contract_id || !s.concept_id) continue;
+        const targetPerson =
+          (s.email && byEmail.get(normEmail(s.email))) ||
+          (s.name && byName.get(normName(s.name))) ||
+          null;
+        if (!targetPerson) { skippedNoMatch++; continue; }
+        const mappedContract = contractMap.get(s.contract_id);
+        if (!mappedContract) { skippedNoContract++; continue; }
+        const { error: upErr } = await supabase
+          .from("festival_staff")
+          .update({
+            contract_id: mappedContract,
+            concept_id: s.concept_id,
+            station: s.station,
+            role: "crew",
+          })
+          .eq("id", targetPerson.id);
+        if (upErr) throw upErr;
+        updated++;
+      }
+
+      toast.success(
+        `Applied ${updated} assignment${updated === 1 ? "" : "s"}` +
+        (skippedNoMatch ? ` · ${skippedNoMatch} person(s) not on this list` : "") +
+        (skippedNoContract ? ` · ${skippedNoContract} concept not on this festival` : ""),
+      );
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message ?? "Import failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={run}
+      disabled={disabled}
+      title={
+        sourceFestivalId
+          ? `Copy station assignments from ${sourceName ?? "the imported source festival"}`
+          : "Import the staff list first — this button will then copy assignments from the same source"
+      }
+    >
+      <Copy className="h-3.5 w-3.5 mr-1" />
+      {busy
+        ? "Importing…"
+        : sourceFestivalId
+          ? `Import assignments${sourceName ? ` from ${sourceName}` : ""}`
+          : "Import assignments (staff import required)"}
+    </Button>
+  );
+}
+
+
 
