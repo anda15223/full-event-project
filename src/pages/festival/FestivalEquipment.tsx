@@ -29,6 +29,7 @@ type Festival = { id: string; slug: string; name: string };
 
 export default function FestivalEquipment() {
   const { slug = "" } = useParams();
+  const qc = useQueryClient();
 
   const festivalQ = useQuery({
     queryKey: ["festival-by-slug", slug],
