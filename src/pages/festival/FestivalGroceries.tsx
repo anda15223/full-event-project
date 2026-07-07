@@ -115,6 +115,23 @@ export default function FestivalGroceries() {
       return (data ?? []) as RecipeItem[];
     },
   });
+  const packagingQ = useQuery({
+    queryKey: ["grocery_recipe_packaging"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grocery_recipe_packaging").select("*").order("sort_order");
+      if (error) throw error;
+      return (data ?? []) as RecipePackaging[];
+    },
+  });
+  const consumablesQ = useQuery({
+    queryKey: ["grocery_festival_consumables", festival?.id],
+    enabled: !!festival?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("grocery_festival_consumables").select("*").eq("festival_id", festival!.id);
+      if (error) throw error;
+      return (data ?? []) as Consumable[];
+    },
+  });
   const estimatesQ = useQuery({
     queryKey: ["grocery_estimates", festival?.id],
     enabled: !!festival?.id,
