@@ -54,14 +54,28 @@ const CONCEPT_LABEL: Record<Recipe["concept"], string> = {
   fish: "Fish & Chips", gyros: "Gyros", creperie: "Creperie", chicksbuns: "Chicks & Buns", other: "Other",
 };
 
+// Local-date arithmetic only — never round-trip through UTC (toISOString shifts by TZ offset).
+function ymd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function daysBetween(a: string, b: string): string[] {
   const out: string[] = [];
-  const s = new Date(a + "T00:00:00");
-  const e = new Date(b + "T00:00:00");
+  const [sy, sm, sd] = a.split("-").map(Number);
+  const [ey, em, ed] = b.split("-").map(Number);
+  const s = new Date(sy, sm - 1, sd);
+  const e = new Date(ey, em - 1, ed);
   for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-    out.push(d.toISOString().slice(0, 10));
+    out.push(ymd(d));
   }
   return out;
+}
+
+// Ceil with floating-point tolerance so 220.0000000000003 → 220, not 221.
+function safeCeil(x: number): number {
+  return Math.ceil(Math.round(x * 1e6) / 1e6);
 }
 function fmtDayShort(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
