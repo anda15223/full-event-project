@@ -613,6 +613,59 @@ export default function FestivalOverview() {
     },
   });
 
+  const groceriesStatsQ = useQuery({
+    queryKey: ["overview-groceries", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const [estRes, ingRes, itemsRes, recRes, setRes] = await Promise.all([
+        supabase.from("grocery_estimates").select("recipe_id, units").eq("festival_id", festivalId!),
+        supabase.from("grocery_ingredients").select("id, unit, pack_size, supplier_id"),
+        supabase.from("grocery_recipe_items").select("recipe_id, ingredient_id, subrecipe_id, qty_g, qty_stk"),
+        supabase.from("grocery_recipes").select("id, batch_g"),
+        supabase.from("grocery_settings").select("safety_margin_pct").eq("festival_id", festivalId!).maybeSingle(),
+      ]);
+      const estimates = estRes.data ?? [];
+      const ingredients = ingRes.data ?? [];
+      const items = itemsRes.data ?? [];
+      const recipes = recRes.data ?? [];
+      const margin = 1 + ((setRes.data?.safety_margin_pct ?? 10) / 100);
+      const productsEstimated = new Set(estimates.filter((e: any) => (e.units ?? 0) > 0).map((e: any) => e.recipe_id)).size;
+      const itemsByRecipe = new Map<string, any[]>();
+      items.forEach((it: any) => { const a = itemsByRecipe.get(it.recipe_id) ?? []; a.push(it); itemsByRecipe.set(it.recipe_id, a); });
+      const recipeById = new Map(recipes.map((r: any) => [r.id, r]));
+      const req = new Map<string, { g: number; stk: number }>();
+      const add = (id: string, g: number, stk: number) => {
+        const c = req.get(id) ?? { g: 0, stk: 0 };
+        req.set(id, { g: c.g + g, stk: c.stk + stk });
+      };
+      const unitsByRecipe = new Map<string, number>();
+      for (const e of estimates as any[]) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
+      for (const [rid, u] of unitsByRecipe) {
+        if (u <= 0) continue;
+        for (const it of itemsByRecipe.get(rid) ?? []) {
+          if (it.ingredient_id) add(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
+          else if (it.subrecipe_id) {
+            const sub: any = recipeById.get(it.subrecipe_id);
+            if (!sub) continue;
+            const grams = (it.qty_g ?? 0) * u;
+            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+            for (const si of itemsByRecipe.get(sub.id) ?? []) {
+              if (si.ingredient_id) add(si.ingredient_id, grams * ((si.qty_g ?? 0) / batch), 0);
+            }
+          }
+        }
+      }
+      let packs = 0;
+      for (const [ingId, need] of req) {
+        const ing: any = ingredients.find((i: any) => i.id === ingId);
+        if (!ing?.pack_size) continue;
+        const r = ing.unit === "g" ? need.g * margin : need.stk * margin;
+        if (r > 0) packs += Math.ceil(r / ing.pack_size);
+      }
+      return { productsEstimated, packs, hasEstimates: productsEstimated > 0 };
+    },
+  });
+
   const contractsCountQ = useQuery({
     queryKey: ["overview-contracts-count", festivalId],
     enabled: !!festivalId,
@@ -939,11 +992,18 @@ export default function FestivalOverview() {
                 primaryStat="Onboarding"
                 secondaryStat="Hires, links, contracts" status="gray" />
             );
-            tilesByKey["groceries"] = (
-              <FestivalTile key="groceries" href="#"
-                icon={ShoppingCart} iconAccent="slate" title="Groceries"
-                primaryStat="Coming soon" disabled />
-            );
+            {(() => {
+              const g = groceriesStatsQ.data;
+              const primary = g ? `${g.productsEstimated} products estimated` : "No estimates yet";
+              const secondary = g ? `${g.packs} packs to order` : "Set up in Groceries";
+              tilesByKey["groceries"] = (
+                <FestivalTile key="groceries" href={`/festivals/${slug}/groceries`}
+                  icon={ShoppingCart} iconAccent="emerald" title="Groceries"
+                  primaryStat={primary} secondaryStat={secondary}
+                  status={g?.hasEstimates ? "green" : "gray"} />
+              );
+              return null;
+            })()}
 
             const ORDER = [
               "contracts", "prices", "contacts", "actions", "equipment",
