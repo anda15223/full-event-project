@@ -255,18 +255,21 @@ export default function FestivalGroceries() {
   // SUM(fryer capacities) * oil_backup_factor (default 2.0). Packs = CEIL(total / 15).
   const autoOil = useMemo(() => {
     const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
-    const groups = new Map<FryerCategory, { label: string; cap: number; qty: number }>();
+    // Group by equipment name so identical fryer models consolidate.
+    const groups = new Map<string, { label: string; cap: number; qty: number }>();
     let totalFryers = 0;
     for (const row of fryerEquipQ.data ?? []) {
-      const name = row.equipment?.name ?? "";
-      const info = classifyFryer(name);
-      const q = row.qty ?? 0;
+      const name = row.equipment_name ?? "";
+      const info = classifyFryer(name, row.power_kw);
+      const q = row.quantity ?? 0;
       if (!info || q <= 0) continue;
-      const g = groups.get(info.category) ?? { label: info.label, cap: info.cap, qty: 0 };
+      const key = `${name}|${info.cap}`;
+      const g = groups.get(key) ?? { label: info.label, cap: info.cap, qty: 0 };
       g.qty += q;
-      groups.set(info.category, g);
+      groups.set(key, g);
       totalFryers += q;
     }
+
     const parts: string[] = [];
     let capSum = 0;
     for (const g of groups.values()) {
