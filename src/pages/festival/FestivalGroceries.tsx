@@ -425,6 +425,17 @@ export default function FestivalGroceries() {
     qc.invalidateQueries({ queryKey: ["grocery_settings", festival.id] });
   };
 
+  const saveOilReserve = async (val: number) => {
+    if (!festival?.id) return;
+    const { error } = await supabase.from("grocery_settings")
+      .upsert(
+        { festival_id: festival.id, safety_margin_pct: safetyMargin, oil_refill_reserve_l: val },
+        { onConflict: "festival_id" },
+      );
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["grocery_settings", festival.id] });
+  };
+
   const setOrderStatus = async (supplierId: string, status: "draft" | "sent") => {
     if (!festival?.id) return;
     const { error } = await supabase.from("grocery_order_status")
