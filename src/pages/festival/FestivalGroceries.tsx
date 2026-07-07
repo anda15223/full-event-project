@@ -739,10 +739,11 @@ function EstimateCell({ value, onSave }: { value: number; onSave: (v: number) =>
 // Calculation view
 // ============================================================
 function CalculationView({
-  req, fromConsumable, ingredients, suppliers, onIngredientUpdated,
+  req, fromConsumable, bumpedMargin, ingredients, suppliers, onIngredientUpdated,
 }: {
   req: Map<string, { g: number; stk: number }>;
   fromConsumable: Set<string>;
+  bumpedMargin: Set<string>;
   ingredients: Ingredient[];
   suppliers: Supplier[];
   onIngredientUpdated: () => void;
