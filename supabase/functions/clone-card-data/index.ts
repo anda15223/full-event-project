@@ -52,7 +52,9 @@ const STRIP = new Set<string>([
 // Per-table additional strips: columns whose value must be re-derived on the
 // target festival (unique-per-festival numbering, etc.) to avoid 23505 clashes.
 const PER_TABLE_STRIP: Record<string, string[]> = {
-  festival_staff: ["staff_number"], // trigger assign_festival_staff_number renumbers on insert
+  // Staff imports are staged as drafts and replace live rows on commit, so the
+  // source numbering can be preserved exactly without colliding with live rows.
+  festival_staff: [],
 };
 
 
@@ -213,10 +215,14 @@ Deno.serve(async (req) => {
     for (const t of tables) {
       try {
         // Wipe any prior drafts for this scope first, so re-import is idempotent.
-        await withRetry(
+        const wipeRes = await withRetry(
           () => supabase.from(t).delete().eq("festival_id", targetFestivalId).eq("is_draft", true) as any,
           `${t} wipe`,
         );
+        if (wipeRes.error) {
+          errors[t] = `wipe: ${(wipeRes.error as any).message ?? String(wipeRes.error)}`.slice(0, 300);
+          continue;
+        }
 
         const { data: rows, error } = await withRetry(
           () => supabase.from(t).select("*").eq("festival_id", sourceFestivalId).eq("is_draft", false) as any,
