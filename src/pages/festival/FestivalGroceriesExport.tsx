@@ -10,7 +10,7 @@ type Ingredient = {
   id: string; name: string; supplier_id: string | null; unit: "g" | "stk";
   pack_size: number | null; pack_label: string | null; price_per_pack: number | null;
 };
-type Recipe = { id: string; name: string; type: string; concept: string; batch_g: number | null; active: boolean };
+type Recipe = { id: string; name: string; type: string; concept: string; batch_g: number | null; active: boolean; location_only?: boolean };
 type RecipeItem = { id: string; recipe_id: string; ingredient_id: string | null; subrecipe_id: string | null; qty_g: number | null; qty_stk: number | null };
 type Estimate = { id: string; recipe_id: string; units: number };
 type Supplier = { id: string; name: string; contact_email: string | null };
