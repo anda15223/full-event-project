@@ -215,50 +215,53 @@ export default function FestivalGroceries() {
       req.set(ingId, cur);
     };
 
+    // Recursive expansion:
+    //  - `scale` is a unit multiplier applied to each item's qty_g / qty_stk.
+    //  - Ingredient rows contribute directly.
+    //  - Subrecipe rows referring to a "subrecipe" (batch) expand via batch_g.
+    //  - Subrecipe rows referring to a "product" expand as
+    //      units_of_nested = qty_g / SUM(all recipe_items qty_g of the referenced product,
+    //                                    INCLUDING subrecipe rows)
+    //    then recurse. Nested product packaging is NOT included (only parent's counts).
+    const expand = (recipeId: string, scale: number, includePackaging: boolean, visiting: Set<string>) => {
+      if (visiting.has(recipeId)) return; // cycle guard
+      visiting.add(recipeId);
+      for (const it of itemsByRecipe.get(recipeId) ?? []) {
+        if (it.ingredient_id) {
+          addIng(it.ingredient_id, (it.qty_g ?? 0) * scale, (it.qty_stk ?? 0) * scale);
+        } else if (it.subrecipe_id) {
+          const sub = recipeById.get(it.subrecipe_id);
+          if (!sub) continue;
+          if (sub.type === "product") {
+            const subItems = itemsByRecipe.get(sub.id) ?? [];
+            const totalG = subItems.reduce((a, si) => a + (si.qty_g ?? 0), 0);
+            const gramsNeeded = it.qty_g ?? 0;
+            const units = totalG > 0 ? Math.round((gramsNeeded / totalG) * 100) / 100 : 0;
+            expand(sub.id, units * scale, false, new Set(visiting));
+          } else {
+            const gramsNeeded = (it.qty_g ?? 0) * scale;
+            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+            expand(sub.id, gramsNeeded / batch, false, new Set(visiting));
+          }
+        }
+      }
+      if (includePackaging) {
+        for (const p of packByRecipe.get(recipeId) ?? []) {
+          const ing = ingredientById.get(p.ingredient_id);
+          if (!ing) continue;
+          const q = (p.qty_per_unit || 0) * scale;
+          if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
+          else addIng(p.ingredient_id, q, 0);
+        }
+      }
+    };
+
     // Sum food + packaging driven by estimates (subject to safety margin)
     const unitsByRecipe = new Map<string, number>();
     for (const e of estimates) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
     for (const [rid, u] of unitsByRecipe) {
       if (u <= 0) continue;
-      // food items
-      for (const it of itemsByRecipe.get(rid) ?? []) {
-        if (it.ingredient_id) {
-          addIng(it.ingredient_id, (it.qty_g ?? 0) * u, (it.qty_stk ?? 0) * u);
-        } else if (it.subrecipe_id) {
-          const sub = recipeById.get(it.subrecipe_id);
-          if (!sub) continue;
-          if (sub.type === "product") {
-            // Product-as-subrecipe: qty_g on the line = grams of that product per parent unit.
-            // Expand as qty_units = qty_g / (sum of product's food qty_g), rounded to 0.01.
-            const subFood = (itemsByRecipe.get(sub.id) ?? []).filter(si => si.ingredient_id);
-            const totalFoodG = subFood.reduce((a, si) => a + (si.qty_g ?? 0), 0);
-            const gramsNeeded = (it.qty_g ?? 0);
-            const qtyUnits = totalFoodG > 0 ? Math.round((gramsNeeded / totalFoodG) * 100) / 100 : 0;
-            const scaled = qtyUnits * u;
-            for (const si of subFood) {
-              addIng(si.ingredient_id!, (si.qty_g ?? 0) * scaled, (si.qty_stk ?? 0) * scaled);
-            }
-            // NOTE: referenced product's packaging is intentionally NOT included.
-          } else {
-            const gramsNeeded = (it.qty_g ?? 0) * u;
-            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-            for (const si of itemsByRecipe.get(sub.id) ?? []) {
-              if (si.ingredient_id) {
-                const scale = (si.qty_g ?? 0) / batch;
-                addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
-              }
-            }
-          }
-        }
-      }
-      // packaging items — always stk (add to whichever unit the ingredient uses)
-      for (const p of packByRecipe.get(rid) ?? []) {
-        const ing = ingredientById.get(p.ingredient_id);
-        if (!ing) continue;
-        const q = (p.qty_per_unit || 0) * u;
-        if (ing.unit === "stk") addIng(p.ingredient_id, 0, q);
-        else addIng(p.ingredient_id, q, 0);
-      }
+      expand(rid, u, true, new Set<string>());
     }
 
     // Apply safety margin to everything so far
