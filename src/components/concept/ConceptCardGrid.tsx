@@ -331,7 +331,7 @@ function ConceptCardItem({
   contract,
   minimal = false,
 }: ConceptCardItemProps) {
-  const { isActive } = useConceptIsActive(festivalSlug ? c.slug : undefined, festivalSlug ?? "");
+  const isActive = (row as any).is_active !== false;
   const disabled = festivalSlug ? !isActive : false;
 
   return (
@@ -406,7 +406,7 @@ function ConceptCardItem({
           </div>
           {festivalSlug && (
             <div className="pointer-events-auto">
-              <ConceptToggle festivalSlug={festivalSlug} conceptSlug={c.slug} />
+              <ConceptToggle festivalSlug={festivalSlug} contractId={row.id} isActive={isActive} />
             </div>
           )}
         </div>
