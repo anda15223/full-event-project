@@ -682,6 +682,7 @@ export default function FestivalOverview() {
         add(c.ingredient_id, g, stk);
       }
       let packs = 0;
+      const safeCeil = (x: number) => Math.ceil(Math.round(x * 1e6) / 1e6);
       for (const [ingId, need] of req) {
         const ing: any = ingById.get(ingId);
         if (!ing?.pack_size) continue;
