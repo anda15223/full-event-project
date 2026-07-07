@@ -160,6 +160,41 @@ function InlineDate({
   );
 }
 
+function DayNudger({
+  value, onChange,
+}: { value: string | null; onChange: (v: string) => void }) {
+  const shift = (delta: number) => {
+    if (!value) return;
+    const d = new Date(value + "T00:00:00");
+    d.setDate(d.getDate() + delta);
+    onChange(d.toISOString().slice(0, 10));
+  };
+  if (!value) return null;
+  return (
+    <span className="inline-flex items-center rounded border bg-muted/30">
+      <button
+        type="button"
+        onClick={() => shift(-1)}
+        className="px-1.5 py-0.5 text-xs hover:bg-muted leading-none"
+        aria-label="Minus one day"
+        title="−1 day"
+      >
+        −
+      </button>
+      <button
+        type="button"
+        onClick={() => shift(1)}
+        className="px-1.5 py-0.5 text-xs hover:bg-muted leading-none border-l"
+        aria-label="Plus one day"
+        title="+1 day"
+      >
+        +
+      </button>
+    </span>
+  );
+}
+
+
 function InlineNumber({
   value, onSave, suffix,
 }: { value: number | null; onSave: (v: number | null) => void; suffix?: string }) {
