@@ -178,10 +178,11 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        const extraStrip = new Set(PER_TABLE_STRIP[t] ?? []);
         const cleaned = rowList.map((r) => {
           const out: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(r)) {
-            if (STRIP.has(k)) continue;
+            if (STRIP.has(k) || extraStrip.has(k)) continue;
             out[k] = v;
           }
           out.festival_id = targetFestivalId;
@@ -189,6 +190,9 @@ Deno.serve(async (req) => {
           out.draft_source_festival_id = sourceFestivalId;
           return out;
         });
+
+        const isDupErr = (e: any) =>
+          e && ((e as any).code === "23505" || /duplicate key/i.test(String((e as any).message ?? "")));
 
         let inserted = 0;
         let tableErr: string | null = null;
@@ -200,19 +204,20 @@ Deno.serve(async (req) => {
           );
           let insErr: any = res.error;
           let count: number | null = res.count ?? null;
-          if (insErr && (insErr as any).code === "23505") {
+          if (isDupErr(insErr)) {
             insErr = null;
             count = 0;
             for (const row of chunk) {
               const single = await supabase.from(t).insert(row, { count: "exact" });
               if (single.error) {
-                if ((single.error as any).code === "23505") continue;
+                if (isDupErr(single.error)) continue;
                 insErr = single.error;
                 break;
               }
               count += single.count ?? 1;
             }
           }
+
           if (insErr) {
             tableErr = `insert: ${(insErr as any).message ?? String(insErr)}`.slice(0, 300);
             break;
