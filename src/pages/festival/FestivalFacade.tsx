@@ -192,6 +192,7 @@ export default function FestivalFacade() {
               key={facade.id}
               festivalId={festivalId}
               festivalSlug={slug}
+              conceptId={concept.id}
               conceptSlug={concept.slug}
               conceptName={concept.name}
               facade={facade}
