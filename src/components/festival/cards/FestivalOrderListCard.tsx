@@ -58,7 +58,7 @@ export function FestivalOrderListCard({
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [powerId, orderListParsedAt]);
+  useEffect(() => { load(); }, [powerId, orderListFilePath, orderListParsedAt]);
 
   const upload = async (file: File) => {
     setUploading(true);
