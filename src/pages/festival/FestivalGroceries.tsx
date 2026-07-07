@@ -1050,8 +1050,8 @@ function LibraryView({
         .map(p => ingById.get(p.ingredient_id)?.name.toLowerCase())
         .filter((n): n is string => !!n);
 
-      const hasWrap = packNames.some(n => n.includes("wrapping paper"));
-      const hasBox = packNames.some(n => n.includes("take away box") || n.includes("takeaway box"));
+      const hasWrap = packNames.some(n => n.includes("wrapping paper") || n.includes("wrap"));
+      const hasBox = packNames.some(n => n.includes("take away box") || n.includes("takeaway box") || /\bbox\b/.test(n));
       const hasFries = [...foodIngNames, ...subNames].some(n => n.includes("fries") || n.includes("chips"));
       const isFish = r.concept === "fish";
       const isGyros = r.concept === "gyros";
