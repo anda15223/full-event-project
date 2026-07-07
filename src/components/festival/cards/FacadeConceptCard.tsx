@@ -45,6 +45,7 @@ export interface FacadePhotoRow {
 interface Props {
   festivalId: string;
   festivalSlug: string;
+  conceptId: string;
   conceptSlug: string;
   conceptName: string;
   facade: FacadeRow;
