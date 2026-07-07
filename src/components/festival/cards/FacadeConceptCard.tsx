@@ -471,6 +471,33 @@ export function FacadeConceptCard({
             )}
           </div>
         </div>
+
+        {/* Import facade equipment from another festival */}
+        <div className="mb-2 rounded-md border border-dashed bg-muted/20 p-2 flex flex-wrap items-center gap-2">
+          <DownloadCloud className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-[11px] text-muted-foreground">Import facade lines from:</span>
+          <Select value={importSourceId} onValueChange={setImportSourceId}>
+            <SelectTrigger className="h-7 w-[200px] text-xs">
+              <SelectValue placeholder="Pick festival…" />
+            </SelectTrigger>
+            <SelectContent>
+              {(sourceFestivalsQ.data ?? []).map((f) => (
+                <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm" variant="outline" className="h-7 text-xs"
+            disabled={!importSourceId || importingEquip}
+            onClick={importFacadeEquipment}
+          >
+            {importingEquip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Import"}
+          </Button>
+          <span className="text-[10px] text-muted-foreground">
+            Copies equipment lines in facade/front/topskilt categories for this concept.
+          </span>
+        </div>
+
         {equipmentQ.isLoading ? (
           <div className="text-[11px] text-muted-foreground italic">Loading…</div>
         ) : equipment.length === 0 ? (
