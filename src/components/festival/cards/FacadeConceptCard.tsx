@@ -152,6 +152,74 @@ export function FacadeConceptCard({
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
+  // --- Per-concept "import facade equipment from another festival" ---
+  const FACADE_CATEGORY_PATTERNS = ["facade", "front", "topskilt", "sign"];
+  const isFacadeCategory = (cat?: string | null) => {
+    if (!cat) return false;
+    const c = cat.toLowerCase();
+    return FACADE_CATEGORY_PATTERNS.some((p) => c.includes(p));
+  };
+
+  const sourceFestivalsQ = useQuery({
+    queryKey: ["facade-import-sources", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festivals")
+        .select("id,name,start_date")
+        .neq("id", festivalId)
+        .order("start_date", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; name: string; start_date: string | null }>;
+    },
+  });
+  const [importSourceId, setImportSourceId] = useState<string>("");
+  const [importingEquip, setImportingEquip] = useState(false);
+
+  const importFacadeEquipment = async () => {
+    if (!importSourceId) return;
+    setImportingEquip(true);
+    try {
+      const { data: rows, error } = await supabase
+        .from("festival_equipment")
+        .select("*")
+        .eq("festival_id", importSourceId)
+        .eq("concept_id", conceptId);
+      if (error) throw error;
+      const facadeRows = (rows ?? []).filter((r: any) => isFacadeCategory(r.category));
+      if (facadeRows.length === 0) {
+        toast.message("No facade-category equipment found on the source festival for this concept.");
+        return;
+      }
+      // Wipe existing facade-category rows for this concept at target to avoid dupes
+      const { data: existing } = await supabase
+        .from("festival_equipment")
+        .select("id,category")
+        .eq("festival_id", festivalId)
+        .eq("concept_id", conceptId);
+      const toDelete = (existing ?? []).filter((r: any) => isFacadeCategory(r.category)).map((r: any) => r.id);
+      if (toDelete.length > 0) {
+        await supabase.from("festival_equipment").delete().in("id", toDelete);
+      }
+      const STRIP = new Set(["id", "festival_id", "created_at", "updated_at", "linked_facade_id"]);
+      const inserts = facadeRows.map((r: any) => {
+        const clean: Record<string, unknown> = { festival_id: festivalId, concept_id: conceptId };
+        for (const [k, v] of Object.entries(r)) {
+          if (!STRIP.has(k) && k !== "concept_id") clean[k] = v;
+        }
+        return clean;
+      });
+      const { error: insErr } = await supabase.from("festival_equipment").insert(inserts as any);
+      if (insErr) throw insErr;
+      toast.success(`Imported ${inserts.length} facade equipment line${inserts.length === 1 ? "" : "s"}`);
+      qc.invalidateQueries({ queryKey: ["facade-concept-equipment", festivalId, conceptId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Import failed");
+    } finally {
+      setImportingEquip(false);
+    }
+  };
+
   const updateCaption = async (id: string, caption: string) => {
     await supabase.from("festival_facade_photos").update({ caption } as any).eq("id", id);
     invalidate();
