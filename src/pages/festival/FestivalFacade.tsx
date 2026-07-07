@@ -23,6 +23,7 @@ type Contract = { id: string; concept_id: string };
 
 export default function FestivalFacade() {
   const { slug = "" } = useParams();
+  const qc = useQueryClient();
 
   const festivalQ = useQuery({
     queryKey: ["festival-by-slug", slug],
