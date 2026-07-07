@@ -142,6 +142,14 @@ export default function FestivalFacade() {
         </div>
       </div>
 
+      <FacadeImportBar
+        festivalId={festivalId}
+        onImported={() => {
+          qc.invalidateQueries({ queryKey: ["facade-page", slug] });
+          qc.invalidateQueries({ queryKey: ["facade-photos", slug] });
+        }}
+      />
+
       {/* Summary pills */}
       {items.length > 0 && (
         <div className="flex flex-wrap gap-2 text-xs">
