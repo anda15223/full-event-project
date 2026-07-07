@@ -558,8 +558,8 @@ export default function FestivalGroceries() {
             ingredients={ingredients}
             suppliers={suppliers}
             autoOil={autoOil}
-            oilReserveL={oilReserveL}
-            onSaveOilReserve={saveOilReserve}
+            oilBackupFactor={oilBackupFactor}
+            onSaveOilBackupFactor={saveOilBackupFactor}
             onChange={() => {
               qc.invalidateQueries({ queryKey: ["grocery_festival_consumables", festival?.id] });
               qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
