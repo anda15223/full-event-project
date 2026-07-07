@@ -227,6 +227,57 @@ export default function FestivalGroceries() {
   const consumables = consumablesQ.data ?? [];
   const estimates = estimatesQ.data ?? [];
   const safetyMargin = settingsQ.data?.safety_margin_pct ?? 10;
+  const oilReserveL = settingsQ.data?.oil_refill_reserve_l ?? 2.5;
+
+  // ---------- Equipment-driven auto oil consumable ----------
+  // Reads the festival's assigned fryers (read-only) and produces a synthetic
+  // consumable row for "Organic frying oil" (Pride 15 L dunk). The refill
+  // reserve is a single flat amount per festival (default 2,5 L).
+  const autoOil = useMemo(() => {
+    const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
+    const groups = new Map<FryerCategory, { label: string; cap: number; qty: number }>();
+    let totalFryers = 0;
+    for (const row of fryerEquipQ.data ?? []) {
+      const name = row.equipment?.name ?? "";
+      const info = classifyFryer(name);
+      const q = row.qty ?? 0;
+      if (!info || q <= 0) continue;
+      const g = groups.get(info.category) ?? { label: info.label, cap: info.cap, qty: 0 };
+      g.qty += q;
+      groups.set(info.category, g);
+      totalFryers += q;
+    }
+    const parts: string[] = [];
+    let capSum = 0;
+    for (const g of groups.values()) {
+      parts.push(`${g.qty} x ${g.label} (${g.cap} L)`);
+      capSum += g.qty * g.cap;
+    }
+    const reserveL = totalFryers > 0 ? oilReserveL : 0;
+    const totalL = capSum + reserveL;
+    const packs = totalL > 0 ? Math.ceil(totalL / 15) : 0;
+    const breakdown = totalFryers > 0
+      ? `${parts.join(" + ")} + ${fmtL(reserveL)} L reserve = ${fmtL(totalL)} L → ${packs} dunke`
+      : "";
+    return { oilIngredient, totalFryers, totalL, packs, breakdown };
+  }, [ingredients, fryerEquipQ.data, oilReserveL]);
+
+  const autoConsumables = useMemo<Consumable[]>(() => {
+    if (!autoOil.oilIngredient || autoOil.packs <= 0 || !festival?.id) return [];
+    return [{
+      id: "auto:oil",
+      festival_id: festival.id,
+      ingredient_id: autoOil.oilIngredient.id,
+      qty: autoOil.packs,
+      unit_mode: "packs",
+      note: autoOil.breakdown,
+    }];
+  }, [autoOil, festival?.id]);
+
+  const effectiveConsumables = useMemo(
+    () => [...consumables, ...autoConsumables],
+    [consumables, autoConsumables],
+  );
 
   const days = useMemo(() => {
     if (festival?.start_date && festival?.end_date) return daysBetween(festival.start_date, festival.end_date);
