@@ -529,10 +529,20 @@ export default function FestivalSoborgLoading() {
               const grouped = regroupForSoborgPDF(cg.items_by_category);
               return (
               <div key={cg.contract_id} className="border-l-2 border-border pl-4">
-                <div className="font-medium text-sm mb-2">
-                  {cg.concept_name}
-                  {cg.concept_alias && <span className="text-muted-foreground"> — {cg.concept_alias}</span>}
-                  <span className="text-xs text-muted-foreground ml-2">({cg.total_items} items)</span>
+                <div className="font-medium text-sm mb-2 flex items-center gap-2 flex-wrap">
+                  <span>
+                    {cg.concept_name}
+                    {cg.concept_alias && <span className="text-muted-foreground"> — {cg.concept_alias}</span>}
+                    <span className="text-xs text-muted-foreground ml-2">({cg.total_items} items)</span>
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs ml-auto"
+                    onClick={() => setPickerForContract(cg.contract_id)}
+                  >
+                    <Truck className="h-3 w-3" /> Change vehicle
+                  </Button>
                 </div>
                 <div className="space-y-3">
                   {sortedCategories(grouped).map((cat) => {
