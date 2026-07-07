@@ -1089,13 +1089,15 @@ function IngredientDialog({
 
 // ---------- Recipe dialog ----------
 type DraftItem = { key: string; ingredient_id: string | null; subrecipe_id: string | null; qty_g: string; qty_stk: string };
+type DraftPack = { key: string; ingredient_id: string; qty_per_unit: string };
 
 function RecipeDialog({
-  recipe, ingredients, recipes, existingItems, onClose, onSaved,
+  recipe, ingredients, recipes, existingItems, existingPackaging, onClose, onSaved,
 }: {
   recipe: Recipe | null;
   ingredients: Ingredient[]; recipes: Recipe[];
   existingItems: RecipeItem[];
+  existingPackaging: RecipePackaging[];
   onClose: () => void; onSaved: () => void;
 }) {
   const [name, setName] = useState(recipe?.name ?? "");
@@ -1105,7 +1107,7 @@ function RecipeDialog({
   const [active, setActive] = useState(recipe?.active ?? true);
   const [draftItems, setDraftItems] = useState<DraftItem[]>(
     existingItems.length > 0
-      ? existingItems.map((it, i) => ({
+      ? existingItems.map((it) => ({
           key: it.id,
           ingredient_id: it.ingredient_id,
           subrecipe_id: it.subrecipe_id,
@@ -1113,6 +1115,11 @@ function RecipeDialog({
           qty_stk: it.qty_stk?.toString() ?? "",
         }))
       : [],
+  );
+  const [draftPack, setDraftPack] = useState<DraftPack[]>(
+    existingPackaging.map(p => ({
+      key: p.id, ingredient_id: p.ingredient_id, qty_per_unit: String(p.qty_per_unit ?? 1),
+    })),
   );
 
   const save = async () => {
@@ -1130,7 +1137,7 @@ function RecipeDialog({
       if (error) { toast.error(error.message); return; }
       recipeId = data.id;
     }
-    // Replace items
+    // Replace food items
     await supabase.from("grocery_recipe_items").delete().eq("recipe_id", recipeId!);
     const toInsert = draftItems
       .filter(d => d.ingredient_id || d.subrecipe_id)
@@ -1144,6 +1151,20 @@ function RecipeDialog({
       }));
     if (toInsert.length > 0) {
       const { error } = await supabase.from("grocery_recipe_items").insert(toInsert);
+      if (error) { toast.error(error.message); return; }
+    }
+    // Replace packaging
+    await supabase.from("grocery_recipe_packaging").delete().eq("recipe_id", recipeId!);
+    const packInsert = draftPack
+      .filter(d => d.ingredient_id)
+      .map((d, i) => ({
+        recipe_id: recipeId!,
+        ingredient_id: d.ingredient_id,
+        qty_per_unit: d.qty_per_unit ? Number(d.qty_per_unit) : 1,
+        sort_order: i,
+      }));
+    if (packInsert.length > 0) {
+      const { error } = await supabase.from("grocery_recipe_packaging").insert(packInsert);
       if (error) { toast.error(error.message); return; }
     }
     toast.success("Saved");
