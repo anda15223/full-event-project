@@ -193,7 +193,20 @@ export default function FestivalGroceries() {
     queryFn: async () => {
       const { data, error } = await supabase.from("grocery_settings").select("*").eq("festival_id", festival!.id).maybeSingle();
       if (error) throw error;
-      return data as { festival_id: string; safety_margin_pct: number } | null;
+      return data as { festival_id: string; safety_margin_pct: number; oil_refill_reserve_l: number | null } | null;
+    },
+  });
+  // READ-ONLY: equipment for this festival. Joined via festival_equipment.equipment_id → equipment_catalog.name.
+  const fryerEquipQ = useQuery({
+    queryKey: ["groceries-fryer-equipment", festival?.id],
+    enabled: !!festival?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_equipment")
+        .select("qty, equipment:equipment_catalog(name)")
+        .eq("festival_id", festival!.id);
+      if (error) throw error;
+      return (data ?? []) as Array<{ qty: number | null; equipment: { name: string } | null }>;
     },
   });
   const orderStatusQ = useQuery({
@@ -214,6 +227,57 @@ export default function FestivalGroceries() {
   const consumables = consumablesQ.data ?? [];
   const estimates = estimatesQ.data ?? [];
   const safetyMargin = settingsQ.data?.safety_margin_pct ?? 10;
+  const oilReserveL = settingsQ.data?.oil_refill_reserve_l ?? 2.5;
+
+  // ---------- Equipment-driven auto oil consumable ----------
+  // Reads the festival's assigned fryers (read-only) and produces a synthetic
+  // consumable row for "Organic frying oil" (Pride 15 L dunk). The refill
+  // reserve is a single flat amount per festival (default 2,5 L).
+  const autoOil = useMemo(() => {
+    const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
+    const groups = new Map<FryerCategory, { label: string; cap: number; qty: number }>();
+    let totalFryers = 0;
+    for (const row of fryerEquipQ.data ?? []) {
+      const name = row.equipment?.name ?? "";
+      const info = classifyFryer(name);
+      const q = row.qty ?? 0;
+      if (!info || q <= 0) continue;
+      const g = groups.get(info.category) ?? { label: info.label, cap: info.cap, qty: 0 };
+      g.qty += q;
+      groups.set(info.category, g);
+      totalFryers += q;
+    }
+    const parts: string[] = [];
+    let capSum = 0;
+    for (const g of groups.values()) {
+      parts.push(`${g.qty} x ${g.label} (${g.cap} L)`);
+      capSum += g.qty * g.cap;
+    }
+    const reserveL = totalFryers > 0 ? oilReserveL : 0;
+    const totalL = capSum + reserveL;
+    const packs = totalL > 0 ? Math.ceil(totalL / 15) : 0;
+    const breakdown = totalFryers > 0
+      ? `${parts.join(" + ")} + ${fmtL(reserveL)} L reserve = ${fmtL(totalL)} L → ${packs} dunke`
+      : "";
+    return { oilIngredient, totalFryers, totalL, packs, breakdown };
+  }, [ingredients, fryerEquipQ.data, oilReserveL]);
+
+  const autoConsumables = useMemo<Consumable[]>(() => {
+    if (!autoOil.oilIngredient || autoOil.packs <= 0 || !festival?.id) return [];
+    return [{
+      id: "auto:oil",
+      festival_id: festival.id,
+      ingredient_id: autoOil.oilIngredient.id,
+      qty: autoOil.packs,
+      unit_mode: "packs",
+      note: autoOil.breakdown,
+    }];
+  }, [autoOil, festival?.id]);
+
+  const effectiveConsumables = useMemo(
+    () => [...consumables, ...autoConsumables],
+    [consumables, autoConsumables],
+  );
 
   const days = useMemo(() => {
     if (festival?.start_date && festival?.end_date) return daysBetween(festival.start_date, festival.end_date);
@@ -306,8 +370,8 @@ export default function FestivalGroceries() {
     const margin = 1 + (safetyMargin || 0) / 100;
     for (const [k, v] of req) req.set(k, { g: v.g * margin, stk: v.stk * margin });
 
-    // Add consumables (fixed, no margin)
-    for (const c of consumables) {
+    // Add consumables (fixed, no margin) — includes equipment-driven auto rows.
+    for (const c of effectiveConsumables) {
       const ing = ingredientById.get(c.ingredient_id);
       if (!ing) continue;
       let g = 0, stk = 0;
@@ -323,7 +387,7 @@ export default function FestivalGroceries() {
     }
 
     return { req, fromConsumable };
-  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, consumables, safetyMargin]);
+  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, effectiveConsumables, safetyMargin]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
@@ -357,6 +421,17 @@ export default function FestivalGroceries() {
     if (!festival?.id) return;
     const { error } = await supabase.from("grocery_settings")
       .upsert({ festival_id: festival.id, safety_margin_pct: val }, { onConflict: "festival_id" });
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["grocery_settings", festival.id] });
+  };
+
+  const saveOilReserve = async (val: number) => {
+    if (!festival?.id) return;
+    const { error } = await supabase.from("grocery_settings")
+      .upsert(
+        { festival_id: festival.id, safety_margin_pct: safetyMargin, oil_refill_reserve_l: val },
+        { onConflict: "festival_id" },
+      );
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["grocery_settings", festival.id] });
   };
@@ -483,6 +558,9 @@ export default function FestivalGroceries() {
             consumables={consumables}
             ingredients={ingredients}
             suppliers={suppliers}
+            autoOil={autoOil}
+            oilReserveL={oilReserveL}
+            onSaveOilReserve={saveOilReserve}
             onChange={() => {
               qc.invalidateQueries({ queryKey: ["grocery_festival_consumables", festival?.id] });
               qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
@@ -1375,12 +1453,21 @@ function RecipeDialog({
 // Consumables view (per festival, fixed quantities)
 // ============================================================
 function ConsumablesView({
-  festivalId, consumables, ingredients, suppliers, onChange,
+  festivalId, consumables, ingredients, suppliers, autoOil, oilReserveL, onSaveOilReserve, onChange,
 }: {
   festivalId: string | null;
   consumables: Consumable[];
   ingredients: Ingredient[];
   suppliers: Supplier[];
+  autoOil: {
+    oilIngredient: Ingredient | null;
+    totalFryers: number;
+    totalL: number;
+    packs: number;
+    breakdown: string;
+  };
+  oilReserveL: number;
+  onSaveOilReserve: (val: number) => Promise<void> | void;
   onChange: () => void;
 }) {
   const [newIngOpen, setNewIngOpen] = useState(false);
@@ -1407,6 +1494,9 @@ function ConsumablesView({
     if (error) { toast.error(error.message); return; }
     onChange();
   };
+
+  const oilSup = autoOil.oilIngredient ? suppliers.find(s => s.id === autoOil.oilIngredient!.supplier_id) : null;
+  const hasFryers = autoOil.totalFryers > 0;
 
   return (
     <div className="space-y-4">
@@ -1438,8 +1528,46 @@ function ConsumablesView({
             </tr>
           </thead>
           <tbody>
+            {/* Auto row: equipment-driven frying oil */}
+            <tr className="border-t bg-emerald-50/40 dark:bg-emerald-950/20">
+              <td className="p-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Fritureolie (fra udstyr)</span>
+                  <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">auto</span>
+                </div>
+                {autoOil.oilIngredient && (
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{autoOil.oilIngredient.name} · {autoOil.oilIngredient.pack_label ?? "15 L dunk"}</div>
+                )}
+              </td>
+              <td className="p-2 text-xs text-muted-foreground">{oilSup?.name ?? "—"}</td>
+              <td className="p-2 text-right font-medium">
+                {hasFryers ? `${autoOil.packs} dunke` : "—"}
+              </td>
+              <td className="p-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1 whitespace-nowrap">
+                  <span>reserve</span>
+                  <Input
+                    type="number" step="0.5" className="h-7 w-16 text-right"
+                    defaultValue={oilReserveL}
+                    onBlur={(e) => {
+                      const n = Number(e.target.value);
+                      if (!Number.isFinite(n) || n < 0) return;
+                      if (n !== oilReserveL) onSaveOilReserve(n);
+                    }}
+                  />
+                  <span>L</span>
+                </div>
+              </td>
+              <td className="p-2 text-xs text-muted-foreground">
+                {hasFryers
+                  ? autoOil.breakdown
+                  : <span className="italic">Ingen frituregryder fundet i udstyr</span>}
+              </td>
+              <td className="p-2 text-right text-[10px] text-muted-foreground">udstyr</td>
+            </tr>
+
             {consumables.length === 0 && (
-              <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No consumables yet.</td></tr>
+              <tr><td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">No manual consumables yet.</td></tr>
             )}
             {consumables.map(c => {
               const ing = ingredients.find(i => i.id === c.ingredient_id);
