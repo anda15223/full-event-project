@@ -95,23 +95,26 @@ function fmtDayShort(d: string) {
 }
 
 // ---------- Fryer classification (equipment-driven oil consumable) ----------
-// Read-only view over festival_equipment + equipment_catalog. Names are matched
-// case-insensitively. Capacity in litres:
-//   - "redfox" -> 25 L
-//   - "9 kw" / "9kw" -> 12 L
-//   - fallback for "fryser"/"fryer"/"friture" -> 12 L
-type FryerCategory = "redfox" | "9kw" | "other";
-function classifyFryer(name: string): { cap: number; category: FryerCategory; label: string } | null {
+// Read-only view over festival_power_equipment. Matching rules:
+//   candidate = name contains fryer/friture/frituregryde OR red fox/redfox
+//   EXCLUDE any name containing "daka" (waste-oil barrels)
+// Capacity per unit:
+//   redfox/red fox -> 25 L; else power_kw >= 15 -> 25 L; else 12 L.
+function classifyFryer(name: string, powerKw: number | null): { cap: number; label: string } | null {
   const n = (name || "").toLowerCase();
-  if (n.includes("redfox")) return { cap: 25, category: "redfox", label: "Redfox" };
-  if (n.includes("9 kw") || n.includes("9kw")) return { cap: 12, category: "9kw", label: "9kW" };
-  if (n.includes("fryser") || n.includes("fryer") || n.includes("friture")) return { cap: 12, category: "other", label: name };
-  return null;
+  if (n.includes("daka")) return null;
+  const isRedfox = n.includes("redfox") || n.includes("red fox");
+  const isFryer = isRedfox || n.includes("fryer") || n.includes("friture") || n.includes("frituregryde");
+  if (!isFryer) return null;
+  const kw = Number(powerKw ?? 0);
+  const cap = isRedfox ? 25 : (kw >= 15 ? 25 : 12);
+  return { cap, label: name };
 }
 function fmtL(x: number): string {
   const rounded = Math.round(x * 10) / 10;
   return (Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)).replace(".", ",");
 }
+
 
 // ============================================================
 export default function FestivalGroceries() {
@@ -196,19 +199,36 @@ export default function FestivalGroceries() {
       return data as { festival_id: string; safety_margin_pct: number; oil_backup_factor: number | null } | null;
     },
   });
-  // READ-ONLY: equipment for this festival. Joined via festival_equipment.equipment_id → equipment_catalog.name.
+  // READ-ONLY: fryer equipment for this festival via festival_power_equipment,
+  // joined through festival_power → festival_contracts.
   const fryerEquipQ = useQuery({
     queryKey: ["groceries-fryer-equipment", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
+      const { data: contracts, error: cErr } = await supabase
+        .from("festival_contracts")
+        .select("id")
+        .eq("festival_id", festival!.id)
+        .eq("is_active", true);
+      if (cErr) throw cErr;
+      const cIds = (contracts ?? []).map((c: any) => c.id);
+      if (cIds.length === 0) return [] as Array<{ quantity: number | null; equipment_name: string; power_kw: number | null }>;
+      const { data: powers, error: pErr } = await supabase
+        .from("festival_power")
+        .select("id")
+        .in("festival_contract_id", cIds);
+      if (pErr) throw pErr;
+      const pIds = (powers ?? []).map((p: any) => p.id);
+      if (pIds.length === 0) return [];
       const { data, error } = await supabase
-        .from("festival_equipment")
-        .select("qty, equipment:equipment_catalog(name)")
-        .eq("festival_id", festival!.id);
+        .from("festival_power_equipment")
+        .select("equipment_name, quantity, power_kw")
+        .in("festival_power_id", pIds);
       if (error) throw error;
-      return (data ?? []) as Array<{ qty: number | null; equipment: { name: string } | null }>;
+      return (data ?? []) as Array<{ quantity: number | null; equipment_name: string; power_kw: number | null }>;
     },
   });
+
   const orderStatusQ = useQuery({
     queryKey: ["grocery_order_status", festival?.id],
     enabled: !!festival?.id,
@@ -235,18 +255,21 @@ export default function FestivalGroceries() {
   // SUM(fryer capacities) * oil_backup_factor (default 2.0). Packs = CEIL(total / 15).
   const autoOil = useMemo(() => {
     const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
-    const groups = new Map<FryerCategory, { label: string; cap: number; qty: number }>();
+    // Group by equipment name so identical fryer models consolidate.
+    const groups = new Map<string, { label: string; cap: number; qty: number }>();
     let totalFryers = 0;
     for (const row of fryerEquipQ.data ?? []) {
-      const name = row.equipment?.name ?? "";
-      const info = classifyFryer(name);
-      const q = row.qty ?? 0;
+      const name = row.equipment_name ?? "";
+      const info = classifyFryer(name, row.power_kw);
+      const q = row.quantity ?? 0;
       if (!info || q <= 0) continue;
-      const g = groups.get(info.category) ?? { label: info.label, cap: info.cap, qty: 0 };
+      const key = `${name}|${info.cap}`;
+      const g = groups.get(key) ?? { label: info.label, cap: info.cap, qty: 0 };
       g.qty += q;
-      groups.set(info.category, g);
+      groups.set(key, g);
       totalFryers += q;
     }
+
     const parts: string[] = [];
     let capSum = 0;
     for (const g of groups.values()) {
