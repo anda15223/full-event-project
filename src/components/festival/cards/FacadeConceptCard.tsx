@@ -338,6 +338,7 @@ export function FacadeConceptCard({
           <PerConceptFacadeImport
             festivalId={festivalId}
             conceptId={conceptId}
+            targetContractId={facade.festival_contract_id}
             targetFacadeId={facade.id}
             onImported={invalidate}
           />
@@ -741,11 +742,13 @@ const PER_CONCEPT_COPY_FIELDS = [
 function PerConceptFacadeImport({
   festivalId,
   conceptId,
+  targetContractId,
   targetFacadeId,
   onImported,
 }: {
   festivalId: string;
   conceptId: string;
+  targetContractId: string;
   targetFacadeId: string;
   onImported: () => void;
 }) {
@@ -820,7 +823,51 @@ function PerConceptFacadeImport({
         photoCount = rows.length;
       }
 
-      toast.success(`Imported facade${photoCount ? ` + ${photoCount} photo${photoCount === 1 ? "" : "s"}` : ""}`);
+      // Copy FACADE-category equipment lines from source concept -> target concept.
+      // These live in festival_power_equipment, grouped by category='facade'.
+      let equipCount = 0;
+      // Source festival_power row for the source contract
+      const { data: srcPower } = await supabase
+        .from("festival_power").select("id")
+        .eq("festival_contract_id", srcContractId).maybeSingle();
+      if (srcPower?.id) {
+        const { data: srcEquip } = await supabase
+          .from("festival_power_equipment")
+          .select("position, equipment_name, quantity, power_type, power_kw, is_shared, shared_with_concepts, notes, is_powered, category, loads_from_soborg")
+          .eq("festival_power_id", (srcPower as any).id)
+          .eq("category", "facade");
+        if ((srcEquip ?? []).length > 0) {
+          // Ensure target festival_power row exists
+          let { data: tgtPower } = await supabase
+            .from("festival_power").select("id")
+            .eq("festival_contract_id", targetContractId).maybeSingle();
+          if (!tgtPower?.id) {
+            const { data: created, error: cErr } = await supabase
+              .from("festival_power")
+              .insert({ festival_contract_id: targetContractId } as any)
+              .select("id").maybeSingle();
+            if (cErr) throw cErr;
+            tgtPower = created as any;
+          }
+          // Wipe existing facade-category rows on target, then insert fresh copies
+          await supabase.from("festival_power_equipment").delete()
+            .eq("festival_power_id", (tgtPower as any).id)
+            .eq("category", "facade");
+          const rows = (srcEquip ?? []).map((e: any) => ({
+            ...e,
+            festival_power_id: (tgtPower as any).id,
+            shared_with_concepts: null,
+          }));
+          const { error: iErr } = await supabase
+            .from("festival_power_equipment").insert(rows as any);
+          if (iErr) throw iErr;
+          equipCount = rows.length;
+        }
+      }
+
+      toast.success(
+        `Imported facade${photoCount ? ` + ${photoCount} photo${photoCount === 1 ? "" : "s"}` : ""}${equipCount ? ` + ${equipCount} equipment line${equipCount === 1 ? "" : "s"}` : ""}`
+      );
       setSourceId("");
       onImported();
     } catch (e: any) {
