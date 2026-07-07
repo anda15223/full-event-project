@@ -1222,7 +1222,7 @@ function RecipeDialog({
 
           <div className="border-t pt-3">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-sm">Items</h4>
+              <h4 className="font-medium text-sm">Ingredients (food)</h4>
               <Button size="sm" variant="outline" onClick={addItem}><Plus className="h-4 w-4" /> Add item</Button>
             </div>
             <div className="space-y-2">
@@ -1252,6 +1252,39 @@ function RecipeDialog({
                   <Input placeholder="qty stk" type="number" className="col-span-2" value={d.qty_stk}
                     onChange={e => updateItem(d.key, { qty_stk: e.target.value })} />
                   <Button size="sm" variant="ghost" className="col-span-2" onClick={() => removeItem(d.key)}>
+                    <Trash2 className="h-4 w-4" /> Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="font-medium text-sm">Packaging & consumables</h4>
+                <p className="text-xs text-muted-foreground">Wrapping paper, take-away boxes, napkins, cutlery, sauce bags… (qty per sold unit)</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setDraftPack([...draftPack, { key: Math.random().toString(36), ingredient_id: "", qty_per_unit: "1" }])}>
+                <Plus className="h-4 w-4" /> Add packaging
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {draftPack.map(d => (
+                <div key={d.key} className="grid grid-cols-12 gap-2 items-center">
+                  <Select
+                    value={d.ingredient_id || ""}
+                    onValueChange={(v) => setDraftPack(draftPack.map(x => x.key === d.key ? { ...x, ingredient_id: v } : x))}
+                  >
+                    <SelectTrigger className="col-span-8"><SelectValue placeholder="Select packaging ingredient (stk)" /></SelectTrigger>
+                    <SelectContent>
+                      {ingredients.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input placeholder="qty/unit" type="number" className="col-span-2" value={d.qty_per_unit}
+                    onChange={e => setDraftPack(draftPack.map(x => x.key === d.key ? { ...x, qty_per_unit: e.target.value } : x))} />
+                  <Button size="sm" variant="ghost" className="col-span-2"
+                    onClick={() => setDraftPack(draftPack.filter(x => x.key !== d.key))}>
                     <Trash2 className="h-4 w-4" /> Remove
                   </Button>
                 </div>
