@@ -992,11 +992,18 @@ export default function FestivalOverview() {
                 primaryStat="Onboarding"
                 secondaryStat="Hires, links, contracts" status="gray" />
             );
-            tilesByKey["groceries"] = (
-              <FestivalTile key="groceries" href="#"
-                icon={ShoppingCart} iconAccent="slate" title="Groceries"
-                primaryStat="Coming soon" disabled />
-            );
+            {(() => {
+              const g = groceriesStatsQ.data;
+              const primary = g ? `${g.productsEstimated} products estimated` : "No estimates yet";
+              const secondary = g ? `${g.packs} packs to order` : "Set up in Groceries";
+              tilesByKey["groceries"] = (
+                <FestivalTile key="groceries" href={`/festivals/${slug}/groceries`}
+                  icon={ShoppingCart} iconAccent="emerald" title="Groceries"
+                  primaryStat={primary} secondaryStat={secondary}
+                  status={g?.hasEstimates ? "green" : "gray"} />
+              );
+              return null;
+            })()}
 
             const ORDER = [
               "contracts", "prices", "contacts", "actions", "equipment",
