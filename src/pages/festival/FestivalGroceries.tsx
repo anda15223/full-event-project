@@ -1581,9 +1581,27 @@ async function runImport(json: any) {
     for (const i of existing ?? []) ingredientMap.set(i.name, i.id);
   }
 
+  // Detect packaging-style items by name keywords.
+  // Rule: paper, box, wrap, napkin, cutlery, fork, spoon, straw, lid — but "sauce bag" (or bag qualified as sauce) stays as food/ingredient.
   const isPackaging = (name: string) => {
     const n = name.toLowerCase();
-    return n.includes("wrapping paper") || n.includes("take away box") || n.includes("takeaway box");
+    if (n.includes("sauce bag") || n.includes("bag for sauce")) return false;
+    return (
+      n.includes("wrapping paper") ||
+      n.includes("take away box") || n.includes("takeaway box") ||
+      /\b(paper|napkin|cutlery|fork|spoon|straw|lid|wrap)\b/.test(n) ||
+      /\bbox\b/.test(n)
+    );
+  };
+  // Also treat "1 stk" qty_note items as packaging when their name looks disposable.
+  const looksDisposableName = (name: string) => {
+    const n = name.toLowerCase();
+    return /\b(paper|napkin|cutlery|fork|spoon|straw|lid|wrap|box|glove|foil|film|bag)\b/.test(n) && !n.includes("sauce bag");
+  };
+  const routeToPackaging = (it: any) => {
+    if (isPackaging(it.name)) return true;
+    if (it.qty_g == null && it.qty_note && /^\s*1\s*stk\b/i.test(String(it.qty_note)) && looksDisposableName(it.name)) return true;
+    return false;
   };
 
   for (const r of recipesIn) {
@@ -1592,7 +1610,7 @@ async function runImport(json: any) {
       const name: string = it.name;
       if (!name) continue;
       const { supplierId, sku } = resolveSupplier(it.source);
-      const forcedStk = isPackaging(name);
+      const forcedStk = routeToPackaging(it);
       const isStkByNote = it.qty_g == null && it.qty_note && /stk|^\d+\s*stk/i.test(String(it.qty_note));
       const unit: "g" | "stk" = forcedStk || isStkByNote ? "stk" : "g";
       const payload: any = {
@@ -1649,33 +1667,49 @@ async function runImport(json: any) {
     }
   }
 
-  // Replace items per recipe
+  // Replace items + packaging per recipe (idempotent)
   for (const r of sorted) {
     const rid = recipeMap.get(r.name)!;
     await supabase.from("grocery_recipe_items").delete().eq("recipe_id", rid);
-    const rows: any[] = [];
-    let idx = 0;
+    await supabase.from("grocery_recipe_packaging").delete().eq("recipe_id", rid);
+    const foodRows: any[] = [];
+    const packRows: any[] = [];
+    let idx = 0, pIdx = 0;
     for (const it of (r.items ?? [])) {
-      let ingredient_id: string | null = null;
-      let subrecipe_id: string | null = null;
       if (it.subrecipe) {
-        subrecipe_id = recipeMap.get(it.name) ?? null;
+        const subrecipe_id = recipeMap.get(it.name) ?? null;
         if (!subrecipe_id) continue;
-      } else {
-        ingredient_id = ingredientMap.get(it.name) ?? null;
-        if (!ingredient_id) continue;
+        const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
+        foodRows.push({
+          recipe_id: rid, ingredient_id: null, subrecipe_id,
+          qty_g, qty_stk: null, sort_order: idx++,
+        });
+        continue;
       }
-      const isPack = ingredient_id && isPackaging(it.name);
-      const isStkByNote = it.qty_g == null && it.qty_note && /stk|^\d+\s*stk/i.test(String(it.qty_note));
-      const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
-      const qty_stk = (isPack || isStkByNote) && qty_g == null ? 1 : null;
-      rows.push({
-        recipe_id: rid, ingredient_id, subrecipe_id,
-        qty_g, qty_stk, sort_order: idx++,
-      });
+      const ingredient_id = ingredientMap.get(it.name) ?? null;
+      if (!ingredient_id) continue;
+      if (routeToPackaging(it)) {
+        const qty_per_unit = it.qty_g != null && it.qty_g > 0 ? Number(it.qty_g) : 1;
+        packRows.push({
+          recipe_id: rid, ingredient_id,
+          qty_per_unit, sort_order: pIdx++,
+        });
+      } else {
+        const isStkByNote = it.qty_g == null && it.qty_note && /stk|^\d+\s*stk/i.test(String(it.qty_note));
+        const qty_g = it.qty_g != null ? Number(it.qty_g) : null;
+        const qty_stk = isStkByNote && qty_g == null ? 1 : null;
+        foodRows.push({
+          recipe_id: rid, ingredient_id, subrecipe_id: null,
+          qty_g, qty_stk, sort_order: idx++,
+        });
+      }
     }
-    if (rows.length > 0) {
-      const { error } = await supabase.from("grocery_recipe_items").insert(rows);
+    if (foodRows.length > 0) {
+      const { error } = await supabase.from("grocery_recipe_items").insert(foodRows);
+      if (error) throw error;
+    }
+    if (packRows.length > 0) {
+      const { error } = await supabase.from("grocery_recipe_packaging").insert(packRows);
       if (error) throw error;
     }
   }
