@@ -979,6 +979,7 @@ function LibraryView({
           ingredients={ingredients}
           recipes={recipes}
           existingItems={editRecipe ? (itemsByRecipe.get(editRecipe.id) ?? []) : []}
+          existingPackaging={editRecipe ? (packagingByRecipe.get(editRecipe.id) ?? []) : []}
           onClose={() => { setEditRecipe(null); setNewRecipe(false); }}
           onSaved={() => { setEditRecipe(null); setNewRecipe(false); onChange(); }}
         />
