@@ -100,6 +100,7 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
         toast.info("No matching concepts to import");
         return;
       }
+      const contractIdMap = new Map(pairs.map((p) => [p.srcContractId, p.tgtContractId]));
 
       // Get full festival_power rows for both sides so the whole card is copied.
       const allContractIds = pairs.flatMap((p) => [p.srcContractId, p.tgtContractId]);
@@ -129,7 +130,10 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
 
       const powerCardPatch = (row: FestivalPowerRow): TablesUpdate<"festival_power"> => {
         const { id: _id, festival_contract_id: _contractId, created_at: _createdAt, updated_at: _updatedAt, ...rest } = row;
-        return rest;
+        return {
+          ...rest,
+          shared_tent_with_contracts: row.shared_tent_with_contracts?.map((id) => contractIdMap.get(id) ?? id) ?? null,
+        };
       };
       for (const { srcPower, tgtPower } of powerPairs) {
         const { error: upErr } = await supabase
