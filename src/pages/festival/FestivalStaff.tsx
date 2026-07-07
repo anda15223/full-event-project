@@ -2158,6 +2158,9 @@ function ImportStationAssignmentsButton({
 }) {
   const [busy, setBusy] = useState(false);
   const [sourceName, setSourceName] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [festivals, setFestivals] = useState<{ id: string; name: string }[]>([]);
+  const [pickedId, setPickedId] = useState<string>("");
 
   useEffect(() => {
     if (!sourceFestivalId) { setSourceName(null); return; }
@@ -2165,33 +2168,34 @@ function ImportStationAssignmentsButton({
       .then(({ data }) => setSourceName((data as any)?.name ?? null));
   }, [sourceFestivalId]);
 
-  const disabled = !sourceFestivalId || busy;
+  useEffect(() => {
+    if (!pickerOpen || festivals.length > 0) return;
+    supabase.from("festivals").select("id, name").neq("id", festivalId)
+      .order("start_date", { ascending: false })
+      .then(({ data }) => setFestivals((data as any) ?? []));
+  }, [pickerOpen, festivals.length, festivalId]);
 
-  const run = async () => {
-    if (!sourceFestivalId) return;
+  const runFrom = async (srcId: string) => {
     if (!confirm(
-      `Copy station & concept assignments from ${sourceName ?? "the imported source"}?\n\n` +
+      `Copy station & concept assignments from this festival?\n\n` +
       `Only staff whose name/email matches will be updated. Slots without a matching person stay empty.`
     )) return;
     setBusy(true);
     try {
-      // Source staff with a real assignment
       const { data: srcStaff, error: srcErr } = await supabase
         .from("festival_staff")
         .select("id, name, email, contract_id, concept_id, station")
-        .eq("festival_id", sourceFestivalId)
+        .eq("festival_id", srcId)
         .eq("is_draft", false);
       if (srcErr) throw srcErr;
 
-      // Source contracts (to map source contract_id → concept + alias)
       const { data: srcContracts, error: scErr } = await supabase
         .from("festival_contracts")
         .select("id, concept_id, concept_alias")
-        .eq("festival_id", sourceFestivalId)
+        .eq("festival_id", srcId)
         .eq("is_active", true);
       if (scErr) throw scErr;
 
-      // Target contracts (this festival)
       const { data: tgtContracts, error: tcErr } = await supabase
         .from("festival_contracts")
         .select("id, concept_id, concept_alias")
@@ -2199,7 +2203,6 @@ function ImportStationAssignmentsButton({
         .eq("is_active", true);
       if (tcErr) throw tcErr;
 
-      // Map: source contract_id → target contract_id (by concept + alias)
       const contractMap = new Map<string, string>();
       (srcContracts ?? []).forEach((sc: any) => {
         const match = (tgtContracts ?? []).find(
@@ -2245,11 +2248,17 @@ function ImportStationAssignmentsButton({
         updated++;
       }
 
+      // Remember this source for next time
+      await supabase.from("festivals")
+        .update({ staff_import_source_festival_id: srcId })
+        .eq("id", festivalId);
+
       toast.success(
         `Applied ${updated} assignment${updated === 1 ? "" : "s"}` +
         (skippedNoMatch ? ` · ${skippedNoMatch} person(s) not on this list` : "") +
         (skippedNoContract ? ` · ${skippedNoContract} concept not on this festival` : ""),
       );
+      setPickerOpen(false);
       onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Import failed");
@@ -2258,27 +2267,46 @@ function ImportStationAssignmentsButton({
     }
   };
 
+  if (sourceFestivalId) {
+    return (
+      <Button size="sm" variant="outline" onClick={() => runFrom(sourceFestivalId)} disabled={busy}>
+        <Copy className="h-3.5 w-3.5 mr-1" />
+        {busy ? "Importing…" : `Import assignments${sourceName ? ` from ${sourceName}` : ""}`}
+      </Button>
+    );
+  }
+
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={run}
-      disabled={disabled}
-      title={
-        sourceFestivalId
-          ? `Copy station assignments from ${sourceName ?? "the imported source festival"}`
-          : "Import the staff list first — this button will then copy assignments from the same source"
-      }
-    >
-      <Copy className="h-3.5 w-3.5 mr-1" />
-      {busy
-        ? "Importing…"
-        : sourceFestivalId
-          ? `Import assignments${sourceName ? ` from ${sourceName}` : ""}`
-          : "Import assignments (staff import required)"}
-    </Button>
+    <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+      <PopoverTrigger asChild>
+        <Button size="sm" variant="outline" disabled={busy}>
+          <Copy className="h-3.5 w-3.5 mr-1" />
+          Import assignments…
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="end">
+        <div className="text-xs font-semibold mb-2">Copy station assignments from…</div>
+        <Select value={pickedId} onValueChange={setPickedId}>
+          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick festival…" /></SelectTrigger>
+          <SelectContent>
+            {festivals.map((f) => (
+              <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          className="w-full mt-2 h-8"
+          disabled={!pickedId || busy}
+          onClick={() => runFrom(pickedId)}
+        >
+          {busy ? "Importing…" : "Import"}
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 }
+
 
 
 
