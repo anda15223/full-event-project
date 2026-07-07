@@ -335,6 +335,12 @@ export function FacadeConceptCard({
           <h3 className="text-xl font-bold truncate">{conceptName}</h3>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <PerConceptFacadeImport
+            festivalId={festivalId}
+            conceptId={conceptId}
+            targetFacadeId={facade.id}
+            onImported={invalidate}
+          />
           <Select
             value={facade.design_status ?? "not_started"}
             onValueChange={(v) => updateFacade.mutate({ design_status: v })}
