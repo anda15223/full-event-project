@@ -10,6 +10,8 @@ import {
 import { computeDemandKw, computePowerStatus } from "@/lib/powerStatus";
 import type { SiblingConcept } from "@/components/festival/TentMergeControls";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
+import { PowerImportBar } from "@/components/festival/cards/PowerImportBar";
+import { useQueryClient } from "@tanstack/react-query";
 
 const SLUG_ORDER = ["fish-chips", "gyros", "creperie", "chicks"];
 
@@ -18,6 +20,7 @@ type Concept = { id: string; slug: string; name: string };
 
 export default function FestivalPower() {
   const { slug = "" } = useParams();
+  const qc = useQueryClient();
 
   const festivalQ = useQuery({
     queryKey: ["festival-by-slug", slug],
@@ -198,6 +201,16 @@ export default function FestivalPower() {
             </span>
           )}
         </div>
+      )}
+
+      {festivalId && (
+        <PowerImportBar
+          currentFestivalId={festivalId}
+          onChanged={() => {
+            qc.invalidateQueries({ queryKey: ["power-page", slug] });
+            qc.invalidateQueries({ queryKey: ["power-equipment", slug] });
+          }}
+        />
       )}
 
       {/* Body */}
