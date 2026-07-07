@@ -753,7 +753,19 @@ export default function FestivalStaff() {
       </div>
 
       <div>
-        <h2 className="font-heading text-lg font-semibold mb-3">Crew by concept</h2>
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <h2 className="font-heading text-lg font-semibold">Crew by concept</h2>
+          <ImportStationAssignmentsButton
+            festivalId={festivalId!}
+            sourceFestivalId={festivalQ.data?.staff_import_source_festival_id ?? null}
+            targetStaff={allRows}
+            targetConceptGroups={conceptGroups}
+            onDone={() =>
+              qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] })
+            }
+          />
+        </div>
+
 
         {(() => {
           const assignmentMap = new Map<string, { conceptName: string; stationLabel: string }>();
