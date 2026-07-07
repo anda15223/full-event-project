@@ -9183,6 +9183,7 @@ export type Database = {
           concept: string
           created_at: string
           id: string
+          location_only: boolean
           name: string
           type: string
           updated_at: string
@@ -9193,6 +9194,7 @@ export type Database = {
           concept: string
           created_at?: string
           id?: string
+          location_only?: boolean
           name: string
           type: string
           updated_at?: string
@@ -9203,6 +9205,7 @@ export type Database = {
           concept?: string
           created_at?: string
           id?: string
+          location_only?: boolean
           name?: string
           type?: string
           updated_at?: string
