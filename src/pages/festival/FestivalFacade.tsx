@@ -49,7 +49,7 @@ export default function FestivalFacade() {
         .eq("festival_id", festivalId)
         .eq("is_active", true);
       if (cErr) throw cErr;
-      const list = (contracts ?? []) as any[];
+      const list = ((contracts ?? []) as any[]).filter((c) => c.concepts);
       const contractIds = list.map((c) => c.id);
       if (contractIds.length === 0) return { items: [] as Array<{ contract: Contract; concept: Concept; facade: FacadeRow }> };
 
@@ -59,8 +59,19 @@ export default function FestivalFacade() {
       const fmap = new Map<string, FacadeRow>();
       (facades ?? []).forEach((f: any) => fmap.set(f.festival_contract_id, f as FacadeRow));
 
+      // Auto-create facade rows for active contracts that don't have one yet
+      const missing = list.filter((c) => !fmap.has(c.id));
+      if (missing.length > 0) {
+        const { data: inserted, error: iErr } = await supabase
+          .from("festival_facade")
+          .insert(missing.map((c) => ({ festival_contract_id: c.id })) as any)
+          .select("*");
+        if (iErr) throw iErr;
+        (inserted ?? []).forEach((f: any) => fmap.set(f.festival_contract_id, f as FacadeRow));
+      }
+
       const items = list
-        .filter((c) => c.concepts && fmap.has(c.id))
+        .filter((c) => fmap.has(c.id))
         .map((c) => ({
           contract: { id: c.id, concept_id: c.concept_id } as Contract,
           concept: c.concepts as Concept,
