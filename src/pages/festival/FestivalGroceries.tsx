@@ -1551,17 +1551,40 @@ async function runImport(json: any) {
   const supplierNames: string[] = json.suppliers ?? [];
   const recipesIn: any[] = json.recipes ?? [];
 
+  // Numeric-source detection: "239494", "239494.0", 239494, 239494.0 → BC Catering Roskilde + sku.
+  const isNumericSource = (src: any) =>
+    (typeof src === "number" && isFinite(src)) ||
+    (typeof src === "string" && /^\d+(\.\d+)?$/.test(src.trim()));
+  const numericToSku = (src: any): string => {
+    const s = String(src).trim();
+    // strip trailing ".0" / ".00" etc.
+    return s.replace(/\.0+$/, "");
+  };
+
+  // Canonicalize supplier display names (aliases → canonical).
+  const canonicalSupplier = (raw: string): string => {
+    const s = (raw || "").trim();
+    if (!s) return "Internal / Ask Marius";
+    const low = s.toLowerCase();
+    if (low === "homemade" || low === "ask marius" || low === "internal" || low === "internal / ask marius") return "Internal / Ask Marius";
+    if (low === "fra inco" || low === "inco") return "Inco";
+    if (low === "odin seafood") return "ODIN Seafood";
+    if (low === "bk frugt") return "BK Frugt";
+    if (low === "bc catering roskilde") return "BC Catering Roskilde";
+    if (low === "bc catering skanderborg") return "BC Catering Skanderborg";
+    return s;
+  };
+
   // Ensure special suppliers exist
-  const specialSuppliers = new Set<string>(supplierNames);
+  const specialSuppliers = new Set<string>();
+  for (const n of supplierNames) if (!isNumericSource(n)) specialSuppliers.add(canonicalSupplier(n));
   specialSuppliers.add("BC Catering Roskilde");
   specialSuppliers.add("Internal / Ask Marius");
   // Collect source-derived suppliers
   for (const r of recipesIn) for (const it of (r.items ?? [])) {
     const src = it.source;
-    if (typeof src === "string" && src && !/^\d+$/.test(src)) {
-      if (src === "Homemade" || src === "Ask Marius") specialSuppliers.add("Internal / Ask Marius");
-      else specialSuppliers.add(src);
-    }
+    if (isNumericSource(src)) continue; // handled via BC Catering Roskilde
+    if (typeof src === "string" && src.trim()) specialSuppliers.add(canonicalSupplier(src));
   }
 
   // upsert suppliers
@@ -1578,14 +1601,14 @@ async function runImport(json: any) {
   }
 
   const resolveSupplier = (source: any): { supplierId: string | null; sku: string | null } => {
-    if (source == null) return { supplierId: supplierMap.get("Internal / Ask Marius") ?? null, sku: null };
-    if (typeof source === "number" || (typeof source === "string" && /^\d+$/.test(source))) {
-      return { supplierId: supplierMap.get("BC Catering Roskilde") ?? null, sku: String(source) };
-    }
-    if (source === "Homemade" || source === "Ask Marius") {
+    if (source == null || (typeof source === "string" && !source.trim())) {
       return { supplierId: supplierMap.get("Internal / Ask Marius") ?? null, sku: null };
     }
-    return { supplierId: supplierMap.get(source) ?? null, sku: null };
+    if (isNumericSource(source)) {
+      return { supplierId: supplierMap.get("BC Catering Roskilde") ?? null, sku: numericToSku(source) };
+    }
+    const canon = canonicalSupplier(String(source));
+    return { supplierId: supplierMap.get(canon) ?? null, sku: null };
   };
 
   // Upsert ingredients from items
