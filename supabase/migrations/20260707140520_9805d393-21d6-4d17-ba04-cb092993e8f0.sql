@@ -1,0 +1,1 @@
+ALTER TABLE public.grocery_settings ADD COLUMN IF NOT EXISTS oil_refill_per_fryer_l numeric NOT NULL DEFAULT 2.5;

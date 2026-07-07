@@ -9213,18 +9213,21 @@ export type Database = {
         Row: {
           created_at: string
           festival_id: string
+          oil_refill_per_fryer_l: number
           safety_margin_pct: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           festival_id: string
+          oil_refill_per_fryer_l?: number
           safety_margin_pct?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           festival_id?: string
+          oil_refill_per_fryer_l?: number
           safety_margin_pct?: number
           updated_at?: string
         }
