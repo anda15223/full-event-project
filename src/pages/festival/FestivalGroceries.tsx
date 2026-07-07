@@ -1641,9 +1641,14 @@ async function runImport(json: any) {
     return false;
   };
 
+  // Pre-index recipe names in the payload so items with matching names are treated as subrecipe refs
+  // (idempotency: prevents recreating orphaned "1 Chicken gyros"-style ingredients).
+  const incomingRecipeNames = new Set<string>((recipesIn ?? []).map((r: any) => r.name));
+
   for (const r of recipesIn) {
     for (const it of (r.items ?? [])) {
       if (it.subrecipe) continue;
+      if (it.name && incomingRecipeNames.has(it.name) && it.name !== r.name) continue;
       const name: string = it.name;
       if (!name) continue;
       const { supplierId, sku } = resolveSupplier(it.source);
