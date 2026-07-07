@@ -813,6 +813,9 @@ function CalculationView({
                       {ing.name}
                       {ing.eco && <span className="text-emerald-600 text-xs"> · ECO</span>}
                       {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
+                      {bumpedMargin.has(ing.id) && (
+                        <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-purple-500/10 text-purple-700 border border-purple-500/30" title="Fixed +20% packaging margin (Triple Trading / Kollek)">+20%</span>
+                      )}
                     </td>
                     <td className="p-2 text-right">
                       {ing.unit === "g"
