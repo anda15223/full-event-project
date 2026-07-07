@@ -20,6 +20,7 @@ type Concept = { id: string; slug: string; name: string };
 
 export default function FestivalPower() {
   const { slug = "" } = useParams();
+  const qc = useQueryClient();
 
   const festivalQ = useQuery({
     queryKey: ["festival-by-slug", slug],
@@ -200,6 +201,16 @@ export default function FestivalPower() {
             </span>
           )}
         </div>
+      )}
+
+      {festivalId && (
+        <PowerImportBar
+          currentFestivalId={festivalId}
+          onChanged={() => {
+            qc.invalidateQueries({ queryKey: ["power-page", slug] });
+            qc.invalidateQueries({ queryKey: ["power-equipment", slug] });
+          }}
+        />
       )}
 
       {/* Body */}
