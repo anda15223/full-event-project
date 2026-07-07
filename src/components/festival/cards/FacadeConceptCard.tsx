@@ -121,104 +121,41 @@ export function FacadeConceptCard({
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
-  // Equipment for this concept at this festival — name + qty + dimensions/notes.
+  // Facade-category equipment lines for THIS concept at THIS festival,
+  // pulled from festival_power_equipment (same source as the Equipment page's FACADE group).
   const equipmentQ = useQuery({
-    queryKey: ["facade-concept-equipment", festivalId, conceptId],
-    enabled: !!festivalId && !!conceptId,
+    queryKey: ["facade-concept-equipment", festivalId, facade.festival_contract_id],
+    enabled: !!festivalId && !!facade.festival_contract_id,
     queryFn: async () => {
+      const { data: power } = await supabase
+        .from("festival_power").select("id")
+        .eq("festival_contract_id", facade.festival_contract_id)
+        .maybeSingle();
+      if (!power?.id) return [] as any[];
       const { data, error } = await supabase
-        .from("festival_equipment")
-        .select("id,name,category,quantity,qty,notes,position_zone,zone")
-        .eq("festival_id", festivalId)
-        .eq("concept_id", conceptId)
-        .eq("is_draft", false)
-        .order("category", { ascending: true, nullsFirst: false })
-        .order("name", { ascending: true });
+        .from("festival_power_equipment")
+        .select("id, equipment_name, category, quantity, power_type, power_kw, is_powered, notes, position")
+        .eq("festival_power_id", (power as any).id)
+        .eq("category", "facade")
+        .order("position", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as any[];
     },
   });
   const equipment = equipmentQ.data ?? [];
-  const [equipOpen, setEquipOpen] = useState(false);
+  const [equipOpen, setEquipOpen] = useState(true);
   const equipMutation = useMutation({
     mutationFn: async ({ id, qty }: { id: string; qty: number }) => {
-      const { error } = await supabase.from("festival_equipment")
-        .update({ quantity: qty, qty } as any).eq("id", id);
+      const { error } = await supabase.from("festival_power_equipment")
+        .update({ quantity: qty } as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["facade-concept-equipment", festivalId, conceptId] });
+      qc.invalidateQueries({ queryKey: ["facade-concept-equipment", festivalId, facade.festival_contract_id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Save failed"),
   });
 
-  // --- Per-concept "import facade equipment from another festival" ---
-  const FACADE_CATEGORY_PATTERNS = ["facade", "front", "topskilt", "sign"];
-  const isFacadeCategory = (cat?: string | null) => {
-    if (!cat) return false;
-    const c = cat.toLowerCase();
-    return FACADE_CATEGORY_PATTERNS.some((p) => c.includes(p));
-  };
-
-  const sourceFestivalsQ = useQuery({
-    queryKey: ["facade-import-sources", festivalId],
-    enabled: !!festivalId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("festivals")
-        .select("id,name,start_date")
-        .neq("id", festivalId)
-        .order("start_date", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Array<{ id: string; name: string; start_date: string | null }>;
-    },
-  });
-  const [importSourceId, setImportSourceId] = useState<string>("");
-  const [importingEquip, setImportingEquip] = useState(false);
-
-  const importFacadeEquipment = async () => {
-    if (!importSourceId) return;
-    setImportingEquip(true);
-    try {
-      const { data: rows, error } = await supabase
-        .from("festival_equipment")
-        .select("*")
-        .eq("festival_id", importSourceId)
-        .eq("concept_id", conceptId);
-      if (error) throw error;
-      const facadeRows = (rows ?? []).filter((r: any) => isFacadeCategory(r.category));
-      if (facadeRows.length === 0) {
-        toast.message("No facade-category equipment found on the source festival for this concept.");
-        return;
-      }
-      // Wipe existing facade-category rows for this concept at target to avoid dupes
-      const { data: existing } = await supabase
-        .from("festival_equipment")
-        .select("id,category")
-        .eq("festival_id", festivalId)
-        .eq("concept_id", conceptId);
-      const toDelete = (existing ?? []).filter((r: any) => isFacadeCategory(r.category)).map((r: any) => r.id);
-      if (toDelete.length > 0) {
-        await supabase.from("festival_equipment").delete().in("id", toDelete);
-      }
-      const STRIP = new Set(["id", "festival_id", "created_at", "updated_at", "linked_facade_id"]);
-      const inserts = facadeRows.map((r: any) => {
-        const clean: Record<string, unknown> = { festival_id: festivalId, concept_id: conceptId };
-        for (const [k, v] of Object.entries(r)) {
-          if (!STRIP.has(k) && k !== "concept_id") clean[k] = v;
-        }
-        return clean;
-      });
-      const { error: insErr } = await supabase.from("festival_equipment").insert(inserts as any);
-      if (insErr) throw insErr;
-      toast.success(`Imported ${inserts.length} facade equipment line${inserts.length === 1 ? "" : "s"}`);
-      qc.invalidateQueries({ queryKey: ["facade-concept-equipment", festivalId, conceptId] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Import failed");
-    } finally {
-      setImportingEquip(false);
-    }
-  };
 
   const updateCaption = async (id: string, caption: string) => {
     await supabase.from("festival_facade_photos").update({ caption } as any).eq("id", id);
@@ -479,31 +416,6 @@ export function FacadeConceptCard({
           </div>
         </div>
 
-        {/* Import facade equipment from another festival */}
-        <div className="mb-2 rounded-md border border-dashed bg-muted/20 p-2 flex flex-wrap items-center gap-2">
-          <DownloadCloud className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-[11px] text-muted-foreground">Import facade lines from:</span>
-          <Select value={importSourceId} onValueChange={setImportSourceId}>
-            <SelectTrigger className="h-7 w-[200px] text-xs">
-              <SelectValue placeholder="Pick festival…" />
-            </SelectTrigger>
-            <SelectContent>
-              {(sourceFestivalsQ.data ?? []).map((f) => (
-                <SelectItem key={f.id} value={f.id} className="text-xs">{f.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm" variant="outline" className="h-7 text-xs"
-            disabled={!importSourceId || importingEquip}
-            onClick={importFacadeEquipment}
-          >
-            {importingEquip ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Import"}
-          </Button>
-          <span className="text-[10px] text-muted-foreground">
-            Copies equipment lines in facade/front/topskilt categories for this concept.
-          </span>
-        </div>
 
         {equipmentQ.isLoading ? (
           <div className="text-[11px] text-muted-foreground italic">Loading…</div>
@@ -514,16 +426,17 @@ export function FacadeConceptCard({
         ) : equipOpen ? (
           <div className="rounded-lg border divide-y text-xs">
             {equipment.map((it) => {
-              const dims = [it.position_zone, it.zone].filter(Boolean).join(" · ");
-              const qty = it.quantity ?? it.qty ?? 1;
+              const qty = it.quantity ?? 1;
+              const meta = [
+                it.power_type && it.power_type !== "none" ? `${it.power_type}${it.power_kw ? ` · ${it.power_kw} kW` : ""}` : null,
+                it.notes,
+              ].filter(Boolean).join(" · ");
               return (
                 <div key={it.id} className="flex items-center gap-2 px-2 py-1.5">
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{it.name ?? "—"}</div>
-                    {(it.category || dims || it.notes) && (
-                      <div className="text-[10px] text-muted-foreground truncate">
-                        {[it.category, dims, it.notes].filter(Boolean).join(" · ")}
-                      </div>
+                    <div className="font-medium truncate">{it.equipment_name ?? "—"}</div>
+                    {meta && (
+                      <div className="text-[10px] text-muted-foreground truncate">{meta}</div>
                     )}
                   </div>
                   <InlineNumber
@@ -537,9 +450,7 @@ export function FacadeConceptCard({
           </div>
         ) : (
           <div className="text-[11px] text-muted-foreground">
-            {equipment.reduce((s, it) => s + (it.quantity ?? it.qty ?? 1), 0)} pieces across{" "}
-            {new Set(equipment.map((it) => it.category ?? "other")).size} categor
-            {new Set(equipment.map((it) => it.category ?? "other")).size === 1 ? "y" : "ies"}
+            {equipment.reduce((s, it) => s + (it.quantity ?? 1), 0)} pieces
             {" · "}
             <button className="underline hover:text-foreground" onClick={() => setEquipOpen(true)}>
               show details
