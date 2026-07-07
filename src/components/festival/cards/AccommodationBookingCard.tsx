@@ -620,12 +620,19 @@ export function AccommodationBookingCard({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Check-in</div>
-          <InlineDate value={booking.check_in_date} onSave={(v) => updateBooking.mutate({ check_in_date: v })} />
+          <div className="flex items-center gap-1">
+            <InlineDate value={booking.check_in_date} onSave={(v) => updateBooking.mutate({ check_in_date: v })} />
+            <DayNudger value={booking.check_in_date} onChange={(v) => updateBooking.mutate({ check_in_date: v })} />
+          </div>
         </div>
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Check-out</div>
-          <InlineDate value={booking.check_out_date} onSave={(v) => updateBooking.mutate({ check_out_date: v })} />
+          <div className="flex items-center gap-1">
+            <InlineDate value={booking.check_out_date} onSave={(v) => updateBooking.mutate({ check_out_date: v })} />
+            <DayNudger value={booking.check_out_date} onChange={(v) => updateBooking.mutate({ check_out_date: v })} />
+          </div>
         </div>
+
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Nights</div>
           <div className="tabular-nums">{nights || "—"}</div>
