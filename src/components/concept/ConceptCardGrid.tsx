@@ -406,7 +406,7 @@ function ConceptCardItem({
           </div>
           {festivalSlug && (
             <div className="pointer-events-auto">
-              <ConceptToggle festivalSlug={festivalSlug} conceptSlug={c.slug} />
+              <ConceptToggle festivalSlug={festivalSlug} contractId={row.id} isActive={isActive} />
             </div>
           )}
         </div>
