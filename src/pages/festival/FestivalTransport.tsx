@@ -141,11 +141,22 @@ export default function FestivalTransport() {
   const { data: festival } = useQuery({
     queryKey: ["festival", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("festivals").select("id,slug,name,start_date,end_date").eq("slug", slug).maybeSingle();
+      const { data, error } = await supabase.from("festivals").select("id,slug,name,start_date,end_date,staff_import_source_festival_id").eq("slug", slug).maybeSingle();
       if (error) throw error;
-      return data as Festival | null;
+      return data as any;
     },
   });
+
+  const { data: staffSourceFestival } = useQuery({
+    queryKey: ["staff-source-festival", (festival as any)?.staff_import_source_festival_id],
+    enabled: !!(festival as any)?.staff_import_source_festival_id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("festivals").select("id,name").eq("id", (festival as any).staff_import_source_festival_id).maybeSingle();
+      if (error) throw error;
+      return data as { id: string; name: string } | null;
+    },
+  });
+
 
   const { data: vehicles = [] } = useQuery({
     queryKey: ["transport-vehicles", slug],
@@ -328,6 +339,19 @@ export default function FestivalTransport() {
           importTransportSeatAssignments(sourceFestivalId, currentFestivalId)
         }
       />
+      <div className="text-xs text-muted-foreground -mt-4 pl-3">
+        {staffSourceFestival ? (
+          <>💺 Seat allocations will follow only if you import from{" "}
+            <strong>{staffSourceFestival.name}</strong> (the source used for
+            this festival's staff list). Pick a different source and only cars
+            come in — seat assignments are skipped.
+          </>
+        ) : (
+          <>💺 No staff-list import is recorded on this festival yet, so seat
+            allocations cannot be auto-imported. Import the staff list first,
+            then import transport from the same festival.</>
+        )}
+      </div>
       {/* Print header (only in print) */}
       <div className="hidden print:block print-header">
         <div className="text-sm font-bold">
@@ -1852,16 +1876,25 @@ async function importTransportSeatAssignments(
       .from("festival_transport")
       .select("*")
       .eq("festival_id", sourceFestivalId)
-      .eq("is_draft", false),
+      .eq("is_draft", false)
+      .order("created_at", { ascending: true }),
     supabase
       .from("festival_transport")
       .select("*")
       .eq("festival_id", targetFestivalId)
       .eq("is_draft", true)
-      .eq("draft_source_festival_id", sourceFestivalId),
+      .eq("draft_source_festival_id", sourceFestivalId)
+      .order("created_at", { ascending: true }),
   ]);
   if (srcT.error) throw srcT.error;
   if (tgtT.error) throw tgtT.error;
+
+  const srcRows = (srcT.data ?? []) as any[];
+  const tgtRows = (tgtT.data ?? []) as any[];
+
+  if (tgtRows.length === 0) {
+    return "seat allocations skipped — no draft cars from this source were found. Was the transport import already committed? Try Discard, then Import as draft.";
+  }
 
   const sig = (r: any) =>
     [
@@ -1875,18 +1908,37 @@ async function importTransportSeatAssignments(
       r.booking_reference ?? "",
     ].join("|");
 
-  const targetBySig = new Map<string, string>();
-  (tgtT.data ?? []).forEach((r: any) => targetBySig.set(sig(r), r.id));
+  const targetBySig = new Map<string, string[]>();
+  tgtRows.forEach((r) => {
+    const k = sig(r);
+    const arr = targetBySig.get(k) ?? [];
+    arr.push(r.id);
+    targetBySig.set(k, arr);
+  });
 
-  // Map sourceTransportId -> targetTransportId
   const transportMap = new Map<string, string>();
-  (srcT.data ?? []).forEach((r: any) => {
-    const tgtId = targetBySig.get(sig(r));
-    if (tgtId) transportMap.set(r.id, tgtId);
+  const usedTgt = new Set<string>();
+  srcRows.forEach((r) => {
+    const arr = targetBySig.get(sig(r)) ?? [];
+    const pick = arr.find((id) => !usedTgt.has(id));
+    if (pick) {
+      transportMap.set(r.id, pick);
+      usedTgt.add(pick);
+    }
+  });
+  const leftoverTgt = tgtRows.filter((r) => !usedTgt.has(r.id));
+  let li = 0;
+  srcRows.forEach((r) => {
+    if (transportMap.has(r.id)) return;
+    const t = leftoverTgt[li++];
+    if (t) {
+      transportMap.set(r.id, t.id);
+      usedTgt.add(t.id);
+    }
   });
 
   if (transportMap.size === 0) {
-    return "no matching cars to attach seat allocations to";
+    return "seat allocations skipped — could not pair source and target cars";
   }
 
   // 3. Fetch source legs + assignments.
