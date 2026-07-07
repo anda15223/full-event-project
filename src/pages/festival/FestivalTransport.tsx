@@ -324,6 +324,9 @@ export default function FestivalTransport() {
         tables={CARD_TABLES.transport}
         currentFestivalId={festival?.id ?? ""}
         onCommitted={() => window.location.reload()}
+        extraImport={async (sourceFestivalId, currentFestivalId) =>
+          importTransportSeatAssignments(sourceFestivalId, currentFestivalId)
+        }
       />
       {/* Print header (only in print) */}
       <div className="hidden print:block print-header">
