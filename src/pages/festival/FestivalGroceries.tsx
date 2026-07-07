@@ -370,8 +370,8 @@ export default function FestivalGroceries() {
     const margin = 1 + (safetyMargin || 0) / 100;
     for (const [k, v] of req) req.set(k, { g: v.g * margin, stk: v.stk * margin });
 
-    // Add consumables (fixed, no margin)
-    for (const c of consumables) {
+    // Add consumables (fixed, no margin) — includes equipment-driven auto rows.
+    for (const c of effectiveConsumables) {
       const ing = ingredientById.get(c.ingredient_id);
       if (!ing) continue;
       let g = 0, stk = 0;
@@ -387,7 +387,7 @@ export default function FestivalGroceries() {
     }
 
     return { req, fromConsumable };
-  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, consumables, safetyMargin]);
+  }, [items, packaging, recipes, ingredients, estimatesForFestivalDays, effectiveConsumables, safetyMargin]);
 
   const totalPacksAllSuppliers = useMemo(() => {
     let n = 0;
