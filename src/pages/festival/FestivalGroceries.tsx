@@ -35,7 +35,7 @@ type Ingredient = {
 type Recipe = {
   id: string; name: string; type: "product" | "subrecipe";
   concept: "fish" | "gyros" | "creperie" | "chicksbuns" | "other";
-  batch_g: number | null; active: boolean;
+  batch_g: number | null; active: boolean; location_only?: boolean;
 };
 type RecipeItem = {
   id: string; recipe_id: string; ingredient_id: string | null;
