@@ -686,7 +686,7 @@ export default function FestivalOverview() {
         const ing: any = ingById.get(ingId);
         if (!ing?.pack_size) continue;
         const r = ing.unit === "g" ? need.g : need.stk;
-        if (r > 0) packs += Math.ceil(r / ing.pack_size);
+        if (r > 0) packs += safeCeil(r / ing.pack_size);
       }
       return { productsEstimated, packs, hasEstimates: productsEstimated > 0 || consumables.length > 0 };
     },
