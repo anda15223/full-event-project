@@ -213,12 +213,26 @@ export default function FestivalGroceries() {
         } else if (it.subrecipe_id) {
           const sub = recipeById.get(it.subrecipe_id);
           if (!sub) continue;
-          const gramsNeeded = (it.qty_g ?? 0) * u;
-          const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
-          for (const si of itemsByRecipe.get(sub.id) ?? []) {
-            if (si.ingredient_id) {
-              const scale = (si.qty_g ?? 0) / batch;
-              addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
+          if (sub.type === "product") {
+            // Product-as-subrecipe: qty_g on the line = grams of that product per parent unit.
+            // Expand as qty_units = qty_g / (sum of product's food qty_g), rounded to 0.01.
+            const subFood = (itemsByRecipe.get(sub.id) ?? []).filter(si => si.ingredient_id);
+            const totalFoodG = subFood.reduce((a, si) => a + (si.qty_g ?? 0), 0);
+            const gramsNeeded = (it.qty_g ?? 0);
+            const qtyUnits = totalFoodG > 0 ? Math.round((gramsNeeded / totalFoodG) * 100) / 100 : 0;
+            const scaled = qtyUnits * u;
+            for (const si of subFood) {
+              addIng(si.ingredient_id!, (si.qty_g ?? 0) * scaled, (si.qty_stk ?? 0) * scaled);
+            }
+            // NOTE: referenced product's packaging is intentionally NOT included.
+          } else {
+            const gramsNeeded = (it.qty_g ?? 0) * u;
+            const batch = sub.batch_g && sub.batch_g > 0 ? sub.batch_g : 1;
+            for (const si of itemsByRecipe.get(sub.id) ?? []) {
+              if (si.ingredient_id) {
+                const scale = (si.qty_g ?? 0) / batch;
+                addIng(si.ingredient_id, gramsNeeded * scale, (si.qty_stk ?? 0) * gramsNeeded / batch);
+              }
             }
           }
         }
