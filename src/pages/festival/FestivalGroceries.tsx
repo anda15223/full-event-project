@@ -193,7 +193,20 @@ export default function FestivalGroceries() {
     queryFn: async () => {
       const { data, error } = await supabase.from("grocery_settings").select("*").eq("festival_id", festival!.id).maybeSingle();
       if (error) throw error;
-      return data as { festival_id: string; safety_margin_pct: number } | null;
+      return data as { festival_id: string; safety_margin_pct: number; oil_refill_reserve_l: number | null } | null;
+    },
+  });
+  // READ-ONLY: equipment for this festival. Joined via festival_equipment.equipment_id → equipment_catalog.name.
+  const fryerEquipQ = useQuery({
+    queryKey: ["groceries-fryer-equipment", festival?.id],
+    enabled: !!festival?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("festival_equipment")
+        .select("qty, equipment:equipment_catalog(name)")
+        .eq("festival_id", festival!.id);
+      if (error) throw error;
+      return (data ?? []) as Array<{ qty: number | null; equipment: { name: string } | null }>;
     },
   });
   const orderStatusQ = useQuery({
