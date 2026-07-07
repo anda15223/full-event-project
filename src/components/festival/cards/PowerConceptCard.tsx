@@ -168,7 +168,7 @@ export function PowerConceptCard({
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [notesDraft, setNotesDraft] = useState(power.notes ?? "");
-  const [eqOpen, setEqOpen] = useState(false);
+  const [eqOpen, setEqOpen] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const demand_kw = computeDemandKw(equipment);
