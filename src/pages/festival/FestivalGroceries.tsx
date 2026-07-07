@@ -363,6 +363,7 @@ export default function FestivalGroceries() {
           <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="calculation">Calculation</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="consumables">Consumables</TabsTrigger>
           <TabsTrigger value="library">Library</TabsTrigger>
         </TabsList>
 
@@ -372,7 +373,7 @@ export default function FestivalGroceries() {
             <Label className="text-sm">Safety margin</Label>
             <Input type="number" className="w-24" value={safetyMargin}
               onChange={(e) => saveSafetyMargin(Number(e.target.value) || 0)} />
-            <span className="text-xs text-muted-foreground">% added to all requirements</span>
+            <span className="text-xs text-muted-foreground">% added to food & packaging (not consumables)</span>
           </div>
           <EstimatesGrid
             days={days}
@@ -385,7 +386,8 @@ export default function FestivalGroceries() {
         {/* ============ CALCULATION ============ */}
         <TabsContent value="calculation" className="space-y-4">
           <CalculationView
-            calculation={calculation}
+            req={calculation.req}
+            fromConsumable={calculation.fromConsumable}
             ingredients={ingredients}
             suppliers={suppliers}
             onIngredientUpdated={() => qc.invalidateQueries({ queryKey: ["grocery_ingredients"] })}
@@ -396,11 +398,26 @@ export default function FestivalGroceries() {
         <TabsContent value="orders" className="space-y-4">
           <OrdersView
             festival={festival ?? null}
-            calculation={calculation}
+            req={calculation.req}
+            fromConsumable={calculation.fromConsumable}
             ingredients={ingredients}
             suppliers={suppliers}
             orderStatus={orderStatusQ.data ?? []}
             onSetStatus={setOrderStatus}
+          />
+        </TabsContent>
+
+        {/* ============ CONSUMABLES ============ */}
+        <TabsContent value="consumables" className="space-y-4">
+          <ConsumablesView
+            festivalId={festival?.id ?? null}
+            consumables={consumables}
+            ingredients={ingredients}
+            suppliers={suppliers}
+            onChange={() => {
+              qc.invalidateQueries({ queryKey: ["grocery_festival_consumables", festival?.id] });
+              qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
+            }}
           />
         </TabsContent>
 
@@ -411,11 +428,13 @@ export default function FestivalGroceries() {
             ingredients={ingredients}
             recipes={recipes}
             items={items}
+            packaging={packaging}
             onChange={() => {
               qc.invalidateQueries({ queryKey: ["grocery_suppliers"] });
               qc.invalidateQueries({ queryKey: ["grocery_ingredients"] });
               qc.invalidateQueries({ queryKey: ["grocery_recipes"] });
               qc.invalidateQueries({ queryKey: ["grocery_recipe_items"] });
+              qc.invalidateQueries({ queryKey: ["grocery_recipe_packaging"] });
             }}
           />
         </TabsContent>
