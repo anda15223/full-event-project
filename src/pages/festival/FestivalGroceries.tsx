@@ -389,13 +389,9 @@ export default function FestivalGroceries() {
       }
     };
 
-    // Sum food + packaging driven by estimates (subject to safety margin)
+    // Sum food + packaging driven by estimates (subject to per-ingredient margin)
     const unitsByRecipe = new Map<string, number>();
     for (const e of estimatesForFestivalDays) unitsByRecipe.set(e.recipe_id, (unitsByRecipe.get(e.recipe_id) ?? 0) + (e.units || 0));
-    for (const [rid, u] of unitsByRecipe) {
-      if (u <= 0) continue;
-      expand(rid, u, true, new Set<string>());
-    }
 
     // Skip location-only products in festival calculations.
     for (const [rid, u] of unitsByRecipe) {
