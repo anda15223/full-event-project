@@ -20,9 +20,9 @@ interface Props {
 }
 
 /**
- * Festival-wide import of powered equipment from another festival.
+ * Festival-wide import of full power cards from another festival.
  * Matches concepts by (concept_id + stall order) so duplicate stalls are preserved.
- * Replace mode wipes each matched target power's equipment first.
+ * Replace mode wipes each matched target power's equipment and order-list items first.
  */
 export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
   const [festivals, setFestivals] = useState<SourceFestival[]>([]);
@@ -91,57 +91,88 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
         return;
       }
 
-      // Get festival_power rows for both sides
+      // Get full festival_power rows for both sides so the whole card is copied.
       const allContractIds = pairs.flatMap((p) => [p.srcContractId, p.tgtContractId]);
       const { data: powers, error: e3 } = await supabase
-        .from("festival_power").select("id, festival_contract_id")
+        .from("festival_power").select("*")
         .in("festival_contract_id", allContractIds);
       if (e3) throw e3;
-      const powerByContract = new Map<string, string>();
-      (powers ?? []).forEach((p: any) => powerByContract.set(p.festival_contract_id, p.id));
+      const powerByContract = new Map<string, any>();
+      (powers ?? []).forEach((p: any) => powerByContract.set(p.festival_contract_id, p));
 
       // Build power-id pairs
       const powerPairs = pairs
         .map((p) => ({
-          srcPowerId: powerByContract.get(p.srcContractId),
-          tgtPowerId: powerByContract.get(p.tgtContractId),
+          srcPower: powerByContract.get(p.srcContractId),
+          tgtPower: powerByContract.get(p.tgtContractId),
         }))
-        .filter((p) => p.srcPowerId && p.tgtPowerId) as Array<{ srcPowerId: string; tgtPowerId: string }>;
+        .filter((p) => p.srcPower && p.tgtPower) as Array<{ srcPower: any; tgtPower: any }>;
 
       if (powerPairs.length === 0) {
         toast.info("No power rows found to import from");
         return;
       }
 
+      const srcPowerIds = powerPairs.map((p) => p.srcPower.id as string);
+      const tgtPowerIds = powerPairs.map((p) => p.tgtPower.id as string);
+      const srcToTgt = new Map(powerPairs.map((p) => [p.srcPower.id as string, p.tgtPower.id as string]));
+
+      const powerCardPatch = ({ id, festival_contract_id, created_at, updated_at, ...rest }: any) => rest;
+      for (const { srcPower, tgtPower } of powerPairs) {
+        const { error: upErr } = await supabase
+          .from("festival_power")
+          .update(powerCardPatch(srcPower) as any)
+          .eq("id", tgtPower.id);
+        if (upErr) throw upErr;
+      }
+
       // Fetch source equipment
       const { data: eq, error: e4 } = await supabase
         .from("festival_power_equipment").select("*")
-        .in("festival_power_id", powerPairs.map((p) => p.srcPowerId));
+        .in("festival_power_id", srcPowerIds);
       if (e4) throw e4;
 
+      // Fetch source festival order-list rows.
+      const { data: orderItems, error: oiErr } = await supabase
+        .from("festival_power_order_items").select("*")
+        .in("festival_power_id", srcPowerIds);
+      if (oiErr) throw oiErr;
+
       if (mode === "replace") {
-        const { error: dErr } = await supabase
+        const { error: dEqErr } = await supabase
           .from("festival_power_equipment").delete()
-          .in("festival_power_id", powerPairs.map((p) => p.tgtPowerId));
-        if (dErr) throw dErr;
+          .in("festival_power_id", tgtPowerIds);
+        if (dEqErr) throw dEqErr;
+        const { error: dOiErr } = await supabase
+          .from("festival_power_order_items").delete()
+          .in("festival_power_id", tgtPowerIds);
+        if (dOiErr) throw dOiErr;
       }
 
-      const srcToTgt = new Map(powerPairs.map((p) => [p.srcPowerId, p.tgtPowerId]));
       const inserts = (eq ?? []).map(({ id, created_at, updated_at, festival_power_id, ...rest }: any) => ({
         ...rest,
         festival_power_id: srcToTgt.get(festival_power_id)!,
       }));
 
-      if (inserts.length === 0) {
-        toast.info(`Matched ${powerPairs.length} concept(s) but source has no equipment.`);
-        return;
+      if (inserts.length > 0) {
+        const { error: iErr } = await supabase
+          .from("festival_power_equipment").insert(inserts);
+        if (iErr) throw iErr;
       }
 
-      const { error: iErr } = await supabase
-        .from("festival_power_equipment").insert(inserts);
-      if (iErr) throw iErr;
+      const orderInserts = (orderItems ?? []).map(({ id, created_at, updated_at, festival_power_id, ...rest }: any) => ({
+        ...rest,
+        festival_power_id: srcToTgt.get(festival_power_id)!,
+      }));
 
-      toast.success(`Imported ${inserts.length} item(s) across ${powerPairs.length} concept(s)`);
+      if (orderInserts.length > 0) {
+        const { error: oiInsErr } = await supabase
+          .from("festival_power_order_items")
+          .insert(orderInserts as any);
+        if (oiInsErr) throw oiInsErr;
+      }
+
+      toast.success(`Imported ${powerPairs.length} power card(s), ${inserts.length} equipment item(s), ${orderInserts.length} order-list item(s)`);
       onChanged();
     } catch (e: any) {
       toast.error(e?.message ?? "Import failed");
@@ -190,7 +221,7 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
   return (
     <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex flex-wrap items-center gap-2">
       <div className="flex items-center gap-1.5 text-xs font-medium">
-        <Download className="h-3.5 w-3.5" /> Import all powered equipment from
+        <Download className="h-3.5 w-3.5" /> Import full power cards from
       </div>
       <Select value={sourceId} onValueChange={setSourceId}>
         <SelectTrigger className="h-8 text-xs w-[220px]">
@@ -228,7 +259,7 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
               <AlertDialogTitle>Reset all powered equipment?</AlertDialogTitle>
               <AlertDialogDescription>
                 Deletes every powered-equipment row for every concept at this festival.
-                Concepts, power allocations and other data are untouched.
+                Concepts, power allocations, documents and order-list items are untouched.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
