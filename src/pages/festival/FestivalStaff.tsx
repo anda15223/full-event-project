@@ -2122,26 +2122,55 @@ function CrewRegisterCard({
     );
   };
 
+  const hasAny = !!(name || url || username || password || name2 || url2 || username2 || password2);
+  const storageKey = `crew-register-collapsed:${festivalId ?? "x"}`;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem(storageKey);
+      if (v === "1") return true;
+      if (v === "0") return false;
+    } catch { /* noop */ }
+    return !hasAny; // default: hidden when empty
+  });
+  useEffect(() => {
+    try { localStorage.setItem(storageKey, collapsed ? "1" : "0"); } catch { /* noop */ }
+  }, [collapsed, storageKey]);
+
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="rounded-xl border bg-card p-3 shadow-sm">
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => !c)}
+        className="w-full flex items-center gap-2 text-left"
+      >
         <KeyRound className="h-4 w-4 text-muted-foreground" />
         <h2 className="font-heading font-semibold text-base">Crew register access</h2>
-      </div>
+        {!hasAny && collapsed && (
+          <span className="text-[11px] text-muted-foreground">— not set</span>
+        )}
+        <span className="ml-auto text-xs text-muted-foreground">
+          {collapsed ? "Show" : "Hide"}
+        </span>
+      </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {renderSlot(name, setName, url, setUrl, username, setUsername, password, setPassword, showPw, setShowPw)}
-        {renderSlot(name2, setName2, url2, setUrl2, username2, setUsername2, password2, setPassword2, showPw2, setShowPw2)}
-      </div>
+      {!collapsed && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
+            {renderSlot(name, setName, url, setUrl, username, setUsername, password, setPassword, showPw, setShowPw)}
+            {renderSlot(name2, setName2, url2, setUrl2, username2, setUsername2, password2, setPassword2, showPw2, setShowPw2)}
+          </div>
 
-      <div className="flex justify-end mt-3">
-        <Button size="sm" onClick={save} disabled={!dirty || saving || !festivalId}>
-          {saving ? "Saving..." : "Save"}
-        </Button>
-      </div>
+          <div className="flex justify-end mt-3">
+            <Button size="sm" onClick={save} disabled={!dirty || saving || !festivalId}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
+
 
 function ImportStationAssignmentsButton({
   festivalId,
