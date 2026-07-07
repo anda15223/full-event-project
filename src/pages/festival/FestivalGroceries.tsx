@@ -687,22 +687,22 @@ function OrdersView({
   onSetStatus: (supplierId: string, status: "draft" | "sent") => void;
 }) {
   const bySupplier = useMemo(() => {
-    const map = new Map<string, { ing: Ingredient; required: number; packs: number | null }[]>();
-    for (const [ingId, need] of calculation) {
+    const map = new Map<string, { ing: Ingredient; required: number; packs: number | null; isEvent: boolean }[]>();
+    for (const [ingId, need] of req) {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing || !ing.supplier_id) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
       const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
       const arr = map.get(ing.supplier_id) ?? [];
-      arr.push({ ing, required, packs });
+      arr.push({ ing, required, packs, isEvent: fromConsumable.has(ing.id) });
       map.set(ing.supplier_id, arr);
     }
     return Array.from(map.entries()).map(([sid, items]) => ({
       supplier: suppliers.find(s => s.id === sid) ?? null,
       items: items.sort((a, b) => a.ing.name.localeCompare(b.ing.name)),
     })).filter(g => g.supplier);
-  }, [calculation, ingredients, suppliers]);
+  }, [req, fromConsumable, ingredients, suppliers]);
 
   const dateRange = festival?.start_date && festival?.end_date
     ? formatDateRange(festival.start_date, festival.end_date) : "";
