@@ -618,10 +618,75 @@ export default function FestivalStaff() {
           No accom.
         </FilterChip>
 
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 h-7 px-2 rounded-md border text-xs bg-background hover:bg-muted"
+              title="Add an accommodation night to every person in the current filter"
+            >
+              <Plus className="h-3 w-3" /> Bulk add night ({rows.length})
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-60 p-3" align="start">
+            <div className="text-xs font-semibold mb-2">
+              Add night to {rows.length} filtered person{rows.length === 1 ? "" : "s"}
+            </div>
+            {dayWindow.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground italic">No dates available.</div>
+            ) : (
+              <div className="space-y-1">
+                {dayWindow.map((d) => {
+                  const missingCount = rows.filter(
+                    (r) => !(r.accom_dates ?? []).includes(d.iso),
+                  ).length;
+                  return (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      disabled={missingCount === 0}
+                      onClick={async () => {
+                        const targets = rows.filter(
+                          (r) => !(r.accom_dates ?? []).includes(d.iso),
+                        );
+                        if (targets.length === 0) return;
+                        await Promise.all(
+                          targets.map((r) =>
+                            updateStaff.mutateAsync({
+                              id: r.id,
+                              patch: {
+                                accom_dates: [...(r.accom_dates ?? []), d.iso].sort(),
+                                needs_accommodation: true,
+                              } as Partial<Staff>,
+                            }),
+                          ),
+                        );
+                        toast.success(`Added ${d.label} to ${targets.length} people`);
+                      }}
+                      className="w-full flex items-center justify-between px-2 py-1 rounded text-xs hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <span className="tabular-nums">
+                        {d.label}
+                        {!d.isFestivalDay && (
+                          <span className="ml-1 text-[9px] uppercase text-muted-foreground">extra</span>
+                        )}
+                      </span>
+                      <span className="text-[9px] uppercase text-muted-foreground">
+                        {missingCount > 0 ? `+${missingCount}` : "all set"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
         <span className="ml-auto text-muted-foreground">
           ✓ {confirmedCount} confirmed
         </span>
       </div>
+
 
       {totalEmpty > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50/50 p-3">
