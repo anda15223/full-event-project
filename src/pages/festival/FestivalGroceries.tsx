@@ -1452,7 +1452,7 @@ function RecipeDialog({
 // Consumables view (per festival, fixed quantities)
 // ============================================================
 function ConsumablesView({
-  festivalId, consumables, ingredients, suppliers, autoOil, oilReserveL, onSaveOilReserve, onChange,
+  festivalId, consumables, ingredients, suppliers, autoOil, oilBackupFactor, onSaveOilBackupFactor, onChange,
 }: {
   festivalId: string | null;
   consumables: Consumable[];
@@ -1465,8 +1465,8 @@ function ConsumablesView({
     packs: number;
     breakdown: string;
   };
-  oilReserveL: number;
-  onSaveOilReserve: (val: number) => Promise<void> | void;
+  oilBackupFactor: number;
+  onSaveOilBackupFactor: (val: number) => Promise<void> | void;
   onChange: () => void;
 }) {
   const [newIngOpen, setNewIngOpen] = useState(false);
