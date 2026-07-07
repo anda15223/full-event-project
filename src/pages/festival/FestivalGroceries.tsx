@@ -193,7 +193,7 @@ export default function FestivalGroceries() {
     queryFn: async () => {
       const { data, error } = await supabase.from("grocery_settings").select("*").eq("festival_id", festival!.id).maybeSingle();
       if (error) throw error;
-      return data as { festival_id: string; safety_margin_pct: number; oil_refill_reserve_l: number | null } | null;
+      return data as { festival_id: string; safety_margin_pct: number; oil_backup_factor: number | null } | null;
     },
   });
   // READ-ONLY: equipment for this festival. Joined via festival_equipment.equipment_id → equipment_catalog.name.
