@@ -54,7 +54,19 @@ const CONCEPT_LABEL: Record<Recipe["concept"], string> = {
   fish: "Fish & Chips", gyros: "Gyros", creperie: "Creperie", chicksbuns: "Chicks & Buns", other: "Other",
 };
 
-// Local-date arithmetic only — never round-trip through UTC (toISOString shifts by TZ offset).
+// Date-only helpers for festival day columns.
+// Split the database ISO date string, construct a local Date, iterate locally,
+// and format manually. Never parse YYYY-MM-DD directly, never use UTC/toISOString,
+// and never use locale formatting for the estimate column keys or labels.
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function parseDateOnly(isoDate: string): Date | null {
+  const [y, m, d] = isoDate.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
 function ymd(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -63,10 +75,9 @@ function ymd(d: Date): string {
 }
 function daysBetween(a: string, b: string): string[] {
   const out: string[] = [];
-  const [sy, sm, sd] = a.split("-").map(Number);
-  const [ey, em, ed] = b.split("-").map(Number);
-  const s = new Date(sy, sm - 1, sd);
-  const e = new Date(ey, em - 1, ed);
+  const s = parseDateOnly(a);
+  const e = parseDateOnly(b);
+  if (!s || !e) return out;
   for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
     out.push(ymd(d));
   }
@@ -78,7 +89,9 @@ function safeCeil(x: number): number {
   return Math.ceil(Math.round(x * 1e6) / 1e6);
 }
 function fmtDayShort(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const date = parseDateOnly(d);
+  if (!date) return d;
+  return `${WEEKDAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
 }
 
 // ============================================================
