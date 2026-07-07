@@ -553,9 +553,10 @@ function EstimateCell({ value, onSave }: { value: number; onSave: (v: number) =>
 // Calculation view
 // ============================================================
 function CalculationView({
-  calculation, ingredients, suppliers, onIngredientUpdated,
+  req, fromConsumable, ingredients, suppliers, onIngredientUpdated,
 }: {
-  calculation: Map<string, { g: number; stk: number }>;
+  req: Map<string, { g: number; stk: number }>;
+  fromConsumable: Set<string>;
   ingredients: Ingredient[];
   suppliers: Supplier[];
   onIngredientUpdated: () => void;
@@ -566,18 +567,19 @@ function CalculationView({
       required: number;
       packs: number | null;
       estCost: number | null;
+      isEvent: boolean;
     }[] = [];
-    for (const [ingId, need] of calculation) {
+    for (const [ingId, need] of req) {
       const ing = ingredients.find(i => i.id === ingId);
       if (!ing) continue;
       const required = ing.unit === "g" ? need.g : need.stk;
       if (required <= 0) continue;
       const packs = ing.pack_size ? Math.ceil(required / ing.pack_size) : null;
       const estCost = packs != null && ing.price_per_pack != null ? packs * ing.price_per_pack : null;
-      arr.push({ ing, required, packs, estCost });
+      arr.push({ ing, required, packs, estCost, isEvent: fromConsumable.has(ing.id) });
     }
     return arr;
-  }, [calculation, ingredients]);
+  }, [req, fromConsumable, ingredients]);
 
   const bySupplier = useMemo(() => {
     const map = new Map<string | null, typeof rows>();
@@ -594,7 +596,7 @@ function CalculationView({
 
   if (rows.length === 0) {
     return <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
-      Enter estimates first to see calculated ingredient requirements.
+      Enter estimates or add consumables to see calculated requirements.
     </div>;
   }
 
@@ -616,12 +618,14 @@ function CalculationView({
               </tr>
             </thead>
             <tbody>
-              {items.map(({ ing, required, packs, estCost }) => {
+              {items.map(({ ing, required, packs, estCost, isEvent }) => {
                 const missingPack = !ing.pack_size;
                 return (
                   <tr key={ing.id} className={cn("border-t", missingPack && "bg-amber-500/10")}>
                     <td className="p-2">
-                      {ing.name} {ing.eco && <span className="text-emerald-600 text-xs">· ECO</span>}
+                      {ing.name}
+                      {ing.eco && <span className="text-emerald-600 text-xs"> · ECO</span>}
+                      {isEvent && <span className="ml-2 px-1.5 py-0.5 text-[10px] rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/30">event</span>}
                     </td>
                     <td className="p-2 text-right">
                       {ing.unit === "g"
