@@ -251,10 +251,19 @@ export default function FestivalGroceries() {
 
   // ---------- Equipment-driven auto oil consumable ----------
   // Reads the festival's assigned fryers (read-only) and produces a synthetic
-  // consumable row for "Organic frying oil" (Pride 15 L dunk). Total litres =
+  // consumable row for the frying oil ingredient (BC Catering, Pride 15 L dunk,
+  // sku 205082). It surfaces inside the ingredient's own supplier group on the
+  // Orders view (marked with the "event" badge). Total litres =
   // SUM(fryer capacities) * oil_backup_factor (default 2.0). Packs = CEIL(total / 15).
   const autoOil = useMemo(() => {
-    const oilIngredient = ingredients.find(i => (i.name || "").trim().toLowerCase() === "organic frying oil") ?? null;
+    const matchOil = (i: Ingredient) => {
+      if (i.sku && i.sku.trim() === "205082") return true;
+      const n = (i.name || "").trim().toLowerCase();
+      return n === "organic frying oil"
+        || n.startsWith("fritureolie")
+        || (n.includes("frying oil") && n.includes("pride"));
+    };
+    const oilIngredient = ingredients.find(matchOil) ?? null;
     // Group by equipment name so identical fryer models consolidate.
     const groups = new Map<string, { label: string; cap: number; qty: number }>();
     let totalFryers = 0;
