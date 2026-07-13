@@ -486,6 +486,7 @@ export default function FestivalStaffExport() {
       setStaff((staffRes.data ?? []) as Staff[]);
       setConcepts(((contractsRes.data ?? []) as any[]).map((c) => c.concepts).filter(Boolean) as Concept[]);
       setPositions(positionList);
+      setStations((stationsRes.data ?? []) as StationRow[]);
       setShifts(shiftList);
       setLoading(false);
     })();
