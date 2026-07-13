@@ -895,7 +895,13 @@ export default function FestivalStaff() {
                       <h3 className="font-heading font-semibold text-base">{group.name}</h3>
                       <div className="flex items-center gap-2">
                         {hasPlan ? (
-                          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                          <span
+                            className={`text-xs font-semibold tabular-nums ${
+                              filledTotal < totalSlots
+                                ? "text-red-600"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             {filledTotal}/{totalSlots}
                           </span>
                         ) : (
