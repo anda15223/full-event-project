@@ -51,6 +51,7 @@ type SchedulePosition = {
   position_number: number | null;
   display_name: string | null;
 };
+type StationRow = { id: string; concept_id: string | null; code: string; label: string };
 
 
 const STATION_LABEL: Record<string, string> = {
