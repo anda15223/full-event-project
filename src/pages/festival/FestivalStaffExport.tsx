@@ -558,7 +558,13 @@ export default function FestivalStaffExport() {
       }
 
       setStaff((staffRes.data ?? []) as Staff[]);
-      setConcepts(((contractsRes.data ?? []) as any[]).map((c) => c.concepts).filter(Boolean) as Concept[]);
+      // Dedupe concepts — a festival can have multiple contracts for the same concept
+      const conceptMap = new Map<string, Concept>();
+      for (const row of (contractsRes.data ?? []) as any[]) {
+        const c = row.concepts as Concept | null;
+        if (c && !conceptMap.has(c.id)) conceptMap.set(c.id, c);
+      }
+      setConcepts(Array.from(conceptMap.values()));
       setPositions(positionList);
       setStations((stationsRes.data ?? []) as StationRow[]);
       setShifts(shiftList);
