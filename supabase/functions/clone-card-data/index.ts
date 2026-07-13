@@ -79,6 +79,19 @@ type ContractRow = {
 const normalizeAlias = (value: string | null | undefined) =>
   (value ?? "").trim().toLowerCase();
 
+// Extract the duplicate-stall key from an alias, e.g.
+//   "Fish 1"            -> "fish 1"
+//   "Fish 1 all tour"   -> "fish 1"
+//   "Gyropolis Gyros 2" -> "gyropolis gyros 2"
+// This lets us match aliases across festivals when one side has extra
+// descriptive text after the stall number.
+const aliasStallKey = (value: string | null | undefined): string => {
+  const n = normalizeAlias(value);
+  if (!n) return "";
+  const m = n.match(/^(.*?\b\d+)\b/);
+  return m ? m[1].trim() : n;
+};
+
 async function remapDraftStaffAssignments(
   supabase: ReturnType<typeof createClient>,
   sourceFestivalId: string,
@@ -101,6 +114,7 @@ async function remapDraftStaffAssignments(
 
   const activeTargets = (targetContracts ?? []) as ContractRow[];
   const targetByExactAlias = new Map<string, ContractRow>();
+  const targetByStallKey = new Map<string, ContractRow>();
   const targetsByConcept = new Map<string, ContractRow[]>();
   activeTargets.forEach((tc) => {
     const list = targetsByConcept.get(tc.concept_id) ?? [];
@@ -109,18 +123,23 @@ async function remapDraftStaffAssignments(
 
     const alias = normalizeAlias(tc.concept_alias);
     if (alias) targetByExactAlias.set(`${tc.concept_id}::${alias}`, tc);
+    const stall = aliasStallKey(tc.concept_alias);
+    if (stall) targetByStallKey.set(`${tc.concept_id}::${stall}`, tc);
   });
 
   const contractMap = new Map<string, { contractId: string; conceptId: string }>();
   ((sourceContracts ?? []) as ContractRow[]).forEach((sc) => {
     const alias = normalizeAlias(sc.concept_alias);
+    const stall = aliasStallKey(sc.concept_alias);
     let match: ContractRow | undefined;
 
     if (alias) {
       // Duplicate concepts (Fish 1/Fish 2, Gyros 1/Gyros 2) must match by alias.
-      // If the same alias is not active on the target festival, the staff member
-      // belongs in Not assigned instead of being moved to another duplicate stall.
-      match = targetByExactAlias.get(`${sc.concept_id}::${alias}`);
+      // Fall back to the stall-number key so "Fish 1" pairs with
+      // "Fish 1 all tour" across festivals with slightly different naming.
+      match =
+        targetByExactAlias.get(`${sc.concept_id}::${alias}`) ??
+        (stall ? targetByStallKey.get(`${sc.concept_id}::${stall}`) : undefined);
     } else {
       // Old rows without aliases are safe to map by concept only when the target
       // festival has exactly one active contract for that concept.
@@ -297,7 +316,93 @@ Deno.serve(async (req) => {
         if (error) return json({ error: `${t}: ${error.message}` }, 500);
         promoted[t] = count ?? 0;
       }
-      return json({ promoted });
+
+      // When staff is committed, also copy schedule shifts (slot assignments)
+      // from the source festival, remapping schedule_position_id and
+      // festival_staff_id, and collapsing dates onto the target festival day.
+      let shiftsCopied = 0;
+      if (replacingStaff) {
+        const { data: targetFest } = await supabase
+          .from("festivals")
+          .select("staff_import_source_festival_id, start_date")
+          .eq("id", targetFestivalId)
+          .maybeSingle();
+        const srcFestId = (targetFest as any)?.staff_import_source_festival_id as string | null;
+        const targetDate = (targetFest as any)?.start_date as string | null;
+
+        if (srcFestId) {
+          const [srcPosRes, tgtPosRes, srcStaffRes, tgtStaffRes] = await Promise.all([
+            supabase.from("festival_schedule_position")
+              .select("id, concept_id, station_id, position_number")
+              .eq("festival_id", srcFestId).eq("is_draft", false),
+            supabase.from("festival_schedule_position")
+              .select("id, concept_id, station_id, position_number")
+              .eq("festival_id", targetFestivalId).eq("is_draft", false),
+            supabase.from("festival_staff")
+              .select("id, staff_number")
+              .eq("festival_id", srcFestId).eq("is_draft", false),
+            supabase.from("festival_staff")
+              .select("id, staff_number")
+              .eq("festival_id", targetFestivalId).eq("is_draft", false),
+          ]);
+
+          const posKey = (r: any) => `${r.concept_id}::${r.station_id}::${r.position_number}`;
+          const tgtPosByKey = new Map<string, string>();
+          (tgtPosRes.data ?? []).forEach((r: any) => tgtPosByKey.set(posKey(r), r.id));
+          const posMap = new Map<string, string>();
+          (srcPosRes.data ?? []).forEach((r: any) => {
+            const tid = tgtPosByKey.get(posKey(r));
+            if (tid) posMap.set(r.id, tid);
+          });
+
+          const tgtStaffByNum = new Map<number, string>();
+          (tgtStaffRes.data ?? []).forEach((r: any) => {
+            if (r.staff_number != null) tgtStaffByNum.set(r.staff_number, r.id);
+          });
+          const staffMap = new Map<string, string>();
+          (srcStaffRes.data ?? []).forEach((r: any) => {
+            const tid = r.staff_number != null ? tgtStaffByNum.get(r.staff_number) : null;
+            if (tid) staffMap.set(r.id, tid);
+          });
+
+          const srcStaffIds = (srcStaffRes.data ?? []).map((r: any) => r.id);
+          if (srcStaffIds.length > 0 && posMap.size > 0) {
+            const { data: srcShifts } = await supabase
+              .from("festival_schedule_shift")
+              .select("schedule_position_id, shift_date, festival_staff_id, start_time, end_time, notes")
+              .in("festival_staff_id", srcStaffIds);
+
+            const newRows = ((srcShifts ?? []) as any[])
+              .map((s) => {
+                const posId = posMap.get(s.schedule_position_id);
+                const staffId = staffMap.get(s.festival_staff_id);
+                if (!posId || !staffId) return null;
+                return {
+                  schedule_position_id: posId,
+                  festival_staff_id: staffId,
+                  shift_date: targetDate ?? s.shift_date,
+                  start_time: s.start_time,
+                  end_time: s.end_time,
+                  notes: s.notes,
+                };
+              })
+              .filter(Boolean) as any[];
+
+            if (newRows.length > 0) {
+              for (let i = 0; i < newRows.length; i += 200) {
+                const chunk = newRows.slice(i, i + 200);
+                const { error, count } = await supabase
+                  .from("festival_schedule_shift")
+                  .insert(chunk, { count: "exact" });
+                if (error) return json({ error: `festival_schedule_shift: ${error.message}` }, 500);
+                shiftsCopied += count ?? chunk.length;
+              }
+            }
+          }
+        }
+      }
+
+      return json({ promoted, shiftsCopied });
     }
 
     // action === "import"
