@@ -1054,6 +1054,51 @@ export default function FestivalStaff() {
       </div>
 
 
+      {totalEmpty > 0 && (
+        <div>
+          <h2 className="font-heading text-lg font-semibold mb-3 text-red-700">
+            Uncovered positions by station · {totalEmpty}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {(() => {
+              const byStation = new Map<string, { conceptName: string; missing: number }[]>();
+              emptySlots.forEach((e) => {
+                const arr = byStation.get(e.stationLabel) ?? [];
+                arr.push({ conceptName: e.conceptName, missing: e.missing });
+                byStation.set(e.stationLabel, arr);
+              });
+              return Array.from(byStation.entries()).map(([stationLabel, items]) => {
+                const total = items.reduce((a, i) => a + i.missing, 0);
+                return (
+                  <div
+                    key={stationLabel}
+                    className="rounded-lg border-2 border-red-500 bg-red-50 p-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-sm text-red-700">{stationLabel}</h3>
+                      <span className="text-xs font-semibold text-red-700">{total}</span>
+                    </div>
+                    <ul className="space-y-1">
+                      {items.map((it, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center justify-between text-sm text-red-700"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+                            <span>{it.conceptName}</span>
+                          </span>
+                          <span className="text-xs font-semibold">×{it.missing}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="font-heading text-lg font-semibold mb-3">Crew by station</h2>
