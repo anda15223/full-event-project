@@ -451,7 +451,7 @@ export default function FestivalStaffExport() {
       if (!f) { setLoading(false); return; }
       setFestival(f as Festival);
 
-      const [staffRes, contractsRes, posRes] = await Promise.all([
+      const [staffRes, contractsRes, posRes, stationsRes] = await Promise.all([
         supabase
           .from("festival_staff")
           .select("id, name, email, home_location, confirmed, needs_accommodation, concept_id, works_thursday, works_friday, works_saturday, works_sunday, accom_thursday, accom_friday, accom_saturday, accom_sunday, work_dates, accom_dates, staff_source, role, station, notes")
@@ -466,6 +466,10 @@ export default function FestivalStaffExport() {
           .from("festival_schedule_position")
           .select("id, concept_id, station_id, position_number, display_name")
           .eq("festival_id", (f as any).id),
+        supabase
+          .from("station")
+          .select("id, concept_id, code, label")
+          .eq("is_active", true),
       ]);
 
       const positionList = (posRes.data ?? []) as SchedulePosition[];
