@@ -434,6 +434,7 @@ export default function FestivalStaffExport() {
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
   const [positions, setPositions] = useState<SchedulePosition[]>([]);
+  const [stations, setStations] = useState<StationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewPages, setPreviewPages] = useState<string[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
