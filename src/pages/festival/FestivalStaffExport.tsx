@@ -269,9 +269,15 @@ function StaffDoc({
 
   // Uncovered positions per concept (station slots that have no matching staff)
   const stationById = new Map(stations.map((s) => [s.id, s]));
-  // Map station.code -> the "staff-code" used on festival_staff.station.
-  // The page uses `staffCodeForStation()`; for the export we assume they match
-  // (they do for the current catalog — burger, fryer, etc.).
+  // Staff.station stores a code (e.g. "cash_register", "pita_wrapper") that
+  // does not always equal station.code (e.g. "cash", "pita_wrap"). Match by
+  // the human label instead — STATION_LABEL[staff.station] vs station.label.
+  const normalizeLabel = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
+  const staffStationLabel = (code: string | null) =>
+    code ? normalizeLabel(STATION_LABEL[code] ?? code) : "";
+  const stationMatchesStaff = (stationLabel: string, staffCode: string | null) =>
+    !!staffCode && normalizeLabel(stationLabel) === staffStationLabel(staffCode);
+
   const uncoveredByConcept = new Map<string, { label: string; missing: number }[]>();
   const slotCountByConceptStation = new Map<string, Map<string, number>>();
   for (const p of positions) {
@@ -286,7 +292,7 @@ function StaffDoc({
       const st = stationById.get(stationId);
       if (!st) return;
       const filled = staff.filter(
-        (s) => s.concept_id === conceptId && s.role !== "management" && s.station === st.code,
+        (s) => s.concept_id === conceptId && s.role !== "management" && stationMatchesStaff(st.label, s.station),
       ).length;
       const missing = count - Math.min(filled, count);
       if (missing > 0) list.push({ label: st.label, missing });
@@ -380,13 +386,16 @@ function StaffDoc({
                   if (sa !== sb) return sa.localeCompare(sb);
                   return (a.position_number ?? 0) - (b.position_number ?? 0);
                 });
-                // Assign staff to slots by station (concept_id + station.code -> staff queue)
+                // Assign staff to slots by station (keyed by station.id, matched via label)
                 const staffByStation = new Map<string, Staff[]>();
+                const conceptStations = stations.filter((st) => st.concept_id === cid || st.concept_id === null);
                 for (const s of staff) {
                   if (s.concept_id !== cid || s.role === "management" || !s.station) continue;
-                  const arr = staffByStation.get(s.station) ?? [];
+                  const st = conceptStations.find((x) => stationMatchesStaff(x.label, s.station));
+                  if (!st) continue;
+                  const arr = staffByStation.get(st.id) ?? [];
                   arr.push(s);
-                  staffByStation.set(s.station, arr);
+                  staffByStation.set(st.id, arr);
                 }
                 staffByStation.forEach((arr) => arr.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
                 const cursor = new Map<string, number>();
@@ -401,11 +410,11 @@ function StaffDoc({
                     </View>
                     {posList.map((p) => {
                       const st = stationById.get(p.station_id!);
-                      const code = st?.code ?? "";
-                      const queue = staffByStation.get(code) ?? [];
-                      const idx = cursor.get(code) ?? 0;
+                      const key = st?.id ?? "";
+                      const queue = staffByStation.get(key) ?? [];
+                      const idx = cursor.get(key) ?? 0;
                       const assigned = queue[idx];
-                      cursor.set(code, idx + 1);
+                      cursor.set(key, idx + 1);
                       const uncovered = !assigned;
                       return (
                         <View
@@ -558,7 +567,13 @@ export default function FestivalStaffExport() {
       }
 
       setStaff((staffRes.data ?? []) as Staff[]);
-      setConcepts(((contractsRes.data ?? []) as any[]).map((c) => c.concepts).filter(Boolean) as Concept[]);
+      // Dedupe concepts — a festival can have multiple contracts for the same concept
+      const conceptMap = new Map<string, Concept>();
+      for (const row of (contractsRes.data ?? []) as any[]) {
+        const c = row.concepts as Concept | null;
+        if (c && !conceptMap.has(c.id)) conceptMap.set(c.id, c);
+      }
+      setConcepts(Array.from(conceptMap.values()));
       setPositions(positionList);
       setStations((stationsRes.data ?? []) as StationRow[]);
       setShifts(shiftList);
