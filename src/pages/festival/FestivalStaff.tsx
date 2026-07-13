@@ -820,16 +820,24 @@ export default function FestivalStaff() {
       <div>
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h2 className="font-heading text-lg font-semibold">Crew by concept</h2>
-          <ImportStationAssignmentsButton
-            festivalId={festivalId!}
-            sourceFestivalId={festivalQ.data?.staff_import_source_festival_id ?? null}
-            targetStaff={allRows}
-            targetConceptGroups={conceptGroups}
-            onDone={() =>
-              qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] })
-            }
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link to={`/festivals/${slug}/staff/crew-by-concept-export`} target="_blank" rel="noopener noreferrer">
+              <Button size="sm" variant="outline">
+                <FileDown className="h-4 w-4 mr-1" /> Export
+              </Button>
+            </Link>
+            <ImportStationAssignmentsButton
+              festivalId={festivalId!}
+              sourceFestivalId={festivalQ.data?.staff_import_source_festival_id ?? null}
+              targetStaff={allRows}
+              targetConceptGroups={conceptGroups}
+              onDone={() =>
+                qc.invalidateQueries({ queryKey: ["festival-staff-page", festivalId, draftMode] })
+              }
+            />
+          </div>
         </div>
+
 
 
         {(() => {
