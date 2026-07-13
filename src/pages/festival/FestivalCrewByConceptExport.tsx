@@ -19,8 +19,15 @@ type Staff = {
   role: string; station: string | null; notes: string | null; staff_source: string;
 };
 type Position = { id: string; concept_id: string; station_id: string | null; position_number: number | null; display_name: string | null };
-type StationRow = { id: string; concept_id: string | null; code: string; label: string };
-type Contract = { id: string; concept_id: string; stall_alias: string | null };
+type StationRow = { id: string; concept_id: string | null; code: string; label: string; display_order: number | null };
+type ContractGroup = { contractId: string; conceptId: string; name: string };
+
+const STATION_CODE_TO_STAFF: Record<string, string> = {
+  cash: "cash_register",
+  pita_wrap: "pita_wrapper",
+  bun_grill: "burger_bun_grill",
+};
+const staffCodeForStation = (code: string) => STATION_CODE_TO_STAFF[code] ?? code;
 
 const STATION_LABEL: Record<string, string> = {
   cash_register: "Cash register", assembly: "Assembly", fryer: "Fryer",
@@ -30,12 +37,6 @@ const STATION_LABEL: Record<string, string> = {
 const SOURCE_LABEL: Record<string, string> = {
   soborg: "Copenhagen", aarhus: "Aarhus", local: "Local", fidibus: "Fidibus", unknown: "",
 };
-
-const normalizeLabel = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
-const staffStationLabel = (code: string | null) =>
-  code ? normalizeLabel(STATION_LABEL[code] ?? code) : "";
-const stationMatchesStaff = (stationLabel: string, staffCode: string | null) =>
-  !!staffCode && normalizeLabel(stationLabel) === staffStationLabel(staffCode);
 
 async function renderPdfBlobToImages(blob: Blob): Promise<string[]> {
   const pdfjs: any = await import("pdfjs-dist");
@@ -65,9 +66,9 @@ const styles = StyleSheet.create({
   page: { padding: 28, fontFamily: "Inter", fontSize: 9, color: "#111" },
   h1: { fontSize: 16, fontWeight: 700 },
   meta: { fontSize: 9, color: "#555", marginTop: 2 },
-  conceptBlock: { marginTop: 14, borderTop: "0.5pt solid #999", paddingTop: 8 },
-  conceptTitle: { fontSize: 13, fontWeight: 700 },
-  conceptMeta: { fontSize: 9, color: "#555", marginBottom: 6 },
+  groupBlock: { marginTop: 14, borderTop: "0.5pt solid #999", paddingTop: 8 },
+  groupTitle: { fontSize: 13, fontWeight: 700 },
+  groupMeta: { fontSize: 9, color: "#555", marginBottom: 6 },
   rowHead: { flexDirection: "row", borderBottom: "0.5pt solid #555", paddingVertical: 3, fontWeight: 700, backgroundColor: "#f4f4f5" },
   row: { flexDirection: "row", borderBottom: "0.25pt solid #ddd", paddingVertical: 3 },
   cellNum: { width: 22, textAlign: "center", paddingHorizontal: 3 },
@@ -83,57 +84,54 @@ const styles = StyleSheet.create({
   footer: { position: "absolute", bottom: 18, left: 28, right: 28, fontSize: 8, color: "#888", flexDirection: "row", justifyContent: "space-between" },
 });
 
+type PlanSlot = { stationId: string; stationCode: string; label: string; count: number };
+
 function CrewDoc({
-  festival, staff, concepts, positions, stations, contracts,
+  festival, staff, groups, positions, stations,
 }: {
-  festival: Festival; staff: Staff[]; concepts: Concept[];
-  positions: Position[]; stations: StationRow[]; contracts: Contract[];
+  festival: Festival; staff: Staff[]; groups: ContractGroup[];
+  positions: Position[]; stations: StationRow[];
 }) {
-  const conceptById = new Map(concepts.map((c) => [c.id, c]));
   const stationById = new Map(stations.map((s) => [s.id, s]));
 
-  // Group positions per concept, sorted
-  const posByConcept = new Map<string, Position[]>();
-  for (const p of positions) {
-    if (!p.station_id) continue;
-    const arr = posByConcept.get(p.concept_id) ?? [];
-    arr.push(p);
-    posByConcept.set(p.concept_id, arr);
-  }
-
-  // Build concept groupings from contracts (dedupe by concept_id)
-  const conceptOrder: string[] = [];
-  const seen = new Set<string>();
-  for (const c of contracts) {
-    if (!seen.has(c.concept_id) && conceptById.has(c.concept_id)) {
-      seen.add(c.concept_id);
-      conceptOrder.push(c.concept_id);
-    }
-  }
-  for (const cid of posByConcept.keys()) {
-    if (!seen.has(cid) && conceptById.has(cid)) { seen.add(cid); conceptOrder.push(cid); }
-  }
-
-  // Uncovered summary
-  const uncoveredByConcept = new Map<string, { label: string; missing: number }[]>();
-  let totalUncovered = 0;
-  for (const cid of conceptOrder) {
-    const posList = (posByConcept.get(cid) ?? []).slice();
-    const slotByStation = new Map<string, number>();
-    for (const p of posList) slotByStation.set(p.station_id!, (slotByStation.get(p.station_id!) ?? 0) + 1);
-    const list: { label: string; missing: number }[] = [];
-    slotByStation.forEach((count, stationId) => {
-      const st = stationById.get(stationId); if (!st) return;
-      const filled = staff.filter(
-        (s) => s.concept_id === cid && s.role !== "management" && stationMatchesStaff(st.label, s.station),
-      ).length;
-      const missing = count - Math.min(filled, count);
-      if (missing > 0) list.push({ label: st.label, missing });
+  // Build plan (slots) per concept
+  const planByConcept = new Map<string, PlanSlot[]>();
+  const grouped = new Map<string, Map<string, number>>();
+  positions.forEach((p) => {
+    if (!p.station_id) return;
+    const inner = grouped.get(p.concept_id) ?? new Map<string, number>();
+    inner.set(p.station_id, (inner.get(p.station_id) ?? 0) + 1);
+    grouped.set(p.concept_id, inner);
+  });
+  grouped.forEach((inner, conceptId) => {
+    const slots: PlanSlot[] = [];
+    inner.forEach((count, stationId) => {
+      const st = stationById.get(stationId);
+      if (!st) return;
+      slots.push({ stationId, stationCode: staffCodeForStation(st.code), label: st.label, count });
     });
-    if (list.length) { uncoveredByConcept.set(cid, list); totalUncovered += list.reduce((a, x) => a + x.missing, 0); }
-  }
+    slots.sort((a, b) => (stationById.get(a.stationId)?.display_order ?? 0) - (stationById.get(b.stationId)?.display_order ?? 0));
+    planByConcept.set(conceptId, slots);
+  });
 
-  const unassigned = staff.filter((s) => !s.concept_id && s.role !== "management");
+  // Uncovered per contract group
+  type UncItem = { label: string; missing: number };
+  const uncoveredByGroup = new Map<string, UncItem[]>();
+  let totalUncovered = 0;
+  groups.forEach((g) => {
+    const slots = planByConcept.get(g.conceptId) ?? [];
+    const groupPeople = staff.filter((s) => s.contract_id === g.contractId && s.role !== "management");
+    const list: UncItem[] = [];
+    slots.forEach((slot) => {
+      const filled = groupPeople.filter((p) => p.station === slot.stationCode).length;
+      const missing = slot.count - Math.min(filled, slot.count);
+      if (missing > 0) list.push({ label: slot.label, missing });
+    });
+    if (list.length) { uncoveredByGroup.set(g.contractId, list); totalUncovered += list.reduce((a, x) => a + x.missing, 0); }
+  });
+
+  const unassigned = staff.filter((s) => !s.contract_id && s.role !== "management");
+  const management = staff.filter((s) => s.role === "management");
 
   return (
     <Document>
@@ -148,92 +146,84 @@ function CrewDoc({
         {totalUncovered > 0 && (
           <View style={styles.bannerBox} wrap={false}>
             <Text style={styles.bannerTitle}>{N(`⚠ Uncovered positions · ${totalUncovered}`)}</Text>
-            {Array.from(uncoveredByConcept.entries()).map(([cid, list]) => (
-              <Text key={cid} style={styles.bannerLine}>
-                {N(`• ${conceptById.get(cid)?.name ?? "—"}: ${list.map((l) => `${l.label} ×${l.missing}`).join(", ")}`)}
-              </Text>
-            ))}
+            {groups.map((g) => {
+              const list = uncoveredByGroup.get(g.contractId);
+              if (!list) return null;
+              return (
+                <Text key={g.contractId} style={styles.bannerLine}>
+                  {N(`• ${g.name}: ${list.map((l) => `${l.label} ×${l.missing}`).join(", ")}`)}
+                </Text>
+              );
+            })}
           </View>
         )}
 
-        {conceptOrder.map((cid) => {
-          const cName = conceptById.get(cid)!.name;
-          const posList = (posByConcept.get(cid) ?? []).slice().sort((a, b) => {
-            const sa = stationById.get(a.station_id!)?.label ?? "";
-            const sb = stationById.get(b.station_id!)?.label ?? "";
-            if (sa !== sb) return sa.localeCompare(sb);
-            return (a.position_number ?? 0) - (b.position_number ?? 0);
+        {groups.map((g) => {
+          const groupPeople = staff.filter((s) => s.contract_id === g.contractId && s.role !== "management");
+          const slots = planByConcept.get(g.conceptId) ?? [];
+
+          // Assign staff to slots (station-by-station, first-come)
+          const usedIds = new Set<string>();
+          const slotRows: { label: string; posNum: number; assigned: Staff | undefined; uncovered: boolean }[] = [];
+          slots.forEach((slot) => {
+            const occupants = groupPeople
+              .filter((p) => p.station === slot.stationCode)
+              .sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+            for (let i = 0; i < slot.count; i++) {
+              const assigned = occupants[i];
+              if (assigned) usedIds.add(assigned.id);
+              slotRows.push({ label: slot.label, posNum: i + 1, assigned, uncovered: !assigned });
+            }
           });
-
-          // Assign staff to slots by station id
-          const staffByStation = new Map<string, Staff[]>();
-          const conceptStations = stations.filter((st) => st.concept_id === cid || st.concept_id === null);
-          const assignedIds = new Set<string>();
-          for (const s of staff) {
-            if (s.concept_id !== cid || s.role === "management" || !s.station) continue;
-            const st = conceptStations.find((x) => stationMatchesStaff(x.label, s.station));
-            if (!st) continue;
-            const arr = staffByStation.get(st.id) ?? [];
-            arr.push(s);
-            staffByStation.set(st.id, arr);
-          }
-          staffByStation.forEach((arr) => arr.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
-
-          const cursor = new Map<string, number>();
-          const rows = posList.map((p) => {
-            const st = stationById.get(p.station_id!);
-            const key = st?.id ?? "";
-            const queue = staffByStation.get(key) ?? [];
-            const idx = cursor.get(key) ?? 0;
-            const assigned = queue[idx];
-            cursor.set(key, idx + 1);
-            if (assigned) assignedIds.add(assigned.id);
-            return { p, st, assigned, uncovered: !assigned };
-          });
-
-          const conceptCrew = staff.filter((s) => s.concept_id === cid && s.role !== "management");
-          const extraCrew = conceptCrew.filter((s) => !assignedIds.has(s.id));
-
-          const missingCount = rows.filter((r) => r.uncovered).length;
+          const extras = groupPeople.filter((p) => !usedIds.has(p.id));
+          const totalSlots = slotRows.length;
+          const filled = slotRows.filter((r) => !r.uncovered).length;
+          const missing = totalSlots - filled;
 
           return (
-            <View key={cid} style={styles.conceptBlock} wrap>
-              <Text style={styles.conceptTitle}>{N(cName)}</Text>
-              <Text style={styles.conceptMeta}>
-                {N(`${conceptCrew.length} crew · ${rows.length - missingCount}/${rows.length} positions filled${missingCount ? ` · ${missingCount} missing` : ""}`)}
+            <View key={g.contractId} style={styles.groupBlock} wrap>
+              <Text style={styles.groupTitle}>{N(g.name)}</Text>
+              <Text style={styles.groupMeta}>
+                {N(`${groupPeople.length} crew · ${filled}/${totalSlots} positions filled${missing ? ` · ${missing} missing` : ""}`)}
               </Text>
 
-              <Text style={styles.subTitle}>Positions</Text>
-              <View style={styles.rowHead}>
-                <Text style={styles.cellNum}>#</Text>
-                <Text style={styles.cellStn}>Station</Text>
-                <Text style={styles.cellPos}>Pos</Text>
-                <Text style={styles.cellName}>Assigned staff</Text>
-                <Text style={styles.cellLoc}>Transport</Text>
-              </View>
-              {rows.map((r) => (
-                <View
-                  key={r.p.id}
-                  style={[styles.row, r.uncovered ? { backgroundColor: "#fee2e2" } : {}]}
-                  wrap={false}
-                >
-                  <Text style={styles.cellNum}>{r.p.position_number ?? "—"}</Text>
-                  <Text style={[styles.cellStn, r.uncovered ? { color: "#b91c1c", fontWeight: 700 } : {}]}>
-                    {N(r.st?.label ?? "—")}
-                  </Text>
-                  <Text style={styles.cellPos}>{N(r.p.display_name || `#${r.p.position_number ?? ""}`)}</Text>
-                  <Text style={[styles.cellName, r.uncovered ? { color: "#b91c1c", fontWeight: 700 } : {}]}>
-                    {N(r.assigned?.name || "⚠ UNCOVERED")}
-                  </Text>
-                  <Text style={styles.cellLoc}>
-                    {N(r.assigned ? (SOURCE_LABEL[r.assigned.staff_source] || r.assigned.home_location || "—") : "—")}
-                  </Text>
-                </View>
-              ))}
-
-              {extraCrew.length > 0 && (
+              {totalSlots > 0 ? (
                 <>
-                  <Text style={styles.subTitle}>Extra crew (no matching position)</Text>
+                  <Text style={styles.subTitle}>Positions</Text>
+                  <View style={styles.rowHead}>
+                    <Text style={styles.cellNum}>#</Text>
+                    <Text style={styles.cellStn}>Station</Text>
+                    <Text style={styles.cellPos}>Pos</Text>
+                    <Text style={styles.cellName}>Assigned staff</Text>
+                    <Text style={styles.cellLoc}>Transport</Text>
+                  </View>
+                  {slotRows.map((r, i) => (
+                    <View
+                      key={i}
+                      style={[styles.row, r.uncovered ? { backgroundColor: "#fee2e2" } : {}]}
+                      wrap={false}
+                    >
+                      <Text style={styles.cellNum}>{r.posNum}</Text>
+                      <Text style={[styles.cellStn, r.uncovered ? { color: "#b91c1c", fontWeight: 700 } : {}]}>
+                        {N(r.label)}
+                      </Text>
+                      <Text style={styles.cellPos}>{`#${r.posNum}`}</Text>
+                      <Text style={[styles.cellName, r.uncovered ? { color: "#b91c1c", fontWeight: 700 } : {}]}>
+                        {N(r.assigned?.name || "⚠ UNCOVERED")}
+                      </Text>
+                      <Text style={styles.cellLoc}>
+                        {N(r.assigned ? (SOURCE_LABEL[r.assigned.staff_source] || r.assigned.home_location || "—") : "—")}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <Text style={styles.groupMeta}>No station plan for this concept.</Text>
+              )}
+
+              {extras.length > 0 && (
+                <>
+                  <Text style={styles.subTitle}>Extra crew (no matching slot)</Text>
                   <View style={styles.rowHead}>
                     <Text style={styles.cellNum}>#</Text>
                     <Text style={styles.cellName}>Name</Text>
@@ -241,7 +231,7 @@ function CrewDoc({
                     <Text style={styles.cellLoc}>Transport</Text>
                     <Text style={styles.cellNotes}>Notes</Text>
                   </View>
-                  {extraCrew.map((s, i) => (
+                  {extras.map((s, i) => (
                     <View key={s.id} style={styles.row} wrap={false}>
                       <Text style={styles.cellNum}>{i + 1}</Text>
                       <Text style={styles.cellName}>{N(s.name || "—")}</Text>
@@ -256,9 +246,29 @@ function CrewDoc({
           );
         })}
 
+        {management.length > 0 && (
+          <View style={styles.groupBlock} wrap>
+            <Text style={styles.groupTitle}>{N(`Management (${management.length})`)}</Text>
+            <View style={styles.rowHead}>
+              <Text style={styles.cellNum}>#</Text>
+              <Text style={styles.cellName}>Name</Text>
+              <Text style={styles.cellLoc}>Transport</Text>
+              <Text style={styles.cellNotes}>Notes</Text>
+            </View>
+            {management.map((s, i) => (
+              <View key={s.id} style={styles.row} wrap={false}>
+                <Text style={styles.cellNum}>{i + 1}</Text>
+                <Text style={styles.cellName}>{N(s.name || "—")}</Text>
+                <Text style={styles.cellLoc}>{N(SOURCE_LABEL[s.staff_source] || s.home_location || "—")}</Text>
+                <Text style={styles.cellNotes}>{N(s.notes || "—")}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {unassigned.length > 0 && (
-          <View style={styles.conceptBlock} wrap>
-            <Text style={[styles.conceptTitle, { color: "#b91c1c" }]}>
+          <View style={styles.groupBlock} wrap>
+            <Text style={[styles.groupTitle, { color: "#b91c1c" }]}>
               {N(`⚠ Not assigned to any concept (${unassigned.length})`)}
             </Text>
             <View style={styles.rowHead}>
@@ -297,10 +307,9 @@ export default function FestivalCrewByConceptExport() {
   const { slug } = useParams<{ slug: string }>();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
-  const [concepts, setConcepts] = useState<Concept[]>([]);
+  const [groups, setGroups] = useState<ContractGroup[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [stations, setStations] = useState<StationRow[]>([]);
-  const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewPages, setPreviewPages] = useState<string[]>([]);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -320,25 +329,27 @@ export default function FestivalCrewByConceptExport() {
           .eq("festival_id", (f as any).id)
           .order("name", { ascending: true }),
         supabase.from("festival_contracts")
-          .select("id, concept_id, stall_alias, concepts:concept_id(id, name)")
+          .select("id, concept_id, concept_alias, concepts:concept_id(id, name)")
           .eq("festival_id", (f as any).id).eq("is_active", true),
         supabase.from("festival_schedule_position")
           .select("id, concept_id, station_id, position_number, display_name")
           .eq("festival_id", (f as any).id),
-        supabase.from("station").select("id, concept_id, code, label").eq("is_active", true),
+        supabase.from("station").select("id, concept_id, code, label, display_order").eq("is_active", true),
       ]);
 
       setStaff((staffRes.data ?? []) as Staff[]);
 
-      const conceptMap = new Map<string, Concept>();
-      const contractList: Contract[] = [];
-      for (const row of (contractsRes.data ?? []) as any[]) {
-        const c = row.concepts as Concept | null;
-        if (c && !conceptMap.has(c.id)) conceptMap.set(c.id, c);
-        contractList.push({ id: row.id, concept_id: row.concept_id, stall_alias: row.stall_alias ?? null });
-      }
-      setConcepts(Array.from(conceptMap.values()));
-      setContracts(contractList);
+      const rows = (contractsRes.data ?? []) as any[];
+      const list: ContractGroup[] = rows
+        .filter((r) => r.concepts)
+        .map((r) => ({
+          contractId: r.id,
+          conceptId: r.concepts.id,
+          name: (r.concept_alias?.trim() || r.concepts.name) as string,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      setGroups(list);
+
       setPositions((posRes.data ?? []) as Position[]);
       setStations((stationsRes.data ?? []) as StationRow[]);
       setLoading(false);
@@ -354,7 +365,7 @@ export default function FestivalCrewByConceptExport() {
     (async () => {
       try {
         const blob = await pdf(
-          <CrewDoc festival={festival} staff={staff} concepts={concepts} positions={positions} stations={stations} contracts={contracts} />,
+          <CrewDoc festival={festival} staff={staff} groups={groups} positions={positions} stations={stations} />,
         ).toBlob();
         const images = await renderPdfBlobToImages(blob);
         if (cancelled) return;
@@ -367,7 +378,7 @@ export default function FestivalCrewByConceptExport() {
       }
     })();
     return () => { cancelled = true; };
-  }, [festival, staff, concepts, positions, stations, contracts, loading]);
+  }, [festival, staff, groups, positions, stations, loading]);
 
   if (loading) {
     return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
@@ -379,7 +390,7 @@ export default function FestivalCrewByConceptExport() {
       <div className="border-b p-3 flex items-center justify-between">
         <Link to={`/festivals/${slug}/staff`} className="text-sm text-primary hover:underline">← Back</Link>
         <PDFDownloadLink
-          document={<CrewDoc festival={festival} staff={staff} concepts={concepts} positions={positions} stations={stations} contracts={contracts} />}
+          document={<CrewDoc festival={festival} staff={staff} groups={groups} positions={positions} stations={stations} />}
           fileName={`${festival.slug}-crew-by-concept.pdf`}
         >
           {({ loading }) => (
