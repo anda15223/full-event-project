@@ -938,10 +938,14 @@ export default function FestivalStaff() {
                                 return (
                                   <div key={slot.stationId} className="space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                      <div className={`text-xs font-semibold uppercase tracking-wide ${
+                                        occupants.length < slot.count ? "text-red-600" : "text-foreground/80"
+                                      }`}>
                                         {slot.label}
                                       </div>
-                                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                                      <span className={`text-[10px] tabular-nums ${
+                                        occupants.length < slot.count ? "text-red-600 font-semibold" : "text-muted-foreground"
+                                      }`}>
                                         {Math.min(occupants.length, slot.count)}/{slot.count}
                                       </span>
                                     </div>
