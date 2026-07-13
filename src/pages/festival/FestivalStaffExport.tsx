@@ -197,12 +197,14 @@ function StaffDoc({
   concepts,
   shifts,
   positions,
+  stations,
 }: {
   festival: Festival;
   staff: Staff[];
   concepts: Concept[];
   shifts: ScheduleShift[];
   positions: SchedulePosition[];
+  stations: StationRow[];
 }) {
   // hours per staff (total across festival)
   const hoursByStaff = new Map<string, number>();
