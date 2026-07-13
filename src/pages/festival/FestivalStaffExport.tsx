@@ -267,6 +267,37 @@ function StaffDoc({
   for (const d of festivalDays) extraSet.delete(d);
   const dayList = [...festivalDays, ...Array.from(extraSet)].sort((a, b) => a.localeCompare(b));
 
+  // Uncovered positions per concept (station slots that have no matching staff)
+  const stationById = new Map(stations.map((s) => [s.id, s]));
+  // Map station.code -> the "staff-code" used on festival_staff.station.
+  // The page uses `staffCodeForStation()`; for the export we assume they match
+  // (they do for the current catalog — burger, fryer, etc.).
+  const uncoveredByConcept = new Map<string, { label: string; missing: number }[]>();
+  const slotCountByConceptStation = new Map<string, Map<string, number>>();
+  for (const p of positions) {
+    if (!p.station_id) continue;
+    const inner = slotCountByConceptStation.get(p.concept_id) ?? new Map<string, number>();
+    inner.set(p.station_id, (inner.get(p.station_id) ?? 0) + 1);
+    slotCountByConceptStation.set(p.concept_id, inner);
+  }
+  slotCountByConceptStation.forEach((inner, conceptId) => {
+    const list: { label: string; missing: number }[] = [];
+    inner.forEach((count, stationId) => {
+      const st = stationById.get(stationId);
+      if (!st) return;
+      const filled = staff.filter(
+        (s) => s.concept_id === conceptId && s.role !== "management" && s.station === st.code,
+      ).length;
+      const missing = count - Math.min(filled, count);
+      if (missing > 0) list.push({ label: st.label, missing });
+    });
+    if (list.length) uncoveredByConcept.set(conceptId, list);
+  });
+  const totalUncovered = Array.from(uncoveredByConcept.values()).reduce(
+    (acc, arr) => acc + arr.reduce((a, s) => a + s.missing, 0),
+    0,
+  );
+
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page} wrap>
@@ -276,6 +307,34 @@ function StaffDoc({
             {N(`${formatDateRange(festival.start_date, festival.end_date)} · ${staff.length} people · ${confirmedCount} confirmed · ${needAccom} need accom.`)}
           </Text>
         </View>
+
+        {totalUncovered > 0 && (
+          <View
+            style={{
+              marginTop: 10,
+              padding: 8,
+              borderWidth: 1.5,
+              borderColor: "#dc2626",
+              backgroundColor: "#fee2e2",
+            }}
+            wrap={false}
+          >
+            <Text style={{ fontSize: 11, fontWeight: 700, color: "#b91c1c", marginBottom: 4 }}>
+              {N(`⚠ Uncovered positions · ${totalUncovered}`)}
+            </Text>
+            {Array.from(uncoveredByConcept.entries()).map(([cid, list]) => {
+              const cName = concepts.find((c) => c.id === cid)?.name ?? "—";
+              return (
+                <Text key={cid} style={{ fontSize: 9, color: "#991b1b", marginTop: 1 }}>
+                  {N(
+                    `• ${cName}: ` +
+                      list.map((l) => `${l.label} ×${l.missing}`).join(", "),
+                  )}
+                </Text>
+              );
+            })}
+          </View>
+        )}
 
         {groups.map((group) => (
           <View key={group.id} style={styles.section} wrap>
