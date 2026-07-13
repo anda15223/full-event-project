@@ -754,17 +754,17 @@ export default function FestivalStaff() {
 
 
       {totalEmpty > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50/50 p-3">
+        <div className="rounded-lg border-2 border-red-500 bg-red-50 p-3">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-amber-900">
-              Empty slots · {totalEmpty}
+            <h3 className="text-sm font-semibold text-red-700">
+              Uncovered positions · {totalEmpty}
             </h3>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {emptySlots.map((e, i) => (
               <span
                 key={i}
-                className="text-xs px-2 py-1 rounded bg-white border border-amber-200"
+                className="text-xs px-2 py-1 rounded bg-white border border-red-300 text-red-700"
               >
                 <strong>{e.conceptName}</strong> · {e.stationLabel} ×{e.missing}
               </span>
