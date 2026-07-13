@@ -91,7 +91,7 @@ const s = StyleSheet.create({
   contactColTitle: { fontSize: 10, fontWeight: 700, marginBottom: 4 },
   contactCard: { borderWidth: 0.5, borderColor: "#e5e7eb", borderRadius: 4, padding: 6, marginBottom: 4 },
   cName: { fontSize: 10, fontWeight: 700 },
-  cRole: { fontSize: 8.5, color: "#6b7280", fontStyle: "italic" },
+  cRole: { fontSize: 8.5, color: "#6b7280" },
   cLine: { fontSize: 8.5, marginTop: 1 },
   docRow: { flexDirection: "row", paddingVertical: 2.5, borderBottom: "0.25pt solid #e5e7eb", fontSize: 9.5 },
   docName: { flex: 1 },
