@@ -360,6 +360,80 @@ function StaffDoc({
           </View>
         ))}
 
+        {positions.length > 0 && (
+          <View style={styles.section} wrap>
+            <Text style={styles.sectionTitle}>Positions roster</Text>
+            {(() => {
+              const byConcept = new Map<string, SchedulePosition[]>();
+              for (const p of positions) {
+                if (!p.station_id) continue;
+                const arr = byConcept.get(p.concept_id) ?? [];
+                arr.push(p);
+                byConcept.set(p.concept_id, arr);
+              }
+              const conceptIds = Array.from(byConcept.keys()).filter((id) => conceptById.has(id));
+              return conceptIds.map((cid) => {
+                const cName = conceptById.get(cid)!.name;
+                const posList = byConcept.get(cid)!.slice().sort((a, b) => {
+                  const sa = stationById.get(a.station_id!)?.label ?? "";
+                  const sb = stationById.get(b.station_id!)?.label ?? "";
+                  if (sa !== sb) return sa.localeCompare(sb);
+                  return (a.position_number ?? 0) - (b.position_number ?? 0);
+                });
+                // Assign staff to slots by station (concept_id + station.code -> staff queue)
+                const staffByStation = new Map<string, Staff[]>();
+                for (const s of staff) {
+                  if (s.concept_id !== cid || s.role === "management" || !s.station) continue;
+                  const arr = staffByStation.get(s.station) ?? [];
+                  arr.push(s);
+                  staffByStation.set(s.station, arr);
+                }
+                staffByStation.forEach((arr) => arr.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
+                const cursor = new Map<string, number>();
+                return (
+                  <View key={cid} wrap>
+                    <Text style={styles.subTitle}>{N(cName)}</Text>
+                    <View style={styles.rowHead}>
+                      <Text style={styles.cellNum}>#</Text>
+                      <Text style={styles.cellStn}>Station</Text>
+                      <Text style={styles.cellName}>Position</Text>
+                      <Text style={styles.cellName}>Assigned staff</Text>
+                    </View>
+                    {posList.map((p) => {
+                      const st = stationById.get(p.station_id!);
+                      const code = st?.code ?? "";
+                      const queue = staffByStation.get(code) ?? [];
+                      const idx = cursor.get(code) ?? 0;
+                      const assigned = queue[idx];
+                      cursor.set(code, idx + 1);
+                      const uncovered = !assigned;
+                      return (
+                        <View
+                          key={p.id}
+                          style={[
+                            styles.row,
+                            uncovered ? { backgroundColor: "#fee2e2" } : {},
+                          ]}
+                          wrap={false}
+                        >
+                          <Text style={styles.cellNum}>{p.position_number ?? "—"}</Text>
+                          <Text style={[styles.cellStn, uncovered ? { color: "#b91c1c", fontWeight: 700 } : {}]}>
+                            {N(st?.label ?? "—")}
+                          </Text>
+                          <Text style={styles.cellName}>{N(p.display_name || `#${p.position_number ?? ""}`)}</Text>
+                          <Text style={[styles.cellName, uncovered ? { color: "#b91c1c", fontWeight: 700 } : {}]}>
+                            {N(assigned?.name || "⚠ UNCOVERED")}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+              });
+            })()}
+          </View>
+        )}
+
         {scheduleConceptIds.length > 0 && (
           <View style={styles.section} wrap>
             <Text style={styles.sectionTitle}>Shift schedule · Thu–Sun</Text>
