@@ -13,7 +13,7 @@ import { normalizeForPdf as N } from "@/lib/textNormalize";
 type Festival = { id: string; name: string; slug: string; start_date: string; end_date: string };
 type Concept = { id: string; name: string };
 type Staff = {
-  id: string; name: string | null; email: string | null; phone: string | null;
+  id: string; name: string | null; email: string | null;
   home_location: string | null; confirmed: boolean | null;
   concept_id: string | null; contract_id: string | null;
   role: string; station: string | null; notes: string | null; staff_source: string;
