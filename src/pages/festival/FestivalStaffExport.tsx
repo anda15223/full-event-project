@@ -515,7 +515,7 @@ export default function FestivalStaffExport() {
     })();
 
     return () => { cancelled = true; };
-  }, [festival, staff, concepts, shifts, positions, loading]);
+  }, [festival, staff, concepts, shifts, positions, stations, loading]);
 
   if (loading) {
     return <div className="p-6 inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
