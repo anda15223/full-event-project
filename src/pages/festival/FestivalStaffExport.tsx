@@ -386,13 +386,16 @@ function StaffDoc({
                   if (sa !== sb) return sa.localeCompare(sb);
                   return (a.position_number ?? 0) - (b.position_number ?? 0);
                 });
-                // Assign staff to slots by station (concept_id + station.code -> staff queue)
+                // Assign staff to slots by station (keyed by station.id, matched via label)
                 const staffByStation = new Map<string, Staff[]>();
+                const conceptStations = stations.filter((st) => st.concept_id === cid || st.concept_id === null);
                 for (const s of staff) {
                   if (s.concept_id !== cid || s.role === "management" || !s.station) continue;
-                  const arr = staffByStation.get(s.station) ?? [];
+                  const st = conceptStations.find((x) => stationMatchesStaff(x.label, s.station));
+                  if (!st) continue;
+                  const arr = staffByStation.get(st.id) ?? [];
                   arr.push(s);
-                  staffByStation.set(s.station, arr);
+                  staffByStation.set(st.id, arr);
                 }
                 staffByStation.forEach((arr) => arr.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
                 const cursor = new Map<string, number>();
@@ -407,11 +410,11 @@ function StaffDoc({
                     </View>
                     {posList.map((p) => {
                       const st = stationById.get(p.station_id!);
-                      const code = st?.code ?? "";
-                      const queue = staffByStation.get(code) ?? [];
-                      const idx = cursor.get(code) ?? 0;
+                      const key = st?.id ?? "";
+                      const queue = staffByStation.get(key) ?? [];
+                      const idx = cursor.get(key) ?? 0;
                       const assigned = queue[idx];
-                      cursor.set(code, idx + 1);
+                      cursor.set(key, idx + 1);
                       const uncovered = !assigned;
                       return (
                         <View
