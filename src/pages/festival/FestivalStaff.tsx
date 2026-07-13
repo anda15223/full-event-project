@@ -754,17 +754,17 @@ export default function FestivalStaff() {
 
 
       {totalEmpty > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50/50 p-3">
+        <div className="rounded-lg border-2 border-red-500 bg-red-50 p-3">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-semibold text-amber-900">
-              Empty slots · {totalEmpty}
+            <h3 className="text-sm font-semibold text-red-700">
+              Uncovered positions · {totalEmpty}
             </h3>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {emptySlots.map((e, i) => (
               <span
                 key={i}
-                className="text-xs px-2 py-1 rounded bg-white border border-amber-200"
+                className="text-xs px-2 py-1 rounded bg-white border border-red-300 text-red-700"
               >
                 <strong>{e.conceptName}</strong> · {e.stationLabel} ×{e.missing}
               </span>
@@ -895,7 +895,13 @@ export default function FestivalStaff() {
                       <h3 className="font-heading font-semibold text-base">{group.name}</h3>
                       <div className="flex items-center gap-2">
                         {hasPlan ? (
-                          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                          <span
+                            className={`text-xs font-semibold tabular-nums ${
+                              filledTotal < totalSlots
+                                ? "text-red-600"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             {filledTotal}/{totalSlots}
                           </span>
                         ) : (
@@ -932,10 +938,14 @@ export default function FestivalStaff() {
                                 return (
                                   <div key={slot.stationId} className="space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                      <div className={`text-xs font-semibold uppercase tracking-wide ${
+                                        occupants.length < slot.count ? "text-red-600" : "text-foreground/80"
+                                      }`}>
                                         {slot.label}
                                       </div>
-                                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                                      <span className={`text-[10px] tabular-nums ${
+                                        occupants.length < slot.count ? "text-red-600 font-semibold" : "text-muted-foreground"
+                                      }`}>
                                         {Math.min(occupants.length, slot.count)}/{slot.count}
                                       </span>
                                     </div>
@@ -1495,7 +1505,9 @@ function SlotPicker({
     <Select value={value} onValueChange={onAssign}>
       <SelectTrigger
         className={`h-8 text-sm ${
-          current ? "border-emerald-300 bg-emerald-50/50" : "border-dashed text-muted-foreground"
+          current
+            ? "border-emerald-300 bg-emerald-50/50"
+            : "border-2 border-red-400 bg-red-50 text-red-700"
         }`}
       >
         <SelectValue placeholder="— Empty slot —">
@@ -1509,7 +1521,7 @@ function SlotPicker({
               <span className="truncate">{current.name || "Unnamed"}</span>
             </span>
           ) : (
-            <span className="italic">— Empty slot —</span>
+            <span className="font-semibold text-red-700">⚠ Uncovered</span>
           )}
         </SelectValue>
       </SelectTrigger>
