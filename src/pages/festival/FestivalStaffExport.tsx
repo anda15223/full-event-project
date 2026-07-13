@@ -502,7 +502,7 @@ export default function FestivalStaffExport() {
 
     (async () => {
       try {
-        const blob = await pdf(<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />).toBlob();
+        const blob = await pdf(<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} stations={stations} />).toBlob();
         const images = await renderPdfBlobToImages(blob);
         if (cancelled) return;
         if (images.length === 0) throw new Error("No preview pages generated");
@@ -527,7 +527,7 @@ export default function FestivalStaffExport() {
       <div className="border-b p-3 flex items-center justify-between">
         <Link to={`/festivals/${slug}/staff`} className="text-sm text-primary hover:underline">← Back</Link>
         <PDFDownloadLink
-          document={<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} />}
+          document={<StaffDoc festival={festival} staff={staff} concepts={concepts} shifts={shifts} positions={positions} stations={stations} />}
           fileName={`${festival.slug}-staff.pdf`}
         >
           {({ loading }) => (
