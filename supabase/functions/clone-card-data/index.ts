@@ -79,6 +79,19 @@ type ContractRow = {
 const normalizeAlias = (value: string | null | undefined) =>
   (value ?? "").trim().toLowerCase();
 
+// Extract the duplicate-stall key from an alias, e.g.
+//   "Fish 1"            -> "fish 1"
+//   "Fish 1 all tour"   -> "fish 1"
+//   "Gyropolis Gyros 2" -> "gyropolis gyros 2"
+// This lets us match aliases across festivals when one side has extra
+// descriptive text after the stall number.
+const aliasStallKey = (value: string | null | undefined): string => {
+  const n = normalizeAlias(value);
+  if (!n) return "";
+  const m = n.match(/^(.*?\b\d+)\b/);
+  return m ? m[1].trim() : n;
+};
+
 async function remapDraftStaffAssignments(
   supabase: ReturnType<typeof createClient>,
   sourceFestivalId: string,
