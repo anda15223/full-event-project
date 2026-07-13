@@ -1594,10 +1594,12 @@ function SlotPicker({
                     p.confirmed ? "bg-emerald-500" : "bg-amber-400"
                   }`}
                 />
-                <span>{p.name || "Unnamed"}</span>
+                <span className={isElsewhere ? "text-red-600 font-medium" : ""}>
+                  {p.name || "Unnamed"}
+                </span>
                 {isElsewhere && (
-                  <span className="text-[10px] text-amber-600 ml-1">
-                    (move from {assigned!.conceptName}{assigned!.stationLabel ? ` · ${assigned!.stationLabel}` : ""})
+                  <span className="text-[10px] text-red-600 ml-1">
+                    ⚠ already at {assigned!.conceptName}{assigned!.stationLabel ? ` · ${assigned!.stationLabel}` : ""} (click to move)
                   </span>
                 )}
               </span>
