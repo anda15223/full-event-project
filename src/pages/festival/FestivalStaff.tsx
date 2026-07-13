@@ -1495,7 +1495,9 @@ function SlotPicker({
     <Select value={value} onValueChange={onAssign}>
       <SelectTrigger
         className={`h-8 text-sm ${
-          current ? "border-emerald-300 bg-emerald-50/50" : "border-dashed text-muted-foreground"
+          current
+            ? "border-emerald-300 bg-emerald-50/50"
+            : "border-2 border-red-400 bg-red-50 text-red-700"
         }`}
       >
         <SelectValue placeholder="— Empty slot —">
@@ -1509,7 +1511,7 @@ function SlotPicker({
               <span className="truncate">{current.name || "Unnamed"}</span>
             </span>
           ) : (
-            <span className="italic">— Empty slot —</span>
+            <span className="font-semibold text-red-700">⚠ Uncovered</span>
           )}
         </SelectValue>
       </SelectTrigger>
