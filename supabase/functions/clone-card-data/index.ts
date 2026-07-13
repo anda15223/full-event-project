@@ -114,6 +114,7 @@ async function remapDraftStaffAssignments(
 
   const activeTargets = (targetContracts ?? []) as ContractRow[];
   const targetByExactAlias = new Map<string, ContractRow>();
+  const targetByStallKey = new Map<string, ContractRow>();
   const targetsByConcept = new Map<string, ContractRow[]>();
   activeTargets.forEach((tc) => {
     const list = targetsByConcept.get(tc.concept_id) ?? [];
@@ -122,18 +123,23 @@ async function remapDraftStaffAssignments(
 
     const alias = normalizeAlias(tc.concept_alias);
     if (alias) targetByExactAlias.set(`${tc.concept_id}::${alias}`, tc);
+    const stall = aliasStallKey(tc.concept_alias);
+    if (stall) targetByStallKey.set(`${tc.concept_id}::${stall}`, tc);
   });
 
   const contractMap = new Map<string, { contractId: string; conceptId: string }>();
   ((sourceContracts ?? []) as ContractRow[]).forEach((sc) => {
     const alias = normalizeAlias(sc.concept_alias);
+    const stall = aliasStallKey(sc.concept_alias);
     let match: ContractRow | undefined;
 
     if (alias) {
       // Duplicate concepts (Fish 1/Fish 2, Gyros 1/Gyros 2) must match by alias.
-      // If the same alias is not active on the target festival, the staff member
-      // belongs in Not assigned instead of being moved to another duplicate stall.
-      match = targetByExactAlias.get(`${sc.concept_id}::${alias}`);
+      // Fall back to the stall-number key so "Fish 1" pairs with
+      // "Fish 1 all tour" across festivals with slightly different naming.
+      match =
+        targetByExactAlias.get(`${sc.concept_id}::${alias}`) ??
+        (stall ? targetByStallKey.get(`${sc.concept_id}::${stall}`) : undefined);
     } else {
       // Old rows without aliases are safe to map by concept only when the target
       // festival has exactly one active contract for that concept.
