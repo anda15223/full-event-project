@@ -316,7 +316,7 @@ export default function FestivalCrewByConceptExport() {
 
       const [staffRes, contractsRes, posRes, stationsRes] = await Promise.all([
         supabase.from("festival_staff")
-          .select("id, name, email, phone, home_location, confirmed, concept_id, contract_id, role, station, notes, staff_source")
+          .select("id, name, email, home_location, confirmed, concept_id, contract_id, role, station, notes, staff_source")
           .eq("festival_id", (f as any).id)
           .order("name", { ascending: true }),
         supabase.from("festival_contracts")
