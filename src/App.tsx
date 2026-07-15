@@ -80,6 +80,7 @@ import AdminRoute from "./components/crew/AdminRoute";
 import OAuthConsent from "./pages/OAuthConsent";
 import FestivalGroceries from "./pages/festival/FestivalGroceries";
 import FestivalGroceriesExport from "./pages/festival/FestivalGroceriesExport";
+import FestivalGroceriesTrolleyExport from "./pages/festival/FestivalGroceriesTrolleyExport";
 
 const queryClient = new QueryClient();
 
