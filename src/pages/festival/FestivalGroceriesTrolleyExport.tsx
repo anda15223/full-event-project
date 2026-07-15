@@ -4,14 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import {
-  buildStallDistribution, type StallDistributionRow,
+  buildStallDistribution, resolveTrolleys, type StallDistributionRow, type Stall, type VirtualTrolley,
 } from "./FestivalGroceriesTrolleys";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
-// Combined + single-stall trolley PDF export.
+// Trolley PDF export — grouped by trolley (not stall).
 // Route params:
-//   /festivals/:slug/groceries/trolleys/export           → all + freezer pull sheet
-//   /festivals/:slug/groceries/trolley/:stallId/export   → one stall
+//   /festivals/:slug/groceries/trolleys/export             → all trolleys + freezer pull sheet
+//   /festivals/:slug/groceries/trolley/:stallId/export     → single trolley (param may be a trolley group id, or "stall:<uuid>" for unassigned stalls)
 
 export default function FestivalGroceriesTrolleyExport() {
   const { slug = "", stallId } = useParams();
