@@ -581,6 +581,7 @@ export default function FestivalGroceries() {
         <TabsList>
           <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="calculation">Calculation</TabsTrigger>
+          <TabsTrigger value="trolleys">Trolleys</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="consumables">Consumables</TabsTrigger>
           <TabsTrigger value="library">Library</TabsTrigger>
@@ -599,8 +600,24 @@ export default function FestivalGroceries() {
             productRecipes={productRecipes}
             estimates={estimatesForFestivalDays}
             onSave={saveEstimate}
+            festivalId={festival?.id ?? null}
+            stalls={stalls}
+            stallEstimates={stallEstimates}
           />
         </TabsContent>
+
+        {/* ============ TROLLEYS ============ */}
+        <TabsContent value="trolleys" className="space-y-4">
+          {festival?.id && (
+            <TrolleysTab
+              festivalId={festival.id}
+              slug={slug}
+              distribution={trolleyDistribution}
+              stalls={stalls}
+            />
+          )}
+        </TabsContent>
+
 
         {/* ============ CALCULATION ============ */}
         <TabsContent value="calculation" className="space-y-4">
