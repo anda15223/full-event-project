@@ -23,6 +23,10 @@ import { cn } from "@/lib/utils";
 import { FestivalBackBar } from "@/components/festival/FestivalBackBar";
 import { formatDateRange } from "@/lib/dateFormat";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import TrolleysTab, {
+  useStalls, useStallEstimates, buildStallDistribution,
+  StallManagerPopover, StallEstimateMatrix,
+} from "./FestivalGroceriesTrolleys";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string | null; end_date: string | null };
