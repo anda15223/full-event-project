@@ -30,7 +30,7 @@ export default function FestivalGroceriesTrolleyExport() {
     queryKey: ["trolley-export-data", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
-      const [ing, sup, rec, ri, pkg, est, set, cons, stalls, se] = await Promise.all([
+      const [ing, sup, rec, ri, pkg, est, set, cons, stalls, se, tg, tgs] = await Promise.all([
         supabase.from("grocery_ingredients").select("*"),
         supabase.from("grocery_suppliers").select("*"),
         supabase.from("grocery_recipes").select("*"),
@@ -41,7 +41,12 @@ export default function FestivalGroceriesTrolleyExport() {
         supabase.from("grocery_festival_consumables").select("*").eq("festival_id", festival!.id),
         supabase.from("festival_grocery_stall").select("*").eq("festival_id", festival!.id),
         supabase.from("festival_grocery_stall_estimate").select("*").eq("festival_id", festival!.id),
+        supabase.from("festival_trolley_group").select("*").eq("festival_id", festival!.id).order("sort_order"),
+        supabase.from("festival_trolley_group_stall").select("*"),
       ]);
+      const groups = (tg.data ?? []) as any[];
+      const groupIds = new Set(groups.map(g => g.id));
+      const links = ((tgs.data ?? []) as any[]).filter(l => groupIds.has(l.group_id));
       return {
         ingredients: (ing.data ?? []) as any[],
         suppliers: (sup.data ?? []) as any[],
@@ -52,6 +57,8 @@ export default function FestivalGroceriesTrolleyExport() {
         consumables: (cons.data ?? []) as any[],
         stalls: (stalls.data ?? []) as any[],
         stallEstimates: (se.data ?? []) as any[],
+        groups,
+        links,
         margin: (set.data?.safety_margin_pct ?? 10) as number,
       };
     },
