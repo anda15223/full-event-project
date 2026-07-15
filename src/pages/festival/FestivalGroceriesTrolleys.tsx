@@ -190,12 +190,19 @@ export function buildStallDistribution(opts: {
     const orderedStalls = paired.map(p => p.s);
 
     const { alloc, reserveIdx } = largestRemainder(orderedPacks, orderedShares);
+    const shareSum = orderedShares.reduce((a, b) => a + b, 0);
 
     rows.push({
       ingredient: ing,
       orderedPacks,
       perStallPacks: orderedStalls.map((stall, i) => ({
-        stall, packs: alloc[i], reserve: reserveIdx.has(i),
+        stall,
+        packs: alloc[i],
+        // Reserve flag only meaningful when we actually had per-stall
+        // demand to allocate against; zero-demand stalls never get a
+        // reserve pack, and if nobody had demand the even split isn't
+        // "reserve" either.
+        reserve: shareSum > 0 && orderedShares[i] > 0 && reserveIdx.has(i),
       })),
       packLabel: ing.pack_size ? `${ing.pack_size} ${ing.pack_label ?? ing.unit}` : (ing.pack_label ?? ing.unit),
     });
