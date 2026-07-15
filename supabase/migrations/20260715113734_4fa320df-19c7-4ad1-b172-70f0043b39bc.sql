@@ -1,0 +1,1 @@
+UPDATE public.grocery_ingredients SET unit = 'stk', pack_size = 1, pack_label = 'Stk Granny Smith (krt ca. 84)' WHERE id = '1a2da8e5-fbfc-49ec-a63a-1b5a360dc7d4';
