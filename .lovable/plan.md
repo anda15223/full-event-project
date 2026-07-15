@@ -1,57 +1,82 @@
-## Goal
+# Groceries — Trolley Distribution Layer
 
-Turn the current single **Grøn Koncert uge 1 2026** festival into **8 separate one-day festivals**, one per Grøn stop, each with its own staff / concepts / schedule.
+Trolleys **distribute** the ordered packs. Orders remain the single source of truth and are untouched.
 
-## The 8 festivals
+Physical flow: **Order → Freezer → Trolleys**.
 
-| Slug | Name | Date | City |
-|---|---|---|---|
-| `gron-tarnby-2026` | Grøn Tårnby 2026 | Jul 16, 2026 | Tårnby |
-| `gron-kolding-2026` | Grøn Kolding 2026 | Jul 17, 2026 | Kolding |
-| `gron-aarhus-2026` | Grøn Aarhus 2026 | Jul 18, 2026 | Aarhus |
-| `gron-aalborg-2026` | Grøn Aalborg 2026 | Jul 19, 2026 | Aalborg |
-| `gron-esbjerg-2026` | Grøn Esbjerg 2026 | Jul 23, 2026 | Esbjerg |
-| `gron-odense-2026` | Grøn Odense 2026 | Jul 24, 2026 | Odense |
-| `gron-naestved-2026` | Grøn Næstved 2026 | Jul 25, 2026 | Næstved |
-| `gron-valby-2026` | Grøn Valby 2026 | Jul 26, 2026 | Valby |
+---
 
-Each is a single day: `start_date = end_date = <that Jul day>`, `year = 2026`.
+## 1. Database (migration)
 
-## What gets copied into each of the 8
+```text
+festival_grocery_stall
+  id, festival_id, concept, name, sort_order, created_at, updated_at
+  UNIQUE (festival_id, concept, name)
 
-For every new festival, I clone the following rows from the current Grøn:
+festival_grocery_stall_estimate
+  id, festival_id, stall_id (FK cascade), product_id, day, qty numeric default 0,
+  created_at, updated_at
+  UNIQUE (stall_id, product_id, day)
+```
 
-- **festivals** — one new row per city (all other columns copied: organiser, contacts, address defaults, notes, accreditation, crew register, etc.)
-- **festival_contracts** — the 4 concept contracts (Fish 1, Fish 2, Gyros 1, Gyros 2)
-- **festival_concepts** — 2 rows (Fish & Chips, Gyros)
-- **festival_concept_assignments** — managers per concept
-- **festival_staff** — full staff roster
-- **festival_staff_vehicles** — vehicle assignments
-- **festival_schedule_position** — station positions
-- **festival_schedule_shift** — shifts, with `schedule_position_id` remapped to the new position rows
-- **festival_shifts** — legacy shift groups
-- **festival_concept_hours** — opening hours per concept
-- **festival_hours** — service-day hours
-- **festival_service_hours** — extra service hours
-- **festival_contacts** — festival-side contacts
+RLS + GRANTs matching sibling `grocery_*` tables. No seed rows — a concept with no stall rows behaves as one implicit stall (existing behavior unchanged).
 
-Dates on any date-bearing rows (e.g. `festival_schedule_shift.shift_date`, `festival_shifts.shift_date`, `festival_concept_hours.date`, etc.) are shifted so the row falls on the new festival's single day. If the original spans multiple days, only the last day's rows are kept for the new one-day festival.
+## 2. Estimates tab — stall config + per-stall split
 
-**Not copied (kept simple):** accommodation, cooling units, power, safety, transport legs, timeline events, action items, open questions, finance rows, forecasts, docs. These are festival-specific and usually not identical between cities — you can add them per city.
+`FestivalGroceries.tsx` Estimates section:
 
-## Then delete the original
+- Per-concept **Stalls** popover: add / rename / delete / reorder. Default pill "1 stall".
+- When a concept has ≥2 stalls, each product row gets an expand chevron revealing a `stall × day` qty matrix.
+- Default fill = even integer split of the existing `grocery_estimates` total (remainder to first stalls so sum matches exactly).
+- Parent product/day total = `SUM(stall qty)` written back to `grocery_estimates` so Calculation and Orders keep working unchanged.
+- `NULL qty → 0` guard everywhere (matches the `batch_g` guard in `FestivalGroceriesExport.tsx`).
 
-After all 8 are created and verified, the current `gron-koncert-uge1-2026` festival and all its child rows are deleted (`ON DELETE CASCADE` where set; manual cleanup otherwise).
+## 3. New "Trolleys" tab — distribution, not recomputation
 
-## How it runs
+Tab between Calculation and Orders. Orders are the fixed total; trolleys only split them.
 
-Everything happens in a single SQL migration inside one transaction, so either all 8 festivals appear cleanly or nothing changes. No code changes needed — the app already handles multiple festivals.
+For each ingredient on the order list:
+
+1. `orderedPacks` = pack count from Orders (never recomputed).
+2. Build **stall demand** by exploding each stall's per-stall estimates through recipes (reusing recipe/sub-recipe logic from `FestivalGroceriesExport.tsx`, wrapped as `computeStallDemand(stallId) → Map<ingredient_id, grams|stk>`). Demand is used **only as a ratio**.
+3. **Largest-remainder allocation**: `share_i = orderedPacks × demand_i / sum(demand)`; assign `floor(share_i)` to each stall, then distribute the remaining packs one-by-one to stalls with the largest fractional remainders. Stall packs **sum exactly to `orderedPacks`** — never more, never less.
+4. Any pack awarded during the remainder step (i.e. beyond `floor(share_i)`) gets a **"reserve" badge** on that stall's row. Ties broken by highest raw demand, then `sort_order`, then name — deterministic.
+5. Ingredients whose demand comes from a single concept are distributed only across that concept's stalls (filter stall list before running the distributor; unrelated stalls get 0).
+6. Ingredients with `orderedPacks = 0` skipped. Ingredients without `pack_size` (raw units) use the same largest-remainder algorithm on the raw required amount.
+7. **Zero-demand fallback**: if `orderedPacks > 0` but total demand is 0, distribute evenly across the stalls of concepts that use the ingredient; extras flagged reserve.
+
+Shared calc extracted to `src/lib/groceriesCalc.ts` (per-stall demand + largest-remainder distributor). Existing export refactored to use the same core; verified against Grøn Tårnby for no drift.
+
+**UI:**
+
+- **Freezer pull sheet** at top: one row per ingredient — `Ordered packs → Fish 1: x, Fish 2: y, Gyros 1: z, Gyros 2: w`. Reserve packs marked with a small badge on the stall's number.
+- **Per-stall packing list card**: `Ingredient | Packs | Pack label`, reserve packs flagged.
+
+## 4. Orders tab
+
+**Unchanged.** No "Use trolley totals" toggle. Orders remain authoritative; trolleys read from them.
+
+## 5. Exports
+
+- `/f/:slug/groceries/trolley/:stallId/export` — single stall packing list.
+- `/f/:slug/groceries/trolleys/export` — combined: freezer pull sheet page + one page per stall.
+- Reuses `ReportTemplate`. Spelling: `facade`, `Soborg` (already normalized by `normalizeForPdf`).
+- Buttons: per-stall "Export" on each stall card + "Export all" at the top of the Trolleys tab.
+
+---
 
 ## Technical notes
 
-- Uses `INSERT ... SELECT` per table with a generated `new_id = gen_random_uuid()` and a mapping CTE for FK remapping (positions → shifts).
-- Slugs and names are hardcoded per the table above; everything else is copied verbatim from the source row.
-- Date shift logic: for shift-bearing tables, `shift_date := <target festival day>` (single-day festival, so all shifts collapse onto that day).
-- Original festival row is deleted last; child rows without cascade are deleted first.
+- **Distribution invariant**: `SUM(stall packs) == orderedPacks` for every ingredient. Enforced by largest-remainder and covered by a unit test in `src/test/`.
+- **Reserve tagging**: exactly `orderedPacks − Σ floor(share_i)` stalls receive a reserve pack per ingredient.
+- **Single-concept filter**: applied before ratio math so unrelated stalls never receive fish, gyros meat, etc.
+- Types regenerated after the migration; UI ships in the same turn as the code that reads them.
 
-Approve and I'll write and run the migration.
+## Out of scope
+
+- No changes to Estimates totals when a concept has 1 stall.
+- No changes to Calculation tab.
+- No changes to Orders tab.
+- No changes to supplier grouping or supplier PDF export.
+
+Approve to build.
