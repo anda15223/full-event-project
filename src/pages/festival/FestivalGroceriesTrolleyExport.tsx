@@ -196,7 +196,7 @@ export default function FestivalGroceriesTrolleyExport() {
           body * { visibility: hidden; }
           .print-root, .print-root * { visibility: visible; }
           .print-root { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; padding: 0 !important; margin: 0 !important; }
-          .print-root table { width: 100% !important; table-layout: fixed; border-collapse: collapse; }
+          .print-root table { width: 100% !important; table-layout: auto; border-collapse: collapse; font-size: 10pt; }
           .print-root th, .print-root td { word-break: break-word; overflow-wrap: anywhere; }
           /* Never trap a whole trolley section on one page — let rows flow */
           .print-root section, .print-root .break-inside-avoid { break-inside: auto !important; page-break-inside: auto !important; }
