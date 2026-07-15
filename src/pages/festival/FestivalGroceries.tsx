@@ -243,6 +243,12 @@ export default function FestivalGroceries() {
     },
   });
 
+  const stallsQ = useStalls(festival?.id);
+  const stallEstimatesQ = useStallEstimates(festival?.id);
+  const stalls = stallsQ.data ?? [];
+  const stallEstimates = stallEstimatesQ.data ?? [];
+
+
   const suppliers = suppliersQ.data ?? [];
   const ingredients = ingredientsQ.data ?? [];
   const recipes = recipesQ.data ?? [];
