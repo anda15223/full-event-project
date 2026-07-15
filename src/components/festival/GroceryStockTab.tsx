@@ -17,7 +17,7 @@ import {
 import {
   projectStock, type StockDay,
 } from "@/lib/groceriesCalc";
-import type { StallDistributionRow } from "./FestivalGroceriesTrolleys";
+import type { StallDistributionRow } from "@/pages/festival/FestivalGroceriesTrolleys";
 
 // ----------------------- types -----------------------
 type Ingredient = { id: string; name: string; supplier_id: string | null; pack_size: number | null; pack_label: string | null; unit: "g" | "stk" };
