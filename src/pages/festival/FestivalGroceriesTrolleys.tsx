@@ -9,6 +9,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { useOpeningStockForFestival } from "@/components/festival/GroceryStockTab";
 import {
   computeDemand, largestRemainder, safeCeil,
   type CalcIngredient, type CalcRecipe, type CalcRecipeItem,
