@@ -90,6 +90,43 @@ export default function FestivalGroceriesTrolleyExport() {
     });
   }, [dataQ.data, days]);
 
+  // Opening stock at festival start (for FROM STOCK/DAILY label)
+  const openingStockQ = useQuery({
+    queryKey: ["trolley-export-opening", festival?.id],
+    enabled: !!festival?.id,
+    queryFn: async () => {
+      const { data: link } = await supabase.from("grocery_stock_pool_festival")
+        .select("pool_id").eq("festival_id", festival!.id).maybeSingle();
+      if (!link?.pool_id || !festival?.start_date) return { inPool: false, opening: new Map<string, number>() };
+      const { data: deliveries } = await supabase.from("grocery_stock_delivery")
+        .select("ingredient_id, packs, delivery_date")
+        .eq("pool_id", link.pool_id)
+        .lt("delivery_date", festival.start_date);
+      const opening = new Map<string, number>();
+      for (const d of (deliveries ?? []) as any[]) {
+        opening.set(d.ingredient_id, (opening.get(d.ingredient_id) ?? 0) + (Number(d.packs) || 0));
+      }
+      return { inPool: true, opening };
+    },
+  });
+  const inPool = !!openingStockQ.data?.inPool;
+  const opening = openingStockQ.data?.opening ?? new Map<string, number>();
+
+  const rowSource = (ing: string, stallIdx: number, row: StallDistributionRow): "stock" | "daily" | "mixed" => {
+    let stockLeft = opening.get(ing) ?? 0;
+    for (let i = 0; i <= stallIdx; i++) {
+      const packs = row.perStallPacks[i].packs;
+      if (i === stallIdx) {
+        if (packs === 0) return "daily";
+        if (stockLeft >= packs) return "stock";
+        if (stockLeft <= 0) return "daily";
+        return "mixed";
+      }
+      stockLeft = Math.max(0, stockLeft - packs);
+    }
+    return "daily";
+  };
+
   useEffect(() => {
     if (dataQ.data && festival) setTimeout(() => window.print(), 400);
   }, [dataQ.data, festival]);
@@ -98,6 +135,7 @@ export default function FestivalGroceriesTrolleyExport() {
 
   const stalls = dataQ.data?.stalls ?? [];
   const focusedStall = stallId ? stalls.find(s => s.id === stallId) : null;
+
   const stallList = focusedStall ? [focusedStall] : stalls;
   const dateRange = festival.start_date && festival.end_date ? formatDateRange(festival.start_date, festival.end_date) : "";
 
