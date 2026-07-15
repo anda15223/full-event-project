@@ -688,13 +688,18 @@ export default function FestivalGroceries() {
 // ============================================================
 function EstimatesGrid({
   days, productRecipes, estimates, onSave,
+  festivalId, stalls, stallEstimates,
 }: {
   days: string[];
   productRecipes: Recipe[];
   estimates: Estimate[];
   onSave: (recipeId: string, day: string | null, units: number) => void;
+  festivalId: string | null;
+  stalls: { id: string; concept: string; name: string; sort_order: number; festival_id: string }[];
+  stallEstimates: { id: string; stall_id: string; product_id: string; day: string; qty: number; festival_id: string }[];
 }) {
   const cols: (string | null)[] = days.length > 0 ? days : [null]; // null = Total column
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const groups = useMemo(() => {
     const map = new Map<Recipe["concept"], Recipe[]>();
     for (const r of productRecipes) {
@@ -730,24 +735,80 @@ function EstimatesGrid({
           </tr>
         </thead>
         <tbody>
-          {groups.map(([concept, recipes]) => (
+          {groups.map(([concept, recipes]) => {
+            const conceptStalls = stalls.filter(s => s.concept === concept)
+              .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+            const hasMultiStall = conceptStalls.length >= 2;
+            return (
             <FragmentGroup key={concept}>
               <tr className="bg-muted/20">
-                <td colSpan={cols.length + 2} className="p-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {CONCEPT_LABEL[concept]}
+                <td colSpan={cols.length + 2} className="p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {CONCEPT_LABEL[concept]}
+                    </span>
+                    {festivalId && (
+                      <StallManagerPopover
+                        festivalId={festivalId}
+                        concept={concept}
+                        stalls={stalls as any}
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
               {recipes.map(r => {
                 const rowTotal = cols.reduce((s, d) => s + cellVal(r.id, d), 0);
+                const isExpanded = expanded[r.id] ?? false;
+                const productDayTotals: Record<string, number> = {};
+                for (const d of days) productDayTotals[d] = cellVal(r.id, d);
                 return (
-                  <tr key={r.id} className="border-t">
-                    <td className="p-2 sticky left-0 bg-card">{r.name}</td>
-                    {cols.map((d, i) => (
-                      <td key={i} className="p-1 text-right">
-                        <EstimateCell
-                          value={cellVal(r.id, d)}
-                          onSave={(v) => onSave(r.id, d, v)}
-                        />
+                  <FragmentGroup key={r.id}>
+                    <tr className="border-t">
+                      <td className="p-2 sticky left-0 bg-card">
+                        <div className="flex items-center gap-1">
+                          {hasMultiStall && festivalId && days.length > 0 && (
+                            <button
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => setExpanded(prev => ({ ...prev, [r.id]: !isExpanded }))}
+                              aria-label={isExpanded ? "Collapse per-stall split" : "Expand per-stall split"}
+                            >
+                              <span className="inline-block w-3 text-xs">{isExpanded ? "▾" : "▸"}</span>
+                            </button>
+                          )}
+                          <span>{r.name}</span>
+                        </div>
+                      </td>
+                      {cols.map((d, i) => (
+                        <td key={i} className="p-1 text-right">
+                          <EstimateCell
+                            value={cellVal(r.id, d)}
+                            onSave={(v) => onSave(r.id, d, v)}
+                          />
+                        </td>
+                      ))}
+                      <td className="p-2 text-right font-medium bg-muted/30">{rowTotal}</td>
+                    </tr>
+                    {isExpanded && hasMultiStall && festivalId && days.length > 0 && (
+                      <tr>
+                        <td colSpan={cols.length + 2} className="p-0">
+                          <StallEstimateMatrix
+                            festivalId={festivalId}
+                            productId={r.id}
+                            days={days}
+                            stalls={conceptStalls as any}
+                            stallEstimates={stallEstimates as any}
+                            productDayTotals={productDayTotals}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </FragmentGroup>
+                );
+              })}
+            </FragmentGroup>
+          )})}
+
                       </td>
                     ))}
                     <td className="p-2 text-right font-medium bg-muted/30">{rowTotal}</td>
