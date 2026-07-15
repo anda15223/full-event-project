@@ -9509,6 +9509,246 @@ export type Database = {
           },
         ]
       }
+      grocery_stock_delivery: {
+        Row: {
+          created_at: string
+          delivery_date: string | null
+          id: string
+          ingredient_id: string
+          note: string | null
+          packs: number
+          pool_id: string
+          source_order_festival_id: string | null
+          source_order_supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          ingredient_id: string
+          note?: string | null
+          packs?: number
+          pool_id: string
+          source_order_festival_id?: string | null
+          source_order_supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          ingredient_id?: string
+          note?: string | null
+          packs?: number
+          pool_id?: string
+          source_order_festival_id?: string | null
+          source_order_supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grocery_stock_delivery_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_delivery_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_stock_pool"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grocery_stock_pool: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      grocery_stock_pool_festival: {
+        Row: {
+          created_at: string
+          festival_id: string
+          pool_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          festival_id: string
+          pool_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          festival_id?: string
+          pool_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_pool_festival_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_stock_pool"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grocery_stock_topup: {
+        Row: {
+          created_at: string
+          delivery_date: string | null
+          id: string
+          pool_id: string
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          pool_id: string
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_date?: string | null
+          id?: string
+          pool_id?: string
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grocery_stock_topup_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_stock_pool"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_topup_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grocery_stock_topup_item: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          packs: number
+          topup_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          packs?: number
+          topup_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          packs?: number
+          topup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grocery_stock_topup_item_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_stock_topup_item_topup_id_fkey"
+            columns: ["topup_id"]
+            isOneToOne: false
+            referencedRelation: "grocery_stock_topup"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grocery_suppliers: {
         Row: {
           contact_email: string | null

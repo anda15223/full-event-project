@@ -9,6 +9,7 @@ import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { useOpeningStockForFestival } from "@/components/festival/GroceryStockTab";
 import {
   computeDemand, largestRemainder, safeCeil,
   type CalcIngredient, type CalcRecipe, type CalcRecipeItem,
@@ -407,6 +408,33 @@ export default function TrolleysTab({
   stalls: Stall[];
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const openingStockQ = useOpeningStockForFestival(festivalId, distribution);
+  const openingStock = openingStockQ.data?.opening ?? new Map<string, number>();
+  const inPool = !!openingStockQ.data?.poolId;
+
+  // Compute per-ingredient FROM STOCK vs FROM DAILY ORDER counters.
+  // Consume stock in stall order across the ingredient's per-stall packs.
+  const perRowSource = new Map<string, Map<string, "stock" | "daily">[]>();
+  for (const row of distribution) {
+    let stockLeft = openingStock.get(row.ingredient.id) ?? 0;
+    const labels: ("stock" | "daily")[] = row.perStallPacks.map(x => {
+      const stallLabels: ("stock" | "daily")[] = [];
+      for (let i = 0; i < x.packs; i++) {
+        if (stockLeft > 0) { stallLabels.push("stock"); stockLeft -= 1; }
+        else stallLabels.push("daily");
+      }
+      // Row-level: if ANY pack from daily → mark daily unless all stock
+      const anyDaily = stallLabels.includes("daily");
+      const anyStock = stallLabels.includes("stock");
+      return anyDaily && !anyStock ? "daily" : anyStock && !anyDaily ? "stock" : (stallLabels.includes("stock") ? "mixed" as any : "daily");
+    });
+    perRowSource.set(row.ingredient.id, labels.map(l => new Map([["_", l as any]])));
+  }
+  const sourceOf = (ingId: string, stallIdx: number): "stock" | "daily" | "mixed" => {
+    const arr = perRowSource.get(ingId);
+    return (arr?.[stallIdx]?.get("_") as any) ?? "daily";
+  };
+
 
   if (stalls.length === 0) {
     return (
@@ -529,9 +557,19 @@ export default function TrolleysTab({
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.map(({ d, entry }) => (
+                        {rows.map(({ d, entry }) => {
+                          const idx = d.perStallPacks.findIndex(x => x.stall.id === stall.id);
+                          const src = sourceOf(d.ingredient.id, idx);
+                          return (
                           <tr key={d.ingredient.id} className="border-t">
-                            <td className="p-2">{d.ingredient.name}</td>
+                            <td className="p-2">
+                              {d.ingredient.name}
+                              {inPool && (
+                                <Badge variant="outline" className={`ml-1 h-4 px-1 text-[10px] ${src === "stock" ? "border-emerald-500 text-emerald-700" : src === "mixed" ? "border-blue-500 text-blue-700" : "border-slate-400 text-slate-600"}`}>
+                                  {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : "FROM DAILY ORDER"}
+                                </Badge>
+                              )}
+                            </td>
                             <td className="p-2 text-right font-mono">
                               {entry!.packs}
                               {entry!.reserve && (
@@ -540,7 +578,8 @@ export default function TrolleysTab({
                             </td>
                             <td className="p-2 text-xs text-muted-foreground">{d.packLabel}</td>
                           </tr>
-                        ))}
+                        );})}
+
                         {rows.length === 0 && (
                           <tr><td colSpan={3} className="p-4 text-center text-xs text-muted-foreground">No items assigned to this stall.</td></tr>
                         )}

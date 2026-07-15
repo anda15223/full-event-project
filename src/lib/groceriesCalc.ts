@@ -193,3 +193,78 @@ export function largestRemainder(
   }
   return { alloc, reserveIdx };
 }
+
+// ================================================================
+// Stock-layer helpers
+// ================================================================
+
+/**
+ * Split a festival's ordered packs across its festival days using largest-remainder,
+ * where the daily demand ratio is derived from per-stall estimates on that day.
+ *
+ * Returns `Map<ingredient_id, Map<day, packs>>`. Sum over days equals the festival's
+ * ordered packs exactly.
+ */
+export function allocateFestivalPacksByDay(opts: {
+  festivalOrderedPacks: Map<string, number>;   // ingredient_id -> packs for whole festival
+  perDayDemand: Map<string, Map<string, number>>; // ingredient_id -> (day -> raw demand)
+  days: string[];
+}): Map<string, Map<string, number>> {
+  const out = new Map<string, Map<string, number>>();
+  for (const [ingId, ordered] of opts.festivalOrderedPacks) {
+    const dayMap = new Map<string, number>();
+    if (ordered <= 0) { out.set(ingId, dayMap); continue; }
+    const demand = opts.perDayDemand.get(ingId) ?? new Map();
+    const shares = opts.days.map(d => demand.get(d) ?? 0);
+    const { alloc } = largestRemainder(ordered, shares);
+    opts.days.forEach((d, i) => dayMap.set(d, alloc[i]));
+    out.set(ingId, dayMap);
+  }
+  return out;
+}
+
+/**
+ * Project running stock balance across a tour timeline.
+ *
+ * Input:
+ *   - deliveries per ingredient (packs, delivery_date)
+ *   - consumption per ingredient per day
+ *   - ordered days across the whole tour
+ *
+ * Output per ingredient: [{ day, opening, delivered, consumed, remaining }].
+ * Deliveries dated ON that day are added to opening BEFORE consumption.
+ */
+export type StockDay = { day: string; opening: number; delivered: number; consumed: number; remaining: number };
+
+export function projectStock(opts: {
+  ingredientIds: string[];
+  tourDays: string[]; // chronological
+  deliveries: { ingredient_id: string; packs: number; delivery_date: string | null }[];
+  consumption: Map<string, Map<string, number>>; // ing -> day -> packs
+}): Map<string, StockDay[]> {
+  const out = new Map<string, StockDay[]>();
+  const deliveryByIngDay = new Map<string, Map<string, number>>();
+  for (const d of opts.deliveries) {
+    const day = (d.delivery_date ?? "").slice(0, 10);
+    if (!day) continue;
+    const per = deliveryByIngDay.get(d.ingredient_id) ?? new Map<string, number>();
+    per.set(day, (per.get(day) ?? 0) + (Number(d.packs) || 0));
+    deliveryByIngDay.set(d.ingredient_id, per);
+  }
+  for (const ing of opts.ingredientIds) {
+    let running = 0;
+    const days: StockDay[] = [];
+    const dMap = deliveryByIngDay.get(ing) ?? new Map<string, number>();
+    const cMap = opts.consumption.get(ing) ?? new Map<string, number>();
+    for (const day of opts.tourDays) {
+      const opening = running;
+      const delivered = dMap.get(day) ?? 0;
+      const consumed = cMap.get(day) ?? 0;
+      running = opening + delivered - consumed;
+      days.push({ day, opening, delivered, consumed, remaining: running });
+    }
+    out.set(ing, days);
+  }
+  return out;
+}
+

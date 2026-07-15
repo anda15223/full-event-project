@@ -1,82 +1,102 @@
-# Groceries — Trolley Distribution Layer
+# Groceries — Stock Pool Layer
 
-Trolleys **distribute** the ordered packs. Orders remain the single source of truth and are untouched.
-
-Physical flow: **Order → Freezer → Trolleys**.
+Adds an upstream stock layer above the existing Trolleys allocation. A **stock pool** groups a sequence of festivals sharing a central freezer. Deliveries flow in; trolley allocations flow out day-by-day. Festivals without a pool are untouched.
 
 ---
 
-## 1. Database (migration)
+## 1. Database
 
 ```text
-festival_grocery_stall
-  id, festival_id, concept, name, sort_order, created_at, updated_at
-  UNIQUE (festival_id, concept, name)
+grocery_stock_pool
+  id, name, notes, created_at, updated_at
 
-festival_grocery_stall_estimate
-  id, festival_id, stall_id (FK cascade), product_id, day, qty numeric default 0,
+grocery_stock_pool_festival
+  pool_id (FK, ON DELETE CASCADE),
+  festival_id (FK, ON DELETE CASCADE),
+  sort_order int,
+  PRIMARY KEY (pool_id, festival_id)
+
+grocery_stock_delivery
+  id, pool_id (FK, ON DELETE CASCADE),
+  ingredient_id (FK -> grocery_ingredients),
+  packs numeric NOT NULL DEFAULT 0,
+  delivery_date date,
+  source_order_supplier_id uuid NULL,   -- traces back to grocery_order_status row
+  source_order_festival_id uuid NULL,
+  note text,
   created_at, updated_at
-  UNIQUE (stall_id, product_id, day)
 ```
 
-RLS + GRANTs matching sibling `grocery_*` tables. No seed rows — a concept with no stall rows behaves as one implicit stall (existing behavior unchanged).
+RLS + GRANTs matching sibling `grocery_*` tables (permissive `authenticated`). `updated_at` triggers.
 
-## 2. Estimates tab — stall config + per-stall split
+## 2. New "Stock" tab in `FestivalGroceries.tsx`
 
-`FestivalGroceries.tsx` Estimates section:
+Between **Trolleys** and **Orders**.
 
-- Per-concept **Stalls** popover: add / rename / delete / reorder. Default pill "1 stall".
-- When a concept has ≥2 stalls, each product row gets an expand chevron revealing a `stall × day` qty matrix.
-- Default fill = even integer split of the existing `grocery_estimates` total (remainder to first stalls so sum matches exactly).
-- Parent product/day total = `SUM(stall qty)` written back to `grocery_estimates` so Calculation and Orders keep working unchanged.
-- `NULL qty → 0` guard everywhere (matches the `batch_g` guard in `FestivalGroceriesExport.tsx`).
+- **Pool selector** at top: current festival's pool, or "No pool — add to pool" dropdown. Managing pool members (add/remove festival, reorder by date) done in a small dialog. Festival not in a pool → tab shows an info card only, everything else in the app unchanged.
+- **Coverage table** (only when a pool is active): rows = ingredients that appear in the pool's aggregate demand OR have deliveries; columns = every festival-day in tour date order.
+  - `Opening packs` (from prior deliveries + prior remaining), then per-day `-consumed`, then `Remaining`.
+  - Consumption per day = sum of that day's per-stall trolley packs for that ingredient in the festival owning that day.
+  - Any day where `Remaining < 0` → row flagged red with `"short X packs by [festival name] · [day]"`.
+- **Deliveries panel**: log per ingredient, filterable, with edit/delete.
 
-## 3. New "Trolleys" tab — distribution, not recomputation
+## 3. Stock IN (three entry points)
 
-Tab between Calculation and Orders. Orders are the fixed total; trolleys only split them.
+1. **From a sent supplier order** — on the Orders tab, when `grocery_order_status.status = 'sent'` and festival is in a pool, add a **"Receive into stock"** button. Converts every ingredient line (pack qty) from that order into `grocery_stock_delivery` rows with `source_order_supplier_id` + `source_order_festival_id` + `delivery_date = today`. Idempotent: warns if that supplier order was already received.
+2. **Manual entry** — a form on the Stock tab: ingredient + packs + date + note.
+3. **CSV import** — small drop-zone accepting `ingredient_name,packs,delivery_date,note`. Match by exact ingredient name (case-insensitive). Rows that don't match are reported back and skipped.
 
-For each ingredient on the order list:
+## 4. Stock OUT — consumption from Trolleys
 
-1. `orderedPacks` = pack count from Orders (never recomputed).
-2. Build **stall demand** by exploding each stall's per-stall estimates through recipes (reusing recipe/sub-recipe logic from `FestivalGroceriesExport.tsx`, wrapped as `computeStallDemand(stallId) → Map<ingredient_id, grams|stk>`). Demand is used **only as a ratio**.
-3. **Largest-remainder allocation**: `share_i = orderedPacks × demand_i / sum(demand)`; assign `floor(share_i)` to each stall, then distribute the remaining packs one-by-one to stalls with the largest fractional remainders. Stall packs **sum exactly to `orderedPacks`** — never more, never less.
-4. Any pack awarded during the remainder step (i.e. beyond `floor(share_i)`) gets a **"reserve" badge** on that stall's row. Ties broken by highest raw demand, then `sort_order`, then name — deterministic.
-5. Ingredients whose demand comes from a single concept are distributed only across that concept's stalls (filter stall list before running the distributor; unrelated stalls get 0).
-6. Ingredients with `orderedPacks = 0` skipped. Ingredients without `pack_size` (raw units) use the same largest-remainder algorithm on the raw required amount.
-7. **Zero-demand fallback**: if `orderedPacks > 0` but total demand is 0, distribute evenly across the stalls of concepts that use the ingredient; extras flagged reserve.
+Per festival, per day, per ingredient consumption = `Σ per-stall packs from the largest-remainder distribution` (the same output as the Trolleys tab, but grouped by day).
 
-Shared calc extracted to `src/lib/groceriesCalc.ts` (per-stall demand + largest-remainder distributor). Existing export refactored to use the same core; verified against Grøn Tårnby for no drift.
+The Trolleys builder currently computes over the whole festival. Extended in `groceriesCalc.ts` to also expose **per-day totals** by running the demand math on a per-day slice of stall estimates; then rounding via largest-remainder against the festival's ordered packs *proportionally per day*. Days sum equals festival ordered packs exactly (invariant preserved).
 
-**UI:**
+Implementation: reuse `computeDemand` per (stall, day) and apply the largest-remainder allocator across days on the festival's `orderedPacks` per ingredient. This gives `dailyPacks[festival_id][day][ingredient_id]`.
 
-- **Freezer pull sheet** at top: one row per ingredient — `Ordered packs → Fish 1: x, Fish 2: y, Gyros 1: z, Gyros 2: w`. Reserve packs marked with a small badge on the stall's number.
-- **Per-stall packing list card**: `Ingredient | Packs | Pack label`, reserve packs flagged.
+## 5. Top-up order
 
-## 4. Orders tab
+Button **"Generate top-up order"** on the Stock tab. For any ingredient with a negative remaining balance on any day, computes the max shortfall `S = -min(remaining_day)` over the tour. Draft order draft rows are created grouped by supplier, dated the day before the earliest short day (`shortDay - 1`).
 
-**Unchanged.** No "Use trolley totals" toggle. Orders remain authoritative; trolleys read from them.
+Draft top-ups appear as a new panel `Top-up orders` inside the Stock tab (each row = supplier, ingredient, packs needed, dated). "Mark sent" flips the row status; when marked sent, that supplier's lines become a delivery on the specified date (via the existing "Receive into stock" flow so numbers stay consistent).
 
-## 5. Exports
+Data lives in a new table `grocery_stock_topup` (pool_id, supplier_id, delivery_date, status, created_at, updated_at) with a child `grocery_stock_topup_item (topup_id, ingredient_id, packs)`.
 
-- `/f/:slug/groceries/trolley/:stallId/export` — single stall packing list.
-- `/f/:slug/groceries/trolleys/export` — combined: freezer pull sheet page + one page per stall.
-- Reuses `ReportTemplate`. Spelling: `facade`, `Soborg` (already normalized by `normalizeForPdf`).
-- Buttons: per-stall "Export" on each stall card + "Export all" at the top of the Trolleys tab.
+## 6. Orders reconciliation
+
+When the festival is inside a pool AND opening stock already covers some or all of an ingredient's need for that festival, the **Orders tab** subtracts the covered amount so the daily order is only for the uncovered gap.
+
+- New `orderedPacks(festival) = max(0, festivalReq - openingStock(festival))` where opening stock = the pool's balance for that ingredient at the moment the festival begins.
+- Small pill on the affected row: `"Covered by stock: N packs"`.
+- The **Trolleys** distribution stays the same total (festivalReq packs). What changes is only the label per pack: covered packs are marked **FROM STOCK**, uncovered packs marked **FROM DAILY ORDER**.
+
+## 7. Trolley "FROM STOCK / FROM DAILY ORDER" label
+
+Each per-stall packing list row gets a source badge. Rule per ingredient per festival:
+
+- `openingStock = balance at festival start for that ingredient`.
+- Packs are consumed in stall order (by `sort_order`, then name). First `openingStock` packs across the festival are labelled **FROM STOCK**, the rest **FROM DAILY ORDER**. Days ordered chronologically inside each stall.
+- Reserve badge remains independent.
+- Applied in the Trolleys tab AND the PDF exports. NULL packs guarded as 0.
+- No pool → all packs are **FROM DAILY ORDER** (no label shown, current behavior).
+
+Spelling in PDFs already handled by `normalizeForPdf` (Danish preserved, "Soborg" / "facade" style).
 
 ---
 
-## Technical notes
+## Files touched
 
-- **Distribution invariant**: `SUM(stall packs) == orderedPacks` for every ingredient. Enforced by largest-remainder and covered by a unit test in `src/test/`.
-- **Reserve tagging**: exactly `orderedPacks − Σ floor(share_i)` stalls receive a reserve pack per ingredient.
-- **Single-concept filter**: applied before ratio math so unrelated stalls never receive fish, gyros meat, etc.
-- Types regenerated after the migration; UI ships in the same turn as the code that reads them.
+- **Migration**: 4 new tables + RLS + GRANTs + updated_at triggers.
+- `src/lib/groceriesCalc.ts` — per-day trolley allocation helper, stock balance projector, source-labeler.
+- `src/pages/festival/FestivalGroceries.tsx` — new **Stock** tab wiring; new pill in Orders showing stock coverage; NO change to Orders math beyond `festivalReq - openingStock`.
+- `src/pages/festival/FestivalGroceriesTrolleys.tsx` — add source label per row (badge in UI).
+- `src/pages/festival/FestivalGroceriesTrolleyExport.tsx` — same label in PDFs.
+- `src/components/festival/GroceryStockTab.tsx` — new component with pool manager, deliveries log, coverage table, top-ups, CSV import.
+- `src/App.tsx` — no new routes needed unless we add a stock PDF export (skipped for now).
 
 ## Out of scope
 
-- No changes to Estimates totals when a concept has 1 stall.
-- No changes to Calculation tab.
-- No changes to Orders tab.
-- No changes to supplier grouping or supplier PDF export.
+- Cross-pool transfers, spoilage tracking, cold-chain notes, per-unit price rollups — flag as future work if requested.
+- No change to Estimates, Calculation, per-stall matrix, or existing exports.
 
 Approve to build.
