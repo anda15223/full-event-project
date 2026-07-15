@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Download, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ChevronRight, ChevronDown, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -21,10 +22,65 @@ type Stall = { id: string; festival_id: string; concept: string; name: string; s
 type StallEstimate = { id: string; festival_id: string; stall_id: string; product_id: string; day: string; qty: number };
 type Estimate = { id: string; festival_id: string; recipe_id: string; day: string | null; units: number };
 type Consumable = { id: string; ingredient_id: string; qty: number; unit_mode: "packs" | "units" };
+export type TrolleyGroup = { id: string; festival_id: string; name: string; sort_order: number };
+export type TrolleyGroupStall = { group_id: string; stall_id: string };
 
 const CONCEPT_LABEL: Record<string, string> = {
   fish: "Fish & Chips", gyros: "Gyros", creperie: "Creperie", chicksbuns: "Chicks & Buns", other: "Other",
 };
+
+// ================================================================
+// Trolley groups — hook + helpers
+// ================================================================
+export function useTrolleyGroups(festivalId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["trolley_groups", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const [g, gs] = await Promise.all([
+        supabase.from("festival_trolley_group").select("*").eq("festival_id", festivalId!).order("sort_order"),
+        supabase.from("festival_trolley_group_stall").select("*"),
+      ]);
+      if (g.error) throw g.error;
+      if (gs.error) throw gs.error;
+      const groups = (g.data ?? []) as TrolleyGroup[];
+      const groupIds = new Set(groups.map(x => x.id));
+      const links = ((gs.data ?? []) as TrolleyGroupStall[]).filter(l => groupIds.has(l.group_id));
+      return { groups, links };
+    },
+  });
+}
+
+// Resolve stalls → an ordered list of "virtual trolleys".
+// Each virtual trolley has: id, name, stalls[]. Unassigned stalls each become their own trolley.
+export type VirtualTrolley = { id: string; name: string; stalls: Stall[]; isGroup: boolean };
+export function resolveTrolleys(
+  stalls: Stall[],
+  groups: TrolleyGroup[],
+  links: TrolleyGroupStall[],
+): VirtualTrolley[] {
+  const stallById = new Map(stalls.map(s => [s.id, s]));
+  const stallToGroup = new Map<string, string>();
+  for (const l of links) stallToGroup.set(l.stall_id, l.group_id);
+
+  const out: VirtualTrolley[] = [];
+  const sortedGroups = [...groups].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  for (const g of sortedGroups) {
+    const gStalls = links
+      .filter(l => l.group_id === g.id)
+      .map(l => stallById.get(l.stall_id))
+      .filter((x): x is Stall => !!x)
+      .sort((a, b) => a.concept.localeCompare(b.concept) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+    if (gStalls.length === 0) continue;
+    out.push({ id: g.id, name: g.name, stalls: gStalls, isGroup: true });
+  }
+  // Unassigned stalls → their own virtual trolley
+  for (const s of stalls) {
+    if (stallToGroup.has(s.id)) continue;
+    out.push({ id: `stall:${s.id}`, name: s.name, stalls: [s], isGroup: false });
+  }
+  return out;
+}
 
 // ================================================================
 // Public hooks
