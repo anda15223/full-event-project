@@ -18,7 +18,7 @@ import {
 } from "@/lib/groceriesCalc";
 
 // ---------------- types ----------------
-type Stall = { id: string; festival_id: string; concept: string; name: string; sort_order: number };
+export type Stall = { id: string; festival_id: string; concept: string; name: string; sort_order: number };
 type StallEstimate = { id: string; festival_id: string; stall_id: string; product_id: string; day: string; qty: number };
 type Estimate = { id: string; festival_id: string; recipe_id: string; day: string | null; units: number };
 type Consumable = { id: string; ingredient_id: string; qty: number; unit_mode: "packs" | "units" };
