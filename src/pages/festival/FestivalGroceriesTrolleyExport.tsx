@@ -219,7 +219,7 @@ export default function FestivalGroceriesTrolleyExport() {
                 );})}
 
                 {rows.length === 0 && (
-                  <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">No items assigned.</td></tr>
+                  <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No items assigned.</td></tr>
                 )}
               </tbody>
             </table>
