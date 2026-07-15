@@ -232,7 +232,8 @@ export function allocateFestivalPacksByDay(opts: {
  *   - ordered days across the whole tour
  *
  * Output per ingredient: [{ day, opening, delivered, consumed, remaining }].
- * Deliveries dated ON that day are added to opening BEFORE consumption.
+ * Deliveries dated on or before a tour day are added to that day's opening
+ * stock BEFORE consumption, so pre-tour deliveries count as opening stock.
  */
 export type StockDay = { day: string; opening: number; delivered: number; consumed: number; remaining: number };
 
@@ -243,24 +244,32 @@ export function projectStock(opts: {
   consumption: Map<string, Map<string, number>>; // ing -> day -> packs
 }): Map<string, StockDay[]> {
   const out = new Map<string, StockDay[]>();
-  const deliveryByIngDay = new Map<string, Map<string, number>>();
+  const deliveryByIng = new Map<string, { day: string; packs: number }[]>();
   for (const d of opts.deliveries) {
     const day = (d.delivery_date ?? "").slice(0, 10);
     if (!day) continue;
-    const per = deliveryByIngDay.get(d.ingredient_id) ?? new Map<string, number>();
-    per.set(day, (per.get(day) ?? 0) + (Number(d.packs) || 0));
-    deliveryByIngDay.set(d.ingredient_id, per);
+    const per = deliveryByIng.get(d.ingredient_id) ?? [];
+    per.push({ day, packs: Number(d.packs) || 0 });
+    deliveryByIng.set(d.ingredient_id, per);
+  }
+  for (const per of deliveryByIng.values()) {
+    per.sort((a, b) => a.day.localeCompare(b.day));
   }
   for (const ing of opts.ingredientIds) {
     let running = 0;
+    let deliveryIdx = 0;
     const days: StockDay[] = [];
-    const dMap = deliveryByIngDay.get(ing) ?? new Map<string, number>();
+    const dRows = deliveryByIng.get(ing) ?? [];
     const cMap = opts.consumption.get(ing) ?? new Map<string, number>();
     for (const day of opts.tourDays) {
-      const opening = running;
-      const delivered = dMap.get(day) ?? 0;
+      let delivered = 0;
+      while (deliveryIdx < dRows.length && dRows[deliveryIdx].day <= day) {
+        delivered += dRows[deliveryIdx].packs;
+        deliveryIdx += 1;
+      }
+      const opening = running + delivered;
       const consumed = cMap.get(day) ?? 0;
-      running = opening + delivered - consumed;
+      running = opening - consumed;
       days.push({ day, opening, delivered, consumed, remaining: running });
     }
     out.set(ing, days);

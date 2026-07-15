@@ -455,7 +455,7 @@ export default function GroceryStockTab({
           <div>
             <div className="text-sm font-semibold">Stock timeline</div>
             <div className="text-xs text-muted-foreground">
-              Opening + deliveries − daily trolley consumption. Red = shortage.
+              Opening stock − daily trolley consumption. Red = shortage.
             </div>
           </div>
           <div className="flex gap-2">
@@ -499,7 +499,7 @@ export default function GroceryStockTab({
                     </td>
                     {days.map(dd => (
                       <td key={dd.day} className={`p-2 text-right font-mono ${dd.remaining < 0 ? "text-destructive font-bold" : ""}`}>
-                        <span title={`opening ${dd.opening} + delivered ${dd.delivered} − consumed ${dd.consumed}`}>
+                        <span title={`opening ${dd.opening} − consumed ${dd.consumed}${dd.delivered ? ` (includes ${dd.delivered} delivered by this day)` : ""}`}>
                           {dd.remaining}
                         </span>
                       </td>
