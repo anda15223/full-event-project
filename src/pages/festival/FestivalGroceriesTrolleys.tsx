@@ -557,9 +557,19 @@ export default function TrolleysTab({
                         </tr>
                       </thead>
                       <tbody>
-                        {rows.map(({ d, entry }) => (
+                        {rows.map(({ d, entry }) => {
+                          const idx = d.perStallPacks.findIndex(x => x.stall.id === stall.id);
+                          const src = sourceOf(d.ingredient.id, idx);
+                          return (
                           <tr key={d.ingredient.id} className="border-t">
-                            <td className="p-2">{d.ingredient.name}</td>
+                            <td className="p-2">
+                              {d.ingredient.name}
+                              {inPool && (
+                                <Badge variant="outline" className={`ml-1 h-4 px-1 text-[10px] ${src === "stock" ? "border-emerald-500 text-emerald-700" : src === "mixed" ? "border-blue-500 text-blue-700" : "border-slate-400 text-slate-600"}`}>
+                                  {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : "FROM DAILY ORDER"}
+                                </Badge>
+                              )}
+                            </td>
                             <td className="p-2 text-right font-mono">
                               {entry!.packs}
                               {entry!.reserve && (
@@ -568,7 +578,8 @@ export default function TrolleysTab({
                             </td>
                             <td className="p-2 text-xs text-muted-foreground">{d.packLabel}</td>
                           </tr>
-                        ))}
+                        );})}
+
                         {rows.length === 0 && (
                           <tr><td colSpan={3} className="p-4 text-center text-xs text-muted-foreground">No items assigned to this stall.</td></tr>
                         )}
