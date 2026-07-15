@@ -7,6 +7,7 @@ import {
   buildStallDistribution, resolveTrolleys, type StallDistributionRow, type Stall, type VirtualTrolley,
 } from "./FestivalGroceriesTrolleys";
 import { normalizeForPdf } from "@/lib/textNormalize";
+import { computeAutoOil, fetchFestivalFryerEquipment } from "@/lib/groceriesAutoOil";
 
 // Trolley PDF export — grouped by trolley (not stall).
 // Route params:
