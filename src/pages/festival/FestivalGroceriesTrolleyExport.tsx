@@ -147,8 +147,13 @@ export default function FestivalGroceriesTrolleyExport() {
   };
 
   useEffect(() => {
-    if (dataQ.data && festival) setTimeout(() => window.print(), 400);
-  }, [dataQ.data, festival]);
+    // Only print once ALL data queries have resolved (incl. opening-stock),
+    // otherwise the browser prints a half-populated DOM and drops rows.
+    if (!festival || !dataQ.data) return;
+    if (festival && !openingStockQ.isFetched && !!festival.id) return;
+    const t = setTimeout(() => window.print(), 600);
+    return () => clearTimeout(t);
+  }, [dataQ.data, festival, openingStockQ.isFetched]);
 
   if (!festival) return <div className="p-8">Loading…</div>;
 
