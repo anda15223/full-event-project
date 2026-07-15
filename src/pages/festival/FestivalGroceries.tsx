@@ -693,6 +693,21 @@ export default function FestivalGroceries() {
           )}
         </TabsContent>
 
+        {/* ============ STOCK ============ */}
+        <TabsContent value="stock" className="space-y-4">
+          {festival && (
+            <GroceryStockTab
+              festival={festival}
+              ingredients={ingredients}
+              suppliers={suppliers}
+              distribution={trolleyDistribution}
+              festivalDailyConsumption={festivalDailyConsumption}
+            />
+          )}
+        </TabsContent>
+
+
+
 
         {/* ============ CALCULATION ============ */}
         <TabsContent value="calculation" className="space-y-4">
