@@ -197,19 +197,27 @@ export default function FestivalGroceriesTrolleyExport() {
                 <tr className="border-b bg-gray-100">
                   <th className="text-left p-2">Ingredient</th>
                   <th className="text-right p-2">Packs</th>
+                  <th className="text-left p-2">Source</th>
                   <th className="text-left p-2">Pack</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ d, entry }) => (
+                {rows.map(({ d, entry }) => {
+                  const idx = d.perStallPacks.findIndex(x => x.stall.id === stall.id);
+                  const src = inPool ? rowSource(d.ingredient.id, idx, d) : null;
+                  return (
                   <tr key={d.ingredient.id} className="border-b">
                     <td className="p-2">{normalizeForPdf(d.ingredient.name)}</td>
                     <td className="p-2 text-right">
                       {entry!.packs}{entry!.reserve && <span className="text-xs"> (reserve)</span>}
                     </td>
+                    <td className="p-2 text-xs font-semibold">
+                      {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : src === "daily" ? "FROM DAILY ORDER" : "—"}
+                    </td>
                     <td className="p-2">{normalizeForPdf(d.packLabel)}</td>
                   </tr>
-                ))}
+                );})}
+
                 {rows.length === 0 && (
                   <tr><td colSpan={3} className="p-4 text-center text-muted-foreground">No items assigned.</td></tr>
                 )}
