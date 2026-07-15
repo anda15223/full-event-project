@@ -147,8 +147,13 @@ export default function FestivalGroceriesTrolleyExport() {
   };
 
   useEffect(() => {
-    if (dataQ.data && festival) setTimeout(() => window.print(), 400);
-  }, [dataQ.data, festival]);
+    // Only print once ALL data queries have resolved (incl. opening-stock),
+    // otherwise the browser prints a half-populated DOM and drops rows.
+    if (!festival || !dataQ.data) return;
+    if (festival && !openingStockQ.isFetched && !!festival.id) return;
+    const t = setTimeout(() => window.print(), 600);
+    return () => clearTimeout(t);
+  }, [dataQ.data, festival, openingStockQ.isFetched]);
 
   if (!festival) return <div className="p-8">Loading…</div>;
 
@@ -180,8 +185,26 @@ export default function FestivalGroceriesTrolleyExport() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto text-sm print:p-0">
-      <style>{`@media print { @page { margin: 1.5cm; } .page-break { page-break-before: always; } }`}</style>
+    <div className="print-root p-8 max-w-4xl mx-auto text-sm print:p-0 print:max-w-none print:mx-0">
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 1.2cm; }
+          html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+          /* Hide app chrome: shadcn sidebar, its trigger, and any layout header */
+          [data-sidebar], [data-sidebar-wrapper], aside, nav[aria-label], header:not(.print-header) { display: none !important; }
+          /* Neutralise DashboardLayout wrappers so print-root starts at the top */
+          body * { visibility: hidden; }
+          .print-root, .print-root * { visibility: visible; }
+          .print-root { position: absolute; left: 0; top: 0; width: 100%; max-width: none !important; padding: 0 !important; margin: 0 !important; }
+          .print-root table { width: 100% !important; table-layout: auto; border-collapse: collapse; font-size: 10pt; }
+          .print-root th, .print-root td { word-break: break-word; overflow-wrap: anywhere; }
+          /* Never trap a whole trolley section on one page — let rows flow */
+          .print-root section, .print-root .break-inside-avoid { break-inside: auto !important; page-break-inside: auto !important; }
+          .print-root tr { break-inside: avoid; page-break-inside: avoid; }
+          .print-root thead { display: table-header-group; }
+          .page-break { break-before: page; page-break-before: always; }
+        }
+      `}</style>
       <header className="mb-6 border-b pb-4">
         <div className="text-xl font-bold">{normalizeForPdf(festival.name)} — Trolleys</div>
         <div className="text-muted-foreground">{dateRange}</div>
