@@ -809,14 +809,6 @@ function EstimatesGrid({
             </FragmentGroup>
           )})}
 
-                      </td>
-                    ))}
-                    <td className="p-2 text-right font-medium bg-muted/30">{rowTotal}</td>
-                  </tr>
-                );
-              })}
-            </FragmentGroup>
-          ))}
           <tr className="border-t bg-muted/40 font-semibold">
             <td className="p-2 sticky left-0 bg-muted/40">Grand total</td>
             {cols.map((d, i) => (
