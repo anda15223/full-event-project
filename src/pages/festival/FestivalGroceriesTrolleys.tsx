@@ -408,7 +408,7 @@ export default function TrolleysTab({
   stalls: Stall[];
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const openingStockQ = useOpeningStockForFestival(festivalId);
+  const openingStockQ = useOpeningStockForFestival(festivalId, distribution);
   const openingStock = openingStockQ.data?.opening ?? new Map<string, number>();
   const inPool = !!openingStockQ.data?.poolId;
 
