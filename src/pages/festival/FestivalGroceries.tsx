@@ -473,6 +473,79 @@ export default function FestivalGroceries() {
     });
   }, [festival?.id, stalls, stallEstimates, estimatesForFestivalDays, recipes, items, packaging, ingredients, suppliers, effectiveConsumables, safetyMargin, days]);
 
+  // Per-day festival consumption per ingredient (packs). Used by Stock timeline.
+  // Aggregates per-stall packs across all stalls per day for the CURRENT festival.
+  const festivalDailyConsumption = useMemo(() => {
+    const out = new Map<string, Map<string, number>>();
+    if (trolleyDistribution.length === 0 || days.length === 0) return out;
+    // Build per-day recipe demand → largest-remainder across days.
+    // We approximate: distribute ordered packs evenly across days weighted by
+    // total stall qty on that day, using the same largestRemainder utility.
+    const stallEstByDay = new Map<string, Map<string, number>>(); // day -> product -> qty
+    for (const se of stallEstimates) {
+      const d = se.day.slice(0, 10);
+      if (!days.includes(d)) continue;
+      const inner = stallEstByDay.get(d) ?? new Map();
+      inner.set(se.product_id, (inner.get(se.product_id) ?? 0) + (Number(se.qty) || 0));
+      stallEstByDay.set(d, inner);
+    }
+    // Rough proxy weight per (ingredient, day) = sum of that day's product estimates for products whose recipes touch that ingredient.
+    // Fallback for ingredients only from single-stall festivals: use grocery_estimates day totals.
+    const recipeById = new Map(recipes.map(r => [r.id, r]));
+    const itemsByRecipe = new Map<string, typeof items>();
+    for (const it of items) {
+      const arr = itemsByRecipe.get(it.recipe_id) ?? [];
+      arr.push(it); itemsByRecipe.set(it.recipe_id, arr);
+    }
+    const recipesUsingIng = new Map<string, Set<string>>();
+    for (const it of items) {
+      if (!it.ingredient_id) continue;
+      const set = recipesUsingIng.get(it.ingredient_id) ?? new Set<string>();
+      set.add(it.recipe_id);
+      recipesUsingIng.set(it.ingredient_id, set);
+    }
+
+    const estByDayProduct = new Map<string, Map<string, number>>();
+    for (const e of estimatesForFestivalDays) {
+      const d = (e.day ?? "").slice(0, 10);
+      if (!d) continue;
+      const inner = estByDayProduct.get(d) ?? new Map();
+      inner.set(e.recipe_id, (inner.get(e.recipe_id) ?? 0) + (e.units ?? 0));
+      estByDayProduct.set(d, inner);
+    }
+
+    for (const row of trolleyDistribution) {
+      const usingRecipes = recipesUsingIng.get(row.ingredient.id) ?? new Set<string>();
+      const dayWeights = days.map(d => {
+        const perProduct = estByDayProduct.get(d) ?? new Map<string, number>();
+        let w = 0;
+        for (const rid of usingRecipes) w += perProduct.get(rid) ?? 0;
+        return w;
+      });
+      const total = dayWeights.reduce((a, b) => a + b, 0);
+      const dayMap = new Map<string, number>();
+      if (row.orderedPacks <= 0) { out.set(row.ingredient.id, dayMap); continue; }
+      if (total <= 0) {
+        // Even distribution fallback
+        const base = Math.floor(row.orderedPacks / days.length);
+        const rem = row.orderedPacks - base * days.length;
+        days.forEach((d, i) => dayMap.set(d, base + (i < rem ? 1 : 0)));
+      } else {
+        // Largest-remainder inline
+        const fair = dayWeights.map(w => (row.orderedPacks * w) / total);
+        const alloc = fair.map(Math.floor);
+        let remaining = row.orderedPacks - alloc.reduce((a, b) => a + b, 0);
+        const order = fair.map((f, i) => ({ i, frac: f - Math.floor(f) })).sort((a, b) => b.frac - a.frac);
+        for (let k = 0; k < remaining; k++) alloc[order[k].i] += 1;
+        days.forEach((d, i) => dayMap.set(d, alloc[i]));
+      }
+      out.set(row.ingredient.id, dayMap);
+    }
+    return out;
+  }, [trolleyDistribution, days, stallEstimates, estimatesForFestivalDays, recipes, items]);
+
+
+
 
 
   // ---------- Estimates tab: save handler ----------
