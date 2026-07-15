@@ -460,6 +460,21 @@ export default function FestivalGroceries() {
     return n;
   }, [calculation, ingredients]);
 
+  // ---------- Trolley distribution (ordered packs → per-stall) ----------
+  const trolleyDistribution = useMemo(() => {
+    if (!festival?.id || stalls.length === 0) return [];
+    return buildStallDistribution({
+      stalls, stallEstimates,
+      estimates: estimatesForFestivalDays,
+      recipes, items, packaging, ingredients, suppliers,
+      consumables: effectiveConsumables,
+      margin: safetyMargin,
+      days,
+    });
+  }, [festival?.id, stalls, stallEstimates, estimatesForFestivalDays, recipes, items, packaging, ingredients, suppliers, effectiveConsumables, safetyMargin, days]);
+
+
+
   // ---------- Estimates tab: save handler ----------
   const saveEstimate = async (recipeId: string, day: string | null, units: number) => {
     if (!festival?.id) return;
