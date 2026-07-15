@@ -4,14 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import {
-  buildStallDistribution, type StallDistributionRow,
+  buildStallDistribution, resolveTrolleys, type StallDistributionRow, type Stall, type VirtualTrolley,
 } from "./FestivalGroceriesTrolleys";
 import { normalizeForPdf } from "@/lib/textNormalize";
 
-// Combined + single-stall trolley PDF export.
+// Trolley PDF export — grouped by trolley (not stall).
 // Route params:
-//   /festivals/:slug/groceries/trolleys/export           → all + freezer pull sheet
-//   /festivals/:slug/groceries/trolley/:stallId/export   → one stall
+//   /festivals/:slug/groceries/trolleys/export             → all trolleys + freezer pull sheet
+//   /festivals/:slug/groceries/trolley/:stallId/export     → single trolley (param may be a trolley group id, or "stall:<uuid>" for unassigned stalls)
 
 export default function FestivalGroceriesTrolleyExport() {
   const { slug = "", stallId } = useParams();
@@ -30,7 +30,7 @@ export default function FestivalGroceriesTrolleyExport() {
     queryKey: ["trolley-export-data", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
-      const [ing, sup, rec, ri, pkg, est, set, cons, stalls, se] = await Promise.all([
+      const [ing, sup, rec, ri, pkg, est, set, cons, stalls, se, tg, tgs] = await Promise.all([
         supabase.from("grocery_ingredients").select("*"),
         supabase.from("grocery_suppliers").select("*"),
         supabase.from("grocery_recipes").select("*"),
@@ -41,7 +41,12 @@ export default function FestivalGroceriesTrolleyExport() {
         supabase.from("grocery_festival_consumables").select("*").eq("festival_id", festival!.id),
         supabase.from("festival_grocery_stall").select("*").eq("festival_id", festival!.id),
         supabase.from("festival_grocery_stall_estimate").select("*").eq("festival_id", festival!.id),
+        supabase.from("festival_trolley_group").select("*").eq("festival_id", festival!.id).order("sort_order"),
+        supabase.from("festival_trolley_group_stall").select("*"),
       ]);
+      const groups = (tg.data ?? []) as any[];
+      const groupIds = new Set(groups.map(g => g.id));
+      const links = ((tgs.data ?? []) as any[]).filter(l => groupIds.has(l.group_id));
       return {
         ingredients: (ing.data ?? []) as any[],
         suppliers: (sup.data ?? []) as any[],
@@ -52,6 +57,8 @@ export default function FestivalGroceriesTrolleyExport() {
         consumables: (cons.data ?? []) as any[],
         stalls: (stalls.data ?? []) as any[],
         stallEstimates: (se.data ?? []) as any[],
+        groups,
+        links,
         margin: (set.data?.safety_margin_pct ?? 10) as number,
       };
     },
@@ -133,11 +140,32 @@ export default function FestivalGroceriesTrolleyExport() {
 
   if (!festival) return <div className="p-8">Loading…</div>;
 
-  const stalls = dataQ.data?.stalls ?? [];
-  const focusedStall = stallId ? stalls.find(s => s.id === stallId) : null;
-
-  const stallList = focusedStall ? [focusedStall] : stalls;
+  const stalls: Stall[] = dataQ.data?.stalls ?? [];
+  const groups = dataQ.data?.groups ?? [];
+  const links = dataQ.data?.links ?? [];
+  const allTrolleys: VirtualTrolley[] = resolveTrolleys(stalls, groups, links);
+  const focusedTrolley = stallId ? allTrolleys.find(t => t.id === stallId) : null;
+  const trolleyList = focusedTrolley ? [focusedTrolley] : allTrolleys;
   const dateRange = festival.start_date && festival.end_date ? formatDateRange(festival.start_date, festival.end_date) : "";
+
+  const CONCEPT_LABEL: Record<string, string> = {
+    fish: "Fish & Chips", gyros: "Gyros", creperie: "Creperie", chicksbuns: "Chicks & Buns", other: "Other", shared: "Shared",
+  };
+
+  // Per-trolley totals per ingredient
+  const trolleyTotals = new Map<string, Map<string, number>>();
+  for (const row of distribution) {
+    const m = new Map<string, number>();
+    for (const tr of allTrolleys) {
+      let sum = 0;
+      for (const s of tr.stalls) {
+        const entry = row.perStallPacks.find(x => x.stall.id === s.id);
+        if (entry) sum += entry.packs;
+      }
+      if (sum > 0) m.set(tr.id, sum);
+    }
+    trolleyTotals.set(row.ingredient.id, m);
+  }
 
   return (
     <div className="p-8 max-w-4xl mx-auto text-sm print:p-0">
@@ -149,9 +177,41 @@ export default function FestivalGroceriesTrolleyExport() {
       </header>
 
       {/* Freezer pull sheet only in combined export */}
-      {!focusedStall && (
+      {!focusedTrolley && (
         <section className="mb-8 break-inside-avoid">
-          <h2 className="text-lg font-semibold mb-2">Freezer pull sheet</h2>
+          <h2 className="text-lg font-semibold mb-2">Freezer pull sheet — per trolley</h2>
+          <table className="w-full border-collapse mb-6">
+            <thead>
+              <tr className="border-b bg-gray-100">
+                <th className="text-left p-2">Ingredient</th>
+                <th className="text-right p-2">Ordered</th>
+                {allTrolleys.map(t => (
+                  <th key={t.id} className="text-right p-2">{normalizeForPdf(t.name)}</th>
+                ))}
+                <th className="text-left p-2">Pack</th>
+              </tr>
+            </thead>
+            <tbody>
+              {distribution.map(row => {
+                const tot = trolleyTotals.get(row.ingredient.id);
+                return (
+                  <tr key={row.ingredient.id} className="border-b align-top">
+                    <td className="p-2">{normalizeForPdf(row.ingredient.name)}</td>
+                    <td className="p-2 text-right">{row.orderedPacks}</td>
+                    {allTrolleys.map(t => (
+                      <td key={t.id} className="p-2 text-right">{tot?.get(t.id) ?? ""}</td>
+                    ))}
+                    <td className="p-2">{normalizeForPdf(row.packLabel)}</td>
+                  </tr>
+                );
+              })}
+              {distribution.length === 0 && (
+                <tr><td colSpan={3 + allTrolleys.length} className="p-4 text-center text-muted-foreground">No distribution yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+
+          <h3 className="text-sm font-semibold mb-2">Per-stall detail (verification)</h3>
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b bg-gray-100">
@@ -177,49 +237,86 @@ export default function FestivalGroceriesTrolleyExport() {
                   <td className="p-2">{normalizeForPdf(row.packLabel)}</td>
                 </tr>
               ))}
-              {distribution.length === 0 && (
-                <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No distribution yet.</td></tr>
-              )}
             </tbody>
           </table>
         </section>
       )}
 
-      {stallList.map((stall, idx) => {
-        const rows = distribution
-          .map(d => ({ d, entry: d.perStallPacks.find(x => x.stall.id === stall.id) }))
-          .filter(x => x.entry && x.entry.packs > 0);
+      {trolleyList.map((tr, tIdx) => {
+        type TRow = { row: StallDistributionRow; total: number; perStall: { stall: Stall; packs: number; reserve: boolean }[]; concept: string; src: "stock" | "daily" | "mixed" | null };
+        const trRows: TRow[] = [];
+        for (const row of distribution) {
+          const perStall = row.perStallPacks.filter(p => tr.stalls.some(s => s.id === p.stall.id) && p.packs > 0);
+          if (perStall.length === 0) continue;
+          const total = perStall.reduce((a, b) => a + b.packs, 0);
+          const concepts = new Set(perStall.map(p => p.stall.concept));
+          const concept = concepts.size === 1 ? [...concepts][0] : "shared";
+          // Source: use first perStall entry's row-level index
+          const idx = row.perStallPacks.findIndex(x => x.stall.id === perStall[0].stall.id);
+          const src = inPool ? rowSource(row.ingredient.id, idx, row) : null;
+          trRows.push({ row, total, perStall, concept, src });
+        }
+        const byConcept = new Map<string, TRow[]>();
+        for (const r of trRows) {
+          const arr = byConcept.get(r.concept) ?? [];
+          arr.push(r); byConcept.set(r.concept, arr);
+        }
+        for (const arr of byConcept.values()) arr.sort((a, b) => a.row.ingredient.name.localeCompare(b.row.ingredient.name));
+        const conceptOrder = ["fish", "gyros", "creperie", "chicksbuns", "other", "shared"].filter(c => byConcept.has(c));
+        const memberNames = tr.stalls.map(s => s.name).join(" + ");
         return (
-          <section key={stall.id} className={`mb-8 break-inside-avoid ${idx > 0 || !focusedStall ? "page-break" : ""}`}>
-            <h2 className="text-lg font-semibold mb-2">{normalizeForPdf(stall.name)} — packing list</h2>
+          <section key={tr.id} className={`mb-8 break-inside-avoid ${tIdx > 0 || !focusedTrolley ? "page-break" : ""}`}>
+            <h2 className="text-lg font-semibold mb-1">{normalizeForPdf(tr.name)} — packing list</h2>
+            {tr.isGroup && (
+              <div className="text-xs text-muted-foreground mb-2">Stalls: {normalizeForPdf(memberNames)}</div>
+            )}
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b bg-gray-100">
                   <th className="text-left p-2">Ingredient</th>
                   <th className="text-right p-2">Packs</th>
+                  {tr.stalls.length > 1 && <th className="text-left p-2">Per stall</th>}
                   <th className="text-left p-2">Source</th>
                   <th className="text-left p-2">Pack</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map(({ d, entry }) => {
-                  const idx = d.perStallPacks.findIndex(x => x.stall.id === stall.id);
-                  const src = inPool ? rowSource(d.ingredient.id, idx, d) : null;
-                  return (
-                  <tr key={d.ingredient.id} className="border-b">
-                    <td className="p-2">{normalizeForPdf(d.ingredient.name)}</td>
-                    <td className="p-2 text-right">
-                      {entry!.packs}{entry!.reserve && <span className="text-xs"> (reserve)</span>}
-                    </td>
-                    <td className="p-2 text-xs font-semibold">
-                      {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : src === "daily" ? "FROM DAILY ORDER" : "—"}
-                    </td>
-                    <td className="p-2">{normalizeForPdf(d.packLabel)}</td>
-                  </tr>
-                );})}
-
-                {rows.length === 0 && (
-                  <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No items assigned.</td></tr>
+                {conceptOrder.map(concept => (
+                  <>
+                    <tr key={`h-${concept}`} className="bg-gray-50">
+                      <td colSpan={tr.stalls.length > 1 ? 5 : 4} className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide">
+                        {CONCEPT_LABEL[concept] ?? concept}
+                      </td>
+                    </tr>
+                    {byConcept.get(concept)!.map(({ row, total, perStall, src }) => {
+                      const anyReserve = perStall.some(p => p.reserve);
+                      return (
+                        <tr key={`${tr.id}-${row.ingredient.id}`} className="border-b align-top">
+                          <td className="p-2">{normalizeForPdf(row.ingredient.name)}</td>
+                          <td className="p-2 text-right">
+                            {total}{anyReserve && <span className="text-xs"> (reserve)</span>}
+                          </td>
+                          {tr.stalls.length > 1 && (
+                            <td className="p-2 text-xs">
+                              {perStall.map(p => (
+                                <span key={p.stall.id} className="inline-block mr-2">
+                                  {normalizeForPdf(p.stall.name)}: <b>{p.packs}</b>
+                                  {p.reserve && <span> (r)</span>}
+                                </span>
+                              ))}
+                            </td>
+                          )}
+                          <td className="p-2 text-xs font-semibold">
+                            {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : src === "daily" ? "FROM DAILY ORDER" : "—"}
+                          </td>
+                          <td className="p-2">{normalizeForPdf(row.packLabel)}</td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
+                {trRows.length === 0 && (
+                  <tr><td colSpan={tr.stalls.length > 1 ? 5 : 4} className="p-4 text-center text-muted-foreground">No items assigned.</td></tr>
                 )}
               </tbody>
             </table>

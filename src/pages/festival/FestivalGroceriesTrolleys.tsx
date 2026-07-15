@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Download, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, ChevronRight, ChevronDown, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -17,14 +18,69 @@ import {
 } from "@/lib/groceriesCalc";
 
 // ---------------- types ----------------
-type Stall = { id: string; festival_id: string; concept: string; name: string; sort_order: number };
+export type Stall = { id: string; festival_id: string; concept: string; name: string; sort_order: number };
 type StallEstimate = { id: string; festival_id: string; stall_id: string; product_id: string; day: string; qty: number };
 type Estimate = { id: string; festival_id: string; recipe_id: string; day: string | null; units: number };
 type Consumable = { id: string; ingredient_id: string; qty: number; unit_mode: "packs" | "units" };
+export type TrolleyGroup = { id: string; festival_id: string; name: string; sort_order: number };
+export type TrolleyGroupStall = { group_id: string; stall_id: string };
 
 const CONCEPT_LABEL: Record<string, string> = {
   fish: "Fish & Chips", gyros: "Gyros", creperie: "Creperie", chicksbuns: "Chicks & Buns", other: "Other",
 };
+
+// ================================================================
+// Trolley groups — hook + helpers
+// ================================================================
+export function useTrolleyGroups(festivalId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["trolley_groups", festivalId],
+    enabled: !!festivalId,
+    queryFn: async () => {
+      const [g, gs] = await Promise.all([
+        supabase.from("festival_trolley_group").select("*").eq("festival_id", festivalId!).order("sort_order"),
+        supabase.from("festival_trolley_group_stall").select("*"),
+      ]);
+      if (g.error) throw g.error;
+      if (gs.error) throw gs.error;
+      const groups = (g.data ?? []) as TrolleyGroup[];
+      const groupIds = new Set(groups.map(x => x.id));
+      const links = ((gs.data ?? []) as TrolleyGroupStall[]).filter(l => groupIds.has(l.group_id));
+      return { groups, links };
+    },
+  });
+}
+
+// Resolve stalls → an ordered list of "virtual trolleys".
+// Each virtual trolley has: id, name, stalls[]. Unassigned stalls each become their own trolley.
+export type VirtualTrolley = { id: string; name: string; stalls: Stall[]; isGroup: boolean };
+export function resolveTrolleys(
+  stalls: Stall[],
+  groups: TrolleyGroup[],
+  links: TrolleyGroupStall[],
+): VirtualTrolley[] {
+  const stallById = new Map(stalls.map(s => [s.id, s]));
+  const stallToGroup = new Map<string, string>();
+  for (const l of links) stallToGroup.set(l.stall_id, l.group_id);
+
+  const out: VirtualTrolley[] = [];
+  const sortedGroups = [...groups].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  for (const g of sortedGroups) {
+    const gStalls = links
+      .filter(l => l.group_id === g.id)
+      .map(l => stallById.get(l.stall_id))
+      .filter((x): x is Stall => !!x)
+      .sort((a, b) => a.concept.localeCompare(b.concept) || a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+    if (gStalls.length === 0) continue;
+    out.push({ id: g.id, name: g.name, stalls: gStalls, isGroup: true });
+  }
+  // Unassigned stalls → their own virtual trolley
+  for (const s of stalls) {
+    if (stallToGroup.has(s.id)) continue;
+    out.push({ id: `stall:${s.id}`, name: s.name, stalls: [s], isGroup: false });
+  }
+  return out;
+}
 
 // ================================================================
 // Public hooks
@@ -480,11 +536,34 @@ export default function TrolleysTab({
     );
   }
 
-  // Group by concept for per-stall packing lists
-  const stallsByConcept = new Map<string, Stall[]>();
-  for (const s of stalls) {
-    const arr = stallsByConcept.get(s.concept) ?? [];
-    arr.push(s); stallsByConcept.set(s.concept, arr);
+  // ---------------- Trolley groups ----------------
+  const groupsQ = useTrolleyGroups(festivalId);
+  const groups = groupsQ.data?.groups ?? [];
+  const links = groupsQ.data?.links ?? [];
+  const trolleys = useMemo(() => resolveTrolleys(stalls, groups, links), [stalls, groups, links]);
+
+  // Recipe → concept map, for concept sub-grouping within a trolley.
+  // Ingredient's concept-set derived from the stall concepts that have packs>0 in this trolley.
+  const ingredientRecipeConcepts = new Map<string, Set<string>>();
+  for (const row of distribution) {
+    const concepts = new Set<string>();
+    for (const p of row.perStallPacks) if (p.packs > 0) concepts.add(p.stall.concept);
+    ingredientRecipeConcepts.set(row.ingredient.id, concepts);
+  }
+
+  // Freezer pull sheet: per-trolley totals per ingredient
+  const trolleyTotals = new Map<string, Map<string, number>>(); // ingId → trolleyId → packs
+  for (const row of distribution) {
+    const t = new Map<string, number>();
+    for (const tr of trolleys) {
+      let sum = 0;
+      for (const s of tr.stalls) {
+        const entry = row.perStallPacks.find(x => x.stall.id === s.id);
+        if (entry) sum += entry.packs;
+      }
+      if (sum > 0) t.set(tr.id, sum);
+    }
+    trolleyTotals.set(row.ingredient.id, t);
   }
 
   return (
@@ -504,11 +583,19 @@ export default function TrolleysTab({
         </Button>
       </div>
 
+      {/* -------- Trolley groups config -------- */}
+      <TrolleyGroupsManager
+        festivalId={festivalId}
+        stalls={stalls}
+        groups={groups}
+        links={links}
+      />
+
       {/* -------- Freezer pull sheet -------- */}
       <div className="rounded-lg border">
         <div className="p-3 border-b bg-muted/30">
           <div className="text-sm font-semibold">Freezer pull sheet</div>
-          <div className="text-xs text-muted-foreground">Ordered packs → per-stall split.</div>
+          <div className="text-xs text-muted-foreground">Ordered packs → per-trolley totals, then per-stall detail.</div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -516,111 +603,338 @@ export default function TrolleysTab({
               <tr>
                 <th className="text-left p-2">Ingredient</th>
                 <th className="text-right p-2 w-24">Ordered</th>
-                <th className="text-left p-2">Split</th>
+                <th className="text-left p-2">Per trolley</th>
+                <th className="text-left p-2">Per stall</th>
                 <th className="text-left p-2 w-32">Pack</th>
               </tr>
             </thead>
             <tbody>
-              {distribution.map(row => (
-                <tr key={row.ingredient.id} className="border-t">
-                  <td className="p-2 font-medium">{row.ingredient.name}</td>
-                  <td className="p-2 text-right font-mono">{row.orderedPacks}</td>
-                  <td className="p-2">
-                    <div className="flex flex-wrap gap-1">
-                      {row.perStallPacks.filter(x => x.packs > 0).map(x => (
-                        <span key={x.stall.id}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-muted text-xs">
-                          <span className="font-medium">{x.stall.name}:</span>
-                          <span className="font-mono">{x.packs}</span>
-                          {x.reserve && (
-                            <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px] border-amber-500 text-amber-700">reserve</Badge>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-2 text-xs text-muted-foreground">{row.packLabel}</td>
-                </tr>
-              ))}
+              {distribution.map(row => {
+                const tot = trolleyTotals.get(row.ingredient.id);
+                return (
+                  <tr key={row.ingredient.id} className="border-t align-top">
+                    <td className="p-2 font-medium">{row.ingredient.name}</td>
+                    <td className="p-2 text-right font-mono">{row.orderedPacks}</td>
+                    <td className="p-2">
+                      <div className="flex flex-wrap gap-1">
+                        {trolleys.map(tr => {
+                          const n = tot?.get(tr.id) ?? 0;
+                          if (n === 0) return null;
+                          return (
+                            <span key={tr.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-xs">
+                              <span className="font-medium">{tr.name}:</span>
+                              <span className="font-mono">{n}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <div className="flex flex-wrap gap-1">
+                        {row.perStallPacks.filter(x => x.packs > 0).map(x => (
+                          <span key={x.stall.id}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted text-[11px]">
+                            <span>{x.stall.name}:</span>
+                            <span className="font-mono">{x.packs}</span>
+                            {x.reserve && (
+                              <Badge variant="outline" className="ml-0.5 h-3.5 px-1 text-[9px] border-amber-500 text-amber-700">r</Badge>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="p-2 text-xs text-muted-foreground">{row.packLabel}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* -------- Per-stall packing lists -------- */}
-      {Array.from(stallsByConcept.entries()).map(([concept, group]) => (
-        <div key={concept} className="space-y-3">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {CONCEPT_LABEL[concept] ?? concept}
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {group.map(stall => {
-              const rows = distribution
-                .map(d => ({ d, entry: d.perStallPacks.find(x => x.stall.id === stall.id) }))
-                .filter(x => x.entry && x.entry.packs > 0);
-              const isOpen = expanded[stall.id] ?? true;
-              return (
-                <div key={stall.id} className="rounded-lg border">
-                  <div className="flex items-center justify-between gap-2 p-3 border-b bg-muted/20">
-                    <button className="flex items-center gap-1 text-sm font-semibold"
-                      onClick={() => setExpanded(prev => ({ ...prev, [stall.id]: !isOpen }))}>
-                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      {stall.name}
-                    </button>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{rows.length} items</span>
-                      <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-                        <a href={`/festivals/${slug}/groceries/trolley/${stall.id}/export`} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-3.5 w-3.5" /> Export
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                  {isOpen && (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-xs text-muted-foreground">
-                          <th className="text-left p-2">Ingredient</th>
-                          <th className="text-right p-2 w-20">Packs</th>
-                          <th className="text-left p-2 w-32">Pack</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map(({ d, entry }) => {
-                          const idx = d.perStallPacks.findIndex(x => x.stall.id === stall.id);
-                          const src = sourceOf(d.ingredient.id, idx);
-                          return (
-                          <tr key={d.ingredient.id} className="border-t">
-                            <td className="p-2">
-                              {d.ingredient.name}
-                              {inPool && (
-                                <Badge variant="outline" className={`ml-1 h-4 px-1 text-[10px] ${src === "stock" ? "border-emerald-500 text-emerald-700" : src === "mixed" ? "border-blue-500 text-blue-700" : "border-slate-400 text-slate-600"}`}>
-                                  {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : "FROM DAILY ORDER"}
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="p-2 text-right font-mono">
-                              {entry!.packs}
-                              {entry!.reserve && (
-                                <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px] border-amber-500 text-amber-700 align-middle">reserve</Badge>
-                              )}
-                            </td>
-                            <td className="p-2 text-xs text-muted-foreground">{d.packLabel}</td>
-                          </tr>
-                        );})}
-
-                        {rows.length === 0 && (
-                          <tr><td colSpan={3} className="p-4 text-center text-xs text-muted-foreground">No items assigned to this stall.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  )}
+      {/* -------- Per-trolley packing lists -------- */}
+      <div className="grid gap-3 md:grid-cols-2">
+        {trolleys.map(tr => {
+          // Aggregate per-ingredient packs across trolley's stalls
+          type TRow = { row: StallDistributionRow; total: number; perStall: { stall: Stall; packs: number; reserve: boolean }[]; concept: string };
+          const trRows: TRow[] = [];
+          for (const row of distribution) {
+            const perStall = row.perStallPacks.filter(p => tr.stalls.some(s => s.id === p.stall.id) && p.packs > 0);
+            if (perStall.length === 0) continue;
+            const total = perStall.reduce((a, b) => a + b.packs, 0);
+            // Concept for grouping: single-concept ingredient inside this trolley → that concept; else "shared"
+            const concepts = new Set(perStall.map(p => p.stall.concept));
+            const concept = concepts.size === 1 ? [...concepts][0] : "shared";
+            trRows.push({ row, total, perStall, concept });
+          }
+          // Sub-group by concept
+          const byConcept = new Map<string, TRow[]>();
+          for (const r of trRows) {
+            const arr = byConcept.get(r.concept) ?? [];
+            arr.push(r); byConcept.set(r.concept, arr);
+          }
+          for (const arr of byConcept.values()) arr.sort((a, b) => a.row.ingredient.name.localeCompare(b.row.ingredient.name));
+          const conceptOrder = ["fish", "gyros", "creperie", "chicksbuns", "other", "shared"].filter(c => byConcept.has(c));
+          const totalItems = trRows.length;
+          const isOpen = expanded[tr.id] ?? true;
+          return (
+            <div key={tr.id} className="rounded-lg border">
+              <div className="flex items-center justify-between gap-2 p-3 border-b bg-muted/20">
+                <button className="flex items-center gap-1 text-sm font-semibold text-left"
+                  onClick={() => setExpanded(prev => ({ ...prev, [tr.id]: !isOpen }))}>
+                  {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span>
+                    {tr.name}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      {tr.stalls.map(s => s.name).join(" + ")}
+                    </span>
+                  </span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{totalItems} items</span>
+                  <Button asChild size="sm" variant="outline" className="h-7 text-xs">
+                    <a href={`/festivals/${slug}/groceries/trolley/${tr.id}/export`} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-3.5 w-3.5" /> Export
+                    </a>
+                  </Button>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+              </div>
+              {isOpen && (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground">
+                      <th className="text-left p-2">Ingredient</th>
+                      <th className="text-right p-2 w-20">Packs</th>
+                      <th className="text-left p-2 w-32">Pack</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {conceptOrder.map(concept => (
+                      <>
+                        <tr key={`h-${concept}`} className="bg-muted/40">
+                          <td colSpan={3} className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {CONCEPT_LABEL[concept] ?? (concept === "shared" ? "Shared" : concept)}
+                          </td>
+                        </tr>
+                        {byConcept.get(concept)!.map(({ row, total, perStall }) => {
+                          const src = sourceOf(row.ingredient.id, 0); // row-level label
+                          const anyReserve = perStall.some(p => p.reserve);
+                          return (
+                            <tr key={`${tr.id}-${row.ingredient.id}`} className="border-t align-top">
+                              <td className="p-2">
+                                <div>
+                                  {row.ingredient.name}
+                                  {inPool && (
+                                    <Badge variant="outline" className={`ml-1 h-4 px-1 text-[10px] ${src === "stock" ? "border-emerald-500 text-emerald-700" : src === "mixed" ? "border-blue-500 text-blue-700" : "border-slate-400 text-slate-600"}`}>
+                                      {src === "stock" ? "FROM STOCK" : src === "mixed" ? "MIXED" : "FROM DAILY ORDER"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {tr.stalls.length > 1 && (
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                                    {perStall.map(p => (
+                                      <span key={p.stall.id} className="mr-2">
+                                        {p.stall.name}: <span className="font-mono">{p.packs}</span>
+                                        {p.reserve && <span className="text-amber-600"> r</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="p-2 text-right font-mono">
+                                {total}
+                                {anyReserve && (
+                                  <Badge variant="outline" className="ml-1 h-4 px-1 text-[10px] border-amber-500 text-amber-700 align-middle">reserve</Badge>
+                                )}
+                              </td>
+                              <td className="p-2 text-xs text-muted-foreground">{row.packLabel}</td>
+                            </tr>
+                          );
+                        })}
+                      </>
+                    ))}
+                    {totalItems === 0 && (
+                      <tr><td colSpan={3} className="p-4 text-center text-xs text-muted-foreground">No items on this trolley.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+// ================================================================
+// Trolley groups manager
+// ================================================================
+function TrolleyGroupsManager({
+  festivalId, stalls, groups, links,
+}: {
+  festivalId: string;
+  stalls: Stall[];
+  groups: TrolleyGroup[];
+  links: TrolleyGroupStall[];
+}) {
+  const qc = useQueryClient();
+  const [newName, setNewName] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["trolley_groups", festivalId] });
+
+  const stallToGroup = new Map<string, string>();
+  for (const l of links) stallToGroup.set(l.stall_id, l.group_id);
+  const unassigned = stalls.filter(s => !stallToGroup.has(s.id));
+
+  const addGroup = async () => {
+    const n = newName.trim();
+    if (!n) return;
+    const nextOrder = (groups[groups.length - 1]?.sort_order ?? -1) + 1;
+    const { error } = await supabase.from("festival_trolley_group").insert({ festival_id: festivalId, name: n, sort_order: nextOrder });
+    if (error) { toast.error(error.message); return; }
+    setNewName("");
+    invalidate();
+  };
+  const renameGroup = async (id: string, name: string) => {
+    const n = name.trim(); if (!n) return;
+    const { error } = await supabase.from("festival_trolley_group").update({ name: n }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    invalidate();
+  };
+  const deleteGroup = async (id: string) => {
+    if (!confirm("Delete this trolley group? Its stalls will fall back to individual trolleys.")) return;
+    const { error } = await supabase.from("festival_trolley_group").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    invalidate();
+  };
+  const toggleStall = async (groupId: string, stallId: string, checked: boolean) => {
+    if (checked) {
+      // Remove from any other group first (UNIQUE stall_id enforces one group)
+      await supabase.from("festival_trolley_group_stall").delete().eq("stall_id", stallId);
+      const { error } = await supabase.from("festival_trolley_group_stall").insert({ group_id: groupId, stall_id: stallId });
+      if (error) { toast.error(error.message); return; }
+    } else {
+      const { error } = await supabase.from("festival_trolley_group_stall").delete()
+        .eq("group_id", groupId).eq("stall_id", stallId);
+      if (error) { toast.error(error.message); return; }
+    }
+    invalidate();
+  };
+  const resetAll = async () => {
+    if (!confirm("Delete all trolley groups for this festival? Each stall becomes its own trolley.")) return;
+    const { error } = await supabase.from("festival_trolley_group").delete().eq("festival_id", festivalId);
+    if (error) { toast.error(error.message); return; }
+    invalidate();
+  };
+
+  const summary = groups.length === 0
+    ? `${stalls.length} trolley${stalls.length === 1 ? "" : "s"} (one per stall)`
+    : `${groups.length} group${groups.length === 1 ? "" : "s"}${unassigned.length > 0 ? ` + ${unassigned.length} unassigned` : ""}`;
+
+  return (
+    <div className="rounded-lg border">
+      <button
+        className="w-full flex items-center justify-between gap-2 p-3 text-left"
+        onClick={() => setOpen(o => !o)}
+      >
+        <div>
+          <div className="text-sm font-semibold">Trolley groups</div>
+          <div className="text-xs text-muted-foreground">{summary}</div>
+        </div>
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+      {open && (
+        <div className="border-t p-3 space-y-3">
+          {groups.map(g => (
+            <TrolleyGroupCard
+              key={g.id}
+              group={g}
+              stalls={stalls}
+              links={links}
+              onRename={renameGroup}
+              onDelete={deleteGroup}
+              onToggleStall={toggleStall}
+            />
+          ))}
+          {unassigned.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Unassigned stalls (each renders as its own trolley): {unassigned.map(s => s.name).join(", ")}
+            </div>
+          )}
+          <div className="flex gap-2 pt-2 border-t">
+            <Input
+              placeholder="New trolley name, e.g. Trolley 1 - Fish 1 + Gyros 1"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addGroup(); }}
+              className="h-8 text-sm"
+            />
+            <Button size="sm" onClick={addGroup}><Plus className="h-3.5 w-3.5" /> Add</Button>
+            {groups.length > 0 && (
+              <Button size="sm" variant="outline" onClick={resetAll}>Reset</Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrolleyGroupCard({
+  group, stalls, links, onRename, onDelete, onToggleStall,
+}: {
+  group: TrolleyGroup;
+  stalls: Stall[];
+  links: TrolleyGroupStall[];
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+  onToggleStall: (groupId: string, stallId: string, checked: boolean) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(group.name);
+  const stallToGroup = new Map(links.map(l => [l.stall_id, l.group_id]));
+
+  return (
+    <div className="rounded border p-2 bg-muted/10">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        {editing ? (
+          <div className="flex gap-1 items-center flex-1">
+            <Input value={v} onChange={(e) => setV(e.target.value)} className="h-7 text-sm" />
+            <Button size="sm" variant="ghost" onClick={() => { onRename(group.id, v); setEditing(false); }}>Save</Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-sm font-medium">
+            {group.name}
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditing(true)}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onDelete(group.id)}>
+          <X className="h-3.5 w-3.5 text-destructive" />
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1">
+        {stalls.map(s => {
+          const owningGroup = stallToGroup.get(s.id);
+          const isMine = owningGroup === group.id;
+          const takenElsewhere = owningGroup && !isMine;
+          return (
+            <label key={s.id} className={`flex items-center gap-1.5 text-xs ${takenElsewhere ? "opacity-40" : ""}`}>
+              <Checkbox
+                checked={isMine}
+                onCheckedChange={(c) => onToggleStall(group.id, s.id, !!c)}
+                disabled={!!takenElsewhere}
+              />
+              <span>{s.name}</span>
+              <span className="text-muted-foreground">({CONCEPT_LABEL[s.concept] ?? s.concept})</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
