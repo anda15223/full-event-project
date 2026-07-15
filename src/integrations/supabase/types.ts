@@ -4970,6 +4970,176 @@ export type Database = {
           },
         ]
       }
+      festival_grocery_stall: {
+        Row: {
+          concept: string
+          created_at: string
+          festival_id: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          concept: string
+          created_at?: string
+          festival_id: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          concept?: string
+          created_at?: string
+          festival_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+        ]
+      }
+      festival_grocery_stall_estimate: {
+        Row: {
+          created_at: string
+          day: string
+          festival_id: string
+          id: string
+          product_id: string
+          qty: number
+          stall_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          festival_id: string
+          id?: string
+          product_id: string
+          qty?: number
+          stall_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          festival_id?: string
+          id?: string
+          product_id?: string
+          qty?: number
+          stall_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_consumables_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_cooking_equipment_rentals"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_festival_kpis"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_missing_manual_quantities"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_order_by_supplier"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "v_trolley_pack_list"
+            referencedColumns: ["festival_id"]
+          },
+          {
+            foreignKeyName: "festival_grocery_stall_estimate_stall_id_fkey"
+            columns: ["stall_id"]
+            isOneToOne: false
+            referencedRelation: "festival_grocery_stall"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       festival_hours: {
         Row: {
           created_at: string
