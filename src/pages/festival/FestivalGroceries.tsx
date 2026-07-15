@@ -656,6 +656,7 @@ export default function FestivalGroceries() {
           <TabsTrigger value="estimates">Estimates</TabsTrigger>
           <TabsTrigger value="calculation">Calculation</TabsTrigger>
           <TabsTrigger value="trolleys">Trolleys</TabsTrigger>
+          <TabsTrigger value="stock">Stock</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="consumables">Consumables</TabsTrigger>
           <TabsTrigger value="library">Library</TabsTrigger>
