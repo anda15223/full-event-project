@@ -205,8 +205,15 @@ export function buildStallDistribution(opts: {
   }
 
   // ---------------- (C) allocate ordered packs across stalls ----------------
+  // Exclude packaging loaded separately from Søborg (never routed through trolleys).
+  const EXCLUDED_SUPPLIER_NAMES = new Set(["kollek", "triple trading"]);
+  const excludedSupplierIds = new Set(
+    suppliers.filter(s => EXCLUDED_SUPPLIER_NAMES.has(s.name.trim().toLowerCase())).map(s => s.id)
+  );
+
   const rows: StallDistributionRow[] = [];
   for (const ing of ingredients) {
+    if (ing.supplier_id && excludedSupplierIds.has(ing.supplier_id)) continue;
     const need = festivalReq.get(ing.id);
     if (!need) continue;
     const raw = ing.unit === "g" ? need.g : need.stk;
