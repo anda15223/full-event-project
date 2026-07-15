@@ -130,6 +130,24 @@ export function buildStallDistribution(opts: {
     }));
   }
 
+  // ---------------- (B2) per-concept demand — authoritative source for
+  // which concepts an ingredient belongs to. Derived from recipes, not
+  // from per-stall estimates (which may be blank).
+  const conceptSet = new Set(stalls.map(s => s.concept));
+  const conceptReq = new Map<string, Map<string, { g: number; stk: number }>>();
+  for (const concept of conceptSet) {
+    const perRecipe = new Map<string, number>();
+    for (const [rid, u] of unitsByRecipe) {
+      if (recipeConcept.get(rid) === concept) perRecipe.set(rid, u);
+    }
+    conceptReq.set(concept, computeDemand({
+      unitsByRecipe: perRecipe,
+      recipes, items, packaging, ingredients, suppliers,
+      margin,
+      consumables: [],
+    }));
+  }
+
   // ---------------- (C) allocate ordered packs across stalls ----------------
   const rows: StallDistributionRow[] = [];
   for (const ing of ingredients) {
@@ -141,14 +159,18 @@ export function buildStallDistribution(opts: {
     const orderedPacks = packSize > 0 ? safeCeil(raw / packSize) : safeCeil(raw);
     if (orderedPacks <= 0) continue;
 
-    // Which concepts contribute demand for this ingredient? Filter stalls to those concepts.
+    // Which concepts contribute demand for this ingredient? Derived from
+    // recipe usage (concept-level), so ingredients tied to gyros-only
+    // recipes never leak into fish stalls even if per-stall estimates
+    // are still blank.
     const contributingConcepts = new Set<string>();
-    for (const stall of stalls) {
-      const sn = stallReq.get(stall.id)?.get(ing.id);
-      const v = sn ? (ing.unit === "g" ? sn.g : sn.stk) : 0;
-      if (v > 0) contributingConcepts.add(stall.concept);
+    for (const concept of conceptSet) {
+      const cn = conceptReq.get(concept)?.get(ing.id);
+      const v = cn ? (ing.unit === "g" ? cn.g : cn.stk) : 0;
+      if (v > 0) contributingConcepts.add(concept);
     }
-    // If no stall demand at all (e.g. consumable) → fall back to all stalls with recipes for that ingredient's concept usage.
+    // If no concept demand at all (pure consumable not tied to a recipe)
+    // → fall back to all stalls.
     let stallList: Stall[];
     if (contributingConcepts.size > 0) {
       stallList = stalls.filter(s => contributingConcepts.has(s.concept));
