@@ -31,7 +31,7 @@ export default function FestivalGroceriesTrolleyExport() {
     queryKey: ["trolley-export-data", festival?.id],
     enabled: !!festival?.id,
     queryFn: async () => {
-      const [ing, sup, rec, ri, pkg, est, set, cons, stalls, se, tg, tgs] = await Promise.all([
+      const [ing, sup, rec, ri, pkg, est, set, cons, stalls, se, tg, tgs, fryers] = await Promise.all([
         supabase.from("grocery_ingredients").select("*"),
         supabase.from("grocery_suppliers").select("*"),
         supabase.from("grocery_recipes").select("*"),
@@ -44,18 +44,29 @@ export default function FestivalGroceriesTrolleyExport() {
         supabase.from("festival_grocery_stall_estimate").select("*").eq("festival_id", festival!.id),
         supabase.from("festival_trolley_group").select("*").eq("festival_id", festival!.id).order("sort_order"),
         supabase.from("festival_trolley_group_stall").select("*"),
+        fetchFestivalFryerEquipment(festival!.id),
       ]);
       const groups = (tg.data ?? []) as any[];
       const groupIds = new Set(groups.map(g => g.id));
       const links = ((tgs.data ?? []) as any[]).filter(l => groupIds.has(l.group_id));
+      const ingredients = (ing.data ?? []) as any[];
+      const oilBackupFactor = (set.data?.oil_backup_factor ?? 2.0) as number;
+      const autoOil = computeAutoOil({
+        festivalId: festival!.id,
+        ingredients,
+        fryerRows: fryers,
+        oilBackupFactor,
+      });
+      const dbCons = (cons.data ?? []) as any[];
+      const effectiveConsumables = autoOil ? [...dbCons, autoOil] : dbCons;
       return {
-        ingredients: (ing.data ?? []) as any[],
+        ingredients,
         suppliers: (sup.data ?? []) as any[],
         recipes: (rec.data ?? []) as any[],
         items: (ri.data ?? []) as any[],
         packaging: (pkg.data ?? []) as any[],
         estimates: (est.data ?? []) as any[],
-        consumables: (cons.data ?? []) as any[],
+        consumables: effectiveConsumables,
         stalls: (stalls.data ?? []) as any[],
         stallEstimates: (se.data ?? []) as any[],
         groups,
