@@ -27,6 +27,7 @@ import TrolleysTab, {
   useStalls, useStallEstimates, buildStallDistribution,
   StallManagerPopover, StallEstimateMatrix,
 } from "./FestivalGroceriesTrolleys";
+import GroceryStockTab from "@/components/festival/GroceryStockTab";
 
 // ---------- types ----------
 type Festival = { id: string; slug: string; name: string; start_date: string | null; end_date: string | null };
