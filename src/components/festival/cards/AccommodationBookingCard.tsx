@@ -82,8 +82,10 @@ interface Props {
   booking: AccommodationRow;
   rooms: AccommodationRoomRow[];
   staffList?: StaffPickOption[];
-  /** lowercased assignee name -> "Booking · Room X · Bed Y" */
+  /** lowercased assignee name -> "Booking · Room X · Bed Y" for this booking's nights */
   assignmentMap?: Map<string, string>;
+  bookingNights?: string[];
+  coveredNightsByStaff?: Map<string, Set<string>>;
 }
 
 const PAYMENT_OPTIONS = [
@@ -341,9 +343,10 @@ function BedPicker({
 }
 
 export function AccommodationBookingCard({
-  festivalId, festivalSlug, booking, rooms, staffList = [], assignmentMap,
+  festivalId, festivalSlug, booking, rooms, staffList = [], assignmentMap, bookingNights = [], coveredNightsByStaff,
 }: Props) {
   const effectiveAssignmentMap = assignmentMap ?? new Map<string, string>();
+  const effectiveCoveredNights = coveredNightsByStaff ?? new Map<string, Set<string>>();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [notesDraft, setNotesDraft] = useState(booking.notes ?? "");
@@ -778,9 +781,15 @@ export function AccommodationBookingCard({
           </div>
         )}
         {staffList.length > 0 && (() => {
-          const unassigned = staffList.filter(
-            (s) => !effectiveAssignmentMap.has(s.name.trim().toLowerCase())
-          );
+          const unassigned = staffList
+            .map((s) => {
+              const requiredForBooking = (s.accom_dates ?? []).filter((d) => bookingNights.includes(d));
+              if (requiredForBooking.length === 0) return null;
+              const covered = effectiveCoveredNights.get(s.name.trim().toLowerCase()) ?? new Set<string>();
+              const missingDates = requiredForBooking.filter((d) => !covered.has(d));
+              return missingDates.length > 0 ? { ...s, missingDates } : null;
+            })
+            .filter(Boolean) as (StaffPickOption & { missingDates: string[] })[];
           if (unassigned.length === 0) return null;
           return (
             <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
@@ -791,7 +800,6 @@ export function AccommodationBookingCard({
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {unassigned.map((s) => {
-                  const dates = (s.accom_dates ?? []).filter(Boolean);
                   const fmt = (d: string) => {
                     const dt = new Date(d + "T00:00:00");
                     return dt.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -811,9 +819,9 @@ export function AccommodationBookingCard({
                       {s.home_location && (
                         <span className="text-[10px] text-muted-foreground">· {s.home_location}</span>
                       )}
-                      {dates.length > 0 && (
+                      {s.missingDates.length > 0 && (
                         <span className="text-[10px] text-blue-700 dark:text-blue-300">
-                          · {dates.map(fmt).join(", ")}
+                          · missing {s.missingDates.map(fmt).join(", ")}
                         </span>
                       )}
                     </span>
