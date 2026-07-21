@@ -1028,6 +1028,20 @@ function PassengersCell({
 
   const addPassenger = useMutation({
     mutationFn: async (staffId: string) => {
+      // Enforce uniqueness per date: a person can only be on one leg per day.
+      // Remove any existing assignment for this staff on legs on the same date.
+      const { data: sameDateLegs } = await supabase
+        .from("transport_legs")
+        .select("id")
+        .eq("leg_date", leg.leg_date);
+      const ids = (sameDateLegs ?? []).map((l: any) => l.id);
+      if (ids.length) {
+        await supabase
+          .from("transport_leg_assignments")
+          .delete()
+          .eq("staff_id", staffId)
+          .in("leg_id", ids);
+      }
       const { error } = await supabase
         .from("transport_leg_assignments")
         .insert({ leg_id: leg.id, role: "passenger", staff_id: staffId });
