@@ -60,7 +60,7 @@ type Assignment = {
   id: string; leg_id: string; staff_id: string | null; role: string;
   seat_position: string | null; pickup_point: string | null; notes: string | null;
 };
-type Staff = { id: string; name: string | null; role: string; requires_transport: boolean; home_location: string | null };
+type Staff = { id: string; name: string | null; role: string; requires_transport: boolean; home_location: string | null; staff_source: string | null };
 
 const VEHICLE_STATUSES = ["planned", "booked", "picked-up", "returned", "cancelled"];
 const LEG_STATUSES = ["planned", "confirmed", "completed", "cancelled"];
@@ -87,14 +87,20 @@ function fmtDateLong(d: string) {
 }
 
 // Bucket staff by home city (Aarhus / Copenhagen / Unknown).
-// Source is the per-event value on festival_staff.home_location, so any
-// per-festival override made in the Staff card is respected here.
+// Priority: per-event `staff_source` (edited via the Staff card's location
+// dropdown) → fallback to free-text `home_location`. This way any per-festival
+// override in the Staff card immediately flows into transport picking.
 type CityKey = "aarhus" | "copenhagen" | "unknown";
-function cityBucket(loc: string | null | undefined): CityKey {
-  const s = (loc ?? "").toLowerCase().trim();
-  if (!s) return "unknown";
-  if (s.includes("aarhus") || s.includes("århus") || s.includes("aaarhus")) return "aarhus";
-  if (s.includes("copenhagen") || s.includes("københavn") || s.includes("kobenhavn") || s.includes("kbh") || s.includes("coprnhaga")) return "copenhagen";
+function cityBucket(s: Pick<Staff, "staff_source" | "home_location">): CityKey {
+  const src = (s.staff_source ?? "").toLowerCase().trim();
+  if (src === "aarhus") return "aarhus";
+  if (src === "soborg" || src === "copenhagen") return "copenhagen";
+  if (src === "local" || src === "fidibus") return "unknown";
+  // Fall back to the free-text home_location only when staff_source is empty/unknown.
+  const loc = (s.home_location ?? "").toLowerCase().trim();
+  if (!loc) return "unknown";
+  if (loc.includes("aarhus") || loc.includes("århus") || loc.includes("aaarhus")) return "aarhus";
+  if (loc.includes("copenhagen") || loc.includes("københavn") || loc.includes("kobenhavn") || loc.includes("kbh") || loc.includes("coprnhaga")) return "copenhagen";
   return "unknown";
 }
 
@@ -108,7 +114,7 @@ function StaffOptions({
     { key: "unknown", label: "Unknown", items: [] },
   ];
   staff.forEach((s) => {
-    const b = cityBucket(s.home_location);
+    const b = cityBucket(s);
     groups.find((g) => g.key === b)!.items.push(s);
   });
   const chips: { key: "all" | CityKey; label: string; count: number }[] = [
@@ -248,7 +254,7 @@ export default function FestivalTransport() {
       // an import where the staff list was already committed).
       const { data, error } = await supabase
         .from("festival_staff")
-        .select("id,name,role,requires_transport,home_location,is_draft")
+        .select("id,name,role,requires_transport,home_location,staff_source,is_draft")
         .eq("festival_id", festival!.id)
         .order("name");
       if (error) throw error;
