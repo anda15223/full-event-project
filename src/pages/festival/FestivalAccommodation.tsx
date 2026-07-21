@@ -474,7 +474,7 @@ export default function FestivalAccommodation() {
                 booking={b}
                 rooms={groupedRooms.get(b.id) ?? []}
                 staffList={staffQ.data ?? []}
-                assignmentMap={assignmentMap}
+                assignmentMap={assignmentsByBooking.get(b.id) ?? new Map()}
               />
             ))}
           </div>
