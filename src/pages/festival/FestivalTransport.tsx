@@ -87,14 +87,20 @@ function fmtDateLong(d: string) {
 }
 
 // Bucket staff by home city (Aarhus / Copenhagen / Unknown).
-// Source is the per-event value on festival_staff.home_location, so any
-// per-festival override made in the Staff card is respected here.
+// Priority: per-event `staff_source` (edited via the Staff card's location
+// dropdown) → fallback to free-text `home_location`. This way any per-festival
+// override in the Staff card immediately flows into transport picking.
 type CityKey = "aarhus" | "copenhagen" | "unknown";
-function cityBucket(loc: string | null | undefined): CityKey {
-  const s = (loc ?? "").toLowerCase().trim();
-  if (!s) return "unknown";
-  if (s.includes("aarhus") || s.includes("århus") || s.includes("aaarhus")) return "aarhus";
-  if (s.includes("copenhagen") || s.includes("københavn") || s.includes("kobenhavn") || s.includes("kbh") || s.includes("coprnhaga")) return "copenhagen";
+function cityBucket(s: Pick<Staff, "staff_source" | "home_location">): CityKey {
+  const src = (s.staff_source ?? "").toLowerCase().trim();
+  if (src === "aarhus") return "aarhus";
+  if (src === "soborg" || src === "copenhagen") return "copenhagen";
+  if (src === "local" || src === "fidibus") return "unknown";
+  // Fall back to the free-text home_location only when staff_source is empty/unknown.
+  const loc = (s.home_location ?? "").toLowerCase().trim();
+  if (!loc) return "unknown";
+  if (loc.includes("aarhus") || loc.includes("århus") || loc.includes("aaarhus")) return "aarhus";
+  if (loc.includes("copenhagen") || loc.includes("københavn") || loc.includes("kobenhavn") || loc.includes("kbh") || loc.includes("coprnhaga")) return "copenhagen";
   return "unknown";
 }
 
