@@ -19,6 +19,18 @@ const sb = supabase as any;
 
 type Festival = { id: string; slug: string; name: string; start_date: string; end_date: string };
 
+function nightsInRange(checkIn: string | null, checkOut: string | null) {
+  if (!checkIn || !checkOut || checkIn >= checkOut) return [];
+  const nights: string[] = [];
+  const d = new Date(checkIn + "T00:00:00");
+  const end = new Date(checkOut + "T00:00:00");
+  while (d < end) {
+    nights.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return nights;
+}
+
 export default function FestivalAccommodation() {
   const { draftMode } = useDraftMode();
   const { slug = "" } = useParams();
@@ -39,7 +51,7 @@ export default function FestivalAccommodation() {
   const festivalId = festival?.id ?? "";
 
   const pageQ = useQuery({
-    queryKey: ["accommodation-page", slug],
+    queryKey: ["accommodation-page", slug, draftMode],
     enabled: !!festivalId,
     queryFn: async () => {
       const { data: bookings, error: be } = await sb.from("festival_accommodation")
@@ -154,7 +166,6 @@ export default function FestivalAccommodation() {
     bookings.forEach((b) => {
       const m = new Map<string, string>();
       all.forEach((a) => {
-        if (a.bookingId === b.id) return; // don't flag person against their own booking
         if (!overlaps(b.check_in_date, b.check_out_date, a.ci, a.co)) return;
         if (!m.has(a.name)) m.set(a.name, a.label);
       });
@@ -162,6 +173,39 @@ export default function FestivalAccommodation() {
     });
     return out;
   }, [pageQ.data, bookingLabelById]);
+
+  const coveredNightsByStaff = useMemo(() => {
+    const bookings = pageQ.data?.bookings ?? [];
+    const rooms = pageQ.data?.rooms ?? [];
+    const bookingById = new Map(bookings.map((b) => [b.id, b] as const));
+    const staffByName = new Map(
+      (staffQ.data ?? []).map((s) => [s.name.trim().toLowerCase(), new Set(s.accom_dates ?? [])] as const),
+    );
+    const covered = new Map<string, Set<string>>();
+
+    rooms.forEach((r) => {
+      const booking = bookingById.get(r.accommodation_id);
+      const bookingNights = nightsInRange(booking?.check_in_date ?? null, booking?.check_out_date ?? null);
+      const c = r.bed_count ?? 0;
+      for (let i = 1; i <= 4; i++) {
+        if (i > c) break;
+        const key = `bed_${i}_assignee` as keyof AccommodationRoomRow;
+        const rawName = (r[key] as string | null)?.trim();
+        if (!rawName) continue;
+        const name = rawName.toLowerCase();
+        const requiredDates = staffByName.get(name);
+        const nightsCovered = requiredDates?.size
+          ? bookingNights.filter((night) => requiredDates.has(night))
+          : bookingNights;
+        if (nightsCovered.length === 0) continue;
+        const set = covered.get(name) ?? new Set<string>();
+        nightsCovered.forEach((night) => set.add(night));
+        covered.set(name, set);
+      }
+    });
+
+    return covered;
+  }, [pageQ.data, staffQ.data]);
 
   const summary = useMemo(() => {
     const bookings = pageQ.data?.bookings ?? [];
@@ -475,6 +519,8 @@ export default function FestivalAccommodation() {
                 rooms={groupedRooms.get(b.id) ?? []}
                 staffList={staffQ.data ?? []}
                 assignmentMap={assignmentsByBooking.get(b.id) ?? new Map()}
+                bookingNights={nightsInRange(b.check_in_date, b.check_out_date)}
+                coveredNightsByStaff={coveredNightsByStaff}
               />
             ))}
           </div>
