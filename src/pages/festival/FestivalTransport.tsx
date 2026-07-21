@@ -114,7 +114,7 @@ function StaffOptions({
     { key: "unknown", label: "Unknown", items: [] },
   ];
   staff.forEach((s) => {
-    const b = cityBucket(s.home_location);
+    const b = cityBucket(s);
     groups.find((g) => g.key === b)!.items.push(s);
   });
   const chips: { key: "all" | CityKey; label: string; count: number }[] = [
