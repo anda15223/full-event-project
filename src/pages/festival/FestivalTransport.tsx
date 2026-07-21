@@ -254,7 +254,7 @@ export default function FestivalTransport() {
       // an import where the staff list was already committed).
       const { data, error } = await supabase
         .from("festival_staff")
-        .select("id,name,role,requires_transport,home_location,is_draft")
+        .select("id,name,role,requires_transport,home_location,staff_source,is_draft")
         .eq("festival_id", festival!.id)
         .order("name");
       if (error) throw error;
