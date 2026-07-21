@@ -60,7 +60,7 @@ type Assignment = {
   id: string; leg_id: string; staff_id: string | null; role: string;
   seat_position: string | null; pickup_point: string | null; notes: string | null;
 };
-type Staff = { id: string; name: string | null; role: string; requires_transport: boolean; home_location: string | null };
+type Staff = { id: string; name: string | null; role: string; requires_transport: boolean; home_location: string | null; staff_source: string | null };
 
 const VEHICLE_STATUSES = ["planned", "booked", "picked-up", "returned", "cancelled"];
 const LEG_STATUSES = ["planned", "confirmed", "completed", "cancelled"];
