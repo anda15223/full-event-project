@@ -114,20 +114,53 @@ export default function FestivalAccommodation() {
     return m;
   }, [pageQ.data]);
 
-  const assignmentMap = useMemo(() => {
-    const m = new Map<string, string>(); // lowercased name -> location label
-    (pageQ.data?.rooms ?? []).forEach((r) => {
+  // Date-aware assignment map: an assignment on booking A only conflicts with
+  // booking B if their check-in / check-out ranges actually overlap. Two
+  // back-to-back nights (e.g. 22→23 and 23→24) do NOT overlap.
+  const assignmentsByBooking = useMemo(() => {
+    const bookings = pageQ.data?.bookings ?? [];
+    const rooms = pageQ.data?.rooms ?? [];
+    const bookingById = new Map(bookings.map((b) => [b.id, b] as const));
+
+    // Collect every assignment with its source booking's dates.
+    type A = { name: string; label: string; bookingId: string; ci: string | null; co: string | null };
+    const all: A[] = [];
+    rooms.forEach((r) => {
+      const src = bookingById.get(r.accommodation_id);
       const c = r.bed_count ?? 0;
       for (let i = 1; i <= 4; i++) {
         if (i > c) break;
         const key = `bed_${i}_assignee` as keyof AccommodationRoomRow;
         const v = (r[key] as string | null)?.trim();
         if (!v) continue;
-        const where = `${bookingLabelById.get(r.accommodation_id) ?? ""} · ${r.room_label} · Bed ${i}`;
-        m.set(v.toLowerCase(), where);
+        all.push({
+          name: v.toLowerCase(),
+          label: `${bookingLabelById.get(r.accommodation_id) ?? ""} · ${r.room_label} · Bed ${i}`,
+          bookingId: r.accommodation_id,
+          ci: src?.check_in_date ?? null,
+          co: src?.check_out_date ?? null,
+        });
       }
     });
-    return m;
+
+    const overlaps = (aCi: string | null, aCo: string | null, bCi: string | null, bCo: string | null) => {
+      // If either range lacks dates, fall back to treating them as conflicting
+      // (safer than hiding a possible double-booking).
+      if (!aCi || !aCo || !bCi || !bCo) return true;
+      return aCi < bCo && bCi < aCo;
+    };
+
+    const out = new Map<string, Map<string, string>>();
+    bookings.forEach((b) => {
+      const m = new Map<string, string>();
+      all.forEach((a) => {
+        if (a.bookingId === b.id) return; // don't flag person against their own booking
+        if (!overlaps(b.check_in_date, b.check_out_date, a.ci, a.co)) return;
+        if (!m.has(a.name)) m.set(a.name, a.label);
+      });
+      out.set(b.id, m);
+    });
+    return out;
   }, [pageQ.data, bookingLabelById]);
 
   const summary = useMemo(() => {
