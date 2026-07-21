@@ -86,29 +86,64 @@ function fmtDateLong(d: string) {
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
-// Bucket staff by home city (Aarhus / Copenhagen / Other)
-function cityBucket(loc: string | null | undefined): "aarhus" | "copenhagen" | "other" {
-  const s = (loc ?? "").toLowerCase();
-  if (s.includes("aarhus") || s.includes("århus")) return "aarhus";
-  if (s.includes("copenhagen") || s.includes("københavn") || s.includes("kobenhavn") || s.includes("kbh")) return "copenhagen";
-  return "other";
+// Bucket staff by home city (Aarhus / Copenhagen / Unknown).
+// Source is the per-event value on festival_staff.home_location, so any
+// per-festival override made in the Staff card is respected here.
+type CityKey = "aarhus" | "copenhagen" | "unknown";
+function cityBucket(loc: string | null | undefined): CityKey {
+  const s = (loc ?? "").toLowerCase().trim();
+  if (!s) return "unknown";
+  if (s.includes("aarhus") || s.includes("århus") || s.includes("aaarhus")) return "aarhus";
+  if (s.includes("copenhagen") || s.includes("københavn") || s.includes("kobenhavn") || s.includes("kbh") || s.includes("coprnhaga")) return "copenhagen";
+  return "unknown";
 }
 
 function StaffOptions({
   staff, assignedIds, currentId,
 }: { staff: Staff[]; assignedIds: Set<string>; currentId?: string | null }) {
-  const groups: { key: string; label: string; items: Staff[] }[] = [
+  const [filter, setFilter] = useState<"all" | CityKey>("all");
+  const groups: { key: CityKey; label: string; items: Staff[] }[] = [
     { key: "aarhus", label: "Aarhus", items: [] },
     { key: "copenhagen", label: "Copenhagen", items: [] },
-    { key: "other", label: "Other", items: [] },
+    { key: "unknown", label: "Unknown", items: [] },
   ];
   staff.forEach((s) => {
     const b = cityBucket(s.home_location);
     groups.find((g) => g.key === b)!.items.push(s);
   });
+  const chips: { key: "all" | CityKey; label: string; count: number }[] = [
+    { key: "all", label: "All", count: staff.length },
+    { key: "aarhus", label: "Aarhus", count: groups[0].items.length },
+    { key: "copenhagen", label: "Copenhagen", count: groups[1].items.length },
+    { key: "unknown", label: "Unknown", count: groups[2].items.length },
+  ];
+  const visible = groups.filter((g) => (filter === "all" || filter === g.key) && g.items.length > 0);
   return (
     <>
-      {groups.filter((g) => g.items.length > 0).map((g) => (
+      <div
+        className="sticky top-0 z-10 flex flex-wrap gap-1 border-b bg-popover px-2 py-1.5"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {chips.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFilter(c.key); }}
+            className={cn(
+              "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+              filter === c.key
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground border-border hover:bg-accent",
+            )}
+          >
+            {c.label} <span className="tabular-nums opacity-70">{c.count}</span>
+          </button>
+        ))}
+      </div>
+      {visible.length === 0 && (
+        <div className="px-3 py-2 text-xs text-muted-foreground">No staff in this category.</div>
+      )}
+      {visible.map((g) => (
         <SelectGroup key={g.key}>
           <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">{g.label}</SelectLabel>
           {g.items.map((s) => {
@@ -121,6 +156,7 @@ function StaffOptions({
                 className={cn(taken && "text-destructive", isCurrent && "font-semibold")}
               >
                 {s.name ?? "(unnamed)"} · {s.role}
+                {s.home_location ? ` · ${s.home_location}` : ""}
                 {taken && (isCurrent ? " · assigned here" : " · assigned elsewhere")}
               </SelectItem>
             );
