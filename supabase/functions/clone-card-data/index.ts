@@ -518,8 +518,6 @@ Deno.serve(async (req) => {
 
     // If staff was part of this import, remap source contract IDs to the active
     // target festival contracts before the user previews/commits the draft.
-    // This keeps identical stations filled and parks staff from disabled
-    // duplicate stalls (for example Fish 2) in Not assigned.
     if (tables.some((t) => STAFF_REPLACE_TABLES.has(t))) {
       staffRemap = await remapDraftStaffAssignments(supabase, sourceFestivalId, targetFestivalId);
 
@@ -529,7 +527,116 @@ Deno.serve(async (req) => {
         .eq("id", targetFestivalId);
     }
 
-    return json({ imported, errors, staffRemap });
+    // If festival_transport was part of this import, also clone the child
+    // transport_legs and transport_leg_assignments so drivers/passengers come
+    // across too. Legs are re-parented to the freshly inserted draft transport
+    // rows; assignment staff_ids are remapped by staff_number between the
+    // source and target festival staff lists (draft or live).
+    let transportLegsCopied = 0;
+    let transportAssignmentsCopied = 0;
+    if (tables.includes("festival_transport")) {
+      try {
+        const [srcT, tgtT] = await Promise.all([
+          supabase
+            .from("festival_transport")
+            .select("id, vehicle_type, license_plate, pickup_date, rental_supplier, booking_reference, vehicle_purpose")
+            .eq("festival_id", sourceFestivalId)
+            .eq("is_draft", false),
+          supabase
+            .from("festival_transport")
+            .select("id, vehicle_type, license_plate, pickup_date, rental_supplier, booking_reference, vehicle_purpose")
+            .eq("festival_id", targetFestivalId)
+            .eq("is_draft", true)
+            .eq("draft_source_festival_id", sourceFestivalId),
+        ]);
+
+        const keyOf = (r: any) =>
+          [r.vehicle_type ?? "", r.license_plate ?? "", r.pickup_date ?? "",
+           r.rental_supplier ?? "", r.booking_reference ?? "", r.vehicle_purpose ?? ""].join("||");
+        const tgtByKey = new Map<string, string[]>();
+        ((tgtT.data ?? []) as any[]).forEach((r) => {
+          const k = keyOf(r);
+          const list = tgtByKey.get(k) ?? [];
+          list.push(r.id);
+          tgtByKey.set(k, list);
+        });
+        const transportMap = new Map<string, string>();
+        ((srcT.data ?? []) as any[]).forEach((r) => {
+          const list = tgtByKey.get(keyOf(r));
+          if (list && list.length > 0) transportMap.set(r.id, list.shift()!);
+        });
+
+        const srcTransportIds = Array.from(transportMap.keys());
+        if (srcTransportIds.length > 0) {
+          const { data: srcLegs } = await supabase
+            .from("transport_legs")
+            .select("*")
+            .in("transport_id", srcTransportIds);
+
+          const legList = ((srcLegs ?? []) as Record<string, any>[]);
+          const legMap = new Map<string, string>();
+
+          for (const leg of legList) {
+            const newTransportId = transportMap.get(leg.transport_id);
+            if (!newTransportId) continue;
+            const { id: srcLegId, transport_id: _t, created_at: _c, updated_at: _u, ...rest } = leg;
+            const { data: inserted, error: legErr } = await supabase
+              .from("transport_legs")
+              .insert({ ...rest, transport_id: newTransportId })
+              .select("id")
+              .single();
+            if (legErr || !inserted) continue;
+            legMap.set(srcLegId, inserted.id);
+            transportLegsCopied++;
+          }
+
+          const [srcStaffRes, tgtStaffRes] = await Promise.all([
+            supabase.from("festival_staff")
+              .select("id, staff_number")
+              .eq("festival_id", sourceFestivalId).eq("is_draft", false),
+            supabase.from("festival_staff")
+              .select("id, staff_number, is_draft")
+              .eq("festival_id", targetFestivalId),
+          ]);
+          const tgtLive = new Map<number, string>();
+          const tgtDraft = new Map<number, string>();
+          ((tgtStaffRes.data ?? []) as any[]).forEach((r) => {
+            if (r.staff_number == null) return;
+            if (r.is_draft) tgtDraft.set(r.staff_number, r.id);
+            else tgtLive.set(r.staff_number, r.id);
+          });
+          const staffMap = new Map<string, string>();
+          ((srcStaffRes.data ?? []) as any[]).forEach((r) => {
+            if (r.staff_number == null) return;
+            const tid = tgtLive.get(r.staff_number) ?? tgtDraft.get(r.staff_number);
+            if (tid) staffMap.set(r.id, tid);
+          });
+
+          const srcLegIds = legList.map((l) => l.id);
+          if (srcLegIds.length > 0) {
+            const { data: srcAssigns } = await supabase
+              .from("transport_leg_assignments")
+              .select("*")
+              .in("leg_id", srcLegIds);
+
+            for (const a of ((srcAssigns ?? []) as Record<string, any>[])) {
+              const newLegId = legMap.get(a.leg_id);
+              if (!newLegId) continue;
+              const { id: _id, leg_id: _l, created_at: _c, updated_at: _u, staff_id, ...rest } = a;
+              const newStaffId = staff_id ? (staffMap.get(staff_id) ?? null) : null;
+              const { error: aErr } = await supabase
+                .from("transport_leg_assignments")
+                .insert({ ...rest, leg_id: newLegId, staff_id: newStaffId });
+              if (!aErr) transportAssignmentsCopied++;
+            }
+          }
+        }
+      } catch (e) {
+        errors["transport_legs"] = (e as Error).message?.slice(0, 300) ?? "unknown error";
+      }
+    }
+
+    return json({ imported, errors, staffRemap, transportLegsCopied, transportAssignmentsCopied });
 
 
   } catch (e) {
