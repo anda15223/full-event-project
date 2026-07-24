@@ -525,9 +525,25 @@ export function AccommodationBookingCard({
 
   const openDoc = async () => {
     if (!booking.booking_file_path) return;
-    const { data } = await supabase.storage.from("festival-accommodation-docs")
-      .createSignedUrl(booking.booking_file_path, 600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    try {
+      const path = booking.booking_file_path;
+      const fileName = path.split("/").pop() || "confirmation";
+      const { data, error } = await supabase.storage
+        .from("festival-accommodation-docs")
+        .createSignedUrl(path, 600, { download: fileName });
+      if (error || !data?.signedUrl) throw error ?? new Error("No signed URL");
+      // Use an anchor click instead of window.open — avoids popup-blocker issues.
+      const a = document.createElement("a");
+      a.href = data.signedUrl;
+      a.rel = "noopener noreferrer";
+      a.target = "_blank";
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not open confirmation");
+    }
   };
 
   const targetRooms = booking.room_count ?? 0;
