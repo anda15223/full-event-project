@@ -31,7 +31,9 @@ function errorMessage(error: unknown, fallback: string) {
 /**
  * Festival-wide import of full power cards from another festival.
  * Matches concepts by (concept_id + stall order) so duplicate stalls are preserved.
- * Replace mode wipes each matched target power's equipment and order-list items first.
+ * Replace mode wipes each matched target power's equipment first.
+ * The electricity order (order-list items, allocations, connections, order refs)
+ * is never imported — it is filled from this festival's own parsed order list.
  */
 export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
   const [festivals, setFestivals] = useState<SourceFestival[]>([]);
