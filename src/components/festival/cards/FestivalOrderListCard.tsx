@@ -52,9 +52,8 @@ function deriveElectricityOrder(
   let hasConnections = false;
 
   for (const r of rows) {
-    const text = `${r.item_name ?? ""} ${r.unit ?? ""} ${r.notes ?? ""}`
-      .toLowerCase()
-      .replace(/\s+/g, "");
+    const raw = `${r.item_name ?? ""} ${r.unit ?? ""} ${r.notes ?? ""}`.toLowerCase();
+    const text = raw.replace(/\s+/g, "");
     const isElectric =
       r.category === "electricity" ||
       /\d+a\b|amp|ampere|kw|str[oø]m|power|el-|stik|schuko|cee/.test(text);
@@ -63,18 +62,24 @@ function deriveElectricityOrder(
     if (r.total_price != null) cost += Number(r.total_price);
 
     const qty = Math.max(1, Math.round(Number(r.quantity ?? 1)));
+    // Pick the largest amp figure mentioned and snap it to the nearest
+    // standard connection size (e.g. "64 A" → 63A, "125A" → 125A).
+    const amps = Array.from(raw.matchAll(/(\d{1,3})\s*a(?:mp(?:ere)?)?(?![a-z0-9])/g))
+      .map((m) => Number(m[1]))
+      .filter((n) => n >= 6 && n <= 400);
+    const amp = amps.length ? Math.max(...amps) : null;
     let key: keyof typeof counts | null = null;
-    if (/125a/.test(text)) key = "connections_125a";
-    else if (/63a/.test(text)) key = "connections_63a";
-    else if (/32a/.test(text)) key = "connections_32a";
-    else if (/16a/.test(text)) {
-      key =
-        /240|230|1ph|1-ph|schuko|enfaset/.test(text)
-          ? "connections_16a_240v"
-          : /400|3ph|3-ph|trefaset/.test(text)
-            ? "connections_16a_400v"
-            : "connections_16a_240v";
+    if (amp != null) {
+      if (amp >= 90) key = "connections_125a";
+      else if (amp >= 45) key = "connections_63a";
+      else if (amp >= 24) key = "connections_32a";
+      else {
+        key = /400|3ph|3-ph|trefaset/.test(text)
+          ? "connections_16a_400v"
+          : "connections_16a_240v";
+      }
     }
+
     if (key) {
       counts[key] += qty;
       hasConnections = true;
