@@ -486,23 +486,24 @@ Deno.serve(async (req) => {
       // For "prices" PDFs, always use vision/document path — these are often fillable
       // AcroForm PDFs (e.g. Tinderbox "Bodens sortiment" template) where text extraction
       // only returns the static labels and misses the user-filled values.
-      const forceVisionForPdf = format === "pdf" && documentType === "prices";
+      const forceVisionForPdf = format === "pdf" &&
+        (documentType === "prices" || documentType === "festival_order");
 
       if (forceVisionForPdf) {
         const formText = await extractPdfFormFields(buf);
         const base64 = arrayBufferToBase64(buf);
+        const instruction = documentType === "festival_order"
+          ? "Read the PDF, the visible page, and any PDF form-field values above. Extract ONLY order lines the customer actually filled in with a quantity of 1 or more. Ignore blank template rows, price-catalogue rows with no quantity, labels and placeholders. If nothing was filled in, return an empty items array."
+          : "Read the PDF, the visible page, and any PDF form-field values above. Extract ONLY real filled-in menu dishes with a positive price. Ignore empty template rows like RET NR. 1/2/3, labels, and placeholder fields.";
         userContent = [
           {
             type: "document",
             source: { type: "base64", media_type: "application/pdf", data: base64 },
           },
           ...(formText ? [{ type: "text", text: formText }] : []),
-          {
-            type: "text",
-            text: "Read the PDF, the visible page, and any PDF form-field values above. Extract ONLY real filled-in menu dishes with a positive price. Ignore empty template rows like RET NR. 1/2/3, labels, and placeholder fields.",
-          },
+          { type: "text", text: instruction },
         ];
-        rawTextExcerpt = formText ? formText.slice(0, 500) : "[prices PDF — vision/document mode]";
+        rawTextExcerpt = formText ? formText.slice(0, 500) : `[${documentType} PDF — vision/document mode]`;
         visionFallbackUsed = true;
       } else {
         try {
