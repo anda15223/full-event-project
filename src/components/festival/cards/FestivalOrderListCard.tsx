@@ -340,6 +340,34 @@ export function FestivalOrderListCard({
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
+  const recalculate = async () => {
+    setRecalculating(true);
+    try {
+      const elec = deriveElectricityOrder(items);
+      const patch: Record<string, any> = {
+        connections_16a_240v: elec.connections_16a_240v,
+        connections_16a_400v: elec.connections_16a_400v,
+        connections_32a: elec.connections_32a,
+        connections_63a: elec.connections_63a,
+        connections_125a: elec.connections_125a,
+        allocated_kw: elec.allocated_kw,
+        cost_dkk: elec.cost_dkk,
+      };
+      const { error } = await supabase.from("festival_power").update(patch as any).eq("id", powerId);
+      if (error) throw error;
+      onPowerUpdated?.();
+      toast.success(
+        elec.hasConnections
+          ? `Electricity order updated — ${elec.allocated_kw} kW${elec.cost_dkk ? `, ${elec.cost_dkk.toLocaleString()} DKK` : ""}`
+          : "No electricity lines found — connections cleared",
+      );
+    } catch (e: any) {
+      toast.error(e?.message ?? "Recalculate failed");
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   const addRow = async () => {
     const nextPos = items.reduce((m, x) => Math.max(m, x.position), -1) + 1;
     const { error } = await supabase.from("festival_power_order_items").insert({
@@ -351,6 +379,7 @@ export function FestivalOrderListCard({
     } as any);
     if (error) toast.error(error.message); else load();
   };
+
 
   const totalAll = items.reduce((s, it) => s + Number(it.total_price ?? 0), 0);
   const currency = items.find((i) => i.currency)?.currency ?? "DKK";
