@@ -64,7 +64,7 @@ function deriveElectricityOrder(
     const qty = Math.max(1, Math.round(Number(r.quantity ?? 1)));
     // Pick the largest amp figure mentioned and snap it to the nearest
     // standard connection size (e.g. "64 A" → 63A, "125A" → 125A).
-    const amps = Array.from(text.matchAll(/(\d{1,3})\s*a(?![a-z0-9])/g))
+    const amps = Array.from(raw.matchAll(/(\d{1,3})\s*a(?:mp(?:ere)?)?(?![a-z0-9])/g))
       .map((m) => Number(m[1]))
       .filter((n) => n >= 6 && n <= 400);
     const amp = amps.length ? Math.max(...amps) : null;
