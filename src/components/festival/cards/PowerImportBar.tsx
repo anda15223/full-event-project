@@ -17,7 +17,7 @@ type SourceFestival = { id: string; name: string; start_date: string | null };
 type FestivalContractLite = Pick<Tables<"festival_contracts">, "id" | "concept_id">;
 type FestivalPowerRow = Tables<"festival_power">;
 type FestivalPowerEquipmentInsert = TablesInsert<"festival_power_equipment">;
-type FestivalPowerOrderItemInsert = TablesInsert<"festival_power_order_items">;
+
 
 interface Props {
   currentFestivalId: string;
