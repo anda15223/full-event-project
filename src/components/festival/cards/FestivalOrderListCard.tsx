@@ -405,6 +405,18 @@ export function FestivalOrderListCard({
               <Download className="h-3.5 w-3.5" /> Source
             </Button>
           )}
+          <Button
+            size="sm" variant="outline" className="h-7 text-xs gap-1"
+            disabled={recalculating || loading || uploading || parsing}
+            onClick={recalculate}
+            title="Recompute connections, allocated kW and cost from the list below"
+          >
+            {recalculating
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <RefreshCw className="h-3.5 w-3.5" />}
+            Recalculate electricity order
+          </Button>
+
           <input
             ref={fileRef} type="file" className="hidden"
             accept=".pdf,.xlsx,.xls,.csv,.docx,.eml,image/*"
