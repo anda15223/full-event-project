@@ -573,6 +573,7 @@ export function PowerConceptCard({
       powerId={power.id}
       orderListFilePath={power.order_list_file_path ?? null}
       orderListParsedAt={power.order_list_parsed_at ?? null}
+      onPowerUpdated={invalidate}
     />
     </div>
   );
