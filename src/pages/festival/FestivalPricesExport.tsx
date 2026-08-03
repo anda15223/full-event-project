@@ -120,7 +120,24 @@ export default function FestivalPricesExport() {
   );
 
   return (
-    <PDFViewer style={{ width: "100vw", height: "100vh", border: "none" }}>{doc}</PDFViewer>
+    <div className="h-screen flex flex-col">
+      <div className="flex items-center justify-between p-3 border-b bg-card">
+        <Link to={`/festivals/${slug}/prices`} className="text-sm text-muted-foreground hover:underline">
+          ← Back to prices
+        </Link>
+        <PDFDownloadLink document={doc} fileName={fmtFilename(slug, "prices")}>
+          {({ loading: dlLoading }) => (
+            <Button size="sm" disabled={dlLoading}>
+              <Download className="h-4 w-4" />
+              {dlLoading ? "Preparing…" : "Download PDF"}
+            </Button>
+          )}
+        </PDFDownloadLink>
+      </div>
+      <div className="flex-1 min-h-0">
+        <PDFViewer style={{ width: "100%", height: "100%", border: 0 }}>{doc}</PDFViewer>
+      </div>
+    </div>
   );
 }
 
