@@ -129,7 +129,20 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
       const srcToTgt = new Map(powerPairs.map((p) => [p.srcPower.id as string, p.tgtPower.id as string]));
 
       const powerCardPatch = (row: FestivalPowerRow): TablesUpdate<"festival_power"> => {
-        const { id: _id, festival_contract_id: _contractId, created_at: _createdAt, updated_at: _updatedAt, ...rest } = row;
+        const {
+          id: _id, festival_contract_id: _contractId, created_at: _createdAt, updated_at: _updatedAt,
+          // Electricity order data is never imported — it must come from this
+          // festival's own order list upload + parse.
+          allocated_kw: _allocatedKw,
+          connections_125a: _c125, connections_16a_240v: _c16240, connections_16a_400v: _c16400,
+          connections_32a: _c32, connections_63a: _c63,
+          cost_dkk: _cost, delivery_date: _delivery, pickup_date: _pickup,
+          order_list_file_path: _orderFile, order_list_parsed_at: _orderParsed,
+          order_reference: _orderRef, ordered_date: _orderedDate,
+          parse_summary: _parseSummary, last_parsed_at: _lastParsed,
+          status: _status,
+          ...rest
+        } = row;
         return {
           ...rest,
           shared_tent_with_contracts: row.shared_tent_with_contracts?.map((id) => contractIdMap.get(id) ?? id) ?? null,
@@ -149,21 +162,11 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
         .in("festival_power_id", srcPowerIds);
       if (e4) throw e4;
 
-      // Fetch source festival order-list rows.
-      const { data: orderItems, error: oiErr } = await supabase
-        .from("festival_power_order_items").select("*")
-        .in("festival_power_id", srcPowerIds);
-      if (oiErr) throw oiErr;
-
       if (mode === "replace") {
         const { error: dEqErr } = await supabase
           .from("festival_power_equipment").delete()
           .in("festival_power_id", tgtPowerIds);
         if (dEqErr) throw dEqErr;
-        const { error: dOiErr } = await supabase
-          .from("festival_power_order_items").delete()
-          .in("festival_power_id", tgtPowerIds);
-        if (dOiErr) throw dOiErr;
       }
 
       const inserts: FestivalPowerEquipmentInsert[] = (eq ?? []).map(({ id: _id, created_at: _createdAt, updated_at: _updatedAt, festival_power_id, ...rest }) => ({
@@ -177,19 +180,7 @@ export function PowerImportBar({ currentFestivalId, onChanged }: Props) {
         if (iErr) throw iErr;
       }
 
-      const orderInserts: FestivalPowerOrderItemInsert[] = (orderItems ?? []).map(({ id: _id, created_at: _createdAt, updated_at: _updatedAt, festival_power_id, ...rest }) => ({
-        ...rest,
-        festival_power_id: srcToTgt.get(festival_power_id)!,
-      }));
-
-      if (orderInserts.length > 0) {
-        const { error: oiInsErr } = await supabase
-          .from("festival_power_order_items")
-          .insert(orderInserts);
-        if (oiInsErr) throw oiInsErr;
-      }
-
-      toast.success(`Imported ${powerPairs.length} power card(s), ${inserts.length} equipment item(s), ${orderInserts.length} order-list item(s)`);
+      toast.success(`Imported ${powerPairs.length} power card(s), ${inserts.length} equipment item(s) — electricity order not imported`);
       onChanged();
     } catch (e: unknown) {
       toast.error(errorMessage(e, "Import failed"));
