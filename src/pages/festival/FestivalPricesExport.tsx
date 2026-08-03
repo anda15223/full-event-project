@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { PDFViewer, Text, View } from "@react-pdf/renderer";
-import { Loader2 } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { PDFViewer, PDFDownloadLink, Text, View } from "@react-pdf/renderer";
+import { Loader2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ReportTemplate, reportStyles as r, fmtFilename } from "@/components/pdf/ReportTemplate";
 
