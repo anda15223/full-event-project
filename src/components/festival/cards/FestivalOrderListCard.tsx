@@ -227,17 +227,24 @@ export function FestivalOrderListCard({
           if (insErr) throw insErr;
           importedTotal += rows.length;
 
-          // Mark parsed_at + file path on tent-mate power rows too
-          if (targetPowerId !== powerId) {
-            await supabase
-              .from("festival_power")
-              .update({
-                order_list_file_path: path,
-                order_list_parsed_at: new Date().toISOString(),
-              } as any)
-              .eq("id", targetPowerId);
+          // Derive the electricity order (connections, kW, cost) from the parsed rows
+          const elec = deriveElectricityOrder(rows);
+          const powerPatch: Record<string, any> = {
+            order_list_parsed_at: new Date().toISOString(),
+            ...(targetPowerId !== powerId ? { order_list_file_path: path } : {}),
+          };
+          if (elec.hasConnections) {
+            powerPatch.connections_16a_240v = elec.connections_16a_240v;
+            powerPatch.connections_16a_400v = elec.connections_16a_400v;
+            powerPatch.connections_32a = elec.connections_32a;
+            powerPatch.connections_63a = elec.connections_63a;
+            powerPatch.connections_125a = elec.connections_125a;
+            powerPatch.allocated_kw = elec.allocated_kw;
           }
+          if (elec.cost_dkk != null) powerPatch.cost_dkk = elec.cost_dkk;
+          await supabase.from("festival_power").update(powerPatch as any).eq("id", targetPowerId);
         }
+
         const groupCount = groups.size;
         toast.success(
           groupCount > 1
