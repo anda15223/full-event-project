@@ -104,16 +104,19 @@ interface Props {
   powerId: string;
   orderListFilePath: string | null;
   orderListParsedAt: string | null;
+  onPowerUpdated?: () => void;
 }
 
 export function FestivalOrderListCard({
   festivalId, conceptSlug, conceptName, powerId, orderListFilePath, orderListParsedAt,
+  onPowerUpdated,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   const load = async () => {
     setLoading(true);
