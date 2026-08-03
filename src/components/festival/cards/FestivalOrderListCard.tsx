@@ -52,9 +52,8 @@ function deriveElectricityOrder(
   let hasConnections = false;
 
   for (const r of rows) {
-    const text = `${r.item_name ?? ""} ${r.unit ?? ""} ${r.notes ?? ""}`
-      .toLowerCase()
-      .replace(/\s+/g, "");
+    const raw = `${r.item_name ?? ""} ${r.unit ?? ""} ${r.notes ?? ""}`.toLowerCase();
+    const text = raw.replace(/\s+/g, "");
     const isElectric =
       r.category === "electricity" ||
       /\d+a\b|amp|ampere|kw|str[oø]m|power|el-|stik|schuko|cee/.test(text);
