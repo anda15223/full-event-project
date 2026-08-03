@@ -161,10 +161,15 @@ export function FestivalOrderListCard({
       if (!parsed?.ok) throw new Error(parsed?.message ?? "Parse failed");
 
       const rawItems = (parsed.parsed?.items ?? []) as any[];
-      if (rawItems.length === 0) {
-        toast.message("AI parsed but found no items — add manually");
+      const filteredItems = rawItems.filter((it) => Number(it.quantity ?? 1) > 0);
+      if (filteredItems.length === 0) {
+        toast.message(
+          rawItems.length > 0
+            ? "The form looks blank — no filled-in quantities found. Add items manually."
+            : "AI parsed but found no items — add manually",
+        );
       } else {
-        const filteredItems = rawItems.filter((it) => Number(it.quantity ?? 1) > 0);
+
 
         // Build {normalized concept name/slug/aliases -> power_id} for routing
         const normalize = (s: string) =>
