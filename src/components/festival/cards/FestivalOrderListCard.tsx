@@ -6,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Upload, Loader2, Plus, Trash2, Save, Sparkles, Download } from "lucide-react";
+import { Upload, Loader2, Plus, Trash2, Save, Sparkles, Download, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OrderItem {
