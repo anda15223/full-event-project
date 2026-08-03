@@ -28,6 +28,75 @@ const CATEGORIES = [
   "decor", "signage", "kitchen", "cleaning", "security", "internet", "other",
 ];
 
+const CONNECTION_KW: Record<string, number> = {
+  connections_16a_240v: 3.7,
+  connections_16a_400v: 11.0,
+  connections_32a: 22.0,
+  connections_63a: 43.6,
+  connections_125a: 86.6,
+};
+
+/** Turn parsed order rows into the electricity order (connection counts, kW, cost). */
+function deriveElectricityOrder(
+  rows: { category: string | null; item_name: string; quantity: number | null; unit: string | null; notes: string | null; total_price: number | null; currency: string | null }[],
+) {
+  const counts = {
+    connections_16a_240v: 0,
+    connections_16a_400v: 0,
+    connections_32a: 0,
+    connections_63a: 0,
+    connections_125a: 0,
+  };
+  let cost = 0;
+  let sawElectricity = false;
+  let hasConnections = false;
+
+  for (const r of rows) {
+    const text = `${r.item_name ?? ""} ${r.unit ?? ""} ${r.notes ?? ""}`
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    const isElectric =
+      r.category === "electricity" ||
+      /\d+a\b|amp|ampere|kw|str[oø]m|power|el-|stik|schuko|cee/.test(text);
+    if (!isElectric) continue;
+    sawElectricity = true;
+    if (r.total_price != null) cost += Number(r.total_price);
+
+    const qty = Math.max(1, Math.round(Number(r.quantity ?? 1)));
+    let key: keyof typeof counts | null = null;
+    if (/125a/.test(text)) key = "connections_125a";
+    else if (/63a/.test(text)) key = "connections_63a";
+    else if (/32a/.test(text)) key = "connections_32a";
+    else if (/16a/.test(text)) {
+      key =
+        /240|230|1ph|1-ph|schuko|enfaset/.test(text)
+          ? "connections_16a_240v"
+          : /400|3ph|3-ph|trefaset/.test(text)
+            ? "connections_16a_400v"
+            : "connections_16a_240v";
+    }
+    if (key) {
+      counts[key] += qty;
+      hasConnections = true;
+    }
+  }
+
+  const allocated_kw = hasConnections
+    ? Number(
+        Object.entries(counts)
+          .reduce((sum, [k, n]) => sum + n * (CONNECTION_KW[k] ?? 0), 0)
+          .toFixed(1),
+      )
+    : null;
+
+  return {
+    ...counts,
+    hasConnections,
+    allocated_kw,
+    cost_dkk: sawElectricity && cost > 0 ? Number(cost.toFixed(2)) : null,
+  };
+}
+
 interface Props {
   festivalId: string;
   conceptSlug: string;
