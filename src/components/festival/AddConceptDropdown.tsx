@@ -158,7 +158,9 @@ export function AddConceptDropdown({ festivalId }: Props) {
     mutationFn: async ({ contractId, conceptId }: { contractId: string; conceptId: string }) => {
       const { error } = await supabase
         .from("festival_contracts")
-        .update({ is_active: true })
+        // Restore = live everywhere: clear the draft flag too, otherwise the concept
+        // stays invisible on every card unless draft preview is on.
+        .update({ is_active: true, is_draft: false })
         .eq("id", contractId)
         .eq("festival_id", festivalId);
       if (error) throw error;

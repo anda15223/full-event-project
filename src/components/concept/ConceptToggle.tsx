@@ -19,7 +19,9 @@ export function ConceptToggle({ festivalSlug, contractId, isActive, size = "md" 
     mutationFn: async (next: boolean) => {
       const { error } = await supabase
         .from("festival_contracts")
-        .update({ is_active: next })
+        // Enabling a stall also promotes it out of draft so it appears on every
+        // card/report for the event — draft rows are hidden outside draft mode.
+        .update(next ? { is_active: true, is_draft: false } : { is_active: false })
         .eq("id", contractId);
       if (error) throw error;
       return next;
