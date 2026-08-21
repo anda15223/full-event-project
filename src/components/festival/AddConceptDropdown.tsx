@@ -24,11 +24,18 @@ interface ConceptRow {
 }
 
 interface ExistingConceptRow {
+  id: string;
   concept_id: string;
   is_active: boolean | null;
+  is_draft: boolean | null;
+  concept_alias: string | null;
 }
 
-type AddConceptOption = ConceptRow & { mode: "add" | "restore" };
+type AddConceptOption = ConceptRow & {
+  mode: "add" | "restore" | "review";
+  contractId?: string;
+  conceptAlias?: string | null;
+};
 
 interface FestivalRow {
   id: string;
@@ -64,27 +71,36 @@ export function AddConceptDropdown({ festivalId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("festival_contracts")
-        .select("concept_id, is_active")
+        .select("id, concept_id, is_active, is_draft, concept_alias")
         .eq("festival_id", festivalId);
       if (error) throw error;
-      const existing = new Map<string, ExistingConceptRow>();
-      (data ?? []).forEach((r: any) => {
-        const previous = existing.get(r.concept_id);
-        existing.set(r.concept_id, {
-          concept_id: r.concept_id,
-          is_active: previous?.is_active === true || r.is_active !== false,
-        });
-      });
-      return existing;
+      return (data ?? []) as ExistingConceptRow[];
     },
   });
 
   const options = useMemo<AddConceptOption[]>(() => {
-    const existing = existingQ.data ?? new Map<string, ExistingConceptRow>();
+    const existing = existingQ.data ?? [];
     return (conceptsQ.data ?? []).flatMap<AddConceptOption>((c) => {
-      const row = existing.get(c.id);
-      if (!row) return [{ ...c, mode: "add" }];
-      if (row.is_active === false) return [{ ...c, mode: "restore" }];
+      const rows = existing.filter((row) => row.concept_id === c.id);
+      if (rows.length === 0) return [{ ...c, mode: "add" }];
+
+      // Keep every disabled contract recoverable. Grouping only by concept used to
+      // hide these whenever another row for the same concept was active or a draft.
+      const disabled = rows.filter((row) => row.is_active === false);
+      if (disabled.length > 0) {
+        return disabled.map((row) => ({
+          ...c,
+          mode: "restore" as const,
+          contractId: row.id,
+          conceptAlias: row.concept_alias,
+        }));
+      }
+
+      // An active draft is intentionally absent from the live lineup. Give users
+      // a direct route back to it instead of making the concept appear unavailable.
+      if (rows.some((row) => row.is_draft === true)) {
+        return [{ ...c, mode: "review", contractId: rows.find((row) => row.is_draft === true)?.id }];
+      }
       return [];
     });
   }, [conceptsQ.data, existingQ.data]);
@@ -139,14 +155,14 @@ export function AddConceptDropdown({ festivalId }: Props) {
   });
 
   const restoreMut = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ contractId, conceptId }: { contractId: string; conceptId: string }) => {
       const { error } = await supabase
         .from("festival_contracts")
         .update({ is_active: true })
-        .eq("festival_id", festivalId)
-        .eq("concept_id", id);
+        .eq("id", contractId)
+        .eq("festival_id", festivalId);
       if (error) throw error;
-      return id;
+      return conceptId;
     },
     onSuccess: (id) => {
       const concept = conceptsQ.data?.find((c) => c.id === id);
@@ -166,9 +182,15 @@ export function AddConceptDropdown({ festivalId }: Props) {
       <Select
         value=""
         onValueChange={(v) => {
-          const [mode, id] = v.split(":");
+          const [mode, id, contractId] = v.split(":");
           if (mode === "restore") {
-            restoreMut.mutate(id);
+            restoreMut.mutate({ contractId, conceptId: id });
+            return;
+          }
+          if (mode === "review") {
+            setDraftMode(true);
+            toast.success("Draft concepts are now visible for review.");
+            qc.invalidateQueries({ queryKey: ["festival-contracts-grid", festivalId] });
             return;
           }
           setConceptId(id);
@@ -182,8 +204,12 @@ export function AddConceptDropdown({ festivalId }: Props) {
         </SelectTrigger>
         <SelectContent>
           {options.map((c) => (
-            <SelectItem key={`${c.mode}:${c.id}`} value={`${c.mode}:${c.id}`}>
-              {c.name}{c.mode === "restore" ? " — restore disabled" : ""}
+            <SelectItem
+              key={`${c.mode}:${c.id}:${c.contractId ?? "new"}`}
+              value={`${c.mode}:${c.id}:${c.contractId ?? "new"}`}
+            >
+              {c.conceptAlias?.trim() || c.name}
+              {c.mode === "restore" ? " — re-enable" : c.mode === "review" ? " — review draft" : ""}
             </SelectItem>
           ))}
         </SelectContent>
