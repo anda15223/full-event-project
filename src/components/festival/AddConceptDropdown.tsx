@@ -194,9 +194,12 @@ export function AddConceptDropdown({ festivalId }: Props) {
             return;
           }
           if (mode === "review") {
-            setDraftMode(true);
-            toast.success("Draft concepts are now visible for review.");
-            qc.invalidateQueries({ queryKey: ["festival-contracts-grid", festivalId] });
+            if (!contractId) {
+              toast.error("Could not identify the draft concept.");
+              return;
+            }
+            // Promote the draft so the concept shows up on every card for the event.
+            restoreMut.mutate({ contractId, conceptId: id });
             return;
           }
           setConceptId(id);
@@ -218,7 +221,7 @@ export function AddConceptDropdown({ festivalId }: Props) {
               {c.conceptAlias?.trim() && c.conceptAlias.trim() !== c.name
                 ? ` (${c.conceptAlias.trim()})`
                 : ""}
-              {c.mode === "restore" ? " — re-enable" : c.mode === "review" ? " — review draft" : ""}
+              {c.mode === "restore" ? " — re-enable" : c.mode === "review" ? " — make live" : ""}
             </SelectItem>
           ))}
         </SelectContent>
