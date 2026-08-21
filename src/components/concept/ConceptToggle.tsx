@@ -42,6 +42,7 @@ export function ConceptToggle({ festivalSlug, contractId, isActive, size = "md" 
         ["attention-items"],
         ["concept-grid", festivalSlug],
         ["disabled-concepts", festivalSlug],
+        ["festival-contracts-concept-ids"],
       ];
       keys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
     },
