@@ -28,7 +28,7 @@ export function useConceptToggle() {
 
       const { error } = await supabase
         .from("festival_contracts")
-        .update({ is_active: isActive })
+        .update(isActive ? { is_active: true, is_draft: false } : { is_active: false })
         .eq("festival_id", festival.id)
         .eq("concept_id", concept.id);
 

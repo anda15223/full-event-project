@@ -1,0 +1,1 @@
+UPDATE public.festival_contracts SET is_draft = false, is_active = true WHERE id = 'c7617ff8-585c-425b-bc2c-57907e4ffef4';
