@@ -184,6 +184,10 @@ export function AddConceptDropdown({ festivalId }: Props) {
         onValueChange={(v) => {
           const [mode, id, contractId] = v.split(":");
           if (mode === "restore") {
+            if (!contractId) {
+              toast.error("Could not identify the disabled concept.");
+              return;
+            }
             restoreMut.mutate({ contractId, conceptId: id });
             return;
           }

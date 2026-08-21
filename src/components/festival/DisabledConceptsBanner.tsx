@@ -46,7 +46,7 @@ export function DisabledConceptsBanner({ festivalId, festivalSlug }: DisabledCon
           {n} concept{n === 1 ? "" : "s"} disabled at this festival
         </div>
         <div className="text-sm text-amber-800 dark:text-amber-300 mt-1">
-          {nameList}. Their data is hidden from binder exports, Søborg loading manifest, reports, and AI context. Re-enable from the concept card toggle below.
+          {nameList}. Their data is hidden from binder exports, Søborg loading manifest, reports, and AI context. Re-enable them from Add concept in the Concept lineup.
         </div>
       </div>
     </div>
