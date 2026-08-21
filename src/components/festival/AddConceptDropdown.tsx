@@ -212,7 +212,10 @@ export function AddConceptDropdown({ festivalId }: Props) {
               key={`${c.mode}:${c.id}:${c.contractId ?? "new"}`}
               value={`${c.mode}:${c.id}:${c.contractId ?? "new"}`}
             >
-              {c.conceptAlias?.trim() || c.name}
+              {c.name}
+              {c.conceptAlias?.trim() && c.conceptAlias.trim() !== c.name
+                ? ` (${c.conceptAlias.trim()})`
+                : ""}
               {c.mode === "restore" ? " — re-enable" : c.mode === "review" ? " — review draft" : ""}
             </SelectItem>
           ))}
