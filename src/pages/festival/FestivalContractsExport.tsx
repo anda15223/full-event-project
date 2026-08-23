@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   tableRow: { flexDirection: "row", borderBottom: "0.25pt solid #eee", paddingVertical: 2.5 },
   th: { fontSize: 7, fontWeight: 700, color: "#555", lineHeight: 1.3 },
   td: { fontSize: 8, lineHeight: 1.4 },
-  italic: { fontStyle: "italic", color: "#555", fontSize: 8, lineHeight: 1.4 },
+  italic: { color: "#555", fontSize: 8, lineHeight: 1.4 },
   footer: { position: "absolute", bottom: 16, left: 32, right: 32, fontSize: 7, color: "#888", flexDirection: "row", justifyContent: "space-between" },
 });
 
