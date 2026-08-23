@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import "@/lib/pdfFonts";
-import { useParams } from "react-router-dom";
-import { Document, Page, Text, View, StyleSheet, PDFViewer, Font } from "@react-pdf/renderer";
+import { Link, useParams } from "react-router-dom";
+import { Document, Page, Text, View, StyleSheet, PDFViewer, PDFDownloadLink, Font } from "@react-pdf/renderer";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateRange } from "@/lib/dateFormat";
 import { ContractStatus, PaymentStatus, STATUS_META, PAYMENT_META, formatDKK } from "@/lib/contracts";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Download, Loader2 } from "lucide-react";
 
 try {
   Font.register({
@@ -93,8 +94,7 @@ export default function FestivalContractsExport() {
     if (c.contract_status !== "cancelled") total += Number(c.contract_value_dkk) || 0;
   });
 
-  return (
-    <PDFViewer width="100%" height="100%" style={{ width: "100%", height: "100vh", border: 0 }}>
+  const pdfDocument = (
       <Document>
         <Page size="A4" style={styles.page} wrap>
           <Text style={styles.h1}>Contracts Overview — {data.festival.name}</Text>
@@ -125,7 +125,7 @@ export default function FestivalContractsExport() {
                   </Text>
                   <View style={{ flexDirection: "row" }}>
                     <Text style={styles.badge}>{STATUS_META[c.contract_status as ContractStatus]?.label ?? c.contract_status}</Text>
-                    {fin.payment_status && (
+                    {Boolean(fin.payment_status) && (
                       <Text style={styles.badgePay}>{PAYMENT_META[fin.payment_status as PaymentStatus]?.label ?? fin.payment_status}</Text>
                     )}
                   </View>
@@ -176,25 +176,25 @@ export default function FestivalContractsExport() {
                     <Text style={styles.metaLabel}>Payment terms</Text>
                     <Text style={styles.metaValue}>{N(fin.payment_terms)}</Text>
                   </View>
-                  {c.sent_to_counterparty_at && (
+                  {Boolean(c.sent_to_counterparty_at) && (
                     <View style={styles.metaCell}>
                       <Text style={styles.metaLabel}>Sent</Text>
                       <Text style={styles.metaValue}>{c.sent_to_counterparty_at}</Text>
                     </View>
                   )}
-                  {c.expected_signing_by && (
+                  {Boolean(c.expected_signing_by) && (
                     <View style={styles.metaCell}>
                       <Text style={styles.metaLabel}>Expected signing</Text>
                       <Text style={styles.metaValue}>{c.expected_signing_by}</Text>
                     </View>
                   )}
-                  {c.stalled_since && (
+                  {Boolean(c.stalled_since) && (
                     <View style={styles.metaCell}>
                       <Text style={styles.metaLabel}>Stalled since</Text>
                       <Text style={styles.metaValue}>{c.stalled_since}</Text>
                     </View>
                   )}
-                  {c.contract_file_path && (
+                  {Boolean(c.contract_file_path) && (
                     <View style={[styles.metaCell, { width: "100%" }]}>
                       <Text style={styles.metaLabel}>Contract file</Text>
                       <Text style={styles.metaValue}>{c.contract_file_path.split("/").pop()}</Text>
@@ -202,28 +202,28 @@ export default function FestivalContractsExport() {
                   )}
                 </View>
 
-                {c.concept_variation_note && (
+                {Boolean(c.concept_variation_note) && (
                   <Text style={[styles.italic, { marginTop: 4 }]}>{c.concept_variation_note}</Text>
                 )}
-                {c.stalled_reason && (
+                {Boolean(c.stalled_reason) && (
                   <Text style={[styles.italic, { marginTop: 4, color: "#c33" }]}>Stalled: {c.stalled_reason}</Text>
                 )}
-                {c.cancelled_reason && (
+                {Boolean(c.cancelled_reason) && (
                   <Text style={[styles.italic, { marginTop: 4, color: "#c33" }]}>Cancelled: {c.cancelled_reason}</Text>
                 )}
 
-                {c.contract_terms_summary && (
+                {Boolean(c.contract_terms_summary) && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Terms summary</Text>
                     <Bullets text={c.contract_terms_summary} />
                   </View>
                 )}
 
-                {c.key_obligations && (
+                {Boolean(c.key_obligations) && (
                   <View style={styles.obligation}><Text>⚠ {c.key_obligations}</Text></View>
                 )}
 
-                {c.parse_summary && (
+                {Boolean(c.parse_summary) && (
                   <Text style={[styles.italic, { marginTop: 4 }]}>AI: {c.parse_summary}</Text>
                 )}
 
@@ -337,6 +337,28 @@ export default function FestivalContractsExport() {
           </View>
         </Page>
       </Document>
-    </PDFViewer>
+  );
+
+  return (
+    <div className="flex h-screen flex-col">
+      <div className="flex items-center justify-between border-b p-3">
+        <Link to={`/festivals/${slug}/contracts`} className="text-sm text-muted-foreground hover:underline">
+          ← Back to contracts
+        </Link>
+        <PDFDownloadLink document={pdfDocument} fileName={`${data.festival.slug}-contracts.pdf`}>
+          {({ loading }) => (
+            <Button size="sm" disabled={loading}>
+              {loading ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
+              Download PDF
+            </Button>
+          )}
+        </PDFDownloadLink>
+      </div>
+      <div className="min-h-0 flex-1">
+        <PDFViewer width="100%" height="100%" showToolbar={false}>
+          {pdfDocument}
+        </PDFViewer>
+      </div>
+    </div>
   );
 }
